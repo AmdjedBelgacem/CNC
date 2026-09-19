@@ -1,0 +1,17 @@
+{
+  "name": "TITANS of Manufacturing",
+  "short_name": "TITANS",
+  "description": "Free CNC machining education platform",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "en",
+  "categories": ["education"],
+  "background_color": "#0a0f1e",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

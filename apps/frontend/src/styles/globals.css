@@ -1,0 +1,401 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #004ac6;
+  --color-secondary: #006d30;
+  --color-accent: #2563eb;
+  --color-background: #f8f9fa;
+  --color-foreground: #111827;
+  --color-card: #ffffff;
+  --color-card-foreground: #111827;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111827;
+  --color-muted: #f3f4f5;
+  --color-muted-foreground: #6b7280;
+  --color-border: #e1e3e4;
+  --color-ring: #004ac6;
+  --color-text-primary: #111827;
+  --color-text-secondary: #374151;
+  --color-text-muted: #6b7280;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4f5;
+  --color-surface-container-high: #e7e8e9;
+  --color-glass-border: rgba(0, 0, 0, 0.08);
+  --color-accent-glow: rgba(37, 99, 235, 0.1);
+  --color-secondary-container: #92f5a4;
+  --color-secondary-fixed: #95f8a7;
+  --spacing-margin-mobile: 1rem;
+  --spacing-margin-desktop: 2.5rem;
+  --spacing-gutter: 1.5rem;
+  --spacing-stack-md: 1.5rem;
+  --spacing-stack-sm: 0.5rem;
+  --spacing-stack-lg: 4rem;
+  --spacing-container-max: 1440px;
+  --font-family-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --radius: var(--border-radius, 0.5rem);
+  /* RGB channels backing the Tailwind tokens above (hex twins stay for plain CSS use) */
+  --c-primary: 0 74 198;
+  --c-primary-foreground: 255 255 255;
+  --c-secondary: 0 109 48;
+  --c-secondary-foreground: 255 255 255;
+  --c-accent: 37 99 235;
+  --c-accent-foreground: 255 255 255;
+  --c-background: 248 249 250;
+  --c-foreground: 17 24 39;
+  --c-card: 255 255 255;
+  --c-card-foreground: 17 24 39;
+  --c-popover: 255 255 255;
+  --c-popover-foreground: 17 24 39;
+  --c-muted: 243 244 245;
+  --c-muted-foreground: 107 114 128;
+  --c-border: 225 227 228;
+  --c-input: 225 227 228;
+  --c-ring: 0 74 198;
+  --c-text-primary: 17 24 39;
+  --c-text-secondary: 55 65 81;
+  --c-text-muted: 107 114 128;
+  --c-surface-container-lowest: 255 255 255;
+  --c-surface-container-low: 243 244 245;
+  --c-surface-container-high: 231 232 233;
+  --c-secondary-container: 146 245 164;
+  --c-secondary-fixed: 149 248 167;
+  --c-destructive: 220 38 38;
+  --c-destructive-foreground: 255 255 255;
+  /* Glass + decorative surfaces. These flip with the theme so translucent panels
+     never render a light wash on top of dark content (or vice versa). */
+  --glass-bg: 255 255 255;
+  --glass-alpha: 0.7;
+  --glass-border-color: rgba(0, 0, 0, 0.08);
+  --glow-color: 248 249 250;
+  --link-pill-border: #dbe3ee;
+  --link-pill-hover-bg: #eff6ff;
+  --link-pill-hover-border: #93c5fd;
+  --slider-thumb-bg: #ffffff;
+  --slider-thumb-border: rgba(0, 0, 0, 0.14);
+  color-scheme: light;
+}
+
+.dark {
+  --color-primary: #b4c5ff;
+  --color-secondary: #79db8d;
+  --color-accent: #93c5fd;
+  --color-background: #0b1120;
+  --color-foreground: #e5e7eb;
+  --color-card: #111827;
+  --color-card-foreground: #e5e7eb;
+  --color-popover: #161f30;
+  --color-popover-foreground: #e5e7eb;
+  --color-muted: #1f2937;
+  --color-muted-foreground: #9ca3af;
+  --color-border: #273244;
+  --color-ring: #b4c5ff;
+  --color-text-primary: #e5e7eb;
+  --color-text-secondary: #d1d5db;
+  --color-text-muted: #9ca3af;
+  --color-surface-container-lowest: #111827;
+  --color-surface-container-low: #1f2937;
+  --color-surface-container-high: #374151;
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-accent-glow: rgba(99, 102, 241, 0.1);
+  --color-secondary-container: #1a5c2e;
+  --color-secondary-fixed: #14532d;
+  --c-primary: 180 197 255;
+  --c-primary-foreground: 11 17 32;
+  --c-secondary: 121 219 141;
+  --c-secondary-foreground: 11 17 32;
+  --c-accent: 147 197 253;
+  --c-accent-foreground: 11 17 32;
+  --c-background: 11 17 32;
+  --c-foreground: 229 231 235;
+  --c-card: 17 24 39;
+  --c-card-foreground: 229 231 235;
+  --c-popover: 22 31 48;
+  --c-popover-foreground: 229 231 235;
+  --c-muted: 31 41 55;
+  --c-muted-foreground: 156 163 175;
+  --c-border: 39 50 68;
+  --c-input: 39 50 68;
+  --c-ring: 180 197 255;
+  --c-text-primary: 229 231 235;
+  --c-text-secondary: 209 213 219;
+  --c-text-muted: 156 163 175;
+  --c-surface-container-lowest: 17 24 39;
+  --c-surface-container-low: 31 41 55;
+  --c-surface-container-high: 55 65 81;
+  --c-secondary-container: 26 92 46;
+  --c-secondary-fixed: 20 83 45;
+  --c-destructive: 248 113 113;
+  --c-destructive-foreground: 17 24 39;
+  --glass-bg: 17 24 39;
+  --glass-alpha: 0.72;
+  --glass-border-color: rgba(255, 255, 255, 0.1);
+  --glow-color: 11 17 32;
+  --link-pill-border: #273244;
+  --link-pill-hover-bg: rgba(37, 99, 235, 0.14);
+  --link-pill-hover-border: #3b82f6;
+  --slider-thumb-bg: #e5e7eb;
+  --slider-thumb-border: rgba(0, 0, 0, 0.5);
+  /* Native widgets (date pickers, scrollbars, form controls) follow the app toggle,
+     not the OS, because dark mode is class-driven. */
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::selection {
+    background: #ddd6fe;
+    color: #4c1d95;
+  }
+}
+
+@layer components {
+  .marketing-container {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  @keyframes drawer-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes drawer-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-drawer-in-left {
+    animation: drawer-in-left 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .animate-drawer-in-right {
+    animation: drawer-in-right 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .animate-fade-in {
+    animation: fade-in 150ms ease-out;
+  }
+
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    display: inline-block;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+
+  .soft-blend {
+    mix-blend-mode: soft-light;
+  }
+
+  .font-display {
+    font-family: var(--font-family-display, var(--font-garamond)), Georgia, 'Times New Roman', serif;
+  }
+
+  .liquid-glass {
+    background: rgb(var(--glass-bg) / var(--glass-alpha, 0.7));
+    backdrop-filter: blur(var(--glass-blur, 16px));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
+    border: 1px solid var(--glass-border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    border-color: rgb(var(--c-primary) / 0.2);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  }
+
+  .inspector-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 9999px;
+    background: var(--slider-thumb-bg);
+    border: 1px solid var(--slider-thumb-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    cursor: grab;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+  .inspector-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  }
+  .inspector-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.05);
+  }
+  .inspector-slider::-moz-range-thumb {
+    height: 16px;
+    width: 16px;
+    border-radius: 9999px;
+    background: var(--slider-thumb-bg);
+    border: 1px solid var(--slider-thumb-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    cursor: grab;
+  }
+
+  .hero-glow {
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgb(var(--c-accent) / 0.05) 0%,
+      rgb(var(--glow-color) / 0) 70%
+    );
+  }
+
+  .logo-row > * {
+    opacity: 0.5;
+    filter: grayscale(1);
+    transition: opacity 300ms ease, filter 300ms ease, transform 300ms ease;
+  }
+
+  .logo-row > *:hover {
+    opacity: 1;
+    filter: grayscale(0);
+    transform: scale(1.1);
+  }
+
+  /* Logo wall gap: 48px mobile, 96px desktop (mockup gap-12 md:gap-24). */
+  .logo-row { --stack-gap: 48px; }
+  @media (min-width: 768px) {
+    .logo-row { --stack-gap: 96px; }
+  }
+
+  /* CTA pairs: stacked on mobile, side-by-side from sm (mockup flex-col sm:flex-row). */
+  @media (min-width: 640px) {
+    .cta-row { --stack-direction: row; }
+  }
+  @media (max-width: 639.98px) {
+    .cta-row { --stack-direction: column; }
+  }
+
+  .marketing-section {
+    padding-block: 5rem;
+  }
+
+  .eyebrow {
+    font-size: 0.625rem;
+    font-weight: 800;
+    line-height: 1rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--primary);
+  }
+
+  .section-title {
+    font-family: var(--font-family-display, var(--font-garamond)), Georgia, 'Times New Roman', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    color: var(--foreground);
+  }
+
+  .link-pill {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 1px solid #dbe3ee;
+    border-radius: 9999px;
+    padding-inline: 1rem;
+    font-size: 0.625rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--primary);
+    transition: 180ms ease;
+  }
+
+  .link-pill:hover {
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+}
+
+@media (min-width: 640px) {
+  @layer components {
+    .marketing-container { padding-inline: 2.5rem; }
+    .marketing-section { padding-block: 6rem; }
+  }
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  /* `--border` was never defined (the channel token is `--c-border`), so the thumb
+     rendered with an invalid colour and disappeared. */
+  background: rgb(var(--c-border));
+  border-radius: 3px;
+}

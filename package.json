@@ -1,0 +1,32 @@
+{
+  "name": "titans-of-manufacturing",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "concurrently --names backend,frontend --prefix-colors yellow,cyan \"pnpm --filter backend start\" \"pnpm --filter frontend dev\"",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "autoprefixer": "10.5.0",
+    "eslint": "^9.39.4",
+    "prettier": "^3.5.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.61.1"
+  },
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "concurrently": "^10.0.4"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@measured/puck@0.20.2": "patches/@measured__puck@0.20.2.patch"
+    }
+  }
+}

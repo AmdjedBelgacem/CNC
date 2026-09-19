@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../../apps/frontend/src/lib/tenant-config.ts"],"sourcesContent":["export const DEFAULT_TENANT_SLUG =\n  process.env.NEXT_PUBLIC_DEFAULT_TENANT_SLUG || 'cnc-fundamentals';\n"],"names":["DEFAULT_TENANT_SLUG","process","env","NEXT_PUBLIC_DEFAULT_TENANT_SLUG"],"mappings":"m/BAAO,IAAMA,EACXC,QAAQC,GAAG,CAACC,+BAA+B,EAAI"}

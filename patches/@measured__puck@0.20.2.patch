@@ -1,0 +1,139 @@
+diff --git a/dist/chunk-QIGVND56.mjs b/dist/chunk-QIGVND56.mjs
+index ee1d987db5a131ed85032d86d416a80e16d5bad2..2b336022a7e0ea8f81e746fb2f23e2811ded30fc 100644
+--- a/dist/chunk-QIGVND56.mjs
++++ b/dist/chunk-QIGVND56.mjs
+@@ -4106,12 +4106,14 @@ var DraggableComponent = ({
+     feedback: "clone"
+   });
+   useEffect12(() => {
+-    const isEnabled = zoneStore.getState().enabledIndex[zoneCompound];
+-    sortable.droppable.disabled = !isEnabled;
++    const apply = () => {
++      const s = zoneStore.getState();
++      const dragged = s.draggedItem;
++      sortable.droppable.disabled = !s.enabledIndex[zoneCompound] || (dragged != null && dragged.id === id);
++    };
++    apply();
+     sortable.draggable.disabled = !permissions.drag;
+-    const cleanup = zoneStore.subscribe((s) => {
+-      sortable.droppable.disabled = !s.enabledIndex[zoneCompound];
+-    });
++    const cleanup = zoneStore.subscribe(apply);
+     if (ref.current && !permissions.drag) {
+       ref.current.setAttribute("data-puck-disabled", "");
+       return () => {
+@@ -4731,8 +4733,18 @@ var findDeepestCandidate = (position, manager) => {
+     if (!primaryCandidate) return { zone: null, area: null };
+     const primaryCandidateData = primaryCandidate.data;
+     const primaryCandidateIsComponent = "containsActiveZone" in primaryCandidateData;
+-    const zone = getZoneId(primaryCandidate);
+-    const area = primaryCandidateIsComponent && primaryCandidateData.containsActiveZone ? filteredCandidates[0].id : (_a = filteredCandidates[0]) == null ? void 0 : _a.data.areaId;
++    let zone = getZoneId(primaryCandidate);
++    let zoneSubstituted = false;
++    if (primaryCandidateIsComponent) {
++      for (const droppable of manager.registry.droppables) {
++        if (droppable.id && droppable.id.indexOf(primaryCandidate.id + ":") === 0) {
++          zone = droppable.id;
++          zoneSubstituted = true;
++          break;
++        }
++      }
++    }
++    const area = primaryCandidateIsComponent && (primaryCandidateData.containsActiveZone || zoneSubstituted) ? filteredCandidates[0].id : (_a = filteredCandidates[0]) == null ? void 0 : _a.data.areaId;
+     return { zone, area };
+   }
+   return {
+@@ -4908,7 +4920,7 @@ var DragDropContextClient = ({
+     },
+     [zoneStore]
+   );
+-  const setDeepestAndCollide = useCallback8(
++      const setDeepestAndCollide = useCallback8(
+     (params, manager) => {
+       const { zoneChanged, areaChanged } = getChanged2(params, id);
+       if (!zoneChanged && !areaChanged) return;
+@@ -5028,7 +5040,7 @@ var DragDropContextClient = ({
+             }
+             const { zone, index } = source.data;
+             const { previewIndex = {} } = zoneStore.getState() || {};
+-            const thisPreview = ((_b = previewIndex[zone]) == null ? void 0 : _b.props.id) === source.id ? previewIndex[zone] : null;
++            const thisPreview = Object.values(previewIndex).find((p) => (p == null ? void 0 : p.props.id) === source.id) || null;
+             const onAnimationEnd = () => {
+               var _a2, _b2;
+               zoneStore.setState({ draggedItem: null });
+@@ -5105,13 +5117,37 @@ var DragDropContextClient = ({
+               const targetData = target.data;
+               targetZone = targetData.zone;
+               targetIndex = targetData.index;
++              if ("containsActiveZone" in targetData) {
++                const ptr = event.operation.position?.current;
++                for (const d of manager.registry.droppables) {
++                  if (d.id && d.id.indexOf(target.id + ":") === 0) {
++                    if (d.element && ptr) {
++                      const r = d.element.getBoundingClientRect();
++                      if (ptr.x >= r.left && ptr.x <= r.right && ptr.y >= r.top && ptr.y <= r.bottom) {
++                        targetZone = d.id;
++                        targetIndex = 0;
++                      }
++                    }
++                    break;
++                  }
++                }
++              }
+               const collisionData = (_b = manager.collisionObserver.collisions[0]) == null ? void 0 : _b.data;
+               const dir = getDeepDir(target.element);
+-              const collisionPosition = (collisionData == null ? void 0 : collisionData.direction) === "up" || dir === "ltr" && (collisionData == null ? void 0 : collisionData.direction) === "left" || dir === "rtl" && (collisionData == null ? void 0 : collisionData.direction) === "right" ? "before" : "after";
++              let collisionPosition = (collisionData == null ? void 0 : collisionData.direction) === "up" || dir === "ltr" && (collisionData == null ? void 0 : collisionData.direction) === "left" || dir === "rtl" && (collisionData == null ? void 0 : collisionData.direction) === "right" ? "before" : "after";
++              if ("containsActiveZone" in targetData) {
++                const ptr2 = event.operation.position?.current;
++                const rect2 = target.element?.getBoundingClientRect();
++                if (ptr2 && rect2) {
++                  if (dir === "ltr") collisionPosition = ptr2.x < rect2.left + rect2.width / 2 ? "before" : "after";
++                  else if (dir === "rtl") collisionPosition = ptr2.x > rect2.left + rect2.width / 2 ? "before" : "after";
++                  else collisionPosition = ptr2.y < rect2.top + rect2.height / 2 ? "before" : "after";
++                }
++              }
+               if (targetIndex >= sourceIndex && sourceZone === targetZone) {
+                 targetIndex = targetIndex - 1;
+               }
+-              if (collisionPosition === "after") {
++              if (collisionPosition === "after" && targetZone === targetData.zone) {
+                 targetIndex = targetIndex + 1;
+               }
+             } else {
+@@ -5174,6 +5210,7 @@ var DragDropContextClient = ({
+             var _a;
+             const { source } = event.operation;
+             if (source && source.type !== "void") {
++              if (source.droppable) source.droppable.disabled = true;
+               const sourceData = source.data;
+               const item = getItem(
+                 {
+@@ -6145,11 +6182,26 @@ var DropZoneEdit = forwardRef3(
+         enabledIndex: __spreadProps(__spreadValues({}, enabledIndex), { [zoneCompound]: isEnabled })
+       });
+     }, [isEnabled, zoneStore, zoneCompound]);
++    const sectionBoxDetector = (input) => {
++      const base = pointerIntersection(input);
++      if (base) return base;
++      const el = input.droppable.element;
++      if (!el) return null;
++      const parent = el.closest("[data-puck-component]");
++      if (!parent) return null;
++      const pointer = input.dragOperation.position.current;
++      if (!pointer) return null;
++      const rect = parent.getBoundingClientRect();
++      if (pointer.x >= rect.left && pointer.x <= rect.right && pointer.y >= rect.top && pointer.y <= rect.bottom) {
++        return { id: input.droppable.id, value: 1e-9, type: 2, priority: 0 };
++      }
++      return null;
++    };
+     const droppableConfig = {
+       id: zoneCompound,
+       collisionPriority: isEnabled ? depth : 0,
+       disabled: !isDropEnabled,
+-      collisionDetector: pointerIntersection,
++      collisionDetector: sectionBoxDetector,
+       type: "dropzone",
+       data: {
+         areaId,

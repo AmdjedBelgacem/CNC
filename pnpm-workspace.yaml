@@ -1,0 +1,6 @@
+packages:
+  - apps/*
+  - packages/*
+
+patchedDependencies:
+  '@measured/puck@0.20.2': patches/@measured__puck@0.20.2.patch

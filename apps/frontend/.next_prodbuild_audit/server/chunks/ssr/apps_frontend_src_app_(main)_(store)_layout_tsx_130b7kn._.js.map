@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../../../apps/frontend/src/app/%28main%29/%28store%29/layout.tsx"],"sourcesContent":["export default function StoreLayout({ children }: { children: React.ReactNode }) {\n  return <>{children}</>;\n}\n"],"names":["StoreLayout","children"],"mappings":"yEAAe,SAASA,AAAY,UAAEC,CAAQ,CAAiC,EAC7E,MAAO,CAAA,EAAA,EAAA,GAAA,EAAA,EAAA,QAAA,CAAA,UAAGA,GACZ"}
