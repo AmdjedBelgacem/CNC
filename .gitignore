@@ -52,3 +52,11 @@ node_modules
 
 # Local service data (Meilisearch index files, etc.) — never commit
 .runtime/
+
+# Local agent/editor metadata and internal planning docs — machine-specific, not part of
+# the product, and they carried live credentials when committed by mistake.
+.workbuddy-ai/
+.freebuff/
+DEPLOYMENT.md
+DEVELOPMENT_PLAN.md
+LAUNCH_CHECKLIST.md
