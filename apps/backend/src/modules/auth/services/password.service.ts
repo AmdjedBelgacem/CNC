@@ -27,7 +27,10 @@ const SCRYPT = { N: 32768, r: 8, p: 1, keylen: 64, maxmem: 96 * 1024 * 1024 };
 /** argon2id, used when the native binding is available. Preferred. */
 let argon2: any = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // Optional native binding: a static `import` cannot be wrapped in try/catch, so this
+  // stays a guarded require. The rule that actually fires is no-require-imports (the
+  // old no-var-requires name no longer matched and failed lint).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   argon2 = require('argon2');
 } catch {
   argon2 = null;
