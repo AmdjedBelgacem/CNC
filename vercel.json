@@ -1,0 +1,37 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "apps/frontend",
+      "framework": "nextjs",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "backend",
+          "format": "url",
+          "env": "API_INTERNAL_URL"
+        }
+      ]
+    },
+    "backend": {
+      "root": "apps/backend",
+      "entrypoint": "dist/vercel-entry.js",
+      "installCommand": "pnpm install --filter @titan/backend...",
+      "buildCommand": "pnpm turbo build --filter=@titan/backend"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/auth/oauth/(.*)",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
+}

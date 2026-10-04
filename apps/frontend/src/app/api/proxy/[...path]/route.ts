@@ -3,7 +3,13 @@ import { cookies } from 'next/headers';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { LOCALE_COOKIE, coerceLocale, localeFromAcceptLanguage, type Locale } from '@/i18n/config';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+/**
+ * Server-side only. `API_INTERNAL_URL` is the Vercel service binding and points at the
+ * backend's *internal* URL, so this proxy never leaves the deployment. Falling back to
+ * `NEXT_PUBLIC_API_URL` keeps local development working (and any non-Vercel host where
+ * the backend is genuinely public).
+ */
+const API_BASE = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 

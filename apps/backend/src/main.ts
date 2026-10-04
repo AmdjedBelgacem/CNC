@@ -50,7 +50,14 @@ export function assertAuthSecret(env: NodeJS.ProcessEnv = process.env): void {
   }
 }
 
-async function bootstrap() {
+/**
+ * Builds the fully configured Nest application WITHOUT binding a port.
+ *
+ * Split from `bootstrap()` so a serverless runtime can obtain the app as a handler.
+ * `app.listen()` never returns a request handler — it blocks and binds — so a Vercel
+ * function must never go through this path. See `api/index.ts`.
+ */
+export async function createApp(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     /**
@@ -212,6 +219,12 @@ async function bootstrap() {
     console.log('[security] API docs disabled (set API_DOCS_ENABLED=true to expose)');
   }
 
+  return app;
+}
+
+/** Long-running server (local dev, Docker, any process manager). */
+async function bootstrap() {
+  const app = await createApp();
   const port = process.env.PORT || 4000;
   await app.listen(port, '0.0.0.0');
   console.log(`Server running on http://localhost:${port}`);
@@ -220,5 +233,5 @@ async function bootstrap() {
 // Only start the server when executed directly; importing this module (for the
 // security tests) must not bind a port.
 if (require.main === module) {
-  bootstrap();
+  void bootstrap();
 }

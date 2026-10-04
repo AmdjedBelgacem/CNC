@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+/** Server-side only: prefer the Vercel service binding over the public URL. */
+const API_BASE = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   try {
