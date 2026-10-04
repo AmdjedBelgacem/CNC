@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '../../config/config.service';
@@ -20,6 +20,9 @@ import { CookieService } from './services/cookie.service';
 import { RedisService } from './services/redis.service';
 import { ProfileController } from './profile.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { SupabaseTokenVerifier } from './supabase-token.verifier';
+import { SupabaseAuthClient } from './supabase-auth.client';
+import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -29,7 +32,10 @@ import { TenantScopeGuard } from './guards/tenant-scope.guard';
 import { OptionalAuthGuard } from './guards/optional-auth.guard';
 import { CsrfGuard } from './guards/csrf.guard';
 import { RbacModule } from '../rbac/rbac.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { SearchModule } from '../search/search.module';
 
+@Global()
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -41,6 +47,8 @@ import { RbacModule } from '../rbac/rbac.module';
       }),
     }),
     RbacModule,
+    forwardRef(() => NotificationsModule),
+    SearchModule,
   ],
   controllers: [AuthController, ProfileController],
   providers: [
@@ -60,6 +68,9 @@ import { RbacModule } from '../rbac/rbac.module';
     CookieService,
     RedisService,
     JwtStrategy,
+    SupabaseTokenVerifier,
+    SupabaseAuthClient,
+    SupabaseAuthGuard,
     GoogleStrategy,
     GithubStrategy,
     JwtAuthGuard,
@@ -70,6 +81,12 @@ import { RbacModule } from '../rbac/rbac.module';
     CsrfGuard,
   ],
   exports: [
+    // Exported so the JwtAuthGuard instances registered in other modules (admin
+    // controllers and their feature modules) can resolve the Supabase fallback.
+    // Without these, Supabase tokens work on auth routes but 401 on /admin/*.
+    SupabaseTokenVerifier,
+    SupabaseAuthClient,
+    SupabaseAuthGuard,
     AuthService,
     PasswordService,
     TokenService,
@@ -82,6 +99,7 @@ import { RbacModule } from '../rbac/rbac.module';
     CookieService,
     RedisService,
     UploadService,
+    UserPreferencesService,
     JwtAuthGuard,
     RolesGuard,
     PermissionsGuard,

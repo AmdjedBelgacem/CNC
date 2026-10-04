@@ -8,6 +8,7 @@ import { JsonInspectorSection } from '../node-inspector';
 import { BLOCK_INSPECTOR } from './fields';
 import type { InspectorGroup, InspectorFieldDef } from './types';
 import {
+  useInspectorText,
   ColorControl,
   FieldRow,
   IconControl,
@@ -25,6 +26,11 @@ type SelectedNode = {
   props: { id: string } & Record<string, unknown>;
 }; /** * Smart Contextual Inspector — adaptive, grouped property panels. * * Replaces Puck's default field form entirely while a node is selected. * Changes are applied through the same `replace` dispatch Puck itself uses * (`createOnChange`), so history, undo, and iframe updates all behave * identically to stock behaviour. */
 export function SmartInspector() {
+  // Every hook runs before any early return. This one used to sit below the two
+  // `if (!selected) return` / `if (!def) return` branches, so selecting a block
+  // added a hook and deselecting removed one — a rules-of-hooks violation, and on
+  // the short-circuit path the intl provider was never reached.
+  const groupText = useInspectorText();
   const selected = useBuilderPuck((s) => s.selectedItem) as unknown as SelectedNode | null;
   const getSelectorForId = useBuilderPuck((s) => s.getSelectorForId);
   const dispatch = useBuilderPuck((s) => s.dispatch);
@@ -59,7 +65,7 @@ if (!def) {
           {' '}
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
             {' '}
-            <Settings2 className="h-4 w-4" />{' '}
+            <Settings2 className="size-4" />{' '}
           </span>{' '}
           <p className="text-sm font-medium text-foreground">No properties for this block</p>{' '}
           <p className="max-w-[220px] text-xs leading-relaxed text-muted-foreground">
@@ -75,7 +81,7 @@ if (!def) {
   return (
     <div key={selected.props.id} className="flex min-h-0 flex-1 flex-col">
       {' '}
-      <InspectorHeader type={selected.type} label={def.label ?? selected.type} />{' '}
+      <InspectorHeader type={selected.type} label={groupText.label(undefined, def.label ?? selected.type)} />{' '}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         {' '}
         {def.groups.map((group) => (
@@ -98,8 +104,8 @@ export function EmptyInspectorState() {
       {' '}
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
         {' '}
-        <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />{' '}
-        <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+        <Settings2 className="size-3.5 text-muted-foreground" />{' '}
+        <span className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
           Inspector
         </span>{' '}
       </div>{' '}
@@ -107,7 +113,7 @@ export function EmptyInspectorState() {
         {' '}
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
           {' '}
-          <MousePointerClick className="h-5 w-5" />{' '}
+          <MousePointerClick className="size-5" />{' '}
         </span>{' '}
         <p className="text-sm font-bold text-foreground">Select a component</p>{' '}
         <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground">
@@ -124,7 +130,7 @@ function InspectorHeader({ type, label }: { type: string; label: string }) {
     <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
       {' '}
       <p className="truncate text-sm font-bold text-foreground">{label}</p>{' '}
-      <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase text-primary">
+      <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-2xs font-bold uppercase text-primary">
         {' '}
         {type}{' '}
       </span>{' '}
@@ -144,6 +150,7 @@ function InspectorGroupSection({
 }) {
   const [open, setOpen] = useState(group.id !== 'advanced');
   const Icon = group.icon;
+  const groupText = useInspectorText();
   const visible = group.fields.filter((field) => !field.showWhen || field.showWhen(props));
   if (visible.length === 0) return null;
   return (
@@ -153,14 +160,14 @@ function InspectorGroupSection({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-muted-foreground transition hover:bg-muted"
+        className="sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-3 py-2 text-left text-2xs font-bold uppercase tracking-wide text-muted-foreground transition hover:bg-muted"
       >
         {' '}
         <span className={cn('transition-transform duration-200', open ? 'rotate-0' : '-rotate-90')}>
           {' '}
-          <ChevronDown className="h-3.5 w-3.5" />{' '}
+          <ChevronDown className="size-3.5" />{' '}
         </span>{' '}
-        {Icon && <Icon className="h-3.5 w-3.5" />} {group.title}{' '}
+        {Icon && <Icon className="size-3.5" />} {groupText.group(group.titleKey, group.title)}{' '}
       </button>{' '}
       <div
         className={cn(
@@ -198,15 +205,24 @@ function FieldControl({
 }) {
   const dirty = value !== defaultValue;
   const reset = () => onChange(defaultValue);
-  const control = renderControl(field, value, onChange);
+  const fieldText = useInspectorText();
+  const control = renderControl(fieldText, field, value, onChange);
   return (
-    <FieldRow label={field.label} hint={field.hint} dirty={dirty} onReset={reset}>
+    <FieldRow
+      label={field.label}
+      labelKey={field.labelKey}
+      hint={field.hint}
+      hintKey={field.hintKey}
+      dirty={dirty}
+      onReset={reset}
+    >
       {' '}
       {control}{' '}
     </FieldRow>
   );
 }
 function renderControl(
+  fieldText: ReturnType<typeof useInspectorText>,
   field: InspectorFieldDef<Record<string, unknown>>,
   value: unknown,
   onChange: (value: unknown) => void,
@@ -217,7 +233,7 @@ function renderControl(
         <DebouncedTextControl
           value={String(value ?? '')}
           onChange={onChange}
-          placeholder={field.placeholder}
+          placeholder={fieldText.placeholder(field.placeholderKey, field.placeholder)}
           multiline={false}
         />
       );
@@ -226,7 +242,7 @@ function renderControl(
         <DebouncedTextControl
           value={String(value ?? '')}
           onChange={onChange}
-          placeholder={field.placeholder}
+          placeholder={fieldText.placeholder(field.placeholderKey, field.placeholder)}
           multiline
         />
       );

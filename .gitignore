@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .next/
+.next*/
 .turbo/
 *.tsbuildinfo
 .env
@@ -49,3 +50,5 @@ Thumbs.db
 .env.example
 node_modules
 
+# Local service data (Meilisearch index files, etc.) — never commit
+.runtime/

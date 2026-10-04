@@ -30,7 +30,11 @@ export function ProductCarousel({ title, tags, endpoint }: ProductCarouselProps)
       {' '}
       <div className="container mx-auto px-4">
         {' '}
-        {title && <h2 className="text-2xl font-bold mb-8">{title}</h2>}{' '}
+        {title && (
+          <h2 className="mb-8 font-display text-2xl font-semibold tracking-tight text-foreground">
+            {title}
+          </h2>
+        )}{' '}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {' '}
           {loading

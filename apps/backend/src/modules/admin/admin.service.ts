@@ -305,17 +305,19 @@ export class AdminService {
   async getTopCourses(tenantId: string, range: string, limit = 8) {
     try {
       const { since } = this.rangeFromParam(range);
+      // `slug` is selected so a ranking row can link straight to the course
+      // instead of dropping the user on the list page.
       const rows: any = await this.drizzle.db.execute(sql`
-      SELECT c.id, c.title, COUNT(e.id)::int AS enrollments
+      SELECT c.id, c.title, c.slug, COUNT(e.id)::int AS enrollments
       FROM courses c
       LEFT JOIN enrollments e ON e.course_id = c.id AND e.tenant_id = ${tenantId} AND e.started_at >= ${since.toISOString()}::timestamptz
       WHERE c.tenant_id = ${tenantId}
-      GROUP BY c.id, c.title
+      GROUP BY c.id, c.title, c.slug
       ORDER BY enrollments DESC
       LIMIT ${Number(limit)}
     ` as any);
       const list: any[] = Array.isArray(rows) ? rows : (rows as any).rows ?? [];
-      return list as { id: string; title: string; enrollments: number }[];
+      return list as { id: string; title: string; slug: string; enrollments: number }[];
     } catch {
       return [];
     }
@@ -587,19 +589,43 @@ export class AdminService {
       .from(tenants)
       .where(eq(tenants.id, tenantId));
     if (!existing) throw new NotFoundException('Tenant not found');
+
+    const patch: Record<string, unknown> = {
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      domain: data.domain,
+      logoUrl: data.logoUrl,
+      faviconUrl: data.faviconUrl,
+      primaryColor: data.primaryColor,
+      secondaryColor: data.secondaryColor,
+      fontFamily: data.fontFamily,
+    };
+
+    // Analytics live on settings.analytics — merge only that subtree (tenant-scoped).
+    // Empty string clears the vendor (disable); absent key leaves previous value.
+    if (data.analytics !== undefined) {
+      const prevSettings = (existing.settings ?? {}) as Record<string, unknown>;
+      const prevAnalytics = (prevSettings.analytics ?? {}) as Record<string, unknown>;
+      const next = (data.analytics ?? {}) as Record<string, unknown>;
+      const analytics: Record<string, string> = {};
+      for (const [k, v] of Object.entries(prevAnalytics)) {
+        if (typeof v === 'string') analytics[k] = v;
+      }
+      if ('gaMeasurementId' in next) {
+        analytics.gaMeasurementId =
+          typeof next.gaMeasurementId === 'string' ? next.gaMeasurementId.trim() : '';
+      }
+      if ('snapchatPixelId' in next) {
+        analytics.snapchatPixelId =
+          typeof next.snapchatPixelId === 'string' ? next.snapchatPixelId.trim() : '';
+      }
+      patch.settings = { ...prevSettings, analytics };
+    }
+
     const [updated] = await this.drizzle.db
       .update(tenants)
-      .set({
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        domain: data.domain,
-        logoUrl: data.logoUrl,
-        faviconUrl: data.faviconUrl,
-        primaryColor: data.primaryColor,
-        secondaryColor: data.secondaryColor,
-        fontFamily: data.fontFamily,
-      })
+      .set(patch as any)
       .where(eq(tenants.id, tenantId))
       .returning();
     return updated;
@@ -669,12 +695,49 @@ export class AdminService {
 
     const where = and(...conditions);
 
-    const [rows, totalRes] = await Promise.all([
+    // Status facets are computed against the same filters *except* the status
+    // filter itself, so each tab can show how many learners it would yield.
+    // Without this the admin UI can only count the current page, which makes the
+    // headline numbers wrong whenever the list spans more than one page.
+    const facetConditions = [eq(users.tenantId, tenantId), eq(users.role, 'learner')];
+    const facetSearch = this.buildSearchCondition(search);
+    if (facetSearch) facetConditions.push(facetSearch);
+    if (from) facetConditions.push(gte(users.createdAt, new Date(from)));
+    if (to) facetConditions.push(lte(users.createdAt, new Date(`${to}T23:59:59.999Z`)));
+    const facetWhere = and(...facetConditions);
+
+    const [rows, totalRes, facetRes] = await Promise.all([
       this.drizzle.db.select().from(users).where(where).orderBy(desc(users.createdAt)).limit(l).offset(offset),
       this.drizzle.db.select({ count: count() }).from(users).where(where).then((r) => r[0]),
+      this.drizzle.db
+        .select({ status: users.accountStatus, count: count() })
+        .from(users)
+        .where(facetWhere)
+        .groupBy(users.accountStatus)
+        .then((r) => r as { status: string | null; count: number }[]),
     ]);
 
-    return { items: rows.map(u => this.sanitizeUser(u)), total: totalRes?.count ?? 0, page: p, limit: l };
+    const facets: Record<string, number> = {
+      active: 0,
+      suspended: 0,
+      pending_verification: 0,
+      deleted: 0,
+    };
+    let facetTotal = 0;
+    for (const row of facetRes) {
+      const key = row.status ?? 'active';
+      facets[key] = (facets[key] ?? 0) + Number(row.count ?? 0);
+      facetTotal += Number(row.count ?? 0);
+    }
+
+    return {
+      items: rows.map((u) => this.sanitizeUser(u)),
+      total: totalRes?.count ?? 0,
+      page: p,
+      limit: l,
+      facets,
+      facetTotal,
+    };
   }
 
   // User purchases (orders)

@@ -167,14 +167,19 @@ export default function EditProfilePage() {
     if (!pfForm.title.trim()) return;
     setPfSaving(true);
     try {
-      const body: any = { title: pfForm.title };
-      if (pfForm.description) body.description = pfForm.description;
-      if (pfForm.projectUrl) body.projectUrl = pfForm.projectUrl;
-      if (pfForm.tags)
-        body.tags = pfForm.tags
+      // Always send these keys on edit, including empty values. The backend only writes
+      // keys that are `!== undefined`, so omitting a cleared field left the old value
+      // in the database and the user could never remove a description or URL.
+      const body: Record<string, unknown> = {
+        title: pfForm.title,
+        description: pfForm.description,
+        projectUrl: pfForm.projectUrl,
+        tags: pfForm.tags
           .split(',')
           .map((t: string) => t.trim())
-          .filter(Boolean);
+          .filter(Boolean),
+      };
+      // image is intentionally omitted when empty: sending '' would wipe the stored file.
       if (pfForm.image) body.image = pfForm.image;
       const url = editingPortfolioId
         ? `/api/proxy/portfolio/${editingPortfolioId}`
@@ -185,11 +190,16 @@ export default function EditProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        throw new Error(
+          typeof detail?.message === 'string' ? detail.message : 'Failed to save portfolio item',
+        );
+      }
       await loadPortfolio();
       resetPfForm();
-    } catch {
-      setError('Failed to save portfolio item');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save portfolio item');
     } finally {
       setPfSaving(false);
     }
@@ -246,7 +256,7 @@ export default function EditProfilePage() {
         {' '}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {' '}
-          <User className="h-5 w-5" />{' '}
+          <User className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -257,13 +267,13 @@ export default function EditProfilePage() {
         </div>{' '}
       </div>{' '}
       {error && (
-        <div className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-500/10 dark:text-red-300">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {error}
+        <div className="flex gap-3 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive dark:border-red-900/30 dark:bg-destructive/10 dark:text-red-300">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" /> {error}
         </div>
       )}{' '}
       {saved && (
-        <div className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-          <Check className="h-4 w-4 shrink-0 mt-0.5" /> Profile updated successfully.
+        <div className="flex gap-3 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success dark:border-success/30 dark:bg-success/10 dark:text-success">
+          <Check className="size-4 shrink-0 mt-0.5" /> Profile updated successfully.
         </div>
       )}{' '}
       {/* Cover & Avatar */}{' '}
@@ -274,18 +284,18 @@ export default function EditProfilePage() {
           {coverPreview ? (
             <img src={coverPreview} alt="Cover" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500/10 via-indigo-500/10 to-primary/10">
+            <div className="flex h-full w-full items-center justify-center bg-primary/10">
               {' '}
-              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />{' '}
+              <ImageIcon className="size-8 text-muted-foreground/40" />{' '}
             </div>
           )}{' '}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />{' '}
           <button
             onClick={() => coverInputRef.current?.click()}
-            className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium shadow-md hover:bg-card transition"
+            className="absolute bottom-3 end-3 flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-card transition"
           >
             {' '}
-            <Camera className="h-3.5 w-3.5" /> Change cover{' '}
+            <Camera className="size-3.5" /> Change cover{' '}
           </button>{' '}
           <input
             ref={coverInputRef}
@@ -294,24 +304,24 @@ export default function EditProfilePage() {
             className="hidden"
             onChange={handleCoverChange}
           />{' '}
-          <div className="absolute -bottom-10 left-6 flex items-end gap-3">
+          <div className="absolute -bottom-10 start-6 flex items-end gap-3">
             {' '}
             <div className="relative">
               {' '}
               <Avatar className="h-20 w-20 border-4 border-card shadow-lg">
                 {' '}
                 <AvatarImage src={avatarPreview || undefined} />{' '}
-                <AvatarFallback className="bg-gradient-to-br from-violet-600 to-indigo-600 text-lg font-bold text-white">
+                <AvatarFallback className="bg-primary text-lg font-bold text-white">
                   {user?.name?.charAt(0) || '?'}
                 </AvatarFallback>{' '}
               </Avatar>{' '}
               <button
                 onClick={() => avatarInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow-md ring-2 ring-card hover:bg-primary/90 transition"
+                className="absolute -bottom-1 -end-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-2 ring-card hover:bg-primary/90 transition"
                 disabled={uploading}
               >
                 {' '}
-                <Camera className="h-3.5 w-3.5" />{' '}
+                <Camera className="size-3.5" />{' '}
               </button>{' '}
               <input
                 ref={avatarInputRef}
@@ -337,8 +347,8 @@ export default function EditProfilePage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <FileText className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <FileText className="size-3.5" />
             </span>{' '}
             Profile Information
           </h2>{' '}
@@ -367,13 +377,13 @@ export default function EditProfilePage() {
                   Username
                 </label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                     @
                   </span>
                   <Input
                     value={form.username}
                     onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    className="h-10 rounded-xl bg-muted/20 pl-7"
+                    className="h-10 rounded-xl bg-muted/20 ps-7"
                   />
                 </div>
               </div>{' '}
@@ -403,7 +413,7 @@ export default function EditProfilePage() {
             </div>{' '}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <MapPin className="h-3 w-3" /> Location
+                <MapPin className="size-3.5" /> Location
               </label>
               <Input
                 value={form.location}
@@ -432,8 +442,8 @@ export default function EditProfilePage() {
           <div>
             {' '}
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-                <Briefcase className="h-3.5 w-3.5" />
+              <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+                <Briefcase className="size-3.5" />
               </span>{' '}
               Portfolio
             </h2>{' '}
@@ -450,7 +460,7 @@ export default function EditProfilePage() {
             }}
             className="h-8 rounded-full gap-1.5"
           >
-            <Plus className="h-3.5 w-3.5" /> Add
+            <Plus className="size-3.5" /> Add
           </Button>{' '}
         </div>{' '}
         <div className="p-6 space-y-4">
@@ -490,12 +500,12 @@ export default function EditProfilePage() {
                     Project URL
                   </label>
                   <div className="relative">
-                    <Link2 className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Link2 className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       value={pfForm.projectUrl}
                       onChange={(e) => setPfForm({ ...pfForm, projectUrl: e.target.value })}
                       placeholder="https://..."
-                      className="h-10 rounded-xl bg-card pl-8"
+                      className="h-10 rounded-xl bg-card ps-8"
                     />
                   </div>
                 </div>{' '}
@@ -525,14 +535,14 @@ export default function EditProfilePage() {
                     <button
                       type="button"
                       onClick={() => setPfForm({ ...pfForm, image: '' })}
-                      className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-white"
+                      className="absolute -end-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3.5" />
                     </button>
                   </div>
                 ) : (
                   <label className="flex h-24 w-36 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed bg-muted/20 hover:bg-muted/40 transition">
-                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                    <ImageIcon className="size-5 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Upload image</span>
                     <input
                       type="file"
@@ -572,7 +582,7 @@ export default function EditProfilePage() {
             <div className="rounded-2xl border-2 border-dashed bg-muted/10 px-8 py-12 text-center">
               {' '}
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                <ImageIcon className="size-6 text-muted-foreground" />
               </div>{' '}
               <p className="mt-3 text-sm font-medium">No portfolio items yet</p>{' '}
               <p className="text-xs text-muted-foreground">
@@ -590,7 +600,7 @@ export default function EditProfilePage() {
                   {' '}
                   <div className="flex items-start justify-between gap-2">
                     {' '}
-                    <h3 className="pr-2 text-sm font-semibold leading-tight">{item.title}</h3>{' '}
+                    <h3 className="pe-2 text-sm font-semibold leading-tight">{item.title}</h3>{' '}
                     <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
                       {' '}
                       <button
@@ -599,7 +609,7 @@ export default function EditProfilePage() {
                         disabled={idx === 0}
                         className="rounded-lg p-1 hover:bg-muted disabled:opacity-30"
                       >
-                        <GripVertical className="h-3.5 w-3.5" />
+                        <GripVertical className="size-3.5" />
                       </button>{' '}
                       <button
                         onClick={() => handleEditPortfolio(item)}
@@ -611,7 +621,7 @@ export default function EditProfilePage() {
                         onClick={() => handleDeletePortfolio(item.id)}
                         className="rounded-lg p-1 text-destructive hover:bg-destructive/10"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="size-3.5" />
                       </button>{' '}
                     </div>{' '}
                   </div>{' '}
@@ -630,7 +640,7 @@ export default function EditProfilePage() {
                   {item.tags && item.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {item.tags.filter(Boolean).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="rounded-full text-[10px]">
+                        <Badge key={tag} variant="secondary" className="rounded-full text-2xs">
                           {tag}
                         </Badge>
                       ))}
@@ -643,7 +653,7 @@ export default function EditProfilePage() {
                       rel="noopener noreferrer"
                       className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                     >
-                      <ExternalLink className="h-3 w-3" /> View Project
+                      <ExternalLink className="size-3.5" /> View Project
                     </a>
                   )}{' '}
                 </div>

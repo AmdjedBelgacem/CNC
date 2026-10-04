@@ -5,24 +5,25 @@ import type { BlockComponentProps } from './index'; /** Gradient banner over a b
 export function CtaBannerBlock({ props, puck }: BlockComponentProps<CtaBannerProps>) {
   const {
     imageUrl,
-    overlayColor = '#004ac6',
+    overlayColor = '#C2410C',
     overlayOpacity = 90,
     radialVeil = true,
     gap = 64,
-    radius = 'rounded-[3rem]',
+    radius = 'rounded-3xl',
     copyWidth = 'lg:w-3/5',
     sideWidth = 'lg:w-2/5',
     className,
+    sectionBg = '',
   } = props; // Use responsive padding that works on mobile — ignore any stored `padding` prop that may be `p-12 md:p-24`
 const padding = 'p-6 sm:p-8 md:p-12 lg:p-16';
   const rgb = /^#([0-9a-fA-F]{6})$/.exec(overlayColor);
   const overlayRgb = rgb?.[1]
     ? `${parseInt(rgb[1].slice(0, 2), 16)},${parseInt(rgb[1].slice(2, 4), 16)},${parseInt(rgb[1].slice(4, 6), 16)}`
-    : '0,74,198';
+    : '194,65,12';
   const gradient = `linear-gradient(rgba(${overlayRgb},${overlayOpacity / 100}),rgba(${overlayRgb},${overlayOpacity / 100}))${imageUrl ? `,url('${imageUrl}')` : ''}`;
   return (
     <section
-      className={cn('px-margin-mobile md:px-margin-desktop', className)}
+      className={cn('px-margin-mobile md:px-margin-desktop', sectionBg, className)}
       style={layoutStyle(props)}
     >
       {' '}

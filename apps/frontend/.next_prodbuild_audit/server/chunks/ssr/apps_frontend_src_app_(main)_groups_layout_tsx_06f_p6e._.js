@@ -1,3 +1,0 @@
-module.exports=[94720,a=>{"use strict";var b=a.i(70613);a.s(["default",0,function({children:a}){return(0,b.jsx)(b.Fragment,{children:a})},"metadata",0,{title:"Study Groups | TITANS of Manufacturing",description:"Learn together. Connect with CNC machinists in your area for hands-on study sessions."}])},66517,a=>{a.n(a.i(94720))}];
-
-//# sourceMappingURL=apps_frontend_src_app_%28main%29_groups_layout_tsx_06f_p6e._.js.map

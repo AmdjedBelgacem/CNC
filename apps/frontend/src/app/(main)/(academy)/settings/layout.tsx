@@ -90,25 +90,25 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
   const activeSection = sidebarSections.flatMap((s) => s.items).find((i) => isActive(i.href));
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#050a18]">
+    <div className="min-h-screen bg-background">
       {' '}
       {/* Top bar — floating, same width as content, stays under global navbar */}{' '}
       <div className="sticky top-[76px] z-20 mx-auto max-w-[1600px] px-4 sm:px-6">
         {' '}
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
           {' '}
           <Link
             href="/account"
             className="hidden items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-card hover:text-foreground hover:shadow-sm sm:flex"
           >
             {' '}
-            <ChevronLeft className="h-3.5 w-3.5" /> Dashboard{' '}
+            <ChevronLeft className="flip-rtl size-3.5" /> Dashboard{' '}
           </Link>{' '}
           <div className="flex items-center gap-2.5">
             {' '}
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md">
+            <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white shadow-md">
               {' '}
-              <Settings className="h-4 w-4" />{' '}
+              <Settings className="size-4" />{' '}
             </div>{' '}
             <div>
               {' '}
@@ -122,10 +122,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           </div>{' '}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-muted lg:hidden"
+            className="ms-auto flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-muted lg:hidden"
           >
             {' '}
-            <Menu className="h-4 w-4" />{' '}
+            <Menu className="size-4" />{' '}
           </button>{' '}
         </div>{' '}
       </div>{' '}
@@ -143,7 +143,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 {sidebarSections.map((section) => (
                   <div key={section.label}>
                     {' '}
-                    <p className="mb-2 flex items-center gap-2 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+                    <p className="mb-2 flex items-center gap-2 px-2 text-2xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
                       {' '}
                       <span className="h-px w-3 bg-border" /> {section.label}{' '}
                     </p>{' '}
@@ -159,17 +159,17 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                           >
                             {' '}
                             <span
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${active ? 'bg-primary text-white shadow-sm' : 'bg-muted text-muted-foreground group-hover:bg-card group-hover:text-foreground group-hover:shadow-sm'}`}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${active ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-muted-foreground group-hover:bg-card group-hover:text-foreground group-hover:shadow-sm'}`}
                             >
                               {' '}
-                              <item.icon className="h-3.5 w-3.5" />{' '}
+                              <item.icon className="size-3.5" />{' '}
                             </span>{' '}
                             <span className="min-w-0 flex-1">
                               {' '}
                               <span className="block truncate text-sm font-medium leading-none">
                                 {item.label}
                               </span>{' '}
-                              <span className="truncate text-[11px] leading-none text-muted-foreground">
+                              <span className="truncate text-2xs leading-none text-muted-foreground">
                                 {item.desc}
                               </span>{' '}
                             </span>{' '}
@@ -181,11 +181,11 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 ))}{' '}
               </nav>{' '}
             </div>{' '}
-            <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-violet-600 to-indigo-600 p-4 text-white shadow-lg">
+            <div className="rounded-2xl border border-primary/10 bg-primary p-4 text-white shadow-lg">
               {' '}
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-card">
                 {' '}
-                <Sparkles className="h-4 w-4" />{' '}
+                <Sparkles className="size-4" />{' '}
               </div>{' '}
               <p className="mt-3 text-sm font-semibold leading-tight">Need help?</p>{' '}
               <p className="mt-1 text-xs leading-relaxed text-white/70">
@@ -193,7 +193,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               </p>{' '}
               <Link
                 href="/feed"
-                className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-violet-600 transition hover:bg-white"
+                className="mt-3 inline-flex rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-card"
               >
                 {' '}
                 Visit help center{' '}
@@ -204,25 +204,25 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         {/* Mobile overlay */}{' '}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-gray-900 lg:hidden"
+            className="fixed inset-0 z-40 bg-overlay lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}{' '}
         {/* Mobile drawer */}{' '}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-[300px] flex-col border-r bg-card shadow-sm transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`fixed inset-y-0 start-0 z-50 flex w-[300px] flex-col border-r bg-card shadow-sm transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           {' '}
           <div className="flex items-center justify-between border-b px-4 py-3">
             {' '}
             <span className="flex items-center gap-2 text-sm font-semibold">
-              <Settings className="h-4 w-4 text-primary" /> Settings
+              <Settings className="size-4 text-primary" /> Settings
             </span>{' '}
             <button
               onClick={() => setSidebarOpen(false)}
               className="rounded-full p-2 hover:bg-muted"
             >
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </button>{' '}
           </div>{' '}
           <nav className="flex-1 space-y-5 overflow-auto p-4">
@@ -230,7 +230,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             {sidebarSections.map((section) => (
               <div key={section.label}>
                 {' '}
-                <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+                <p className="mb-2 px-2 text-2xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
                   {section.label}
                 </p>{' '}
                 <div className="space-y-1">
@@ -245,7 +245,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                         className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active ? 'bg-primary/10 text-primary ring-1 ring-primary/15' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
                       >
                         {' '}
-                        <item.icon className="h-4 w-4" /> {item.label}{' '}
+                        <item.icon className="size-4" /> {item.label}{' '}
                       </Link>
                     );
                   })}{' '}

@@ -66,6 +66,10 @@ export const headingPropsSchema = layoutPropsSchema.extend({
   tracking: z.enum(['none', '0.025em', '0.05em', '0.1em', '0.15em', '0.2em']).optional(),
   /** Line-height override. */
   leading: z.enum(['none', 'tight', 'snug', 'normal', 'relaxed', 'loose']).optional(),
+  /** Inline accent phrase rendered after `text` in italic primary (mockup hero headline). */
+  accentText: z.string().max(120).optional(),
+  /** Plain text rendered after the accent phrase. */
+  suffixText: z.string().max(300).optional(),
 });
 export type HeadingProps = z.infer<typeof headingPropsSchema>;
 
@@ -175,6 +179,8 @@ export const badgePropsSchema = layoutPropsSchema.extend({
   icon: iconKeySchema.optional(),
   /** Icon size in px (secondary variant only). */
   iconSize: z.number().int().min(4).max(64).optional(),
+  /** Pulsing status dot before the label (live/synced treatments). */
+  pulse: z.boolean().optional(),
 });
 export type BadgeProps = z.infer<typeof badgePropsSchema>;
 
@@ -444,6 +450,8 @@ export const partnerLogosPropsSchema = layoutPropsSchema.extend({
   logoGap: z.enum(['gap-8 md:gap-16', 'gap-12 md:gap-24', 'gap-16 md:gap-32']).optional(),
   /** Space below the header zone. */
   headerMarginBottom: z.number().int().min(0).max(320).optional(),
+  /** wall = logos inside a rounded card; strip = bare wordmark grid (mockup OEM row). */
+  frame: z.enum(['wall', 'strip']).optional(),
 });
 export type PartnerLogosProps = z.infer<typeof partnerLogosPropsSchema>;
 
@@ -454,7 +462,7 @@ export const featureTilesPropsSchema = layoutPropsSchema.extend({
   imageUrl: z.string().max(1000).optional(),
   imageAlt: z.string().max(300).optional(),
   /** Section background. */
-  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent']).optional(),
+  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
   /** Gap between the image and content columns (px). */
   gap: z.number().int().min(0).max(320).optional(),
   /** Image frame border width (px). */
@@ -494,6 +502,7 @@ export type AcademyGridProps = z.infer<typeof academyGridPropsSchema>;
 export const academyGridDefaults: AcademyGridProps = { viewAllHref: '/courses', headerMarginBottom: 64, cardsColumns: 'md:grid-cols-3', cardsGap: 'gap-8', paddingTop: 64, paddingBottom: 64 };
 
 export const ctaBannerPropsSchema = layoutPropsSchema.extend({
+  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
   id: z.string().optional(),
   imageUrl: z.string().max(1000).optional(),
   /** Overlay color (hex). */
@@ -518,12 +527,12 @@ export type CtaBannerProps = z.infer<typeof ctaBannerPropsSchema>;
 export const ctaBannerDefaults: CtaBannerProps = {
   imageUrl:
     '',
-  overlayColor: '#5b21b6',
+  overlayColor: '#C2410C',
   overlayOpacity: 90,
   radialVeil: true,
   padding: 'p-12 md:p-24',
   gap: 64,
-  radius: 'rounded-[3rem]',
+  radius: 'rounded-3xl',
   copyWidth: 'lg:w-3/5',
   sideWidth: 'lg:w-2/5',
   paddingTop: 96,
@@ -531,6 +540,7 @@ export const ctaBannerDefaults: CtaBannerProps = {
 };
 
 export const faqPropsSchema = layoutPropsSchema.extend({
+  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
   id: z.string().optional(),
   /** Inner column max width (px). */
   maxWidth: z.number().int().min(320).max(2560).optional(),
@@ -559,6 +569,431 @@ export const footerPropsSchema = layoutPropsSchema.extend({
 export type FooterProps = z.infer<typeof footerPropsSchema>;
 
 export const footerDefaults: FooterProps = { gridGap: 'gap-12', columnsSm: 'sm:grid-cols-2', columnsLg: 'md:grid-cols-4', bottomGap: 'gap-8', paddingTop: 96, paddingBottom: 48 };
+
+
+// ------------------------------------------------------------------
+// Machinist Pro landing sections (asymmetric hero console, program
+// cards, digital-twin terminal, testimonials, email CTA band)
+// ------------------------------------------------------------------
+
+/** One axis readout cell in the hero console's kinematic drawer. */
+export const simAxisSchema = z.object({
+  label: z.string().max(24),
+  value: z.string().max(40),
+  /** accent = highlighted rotary axes (B/C) in the mockup. */
+  tone: z.enum(['normal', 'accent']).optional(),
+});
+export type SimAxis = z.infer<typeof simAxisSchema>;
+
+export const heroConsolePropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  imageUrl: z.string().max(1000).optional(),
+  imageAlt: z.string().max(300).optional(),
+  /** Console header: simulator file name + sync pill. */
+  fileName: z.string().max(120).optional(),
+  syncLabel: z.string().max(60).optional(),
+  /** Telemetry badges (top-left). */
+  feedLabel: z.string().max(24).optional(),
+  feedValue: z.string().max(60).optional(),
+  feedTag: z.string().max(60).optional(),
+  spindleLabel: z.string().max(24).optional(),
+  spindleValue: z.string().max(60).optional(),
+  spindleTag: z.string().max(60).optional(),
+  /** Safety status card (top-right). */
+  auditTitle: z.string().max(60).optional(),
+  auditValue: z.string().max(80).optional(),
+  /** Kinematic drawer (bottom). */
+  axesTitle: z.string().max(80).optional(),
+  vibration: z.string().max(80).optional(),
+  axes: z.array(simAxisSchema).max(8).optional(),
+  /** Mode selector bar under the viewport (first entry renders active). */
+  modes: z.array(z.object({ label: z.string().max(60) })).max(6).optional(),
+  controllerLabel: z.string().max(80).optional(),
+  /** Floating metric badge overlapping the card corner. */
+  floatIcon: iconKeySchema.optional(),
+  floatLabel: z.string().max(80).optional(),
+  floatValue: z.string().max(40).optional(),
+  floatTag: z.string().max(40).optional(),
+});
+export type HeroConsoleProps = z.infer<typeof heroConsolePropsSchema>;
+
+export const heroConsoleDefaults: HeroConsoleProps = {
+  imageUrl: '',
+  imageAlt: '5-axis CNC machining simulation',
+  fileName: 'SIM_CELL_5X.cnc',
+  syncLabel: 'SYNCED: 60 FPS',
+  feedLabel: 'FEED:',
+  feedValue: '4,200 mm/min',
+  feedTag: 'G01 SMOOTH',
+  spindleLabel: 'SPINDLE:',
+  spindleValue: '18,500 RPM',
+  spindleTag: '82% TORQUE',
+  auditTitle: 'Collision Audit',
+  auditValue: '100% CLEAR (G00 SAFE)',
+  axesTitle: 'KINEMATIC AXES [RTCP ACTIVE]',
+  vibration: 'Vibration FFT: 0.18 mm/s²',
+  axes: [
+    { label: 'X', value: '+142.308' },
+    { label: 'Y', value: '-84.119' },
+    { label: 'Z', value: '+12.004' },
+    { label: 'B-TILT', value: '-22.45°', tone: 'accent' },
+    { label: 'C-ROT', value: '+180.00°', tone: 'accent' },
+  ],
+  modes: [{ label: 'Iso View' }, { label: 'Tool Vector Overlay' }, { label: 'Cusp Height Sim' }],
+  controllerLabel: 'Siemens Sinumerik 840D SL',
+  floatIcon: 'speed',
+  floatLabel: 'Cycle Time Reduction',
+  floatValue: '-34.8%',
+  floatTag: 'Optimized',
+};
+
+/** A content-managed course card (image, level pill, tags, instructor row). */
+export const programCardPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  imageUrl: z.string().max(1000).optional(),
+  imageAlt: z.string().max(300).optional(),
+  /** Level pill copy + tone (top-left of the media). */
+  level: z.string().max(60).optional(),
+  levelTone: z.enum(['primary', 'secondary', 'accent']).optional(),
+  /** Dark glass duration chip (bottom-right of the media). */
+  duration: z.string().max(60).optional(),
+  /** Small meta row above the title (icon + label). */
+  metaIcon: iconKeySchema.optional(),
+  metaLabel: z.string().max(80).optional(),
+  title: z.string().max(160).default('Program title'),
+  description: z.string().max(600).optional(),
+  /** Comma-separated tool/controller tags rendered as mono chips. */
+  tags: z.string().max(300).optional(),
+  instructorInitials: z.string().max(6).optional(),
+  instructorName: z.string().max(80).optional(),
+  ctaLabel: z.string().max(60).optional(),
+  href: z.string().max(600).optional(),
+});
+export type ProgramCardProps = z.infer<typeof programCardPropsSchema>;
+
+export const programCardDefaults: ProgramCardProps = {
+  level: 'EXPERT TIER',
+  levelTone: 'primary',
+  duration: '24 Modules · 120 Hrs',
+  metaIcon: 'radar',
+  metaLabel: 'Live Kinematic Collision Sim',
+  title: 'Program title',
+  description: '',
+  tags: '',
+  instructorInitials: 'MP',
+  instructorName: 'Program Lead',
+  ctaLabel: 'View Syllabus',
+  href: '#',
+};
+
+export const programCardsPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  /** Space below the header zone. */
+  headerMarginBottom: z.number().int().min(0).max(320).optional(),
+  /** Card columns on lg+. */
+  columnsLg: z.enum(['lg:grid-cols-2', 'lg:grid-cols-3']).optional(),
+  /** Gap between cards. */
+  cardsGap: z.enum(['gap-6', 'gap-8', 'gap-10']).optional(),
+});
+export type ProgramCardsProps = z.infer<typeof programCardsPropsSchema>;
+
+export const programCardsDefaults: ProgramCardsProps = { headerMarginBottom: 64, columnsLg: 'lg:grid-cols-3', cardsGap: 'gap-8', paddingTop: 96, paddingBottom: 96 };
+
+/** One G-code line in the digital-twin terminal. */
+export const twinCodeLineSchema = z.object({
+  text: z.string().max(200),
+  tone: z.enum(['comment', 'code', 'highlight', 'ok']).optional(),
+});
+export type TwinCodeLine = z.infer<typeof twinCodeLineSchema>;
+
+/** One readout cell in the terminal's control dashboard. */
+export const twinReadoutSchema = z.object({
+  label: z.string().max(40),
+  value: z.string().max(60),
+  tone: z.enum(['success', 'normal', 'accent', 'primary']).optional(),
+});
+export type TwinReadout = z.infer<typeof twinReadoutSchema>;
+
+export const twinSectionPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
+  /** Terminal header. */
+  fileName: z.string().max(120).optional(),
+  statusLabel: z.string().max(60).optional(),
+  /** Syntax-highlighted code lines. */
+  codeLines: z.array(twinCodeLineSchema).max(24).optional(),
+  /** Bottom control dashboard cells. */
+  readouts: z.array(twinReadoutSchema).max(8).optional(),
+});
+export type TwinSectionProps = z.infer<typeof twinSectionPropsSchema>;
+
+export const twinSectionDefaults: TwinSectionProps = {
+  sectionBg: 'bg-surface-container-low',
+  fileName: 'TERMINAL_EXEC // PROGRAM.NC',
+  statusLabel: 'SPINDLE ENGAGED',
+  codeLines: [],
+  readouts: [],
+  paddingTop: 80,
+  paddingBottom: 80,
+};
+
+export const testimonialCardPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  quote: z.string().max(1200).default('Testimonial quote'),
+  name: z.string().max(80).default('Name'),
+  role: z.string().max(120).optional(),
+  avatarUrl: z.string().max(1000).optional(),
+  /** Star rating (0-5). */
+  rating: z.number().int().min(0).max(5).optional(),
+});
+export type TestimonialCardProps = z.infer<typeof testimonialCardPropsSchema>;
+
+export const testimonialCardDefaults: TestimonialCardProps = {
+  quote: 'Testimonial quote',
+  name: 'Name',
+  role: '',
+  rating: 5,
+};
+
+export const testimonialsPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  /** Space below the header zone. */
+  headerMarginBottom: z.number().int().min(0).max(320).optional(),
+  /** Card columns on md+. */
+  columnsMd: z.enum(['md:grid-cols-2', 'md:grid-cols-3']).optional(),
+  /** Gap between cards. */
+  cardsGap: z.enum(['gap-6', 'gap-8', 'gap-10']).optional(),
+});
+export type TestimonialsProps = z.infer<typeof testimonialsPropsSchema>;
+
+export const testimonialsDefaults: TestimonialsProps = { headerMarginBottom: 64, columnsMd: 'md:grid-cols-2', cardsGap: 'gap-8', paddingTop: 96, paddingBottom: 96 };
+
+/** Gradient email-capture band (mockup final CTA). */
+export const ctaSignupPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  pill: z.string().max(80).optional(),
+  title: z.string().max(200).default('Scale Your Shop Floor Skills'),
+  subtitle: z.string().max(400).optional(),
+  placeholder: z.string().max(80).optional(),
+  buttonLabel: z.string().max(60).optional(),
+  /** Fine print under the form. */
+  note: z.string().max(200).optional(),
+  /** Where the email form routes (email appended as ?email=). */
+  formAction: z.string().max(600).optional(),
+});
+export type CtaSignupProps = z.infer<typeof ctaSignupPropsSchema>;
+
+export const ctaSignupDefaults: CtaSignupProps = {
+  pill: 'Admissions Now Open',
+  title: 'Scale Your Shop Floor Skills',
+  subtitle: '',
+  placeholder: 'Enter your work email...',
+  buttonLabel: 'Join Cohort',
+  note: '',
+  formAction: '/register',
+  paddingTop: 80,
+  paddingBottom: 80,
+};
+
+// ------------------------------------------------------------------
+// Redesigned marketing sections (academy / products / feed / events)
+// ------------------------------------------------------------------
+
+export const catalogHeroStatSchema = z.object({
+  label: z.string().max(40),
+  value: z.string().max(40),
+});
+export type CatalogHeroStat = z.infer<typeof catalogHeroStatSchema>;
+
+export const catalogHeroCtaSchema = z.object({
+  label: z.string().max(80),
+  href: z.string().max(600),
+  variant: z.enum(['primary', 'secondary']).default('primary'),
+  icon: iconKeySchema.optional(),
+});
+export type CatalogHeroCta = z.infer<typeof catalogHeroCtaSchema>;
+
+/** Catalog-style hero: badge row, accent headline, subtitle, stats strip, CTAs. */
+export const catalogHeroPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  eyebrow: z.string().max(120).default('Academy Catalog'),
+  /** Leading glyph in the eyebrow pill (a pulse dot when omitted). */
+  eyebrowIcon: iconKeySchema.optional(),
+  /** Optional second mono line beside the eyebrow pill. */
+  metaLine: z.string().max(160).optional(),
+  title: z.string().max(160).default('The floor has a'),
+  titleAccent: z.string().max(160).default('syllabus.'),
+  subtitle: z.string().max(600).default(''),
+  /** Label/value strip under the subtitle (renderer may inject live values). */
+  stats: z.array(catalogHeroStatSchema).max(6).optional(),
+  primaryCta: catalogHeroCtaSchema.optional(),
+  secondaryCta: catalogHeroCtaSchema.optional(),
+  /** Draw a border under the hero (false when a ticker band follows). */
+  borderBottom: z.boolean().default(true),
+});
+export type CatalogHeroProps = z.infer<typeof catalogHeroPropsSchema>;
+
+export const catalogHeroDefaults: CatalogHeroProps = {
+  eyebrow: 'Academy Catalog · Free Core',
+  title: 'The floor has a',
+  titleAccent: 'syllabus.',
+  subtitle:
+    'Four specialized academies. One mission: free, project-based manufacturing education that ends in credentials shops hire for.',
+  stats: [
+    { label: 'Academies', value: '4' },
+    { label: 'Courses', value: '12' },
+    { label: 'Price', value: '$0' },
+    { label: 'Format', value: 'Self-paced' },
+  ],
+  primaryCta: { label: 'Browse pathways', href: '#pathways', variant: 'primary', icon: 'arrow_forward' },
+  secondaryCta: { label: 'How it works', href: '#how-it-works', variant: 'secondary' },
+  borderBottom: true,
+  paddingTop: 64,
+  paddingBottom: 48,
+};
+
+export const cardGridItemSchema = z.object({
+  title: z.string().max(140),
+  body: z.string().max(500).default(''),
+  icon: iconKeySchema.optional(),
+});
+export type CardGridItem = z.infer<typeof cardGridItemSchema>;
+
+/** Numbered/icon card row — steps, promises, formats, house rules. */
+export const cardGridPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  eyebrow: z.string().max(80).optional(),
+  title: z.string().max(220).default('How it works'),
+  subtitle: z.string().max(500).optional(),
+  items: z.array(cardGridItemSchema).max(8).default([]),
+  /** Show 01/02/… index badges on each card. */
+  showNumbers: z.boolean().default(true),
+  /** Card columns on md+. */
+  columns: z.enum(['md:grid-cols-3', 'sm:grid-cols-2 lg:grid-cols-4']).default('md:grid-cols-3'),
+  /** Sunken full-width band (border-y + surface-sunken). */
+  band: z.enum(['none', 'sunken']).default('none'),
+  /** Fine-print note rendered under the grid. */
+  note: z.string().max(400).optional(),
+});
+export type CardGridProps = z.infer<typeof cardGridPropsSchema>;
+
+export const cardGridDefaults: CardGridProps = {
+  eyebrow: 'The model',
+  title: 'Built like a shop, not a lecture hall.',
+  subtitle: '',
+  items: [
+    { title: 'Step one', body: 'Describe the first step.', icon: 'school' },
+    { title: 'Step two', body: 'Describe the second step.', icon: 'wrench' },
+    { title: 'Step three', body: 'Describe the third step.', icon: 'verified_user' },
+  ],
+  showNumbers: true,
+  columns: 'md:grid-cols-3',
+  band: 'none',
+  paddingTop: 64,
+  paddingBottom: 64,
+};
+
+export const spotlightCardItemSchema = z.object({
+  tag: z.string().max(48).default('START HERE'),
+  title: z.string().max(180),
+  meta: z.string().max(160).optional(),
+  href: z.string().max(600).default('/academy'),
+});
+export type SpotlightCardItem = z.infer<typeof spotlightCardItemSchema>;
+
+/** Spotlight path cards (tag + title + meta + link). */
+export const spotlightCardsPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  eyebrow: z.string().max(80).optional(),
+  title: z.string().max(220).default('Three routes into the floor'),
+  subtitle: z.string().max(500).optional(),
+  items: z.array(spotlightCardItemSchema).max(6).default([]),
+  /** Card columns on md+. */
+  columns: z.enum(['md:grid-cols-3', 'md:grid-cols-2']).default('md:grid-cols-3'),
+  band: z.enum(['none', 'sunken']).default('none'),
+});
+export type SpotlightCardsProps = z.infer<typeof spotlightCardsPropsSchema>;
+
+export const spotlightCardsDefaults: SpotlightCardsProps = {
+  eyebrow: 'Signature paths',
+  title: 'Three routes into the floor',
+  items: [
+    { tag: 'START HERE', title: 'CNC Machining Fundamentals', meta: '36 Modules · Self-paced · Free', href: '/academy/general' },
+    { tag: 'ADVANCED', title: 'Aerospace Precision Manufacturing', meta: '48 Modules · AS9100-aligned · Free', href: '/academy/aerospace' },
+    { tag: 'INTERMEDIATE', title: 'Automation & Robotics', meta: '30 Modules · PLCs & robots · Free', href: '/academy/automation' },
+  ],
+  columns: 'md:grid-cols-3',
+  band: 'none',
+  paddingTop: 64,
+  paddingBottom: 64,
+};
+
+/** Closing overlay band with copy column + two CTAs. */
+export const closingCtaPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  eyebrow: z.string().max(80).default('Enrollment open'),
+  title: z.string().max(220).default('Start free. Stay free.'),
+  body: z.string().max(500).default(''),
+  primaryLabel: z.string().max(80).default('Get started'),
+  primaryHref: z.string().max(600).default('/'),
+  primaryIcon: iconKeySchema.optional(),
+  secondaryLabel: z.string().max(80).optional(),
+  secondaryHref: z.string().max(600).optional(),
+  secondaryIcon: iconKeySchema.optional(),
+  /** Top hairline (matches academy/products closing bands). */
+  borderTop: z.boolean().default(false),
+});
+export type ClosingCtaProps = z.infer<typeof closingCtaPropsSchema>;
+
+export const closingCtaDefaults: ClosingCtaProps = {
+  eyebrow: 'Enrollment open',
+  title: 'Start free. Stay free.',
+  body: 'Pick a path and cut your first chip this week.',
+  primaryLabel: 'Get started',
+  primaryHref: '/register',
+  primaryIcon: 'arrow_forward',
+  secondaryLabel: 'Browse academies',
+  secondaryHref: '/academy',
+  borderTop: true,
+  paddingTop: 64,
+  paddingBottom: 80,
+};
+
+/** Live-data island variants substituted by the public renderer. */
+export const LIVE_ISLAND_VARIANTS = [
+  'academy-pathways',
+  'products-featured',
+  'products-inventory',
+  'products-departments',
+  'feed-ticker',
+  'feed-topics',
+  'feed-wire',
+  'events-ticker',
+  'events-next-up',
+  'events-schedule',
+  'events-browse',
+] as const;
+export type LiveIslandVariant = (typeof LIVE_ISLAND_VARIANTS)[number];
+
+/**
+ * Placeholder section for a live tenant-data island (catalog rows, feed wire,
+ * event board, …). The Puck editor shows a labeled stub; the public renderer
+ * substitutes the real interactive section keyed by `variant`.
+ */
+export const liveIslandPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  variant: z.enum(LIVE_ISLAND_VARIANTS).default('academy-pathways'),
+  /** Editor-facing label (also used as the placeholder heading). */
+  label: z.string().max(100).optional(),
+});
+export type LiveIslandProps = z.infer<typeof liveIslandPropsSchema>;
+
+export const liveIslandDefaults: LiveIslandProps = {
+  variant: 'academy-pathways',
+  label: 'Live academy pathways',
+  paddingTop: 64,
+  paddingBottom: 64,
+};
 
 // ------------------------------------------------------------------
 // Composition support
@@ -762,6 +1197,82 @@ const footerCol: BlockDefinition = {
   defaultProps: footerColDefaults,
   zones: { content: { allow: ['heading', 'link', 'text', 'stack'] } },
 };
+const heroConsole: BlockDefinition = {
+  type: 'hero-console',
+  label: 'Hero + Sim Console',
+  description: 'Asymmetric editorial hero with a CNC simulator console card.',
+  category: 'Sections',
+  schema: heroConsolePropsSchema,
+  defaultProps: heroConsoleDefaults,
+  zones: { content: { allow: ['badge', 'heading', 'text', 'stack', 'button', 'avatar-stack'] } },
+};
+
+const programCards: BlockDefinition = {
+  type: 'program-cards',
+  label: 'Program Cards',
+  description: 'Header row plus a grid of program/course cards.',
+  category: 'Sections',
+  schema: programCardsPropsSchema,
+  defaultProps: programCardsDefaults,
+  zones: {
+    header: { allow: ['text', 'heading', 'stack', 'button'] },
+    cards: { allow: ['program-card'] },
+  },
+};
+
+const programCard: BlockDefinition = {
+  type: 'program-card',
+  label: 'Program Card',
+  description: 'Course card: media, level pill, tags and instructor row.',
+  category: 'Items',
+  schema: programCardPropsSchema,
+  defaultProps: programCardDefaults,
+};
+
+const twinSection: BlockDefinition = {
+  type: 'twin-section',
+  label: 'Digital Twin',
+  description: 'Feature narrative beside a G-code terminal mockup.',
+  category: 'Sections',
+  schema: twinSectionPropsSchema,
+  defaultProps: twinSectionDefaults,
+  zones: {
+    content: { allow: ['text', 'heading', 'badge', 'stack', 'button'] },
+    features: { allow: ['feature-item'] },
+  },
+};
+
+const testimonials: BlockDefinition = {
+  type: 'testimonials',
+  label: 'Testimonials',
+  description: 'Centered header plus a grid of review cards.',
+  category: 'Sections',
+  schema: testimonialsPropsSchema,
+  defaultProps: testimonialsDefaults,
+  zones: {
+    header: { allow: ['text', 'heading'] },
+    items: { allow: ['testimonial-card'] },
+  },
+};
+
+const testimonialCard: BlockDefinition = {
+  type: 'testimonial-card',
+  label: 'Testimonial Card',
+  description: 'Star rating, quote and reviewer identity.',
+  category: 'Items',
+  schema: testimonialCardPropsSchema,
+  defaultProps: testimonialCardDefaults,
+};
+
+const ctaSignup: BlockDefinition = {
+  type: 'cta-signup',
+  label: 'CTA Signup Band',
+  description: 'Gradient banner with an email capture form.',
+  category: 'Sections',
+  schema: ctaSignupPropsSchema,
+  defaultProps: ctaSignupDefaults,
+};
+
 
 const stack: BlockDefinition = {
   type: 'stack',
@@ -902,9 +1413,55 @@ const progressCard: BlockDefinition = {
   defaultProps: progressCardDefaults,
 };
 
+const catalogHero: BlockDefinition = {
+  type: 'catalog-hero',
+  label: 'Catalog Hero',
+  description: 'Badge row, accent headline, stats strip and CTAs for catalog pages.',
+  category: 'Sections',
+  schema: catalogHeroPropsSchema,
+  defaultProps: catalogHeroDefaults,
+};
+
+const cardGrid: BlockDefinition = {
+  type: 'card-grid',
+  label: 'Card Grid',
+  description: 'Numbered or icon cards — steps, promises, formats, house rules.',
+  category: 'Sections',
+  schema: cardGridPropsSchema,
+  defaultProps: cardGridDefaults,
+};
+
+const spotlightCards: BlockDefinition = {
+  type: 'spotlight-cards',
+  label: 'Spotlight Cards',
+  description: 'Linked spotlight cards with tag, title and meta line.',
+  category: 'Sections',
+  schema: spotlightCardsPropsSchema,
+  defaultProps: spotlightCardsDefaults,
+};
+
+const closingCta: BlockDefinition = {
+  type: 'closing-cta',
+  label: 'Closing CTA',
+  description: 'Dark overlay closing band with copy and two CTAs.',
+  category: 'Sections',
+  schema: closingCtaPropsSchema,
+  defaultProps: closingCtaDefaults,
+};
+
+const liveIsland: BlockDefinition = {
+  type: 'live-island',
+  label: 'Live Island',
+  description: 'Live tenant data section (catalog, feed, events) substituted at render time.',
+  category: 'Sections',
+  schema: liveIslandPropsSchema,
+  defaultProps: liveIslandDefaults,
+};
+
 export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   nav,
   hero,
+  'hero-console': heroConsole,
   stats,
   'stat-item': statItem,
   'partner-logos': partnerLogos,
@@ -913,6 +1470,12 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   'feature-item': featureItem,
   'academy-grid': academyGrid,
   'academy-card': academyCard,
+  'program-cards': programCards,
+  'program-card': programCard,
+  'twin-section': twinSection,
+  testimonials,
+  'testimonial-card': testimonialCard,
+  'cta-signup': ctaSignup,
   'cta-banner': ctaBanner,
   faq,
   'faq-item': faqItem,
@@ -932,6 +1495,11 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   badge,
   'avatar-stack': avatarStack,
   'progress-card': progressCard,
+  'catalog-hero': catalogHero,
+  'card-grid': cardGrid,
+  'spotlight-cards': spotlightCards,
+  'closing-cta': closingCta,
+  'live-island': liveIsland,
 };
 
 export const BLOCK_TYPES = Object.keys(BLOCK_REGISTRY) as readonly string[];

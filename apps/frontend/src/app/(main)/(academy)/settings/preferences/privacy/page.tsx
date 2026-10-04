@@ -9,34 +9,49 @@ export default function PrivacyPage() {
   const [follows, setFollows] = useState<'everyone' | 'approval'>('everyone');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
     (async () => {
       try {
         const res = await apiProxyFetch('/api/proxy/auth/me/preferences');
         if (res.ok) {
           const data = await res.json();
-          if (data?.privacyVisibility) setVisibility(data.privacyVisibility);
-          if (data?.privacyMessages) setMessages(data.privacyMessages);
-          if (data?.privacyFollows) setFollows(data.privacyFollows);
+          // Column names on user_preferences: profile_visibility / who_can_message / who_can_follow.
+          if (data?.profileVisibility) setVisibility(data.profileVisibility);
+          if (data?.whoCanMessage) setMessages(data.whoCanMessage);
+          if (data?.whoCanFollow) setFollows(data.whoCanFollow);
         }
       } catch {}
     })();
   }, []);
   const handleSave = async () => {
     setSaving(true);
+    setError('');
     try {
-      await apiProxyFetch('/api/proxy/auth/me/preferences', {
+      const res = await apiProxyFetch('/api/proxy/auth/me/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          privacyVisibility: visibility,
-          privacyMessages: messages,
-          privacyFollows: follows,
+          profileVisibility: visibility,
+          whoCanMessage: messages,
+          whoCanFollow: follows,
         }),
       });
+      // The endpoint returns 200 with the full row, so a "success" that did not
+      // actually apply the values is impossible to spot without re-reading it.
+      const saved_ = res.ok ? await res.json().catch(() => null) : null;
+      if (!saved_) throw new Error('Privacy settings could not be saved');
+      if (
+        saved_.profileVisibility !== visibility ||
+        saved_.whoCanMessage !== messages ||
+        saved_.whoCanFollow !== follows
+      ) {
+        throw new Error('Privacy settings were not applied. Please try again.');
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch {
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Privacy settings could not be saved');
     } finally {
       setSaving(false);
     }
@@ -48,15 +63,15 @@ export default function PrivacyPage() {
     >
       {' '}
       {active && (
-        <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
-          <Check className="h-3 w-3" />
+        <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <Check className="size-3.5" />
         </span>
       )}{' '}
       <span
-        className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? 'bg-primary text-white shadow-md' : 'bg-muted text-muted-foreground'}`}
+        className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground'}`}
       >
         {' '}
-        <Icon className="h-5 w-5" />{' '}
+        <Icon className="size-5" />{' '}
       </span>{' '}
       <span className="text-sm font-semibold">{title}</span>{' '}
       <span className="text-xs leading-relaxed text-muted-foreground">{desc}</span>{' '}
@@ -69,7 +84,7 @@ export default function PrivacyPage() {
         {' '}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {' '}
-          <Eye className="h-5 w-5" />{' '}
+          <Eye className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -80,8 +95,16 @@ export default function PrivacyPage() {
         </div>{' '}
       </div>{' '}
       {saved && (
-        <div className="flex gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <Check className="h-4 w-4 shrink-0 mt-0.5" /> Privacy settings saved.
+        <div className="flex gap-2 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success">
+          <Check className="size-4 shrink-0 mt-0.5" /> Privacy settings saved.
+        </div>
+      )}{' '}
+      {error && (
+        <div
+          role="alert"
+          className="flex gap-2 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <Shield className="size-4 shrink-0 mt-0.5" /> {error}
         </div>
       )}{' '}
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -89,8 +112,8 @@ export default function PrivacyPage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <Eye className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <Eye className="size-3.5" />
             </span>{' '}
             Profile Visibility
           </h2>{' '}
@@ -125,8 +148,8 @@ export default function PrivacyPage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <MessageSquare className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <MessageSquare className="size-3.5" />
             </span>{' '}
             Who Can Message You
           </h2>{' '}
@@ -161,8 +184,8 @@ export default function PrivacyPage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <UserPlus className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <UserPlus className="size-3.5" />
             </span>{' '}
             Who Can Follow You
           </h2>{' '}
@@ -185,7 +208,7 @@ export default function PrivacyPage() {
           />{' '}
         </div>{' '}
       </div>{' '}
-      <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-white px-4 py-3 shadow-lg">
+      <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-card px-4 py-3 shadow-lg">
         {' '}
         <Button onClick={handleSave} disabled={saving} className="h-9 rounded-full px-6 shadow-md">
           {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Preferences'}

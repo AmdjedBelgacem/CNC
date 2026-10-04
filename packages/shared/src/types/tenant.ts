@@ -16,6 +16,14 @@ export interface Tenant {
   updatedAt: Date;
 }
 
+/** Per-tenant marketing analytics IDs (public — not secrets). */
+export interface TenantAnalyticsSettings {
+  /** GA4 measurement id, e.g. G-XXXXXXXXXX. Empty/absent = disabled for tenant config path. */
+  gaMeasurementId?: string;
+  /** Snapchat Pixel id (numeric). Empty/absent = disabled for tenant config path. */
+  snapchatPixelId?: string;
+}
+
 export interface TenantSettings {
   allowRegistration?: boolean;
   requireApproval?: boolean;
@@ -25,6 +33,7 @@ export interface TenantSettings {
   storeEnabled?: boolean;
   eventsEnabled?: boolean;
   certificationEnabled?: boolean;
+  analytics?: TenantAnalyticsSettings;
 }
 
 export interface TenantTheme {

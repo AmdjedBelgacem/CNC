@@ -20,7 +20,7 @@ export function NavBlock({ props, puck }: BlockComponentProps<NavProps>) {
   } = props;
   const [scaled, setScaled] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   useEffect(() => {
     const onScroll = () => setScaled(window.scrollY > 50);
     onScroll();
@@ -59,7 +59,7 @@ export function NavBlock({ props, puck }: BlockComponentProps<NavProps>) {
       {' '}
       <div
         className={cn(
-          'bg-white border border-gray-200 flex justify-between items-center',
+          'bg-card border border-border flex justify-between items-center',
           containerPaddingX,
           containerPaddingY,
           containerRadius,

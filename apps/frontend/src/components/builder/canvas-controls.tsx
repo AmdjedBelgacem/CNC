@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMediaQuery, IS_DESKTOP_QUERY } from '@/lib/use-media-query';
@@ -7,6 +8,7 @@ import { VIEWPORTS } from './editor-header';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck'; /**
  * Floating canvas control bar (device switcher + zoom), replacing Puck's * built-in ViewportControls — which are kept mounted but invisible so the * internal zoom machinery (zoomConfig/select) still works; this bar simply * drives those hidden controls and mirrors their state. */
 export function CanvasControls() {
+  const tb = useTranslations('builder');
   const dispatch = useBuilderPuck((s) => s.dispatch);
   const currentWidth = useBuilderPuck((s) => s.appState.ui.viewports?.current?.width);
   const isDesktop = useMediaQuery(IS_DESKTOP_QUERY);
@@ -109,11 +111,16 @@ export function CanvasControls() {
           {VIEWPORTS.map((vp) => {
             const Icon = vp.icon;
             const active = currentWidth === vp.width;
+            const name = tb(`canvas.${vp.labelKey}`, { default: vp.label });
             return (
               <button
                 key={vp.label}
                 type="button"
-                title={`${vp.label} (${vp.width}px)`}
+                title={tb('canvas.viewportTitle', {
+                  label: name,
+                  width: vp.width,
+                  default: `${vp.label} (${vp.width}px)`,
+                })}
                 onClick={() => setViewport(vp.width)}
                 className={cn(
                   'flex h-7 w-8 items-center justify-center rounded-full transition',
@@ -123,7 +130,7 @@ export function CanvasControls() {
                 )}
               >
                 {' '}
-                <Icon className="h-3.5 w-3.5" />{' '}
+                <Icon className="size-3.5" />{' '}
               </button>
             );
           })}{' '}
@@ -131,35 +138,37 @@ export function CanvasControls() {
         <div className="mx-0.5 h-4 w-px bg-border" />{' '}
         <button
           type="button"
-          title="Zoom out"
+          title={tb('canvas.zoomOut', { default: 'Zoom out' })}
           disabled={!canZoomOut}
           onClick={zoomOut}
           className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
         >
           {' '}
-          <ZoomOut className="h-3.5 w-3.5" />{' '}
+          <ZoomOut className="size-3.5" />{' '}
         </button>{' '}
         <button
           type="button"
-          title="Zoom to fit"
+          title={tb('canvas.zoomToFit', { default: 'Zoom to fit' })}
           onClick={fitToScreen}
           className={cn(
-            'h-7 min-w-[3.25rem] rounded-full px-2 text-[11px] font-bold tabular-nums transition',
+            'h-7 min-w-[3.25rem] rounded-full px-2 text-2xs font-bold tabular-nums transition',
             isAuto ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
           )}
         >
           {' '}
-          {isAuto ? 'Auto' : `${Math.round(zoom * 100)}%`}{' '}
+          {isAuto
+            ? tb('canvas.auto', { default: 'Auto' })
+            : `${Math.round(zoom * 100)}%`}{' '}
         </button>{' '}
         <button
           type="button"
-          title="Zoom in"
+          title={tb('canvas.zoomIn', { default: 'Zoom in' })}
           disabled={!canZoomIn}
           onClick={zoomIn}
           className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
         >
           {' '}
-          <ZoomIn className="h-3.5 w-3.5" />{' '}
+          <ZoomIn className="size-3.5" />{' '}
         </button>{' '}
       </div>{' '}
     </div>

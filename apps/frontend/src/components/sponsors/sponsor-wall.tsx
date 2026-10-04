@@ -1,5 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
+import { getImageSrc } from '@/lib/images';
 interface Sponsor {
   id: string;
   name: string;
@@ -28,11 +29,8 @@ export function SponsorWall({ tier, limit = 12 }: { tier?: string; limit?: numbe
             className="flex shrink-0 items-center justify-center rounded-lg border bg-card px-6 py-3 text-sm font-medium text-muted-foreground"
           >
             {' '}
-            {s.logoUrl ? (
-              <img src={s.logoUrl} alt={s.name} className="h-8 object-contain" />
-            ) : (
-              s.name
-            )}{' '}
+            <img src={getImageSrc(s.logoUrl, 'sponsor')} alt={s.name} className="h-8 object-contain" />
+
           </div>
         ))}{' '}
       </div>{' '}

@@ -1,14 +1,16 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Shield, Trash2, Loader2, Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import {
   AdminCommandBar,
   BarPrimaryButton,
   AdminPageHeader,
 } from '@/components/admin/admin-chrome';
-import { RightSheet, RightSheetHeader, GLASS_SUB } from '@/components/ui/right-sheet';
+import { Modal, ModalHeader, GLASS_SUB } from '@/components/ui/modal';
 import { useCan } from '@/lib/use-permissions';
 interface PermDef {
   key: string;
@@ -32,13 +34,14 @@ interface RoleSummary {
   permissions?: string[];
 }
 const roleGrad: Record<string, string> = {
-  super_admin: 'bg-purple-600 text-white',
-  admin: 'bg-blue-600 text-white',
-  instructor: 'bg-emerald-600 text-white',
-  moderator: 'bg-cyan-600 text-white',
+  super_admin: 'bg-primary text-primary-foreground',
+  admin: 'bg-primary text-primary-foreground',
+  instructor: 'bg-success text-success-foreground',
+  moderator: 'bg-info text-info-foreground',
   sponsor: 'bg-orange-600 text-white',
 };
 export default function AdminRolesPage() {
+  const tAdmin = useTranslations('admin');
   const canManage = useCan('staff:manage_roles');
   const [roles, setRoles] = useState<RoleSummary[] | null>(null);
   const [catalog, setCatalog] = useState<PermGroup[]>([]);
@@ -66,36 +69,46 @@ export default function AdminRolesPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Staff & Access', href: '/admin/staff' }, { label: 'Roles' }]}
+        trail={[
+          {
+            label: tAdmin('access.breadcrumb', { default: 'Staff & Access' }),
+            href: '/admin/staff',
+          },
+          { label: tAdmin('tabs.roles', { default: 'Roles' }) },
+        ]}
         count={roles ? roles.length : null}
-        live="Live"
+        live={tAdmin('live', { default: 'Live' })}
         primary={
           canManage ? (
             <BarPrimaryButton
-              icon={<Plus className="h-4 w-4" strokeWidth={2.5} />}
+              icon={<Plus className="size-4" strokeWidth={2.5} />}
               onClick={() => setCreating(true)}
             >
-              New role
+              {tAdmin('roles.newRole', { default: 'New role' })}
             </BarPrimaryButton>
           ) : undefined
         }
       />
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
         <AdminPageHeader
-          title="Roles & Permissions"
-          description="Define custom roles and the precise access each staff member gets."
+          title={tAdmin('roles.title', { default: 'Roles & Permissions' })}
+          description={tAdmin('roles.description', {
+            default: 'Define custom roles and the precise access each staff member gets.',
+          })}
           badge={
-            <span className="flex items-center gap-2 self-start rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-xs font-medium text-emerald-800 shadow-sm md:self-auto dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200">
-              <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              Audited changes
+            <span className="flex items-center gap-2 self-start rounded-full border border-success/80 bg-success/80 px-3 py-1.5 text-xs font-medium text-success shadow-sm md:self-auto dark:border-success/40 dark:bg-success/40 dark:text-success">
+              <Shield className="size-4 text-success dark:text-success" />
+              {tAdmin('roles.auditedChanges', { default: 'Audited changes' })}
             </span>
           }
         />
         <div>
-          <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
-            <div className="hidden border-b border-border bg-muted/40 px-6 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:flex md:items-center md:justify-between">
-              <span className="flex-1">Role</span>
-              <span className="w-[260px] text-right">Permissions · Members</span>
+          <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
+            <div className="hidden border-b border-border bg-muted/40 px-6 py-2.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground md:flex md:items-center md:justify-between">
+              <span className="flex-1">{tAdmin('roles.roleColumn', { default: 'Role' })}</span>
+              <span className="w-[260px] text-right">
+                {tAdmin('roles.permissionsMembers', { default: 'Permissions · Members' })}
+              </span>
             </div>
             <div className="flex-1">
               {loading &&
@@ -106,23 +119,25 @@ export default function AdminRolesPage() {
                     className="flex items-center justify-between border-b border-border p-6"
                   >
                     <div className="flex items-center gap-5">
-                      <div className="h-12 w-12 animate-pulse rounded-xl bg-muted" />
+                      <Skeleton className="h-12 w-12 rounded-xl" />
                       <div className="space-y-2">
-                        <div className="h-4 w-36 animate-pulse rounded bg-muted" />
-                        <div className="h-3 w-52 animate-pulse rounded bg-muted" />
+                        <Skeleton className="h-4 w-36 rounded" />
+                        <Skeleton className="h-3 w-52 rounded" />
                       </div>
                     </div>
-                    <div className="h-7 w-24 animate-pulse rounded-md bg-muted" />
+                    <Skeleton className="h-7 w-24 rounded-md" />
                   </div>
                 ))}
               {!loading && roles && roles.length === 0 && (
                 <div className="px-6 py-20 text-center">
                   {' '}
                   <p className="font-sans text-base font-medium text-foreground">
-                    No custom roles yet
+                    {tAdmin('roles.noCustomRoles', { default: 'No custom roles yet' })}
                   </p>{' '}
                   <p className="mt-1 font-sans text-sm text-muted-foreground">
-                    Create a role to grant a tailored set of permissions.
+                    {tAdmin('roles.noCustomRolesHint', {
+                      default: 'Create a role to grant a tailored set of permissions.',
+                    })}
                   </p>{' '}
                 </div>
               )}{' '}
@@ -151,7 +166,7 @@ export default function AdminRolesPage() {
                           )}
                         >
                           {' '}
-                          <Shield className="h-5 w-5" />{' '}
+                          <Shield className="size-5" />{' '}
                         </span>{' '}
                         <div className="min-w-0">
                           {' '}
@@ -161,9 +176,9 @@ export default function AdminRolesPage() {
                               {r.name}
                             </p>{' '}
                             {r.isSystem && (
-                              <span className="rounded-md border border-purple-100 bg-purple-50/60 px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wide text-purple-700 dark:border-purple-900/40 dark:bg-purple-950/30 dark:text-purple-300">
+                              <span className="rounded-md border border-primary/25 bg-primary/5 px-2 py-0.5 font-sans text-2xs font-semibold uppercase tracking-wide text-primary ">
                                 {' '}
-                                System{' '}
+                                {tAdmin('role.system', { default: 'System' })}{' '}
                               </span>
                             )}{' '}
                           </div>{' '}
@@ -174,8 +189,18 @@ export default function AdminRolesPage() {
                       </div>{' '}
                       <div className="flex w-[260px] items-center justify-end gap-6 font-sans text-sm text-muted-foreground">
                         {' '}
-                        <span>{r.permissionCount ?? 0} permissions</span>{' '}
-                        <span>{r.userCount ?? 0} members</span>{' '}
+                        <span>
+                          {tAdmin('drawer.permissionsCount', {
+                            count: r.permissionCount ?? 0,
+                            default: '{count, plural, one {# permission} other {# permissions}}',
+                          })}
+                        </span>{' '}
+                        <span>
+                          {tAdmin('roles.membersCount', {
+                            count: r.userCount ?? 0,
+                            default: '{count, plural, one {# member} other {# members}}',
+                          })}
+                        </span>{' '}
                       </div>{' '}
                     </button>
                   );
@@ -229,6 +254,8 @@ function RoleEditor({
   onSaved: () => void;
   onDeleted?: () => void;
 }) {
+  const tAdmin = useTranslations('admin');
+  const tCommon = useTranslations('common');
   const [name, setName] = useState(role?.name ?? '');
   const [description, setDescription] = useState(role?.description ?? '');
   const [selected, setSelected] = useState<string[]>(role?.permissions ?? []);
@@ -279,7 +306,7 @@ function RoleEditor({
   };
   const save = async () => {
     if (!name.trim()) {
-      toast({ type: 'err', title: 'Name required' });
+      toast({ type: 'err', title: tAdmin('roles.nameRequired', { default: 'Name required' }) });
       return;
     }
     setBusy(true);
@@ -293,7 +320,9 @@ function RoleEditor({
           body: JSON.stringify({ name: name.trim(), description: description.trim() || undefined }),
         });
         if (!res.ok) {
-          const m = (await res.json().catch(() => ({})))?.message ?? 'Failed to create role';
+          const m =
+            (await res.json().catch(() => ({})))?.message ??
+            tAdmin('roles.createFailed', { default: 'Failed to create role' });
           throw new Error(m);
         }
         roleId = (await res.json()).id;
@@ -305,7 +334,9 @@ function RoleEditor({
           body: JSON.stringify({ name: name.trim(), description: description.trim() || undefined }),
         });
         if (!res.ok) {
-          const m = (await res.json().catch(() => ({})))?.message ?? 'Failed to update role';
+          const m =
+            (await res.json().catch(() => ({})))?.message ??
+            tAdmin('roles.updateFailed', { default: 'Failed to update role' });
           throw new Error(m);
         }
       }
@@ -316,20 +347,40 @@ function RoleEditor({
         body: JSON.stringify({ permissions: selected }),
       });
       if (!pRes.ok) {
-        const m = (await pRes.json().catch(() => ({})))?.message ?? 'Failed to save permissions';
+        const m =
+          (await pRes.json().catch(() => ({})))?.message ??
+          tAdmin('roles.savePermissionsFailed', { default: 'Failed to save permissions' });
         throw new Error(m);
       }
-      toast({ type: 'ok', title: mode === 'create' ? 'Role created' : 'Role updated' });
+      toast({
+        type: 'ok',
+        title:
+          mode === 'create'
+            ? tAdmin('roles.roleCreated', { default: 'Role created' })
+            : tAdmin('roles.roleUpdated', { default: 'Role updated' }),
+      });
       onSaved();
     } catch (e: any) {
-      toast({ type: 'err', title: 'Save failed', description: e?.message });
+      toast({
+        type: 'err',
+        title: tAdmin('roles.saveFailed', { default: 'Save failed' }),
+        description: e?.message,
+      });
     } finally {
       setBusy(false);
     }
   };
   const del = async () => {
     if (!role) return;
-    if (!confirm(`Delete the role “${role.name}”? This cannot be undone.`)) return;
+    if (
+      !confirm(
+        tAdmin('roles.deleteConfirm', {
+          name: role.name,
+          default: 'Delete the role “{name}”? This cannot be undone.',
+        }),
+      )
+    )
+      return;
     setBusy(true);
     try {
       const res = await fetch(`/api/proxy/admin/roles/${role.id}`, {
@@ -337,34 +388,45 @@ function RoleEditor({
         credentials: 'include',
       });
       if (!res.ok) {
-        const m = (await res.json().catch(() => ({})))?.message ?? 'Failed to delete';
+        const m =
+          (await res.json().catch(() => ({})))?.message ??
+          tAdmin('roles.deleteFailed', { default: 'Failed to delete' });
         throw new Error(m);
       }
-      toast({ type: 'ok', title: 'Role deleted' });
+      toast({ type: 'ok', title: tAdmin('roles.roleDeleted', { default: 'Role deleted' }) });
       onDeleted?.();
     } catch (e: any) {
-      toast({ type: 'err', title: 'Delete failed', description: e?.message });
+      toast({
+        type: 'err',
+        title: tAdmin('roles.deleteFailedToast', { default: 'Delete failed' }),
+        description: e?.message,
+      });
     } finally {
       setBusy(false);
     }
   };
   const totalSelected = selected.length;
+  const modalTitle =
+    mode === 'create'
+      ? tAdmin('roles.newRole', { default: 'New role' })
+      : (role?.name ?? tAdmin('roles.role', { default: 'Role' }));
   return (
-    <RightSheet
+    <Modal
       onClose={onClose}
       width="max-w-[560px]"
+      title={modalTitle}
       header={
-        <RightSheetHeader
+        <ModalHeader
           loading={false}
           initials="R"
           gradient="bg-foreground text-background"
-          title={mode === 'create' ? 'New role' : (role?.name ?? 'Role')}
+          title={modalTitle}
           subtitle={
             mode === 'create'
-              ? 'Define a custom role'
+              ? tAdmin('roles.defineCustomRole', { default: 'Define a custom role' })
               : role?.isSystem
-                ? 'System role'
-                : 'Custom role'
+                ? tAdmin('roles.systemRole', { default: 'System role' })
+                : tAdmin('roles.customRole', { default: 'Custom role' })
           }
           onClose={onClose}
         />
@@ -378,7 +440,7 @@ function RoleEditor({
           <div>
             {' '}
             <label className="mb-1.5 block font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Name
+              {tAdmin('roles.nameLabel', { default: 'Name' })}
             </label>{' '}
             <input
               value={name}
@@ -387,7 +449,7 @@ function RoleEditor({
                 setDirty(true);
                 setName(e.target.value);
               }}
-              placeholder="e.g. Content Editor"
+              placeholder={tAdmin('roles.namePlaceholder', { default: 'e.g. Content Editor' })}
               className={cn(
                 GLASS_SUB,
                 'w-full rounded-lg px-3 py-2.5 font-sans text-sm text-foreground outline-none transition focus:ring-2 focus:ring-accent/30',
@@ -397,7 +459,7 @@ function RoleEditor({
           <div>
             {' '}
             <label className="mb-1.5 block font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Description
+              {tAdmin('roles.descriptionLabel', { default: 'Description' })}
             </label>{' '}
             <input
               value={description}
@@ -406,7 +468,9 @@ function RoleEditor({
                 setDirty(true);
                 setDescription(e.target.value);
               }}
-              placeholder="Short description of this role"
+              placeholder={tAdmin('roles.descriptionPlaceholder', {
+                default: 'Short description of this role',
+              })}
               className={cn(
                 GLASS_SUB,
                 'w-full rounded-lg px-3 py-2.5 font-sans text-sm text-foreground outline-none transition focus:ring-2 focus:ring-accent/30',
@@ -414,9 +478,12 @@ function RoleEditor({
             />{' '}
           </div>{' '}
           {mode === 'edit' && role?.isSystem && (
-            <p className="rounded-lg border border-purple-100 bg-purple-50/60 px-3 py-2 font-sans text-xs text-purple-700 dark:border-purple-900/40 dark:bg-purple-950/30 dark:text-purple-300">
+            <p className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 font-sans text-xs text-primary ">
               {' '}
-              System roles cannot be renamed but a super admin may adjust their permissions.{' '}
+              {tAdmin('roles.systemRoleLocked', {
+                default:
+                  'System roles cannot be renamed but a super admin may adjust their permissions.',
+              })}{' '}
             </p>
           )}{' '}
         </section>{' '}
@@ -426,21 +493,26 @@ function RoleEditor({
             {' '}
             <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {' '}
-              Permissions{' '}
+              {tAdmin('drawer.permissionsLabel', { default: 'Permissions' })}{' '}
               {totalSelected > 0 && (
-                <span className="text-accent">· {totalSelected} selected</span>
+                <span className="text-accent">
+                  {tAdmin('roles.selectedCount', {
+                    count: totalSelected,
+                    default: '· {count} selected',
+                  })}
+                </span>
               )}{' '}
             </h3>{' '}
             <div className="relative w-48">
               {' '}
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />{' '}
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />{' '}
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Filter permissions"
+                placeholder={tAdmin('roles.filterPermissions', { default: 'Filter permissions' })}
                 className={cn(
                   GLASS_SUB,
-                  'w-full rounded-lg py-2 pl-9 pr-3 font-sans text-sm text-foreground outline-none transition focus:ring-2 focus:ring-accent/30',
+                  'w-full rounded-lg py-2 ps-9 pe-3 font-sans text-sm text-foreground outline-none transition focus:ring-2 focus:ring-accent/30',
                 )}
               />{' '}
             </div>{' '}
@@ -454,7 +526,7 @@ function RoleEditor({
                   'px-4 py-6 text-center font-sans text-sm text-muted-foreground',
                 )}
               >
-                Loading permissions…
+                {tAdmin('roles.loadingPermissions', { default: 'Loading permissions…' })}
               </p>
             )}{' '}
             {!loadingRole &&
@@ -475,7 +547,9 @@ function RoleEditor({
                         className="rounded-md px-2 py-1 font-sans text-xs font-medium text-accent transition hover:bg-muted/50"
                       >
                         {' '}
-                        {allOn ? 'Clear' : 'Select all'}{' '}
+                        {allOn
+                          ? tCommon('clear')
+                          : tAdmin('roles.selectAll', { default: 'Select all' })}{' '}
                       </button>{' '}
                     </div>{' '}
                     <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -490,28 +564,28 @@ function RoleEditor({
                             className={cn(
                               'flex items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition',
                               on
-                                ? 'border-blue-500 bg-blue-500/5'
+                                ? 'border-primary bg-primary/5'
                                 : 'border-border hover:bg-muted/50',
                             )}
                           >
                             {' '}
                               <span
                                 className={cn(
-                                  'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-md border transition',
+                                  'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-md border transition',
                                   on
-                                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                                    ? 'border-primary bg-primary text-primary-foreground shadow-xs'
                                     : 'border-border bg-background',
                                 )}
                               >
                               {' '}
-                              {on && <Check className="h-3 w-3" />}{' '}
+                              {on && <Check className="size-3.5" />}{' '}
                             </span>{' '}
                             <span className="min-w-0">
                               {' '}
                               <span className="block font-sans text-sm font-medium text-foreground">
                                 {p.label}
                               </span>{' '}
-                              <span className="block truncate font-mono text-[10px] text-muted-foreground">
+                              <span className="block truncate font-mono text-2xs text-muted-foreground">
                                 {p.key}
                               </span>{' '}
                             </span>{' '}
@@ -529,12 +603,15 @@ function RoleEditor({
                   'px-4 py-6 text-center font-sans text-sm text-muted-foreground',
                 )}
               >
-                No permissions match “{search}”
+                {tAdmin('roles.noPermissionsMatch', {
+                  search,
+                  default: 'No permissions match “{search}”',
+                })}
               </p>
             )}{' '}
           </div>{' '}
         </section>{' '}
-        <div className="sticky bottom-0 -mx-6 flex items-center justify-between gap-3 border-t border-border bg-white px-6 py-4">
+        <div className="sticky bottom-0 -mx-6 flex items-center justify-between gap-3 border-t border-border bg-card px-6 py-4">
           {' '}
           <div>
             {' '}
@@ -543,10 +620,10 @@ function RoleEditor({
                 type="button"
                 onClick={del}
                 disabled={busy}
-                className="flex items-center gap-1.5 rounded-lg border border-red-200/70 px-3 py-2 font-sans text-sm font-medium text-red-600 transition hover:bg-red-50/70 disabled:opacity-40 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+                className="flex items-center gap-1.5 rounded-lg border border-destructive/70 px-3 py-2 font-sans text-sm font-medium text-destructive transition hover:bg-destructive/70 disabled:opacity-40 dark:border-red-900/40 dark:text-destructive dark:hover:bg-red-950/30"
               >
                 {' '}
-                <Trash2 className="h-4 w-4" /> Delete{' '}
+                <Trash2 className="size-4" /> {tCommon('delete')}{' '}
               </button>
             )}{' '}
           </div>{' '}
@@ -556,20 +633,22 @@ function RoleEditor({
               onClick={onClose}
               className="rounded-lg px-4 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:text-foreground"
             >
-              Cancel
+              {tCommon('cancel')}
             </button>{' '}
             <button
               onClick={save}
               disabled={busy || (!dirty && mode === 'edit')}
-              className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2 font-sans text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-40"
+              className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2 font-sans text-sm font-medium text-accent-foreground transition hover:bg-primary disabled:opacity-40"
             >
               {' '}
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />}{' '}
-              {mode === 'create' ? 'Create role' : 'Save changes'}{' '}
+              {busy && <Loader2 className="size-4 animate-spin" />}{' '}
+              {mode === 'create'
+                ? tAdmin('roles.createRole', { default: 'Create role' })
+                : tAdmin('saveChanges')}{' '}
             </button>{' '}
           </div>{' '}
         </div>{' '}
       </div>{' '}
-    </RightSheet>
+    </Modal>
   );
 }

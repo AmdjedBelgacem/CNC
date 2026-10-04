@@ -10,6 +10,7 @@ export default function DangerZonePage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const handleExport = async () => {
     setExportLoading(true);
@@ -42,8 +43,20 @@ export default function DangerZonePage() {
     if (!confirm('Permanently delete your account? This cannot be undone.')) return;
     setDeleteLoading(true);
     try {
-      const res = await apiProxyFetch('/api/proxy/auth/delete-account', { method: 'POST' });
-      if (!res.ok) throw new Error('Delete failed');
+      // The server now enforces both the typed confirmation and the password, so
+      // send them. Previously the DELETE check lived only in this component.
+      const res = await apiProxyFetch('/api/proxy/auth/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'DELETE', password: deletePassword }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        throw new Error(
+          typeof detail?.message === 'string' ? detail.message : 'Delete failed',
+        );
+      }
+      setMessage({ type: 'ok', text: 'Your account has been deleted.' });
       window.location.href = '/';
     } catch (err) {
       setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Delete failed' });
@@ -56,9 +69,9 @@ export default function DangerZonePage() {
       {' '}
       <div className="flex gap-4">
         {' '}
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-600">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
           {' '}
-          <ShieldAlert className="h-5 w-5" />{' '}
+          <ShieldAlert className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -70,13 +83,13 @@ export default function DangerZonePage() {
       </div>{' '}
       {message && (
         <div
-          className={`flex gap-3 rounded-2xl border px-4 py-3 text-sm ${message.type === 'ok' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-500/10 dark:text-red-300'}`}
+          className={`flex gap-3 rounded-2xl border px-4 py-3 text-sm ${message.type === 'ok' ? 'border-success bg-success/10 text-success dark:border-success/30 dark:bg-success/10 dark:text-success' : 'border-destructive bg-destructive/10 text-destructive dark:border-red-900/30 dark:bg-destructive/10 dark:text-red-300'}`}
         >
           {' '}
           {message.type === 'ok' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+            <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
           ) : (
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <AlertTriangle className="size-4 shrink-0 mt-0.5" />
           )}{' '}
           {message.text}{' '}
         </div>
@@ -85,8 +98,8 @@ export default function DangerZonePage() {
         {' '}
         <div className="flex items-center gap-3 border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-            <Download className="h-4 w-4" />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+            <Download className="size-4" />
           </div>{' '}
           <div>
             {' '}
@@ -105,7 +118,7 @@ export default function DangerZonePage() {
               <div className="flex gap-3">
                 {' '}
                 <div className="hidden h-10 w-10 items-center justify-center rounded-xl bg-card shadow-sm ring-1 ring-border sm:flex">
-                  <Download className="h-4 w-4" />
+                  <Download className="size-4" />
                 </div>{' '}
                 <div>
                   {' '}
@@ -127,29 +140,29 @@ export default function DangerZonePage() {
           </div>{' '}
         </div>{' '}
       </div>{' '}
-      <div className="overflow-hidden rounded-2xl border border-red-200 bg-card shadow-sm dark:border-red-900/40">
+      <div className="overflow-hidden rounded-2xl border border-destructive bg-card shadow-sm dark:border-red-900/40">
         {' '}
-        <div className="border-b border-red-100 bg-red-50/50 px-6 py-4 dark:border-red-900/20 dark:bg-red-500/[0.04]">
+        <div className="border-b border-red-100 bg-destructive/50 px-6 py-4 dark:border-red-900/20 dark:bg-destructive/[0.04]">
           {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-300">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-destructive dark:text-red-300">
             {' '}
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-500 text-white">
-              <Trash2 className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-destructive text-destructive-foreground">
+              <Trash2 className="size-3.5" />
             </span>{' '}
             Delete account{' '}
           </h2>{' '}
-          <p className="mt-1 text-xs leading-relaxed text-red-600/80 dark:text-red-400">
+          <p className="mt-1 text-xs leading-relaxed text-destructive/80 dark:text-destructive">
             Permanently delete your account and all associated data. This cannot be undone.
           </p>{' '}
         </div>{' '}
         <div className="p-6 space-y-4">
           {' '}
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/30 dark:bg-amber-500/10">
+          <div className="rounded-xl border border-warning/30 bg-warning px-4 py-3 /30 dark:bg-warning/10">
             {' '}
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+            <p className="text-xs font-semibold text-warning">
               Consequences:
             </p>{' '}
-            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <ul className="mt-1.5 list-disc space-y-1 ps-4 text-xs leading-relaxed text-warning ">
               {' '}
               <li>All enrollments, progress, and certificates will be lost.</li>{' '}
               <li>Your username will be released.</li>{' '}
@@ -159,7 +172,7 @@ export default function DangerZonePage() {
           <div className="space-y-2">
             {' '}
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Type <span className="font-mono text-red-600">DELETE</span> to confirm
+              Type <span className="font-mono text-destructive">DELETE</span> to confirm
             </label>{' '}
             <Input
               value={deleteConfirm}
@@ -167,6 +180,23 @@ export default function DangerZonePage() {
               placeholder="DELETE"
               className="h-10 rounded-xl bg-muted/20 font-mono"
             />{' '}
+          </div>{' '}
+          <div className="space-y-2">
+            {' '}
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Confirm your password
+            </label>{' '}
+            <Input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Your account password"
+              autoComplete="current-password"
+              className="h-10 rounded-xl bg-muted/20"
+            />{' '}
+            <p className="text-xs text-muted-foreground">
+              Required for accounts with a password. OAuth-only accounts can leave this blank.
+            </p>{' '}
           </div>{' '}
           <div className="flex flex-wrap items-center gap-3">
             {' '}
@@ -180,7 +210,7 @@ export default function DangerZonePage() {
               {deleteLoading ? 'Deleting...' : 'Permanently delete account'}{' '}
             </Button>{' '}
             <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <KeyRound className="h-3 w-3" /> Requires re-authentication
+              <KeyRound className="size-3.5" /> Requires re-authentication
             </span>{' '}
           </div>{' '}
         </div>{' '}

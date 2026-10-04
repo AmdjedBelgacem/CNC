@@ -25,10 +25,10 @@ export default function ForgotPasswordPage() {
     return (
       <div className="flex h-full flex-col items-center justify-center text-center">
         {' '}
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#f59e0b]/30 bg-[#f59e0b]/10">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
           {' '}
           <svg
-            className="h-7 w-7 text-[#f59e0b]"
+            className="h-7 w-7 text-primary"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -42,30 +42,30 @@ export default function ForgotPasswordPage() {
             />{' '}
           </svg>{' '}
         </div>{' '}
-        <h1 className="font-display text-[24px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#e8e8e8]">
+        <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
           Check Your Email{' '}
         </h1>{' '}
-        <p className="mb-6 mt-3 text-sm leading-relaxed text-[#8b8f96]">
+        <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">
           {' '}
-          If an account exists for <strong className="text-[#e8e8e8]">{email}</strong>, we&apos;ve
+          If an account exists for <strong className="text-foreground">{email}</strong>, we&apos;ve
           sent a password reset link.{' '}
         </p>{' '}
-        <div className="w-full rounded-xl border border-[#2a2e36] bg-[#16181c]/50 p-3.5 text-[12px] text-[#6b6f76]">
+        <div className="w-full rounded-xl border border-border bg-background/50 p-3.5 text-xs text-muted-foreground">
           {' '}
           Didn&apos;t receive it? Check your spam folder or{' '}
           <button
             onClick={() => setSent(false)}
-            className="font-bold text-[#f59e0b] transition-all duration-200 hover:text-[#d97706]"
+            className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
           >
             try again
           </button>{' '}
         </div>{' '}
-        <p className="mt-6 text-sm text-[#5c6068]">
+        <p className="mt-6 text-sm text-muted-foreground">
           {' '}
           <Link
             href="/login"
-            className="font-bold text-[#f59e0b] transition-all duration-200 hover:text-[#d97706]"
+            className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
           >
             Back to Sign In
           </Link>{' '}
@@ -78,15 +78,15 @@ export default function ForgotPasswordPage() {
       {' '}
       <div className="mb-6">
         {' '}
-        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]">
+        <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
           Password Reset{' '}
         </p>{' '}
-        <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#e8e8e8]">
+        <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
           Forgot Password?{' '}
         </h1>{' '}
-        <p className="mt-1.5 text-sm leading-relaxed text-[#8b8f96]">
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           {' '}
           Enter your email and we&apos;ll send you a reset link{' '}
         </p>{' '}
@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {' '}
         {error && (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-red-400">
+          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-destructive">
             {' '}
             {error}{' '}
           </div>
@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
           {' '}
           <label
             htmlFor="email"
-            className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]"
+            className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
             Email{' '}
@@ -116,24 +116,24 @@ export default function ForgotPasswordPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoFocus
-            className="h-12 w-full rounded-xl border border-[#2a2e36] bg-[#16181c] px-4 text-sm text-[#e8e8e8] outline-none ring-0 transition-all duration-200 placeholder:text-[#5c6068] focus:border-[#f59e0b]/60 focus:ring-1 focus:ring-[#f59e0b]/30"
+            className="h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
           />{' '}
         </div>{' '}
         <button
           type="submit"
           disabled={loading}
-          className="h-12 w-full rounded-xl bg-[#f59e0b] text-[13px] font-bold text-[#16181c] transition-all duration-200 hover:scale-[1.01] hover:bg-[#d97706] active:scale-[0.99] disabled:opacity-50"
+          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {' '}
           {loading ? 'Sending...' : 'Send Reset Link'}{' '}
         </button>{' '}
       </form>{' '}
-      <p className="mt-6 text-center text-sm text-[#5c6068]">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         {' '}
         Remember your password?{' '}
         <Link
           href="/login"
-          className="font-bold text-[#f59e0b] transition-all duration-200 hover:text-[#d97706]"
+          className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
         >
           Sign in
         </Link>{' '}

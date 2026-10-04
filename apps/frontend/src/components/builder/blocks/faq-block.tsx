@@ -4,7 +4,9 @@ import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Centered FAQ header, list and support footer. */
 export function FaqBlock({ props, puck }: BlockComponentProps<FaqProps>) {
   const {
+    id,
     className,
+    sectionBg = '',
     maxWidth = 896,
     headerMarginBottom = 64,
     itemsGap = 'flex flex-col gap-4',
@@ -12,7 +14,8 @@ export function FaqBlock({ props, puck }: BlockComponentProps<FaqProps>) {
   } = props;
   return (
     <section
-      className={cn('px-margin-mobile md:px-margin-desktop', className)}
+      id={id}
+      className={cn('px-margin-mobile md:px-margin-desktop', sectionBg, className)}
       style={layoutStyle(props)}
     >
       {' '}

@@ -53,8 +53,11 @@ export default function AccountGeneralPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || 'Failed to save');
       }
-      setSaved(true); // Immediate i18n effect: persist locale in cookie + refresh server components document.cookie = `NEXT_LOCALE=${form.language}; path=/; max-age=31536000; SameSite=Lax`;
-await refreshProfile();
+      setSaved(true);
+      if (form.language === 'en' || form.language === 'ar') {
+        document.cookie = `NEXT_LOCALE=${form.language}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+      await refreshProfile();
       router.refresh();
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -71,7 +74,7 @@ await refreshProfile();
         {' '}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {' '}
-          <User className="h-5 w-5" />{' '}
+          <User className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -83,15 +86,15 @@ await refreshProfile();
       </div>{' '}
       {/* Feedback */}{' '}
       {error && (
-        <div className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-500/10 dark:text-red-300">
+        <div className="flex gap-3 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive dark:border-red-900/30 dark:bg-destructive/10 dark:text-red-300">
           {' '}
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {error}{' '}
+          <AlertCircle className="size-4 shrink-0 mt-0.5" /> {error}{' '}
         </div>
       )}{' '}
       {saved && (
-        <div className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <div className="flex gap-3 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success dark:border-success/30 dark:bg-success/10 dark:text-success">
           {' '}
-          <Check className="h-4 w-4 shrink-0 mt-0.5" /> {t('saved')}{' '}
+          <Check className="size-4 shrink-0 mt-0.5" /> {t('saved')}{' '}
         </div>
       )}{' '}
       <form onSubmit={handleSave} className="space-y-6">
@@ -103,8 +106,8 @@ await refreshProfile();
             {' '}
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               {' '}
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-sm ring-1 ring-border">
-                <User className="h-3.5 w-3.5" />
+              <span className="flex size-6 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-sm ring-1 ring-border">
+                <User className="size-3.5" />
               </span>{' '}
               {t('profileIdentity')}{' '}
             </h2>{' '}
@@ -140,14 +143,14 @@ await refreshProfile();
                 </Label>{' '}
                 <div className="relative">
                   {' '}
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                     @
                   </span>{' '}
                   <Input
                     id="username"
                     value={form.username}
                     onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    className="h-10 rounded-xl bg-muted/20 pl-7 focus:bg-card transition-colors"
+                    className="h-10 rounded-xl bg-muted/20 ps-7 focus:bg-card transition-colors"
                     placeholder="adalovelace"
                   />{' '}
                 </div>{' '}
@@ -160,8 +163,8 @@ await refreshProfile();
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"
               >
                 {' '}
-                <Mail className="h-3 w-3" /> {t('email')}{' '}
-                <span className="ml-auto rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                <Mail className="size-3.5" /> {t('email')}{' '}
+                <span className="ms-auto rounded-full bg-warning/10 px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-warning">
                   {t('verified')}
                 </span>{' '}
               </Label>{' '}
@@ -173,7 +176,7 @@ await refreshProfile();
               />{' '}
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 {' '}
-                <Sparkles className="h-3 w-3" /> {t('changeEmailHint')}{' '}
+                <Sparkles className="size-3.5" /> {t('changeEmailHint')}{' '}
               </p>{' '}
             </div>{' '}
           </div>{' '}
@@ -185,8 +188,8 @@ await refreshProfile();
             {' '}
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               {' '}
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-sm ring-1 ring-border">
-                <Globe className="h-3.5 w-3.5" />
+              <span className="flex size-6 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-sm ring-1 ring-border">
+                <Globe className="size-3.5" />
               </span>{' '}
               {t('localization')}{' '}
             </h2>{' '}
@@ -210,14 +213,13 @@ await refreshProfile();
                     id="language"
                     value={form.language}
                     onChange={(e) => setForm({ ...form, language: e.target.value })}
-                    className="flex h-10 w-full appearance-none rounded-xl border border-input bg-muted/20 px-3 py-2 pr-8 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                    className="flex h-10 w-full appearance-none rounded-xl border border-input bg-muted/20 px-3 py-2 pe-8 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   >
                     {' '}
-                    <option value="en">🇺🇸 English</option> <option value="es">🇪🇸 Español</option>{' '}
-                    <option value="fr">🇫🇷 Français</option>{' '}
-                    <option value="de">🇩🇪 Deutsch</option>{' '}
+                    <option value="en">English</option>
+                    <option value="ar">العربية</option>
                   </select>{' '}
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     ⌄
                   </span>{' '}
                 </div>{' '}
@@ -229,13 +231,13 @@ await refreshProfile();
                   className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"
                 >
                   {' '}
-                  <Clock className="h-3 w-3" /> {t('timezone')}{' '}
+                  <Clock className="size-3.5" /> {t('timezone')}{' '}
                 </Label>{' '}
                 <select
                   id="timezone"
                   value={form.timezone}
                   onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                  className="flex h-10 w-full appearance-none rounded-xl border border-input bg-muted/20 px-3 py-2 pr-8 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                  className="flex h-10 w-full appearance-none rounded-xl border border-input bg-muted/20 px-3 py-2 pe-8 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                 >
                   {' '}
                   <option value="UTC">UTC — Coordinated Universal Time</option>{' '}
@@ -252,7 +254,7 @@ await refreshProfile();
           </div>{' '}
         </div>{' '}
         {/* Sticky save bar */}{' '}
-        <div className="sticky bottom-4 z-10 flex items-center justify-between gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-lg sm:px-5">
+        <div className="sticky bottom-4 z-10 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-lg sm:px-5">
           {' '}
           <p className="hidden text-xs text-muted-foreground sm:block">{t('unsavedHint')}</p>{' '}
           <p className="text-xs font-medium sm:hidden">

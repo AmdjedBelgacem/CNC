@@ -1,0 +1,2185 @@
+[
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/[slug]/edit/page.tsx",
+    "line": 1016,
+    "kind": "jsx-text",
+    "text": "void | Promise"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 142,
+    "kind": "jsx-text",
+    "text": "No file selected.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 163,
+    "kind": "toast",
+    "text": "Not an image",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 167,
+    "kind": "toast",
+    "text": "File too large",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 176,
+    "kind": "toast",
+    "text": "Title required",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 223,
+    "kind": "toast",
+    "text": "Academy created",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 226,
+    "kind": "toast",
+    "text": "Create failed",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 251,
+    "kind": "attr:title",
+    "text": "New academy",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 267,
+    "kind": "jsx-text",
+    "text": "Title *",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 271,
+    "kind": "attr:placeholder",
+    "text": "e.g. CNC Milling Academy",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 310,
+    "kind": "attr:label",
+    "text": "Hero banner",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 317,
+    "kind": "attr:label",
+    "text": "Logo / mark",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 324,
+    "kind": "jsx-text",
+    "text": "Accent color",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 341,
+    "kind": "jsx-text",
+    "text": "SEO title",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 345,
+    "kind": "attr:placeholder",
+    "text": "Custom <title> for search",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 350,
+    "kind": "jsx-text",
+    "text": "SEO description",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/academies/new/page.tsx",
+    "line": 359,
+    "kind": "attr:label",
+    "text": "Social preview image (og:image)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/page.tsx",
+    "line": 84,
+    "kind": "jsx-text",
+    "text": "Date.now() && at - Date.now()"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 90,
+    "kind": "label-map",
+    "text": "Learner name"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 96,
+    "kind": "label-map",
+    "text": "Course title"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 102,
+    "kind": "label-map",
+    "text": "Issue date"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 112,
+    "kind": "label-map",
+    "text": "Certificate no."
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 118,
+    "kind": "label-map",
+    "text": "Academy name"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 149,
+    "kind": "label-map",
+    "text": "DM Sans"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 190,
+    "kind": "label-map",
+    "text": "Royal Violet"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 198,
+    "kind": "label-map",
+    "text": "Heritage Gold"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/certificates/templates-tab.tsx",
+    "line": 206,
+    "kind": "label-map",
+    "text": "Arctic Minimal"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 30,
+    "kind": "label-map",
+    "text": "Start from scratch",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 37,
+    "kind": "label-map",
+    "text": "Workshop blueprint",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 44,
+    "kind": "label-map",
+    "text": "Academy pathway",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 114,
+    "kind": "toast",
+    "text": "Course draft created",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 119,
+    "kind": "toast",
+    "text": "Course creation failed",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 144,
+    "kind": "jsx-text",
+    "text": "Course Studio",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 145,
+    "kind": "jsx-text",
+    "text": "Create a course",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 154,
+    "kind": "jsx-text",
+    "text": "Course title",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 163,
+    "kind": "attr:placeholder",
+    "text": "e.g. CNC Milling Fundamentals",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 166,
+    "kind": "jsx-text",
+    "text": "Use a clear promise learners can recognize in the catalog.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 170,
+    "kind": "jsx-text",
+    "text": "URL slug",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 184,
+    "kind": "jsx-text",
+    "text": "This becomes the public course address.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 207,
+    "kind": "jsx-text",
+    "text": "Choose a starting point",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 251,
+    "kind": "jsx-text",
+    "text": "What happens next",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/courses/new/page.tsx",
+    "line": 269,
+    "kind": "jsx-text",
+    "text": "A guided flow, not a blank canvas.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/integrations/integrations-panel.tsx",
+    "line": 148,
+    "kind": "attr:placeholder",
+    "text": "CSRF token"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/integrations/integrations-panel.tsx",
+    "line": 149,
+    "kind": "attr:aria-label",
+    "text": "CSRF token"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/integrations/integrations-panel.tsx",
+    "line": 163,
+    "kind": "attr:title",
+    "text": "Could not load integrations"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/integrations/page.tsx",
+    "line": 15,
+    "kind": "attr:title",
+    "text": "Google integrations",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/products/product-form.tsx",
+    "line": 344,
+    "kind": "attr:placeholder",
+    "text": "milling, endmill, starter"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/settings/ai-assistant/ai-learning-panel.tsx",
+    "line": 280,
+    "kind": "attr:placeholder",
+    "text": "example.com&#10;docs.example.org"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/settings/ai-assistant/payment-settings-panel.tsx",
+    "line": 209,
+    "kind": "attr:title",
+    "text": "Could not load payment settings"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/staff/page.tsx",
+    "line": 69,
+    "kind": "label-map",
+    "text": "Super Admin"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/staff/page.tsx",
+    "line": 98,
+    "kind": "label-map",
+    "text": "Master Instructor"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/staff/page.tsx",
+    "line": 127,
+    "kind": "label-map",
+    "text": "Sponsor Partner"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/staff/page.tsx",
+    "line": 1090,
+    "kind": "attr:placeholder",
+    "text": "teammate@example.com"
+  },
+  {
+    "file": "apps/frontend/src/app/(admin)/admin/theme/theme-editor.tsx",
+    "line": 187,
+    "kind": "jsx-text",
+    "text": "c.ratio !== null && c.ratio"
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/callback/page.tsx",
+    "line": 48,
+    "kind": "jsx-text",
+    "text": "Completing sign-in…",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/forgot-password/page.tsx",
+    "line": 114,
+    "kind": "attr:placeholder",
+    "text": "you@example.com",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/login/page.tsx",
+    "line": 106,
+    "kind": "jsx-text",
+    "text": "Verification email sent!",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/login/page.tsx",
+    "line": 122,
+    "kind": "attr:placeholder",
+    "text": "you@example.com",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/login/page.tsx",
+    "line": 153,
+    "kind": "attr:placeholder",
+    "text": "Enter your password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/register/page.tsx",
+    "line": 149,
+    "kind": "attr:placeholder",
+    "text": "John Doe",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/register/page.tsx",
+    "line": 190,
+    "kind": "attr:placeholder",
+    "text": "you@example.com",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/register/page.tsx",
+    "line": 210,
+    "kind": "attr:placeholder",
+    "text": "Min. 8 characters — uppercase, lowercase, number",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/register/page.tsx",
+    "line": 230,
+    "kind": "attr:placeholder",
+    "text": "Repeat your password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/resend-verification/page.tsx",
+    "line": 55,
+    "kind": "attr:placeholder",
+    "text": "you@example.com",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/reset-password/page.tsx",
+    "line": 119,
+    "kind": "attr:placeholder",
+    "text": "Min. 8 characters",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/reset-password/page.tsx",
+    "line": 139,
+    "kind": "attr:placeholder",
+    "text": "Repeat your password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/verify-email-change/page.tsx",
+    "line": 44,
+    "kind": "jsx-text",
+    "text": "Email Change Verification",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/verify-email-change/page.tsx",
+    "line": 45,
+    "kind": "jsx-text",
+    "text": "Confirming your new email address",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/verify-email-change/page.tsx",
+    "line": 53,
+    "kind": "jsx-text",
+    "text": "Verifying your email change...",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/verify-email-change/page.tsx",
+    "line": 63,
+    "kind": "jsx-text",
+    "text": "Sign In",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(auth)/verify-email-change/page.tsx",
+    "line": 74,
+    "kind": "jsx-text",
+    "text": "Back to Security Settings",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/page.tsx",
+    "line": 40,
+    "kind": "jsx-text",
+    "text": "My Learning",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/page.tsx",
+    "line": 41,
+    "kind": "jsx-text",
+    "text": "Sign in to track your progress.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/page.tsx",
+    "line": 44,
+    "kind": "jsx-text",
+    "text": "Sign In",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/page.tsx",
+    "line": 54,
+    "kind": "jsx-text",
+    "text": "My Learning",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/page.tsx",
+    "line": 130,
+    "kind": "jsx-text",
+    "text": "No enrollments yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/page.tsx",
+    "line": 136,
+    "kind": "jsx-text",
+    "text": "Browse Courses",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 143,
+    "kind": "jsx-text",
+    "text": "Account Security",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 151,
+    "kind": "jsx-text",
+    "text": "Two-factor authentication is enabled.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 159,
+    "kind": "jsx-text",
+    "text": "Change Password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 180,
+    "kind": "jsx-text",
+    "text": "Current Password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 191,
+    "kind": "jsx-text",
+    "text": "New Password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 202,
+    "kind": "jsx-text",
+    "text": "Confirm New Password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 221,
+    "kind": "jsx-text",
+    "text": "Change Email",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 242,
+    "kind": "jsx-text",
+    "text": "New Email",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 253,
+    "kind": "jsx-text",
+    "text": "Current Password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 272,
+    "kind": "jsx-text",
+    "text": "Two-Factor Authentication",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 273,
+    "kind": "jsx-text",
+    "text": "Add an extra layer of security to your account.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 300,
+    "kind": "attr:alt",
+    "text": "2FA QR Code",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 305,
+    "kind": "jsx-text",
+    "text": "Enter the 6-digit code from your app",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 342,
+    "kind": "jsx-text",
+    "text": "Save these recovery codes",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 365,
+    "kind": "jsx-text",
+    "text": "Active Sessions",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 366,
+    "kind": "jsx-text",
+    "text": "Manage devices where you&apos;re logged in.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 371,
+    "kind": "jsx-text",
+    "text": "Loading sessions...",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 373,
+    "kind": "jsx-text",
+    "text": "No active sessions found.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 420,
+    "kind": "jsx-text",
+    "text": "Logout everywhere",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/account/security/page.tsx",
+    "line": 421,
+    "kind": "jsx-text",
+    "text": "Sign out of all active sessions",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/courses/[slug]/lesson-row.tsx",
+    "line": 68,
+    "kind": "jsx-text",
+    "text": "block.type === 'quiz') &&"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/courses/[slug]/lessons/[lessonSlug]/lesson-player.tsx",
+    "line": 145,
+    "kind": "jsx-text",
+    "text": "Pass the quiz to continue"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/courses/[slug]/lessons/[lessonSlug]/lesson-player.tsx",
+    "line": 151,
+    "kind": "jsx-text",
+    "text": "This lesson does not have published content yet."
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/courses/course-grid.tsx",
+    "line": 102,
+    "kind": "attr:title",
+    "text": "Unable to load courses",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/courses/course-grid.tsx",
+    "line": 138,
+    "kind": "jsx-text",
+    "text": "View academy",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/courses/course-grid.tsx",
+    "line": 155,
+    "kind": "jsx-text",
+    "text": "Clear filter",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/courses/course-grid.tsx",
+    "line": 173,
+    "kind": "jsx-text",
+    "text": "Browse all courses",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/danger/page.tsx",
+    "line": 65,
+    "kind": "jsx-text",
+    "text": "Danger Zone",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/danger/page.tsx",
+    "line": 93,
+    "kind": "jsx-text",
+    "text": "Export your data",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/danger/page.tsx",
+    "line": 112,
+    "kind": "jsx-text",
+    "text": "Your personal data",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/danger/page.tsx",
+    "line": 154,
+    "kind": "jsx-text",
+    "text": "All enrollments, progress, and certificates will be lost.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/danger/page.tsx",
+    "line": 155,
+    "kind": "jsx-text",
+    "text": "Your username will be released.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/danger/page.tsx",
+    "line": 156,
+    "kind": "jsx-text",
+    "text": "You will be logged out immediately.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 133,
+    "kind": "attr:placeholder",
+    "text": "Ada Lovelace"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 243,
+    "kind": "jsx-text",
+    "text": "UTC — Coordinated Universal Time"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 244,
+    "kind": "jsx-text",
+    "text": "Eastern — New York"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 245,
+    "kind": "jsx-text",
+    "text": "Central — Chicago"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 246,
+    "kind": "jsx-text",
+    "text": "Mountain — Denver"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 247,
+    "kind": "jsx-text",
+    "text": "Pacific — Los Angeles"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 248,
+    "kind": "jsx-text",
+    "text": "London — GMT/BST"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 249,
+    "kind": "jsx-text",
+    "text": "Paris — CET/CEST"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/page.tsx",
+    "line": 250,
+    "kind": "jsx-text",
+    "text": "Berlin — CET/CEST"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 333,
+    "kind": "attr:placeholder",
+    "text": "new@example.com",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 395,
+    "kind": "attr:alt",
+    "text": "2FA QR Code",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 435,
+    "kind": "jsx-text",
+    "text": "Save these recovery codes",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 483,
+    "kind": "jsx-text",
+    "text": "Loading sessions...",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 485,
+    "kind": "jsx-text",
+    "text": "No active sessions.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 536,
+    "kind": "jsx-text",
+    "text": "Logout everywhere",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 537,
+    "kind": "jsx-text",
+    "text": "Sign out of all devices",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 573,
+    "kind": "jsx-text",
+    "text": "No login history available.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 668,
+    "kind": "jsx-text",
+    "text": "Disable Two-Factor",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/account/security/page.tsx",
+    "line": 669,
+    "kind": "jsx-text",
+    "text": "Enter your 6-digit code to confirm.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/billing/page.tsx",
+    "line": 30,
+    "kind": "jsx-text",
+    "text": "Upgrade to Pro",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/billing/page.tsx",
+    "line": 122,
+    "kind": "jsx-text",
+    "text": "No invoices yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/connected-accounts/page.tsx",
+    "line": 62,
+    "kind": "jsx-text",
+    "text": "Connected Accounts",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/layout.tsx",
+    "line": 35,
+    "kind": "label-map",
+    "text": "Danger Zone",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/layout.tsx",
+    "line": 46,
+    "kind": "label-map",
+    "text": "Edit Profile",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/layout.tsx",
+    "line": 80,
+    "kind": "label-map",
+    "text": "Connected Accounts",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/layout.tsx",
+    "line": 190,
+    "kind": "jsx-text",
+    "text": "Need help?",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/preferences/appearance/page.tsx",
+    "line": 128,
+    "kind": "jsx-text",
+    "text": "Adjust spacing and sizing.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/preferences/privacy/page.tsx",
+    "line": 154,
+    "kind": "attr:title",
+    "text": "No one",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 253,
+    "kind": "jsx-text",
+    "text": "Edit Profile",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 388,
+    "kind": "attr:placeholder",
+    "text": "e.g. CNC Machinist | Manufacturing Engineer",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 401,
+    "kind": "attr:placeholder",
+    "text": "Tell us about yourself...",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 411,
+    "kind": "attr:placeholder",
+    "text": "e.g. Detroit, MI",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 509,
+    "kind": "attr:placeholder",
+    "text": "CNC, CAD",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 536,
+    "kind": "jsx-text",
+    "text": "Upload image",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 570,
+    "kind": "jsx-text",
+    "text": "Loading portfolio...",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/settings/profile/page.tsx",
+    "line": 577,
+    "kind": "jsx-text",
+    "text": "No portfolio items yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/u/[username]/page.tsx",
+    "line": 153,
+    "kind": "jsx-text",
+    "text": "No portfolio items yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/u/[username]/page.tsx",
+    "line": 171,
+    "kind": "jsx-text",
+    "text": "Activity feed coming soon",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(academy)/u/[username]/page.tsx",
+    "line": 281,
+    "kind": "jsx-text",
+    "text": "Profile not found",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/feed/page.tsx",
+    "line": 11,
+    "kind": "label-map",
+    "text": "Community Feed",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/feed/page.tsx",
+    "line": 16,
+    "kind": "label-map",
+    "text": "Community Feed | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/feed/page.tsx",
+    "line": 34,
+    "kind": "label-map",
+    "text": "Community Feed",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/repair/page.tsx",
+    "line": 63,
+    "kind": "jsx-text",
+    "text": "Machine Repair Directory",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/repair/page.tsx",
+    "line": 64,
+    "kind": "jsx-text",
+    "text": "Find CNC repair services near you.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/repair/page.tsx",
+    "line": 83,
+    "kind": "attr:placeholder",
+    "text": "Search by name or city...",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/repair/page.tsx",
+    "line": 108,
+    "kind": "jsx-text",
+    "text": "No repair shops found.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/tags/[slug]/page.tsx",
+    "line": 5,
+    "kind": "label-map",
+    "text": "Tag | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(social)/tags/page.tsx",
+    "line": 5,
+    "kind": "label-map",
+    "text": "Tags | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/cart/page.tsx",
+    "line": 47,
+    "kind": "attr:title",
+    "text": "Your cart is empty",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/cart/page.tsx",
+    "line": 51,
+    "kind": "jsx-text",
+    "text": "Browse Store",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/cart/page.tsx",
+    "line": 91,
+    "kind": "attr:aria-label",
+    "text": "Decrease quantity",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/cart/page.tsx",
+    "line": 102,
+    "kind": "attr:aria-label",
+    "text": "Increase quantity",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/cart/page.tsx",
+    "line": 131,
+    "kind": "jsx-text",
+    "text": "Order Summary",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/cart/page.tsx",
+    "line": 144,
+    "kind": "jsx-text",
+    "text": "Calculated at checkout",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/cart/page.tsx",
+    "line": 157,
+    "kind": "jsx-text",
+    "text": "Proceed to Checkout",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/products/[slug]/page.tsx",
+    "line": 152,
+    "kind": "attr:aria-label",
+    "text": "Previous image"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/products/[slug]/page.tsx",
+    "line": 162,
+    "kind": "attr:aria-label",
+    "text": "Next image"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/(store)/products/page.tsx",
+    "line": 21,
+    "kind": "label-map",
+    "text": "Products | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/about/layout.tsx",
+    "line": 3,
+    "kind": "label-map",
+    "text": "About Us | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/about/page.tsx",
+    "line": 7,
+    "kind": "label-map",
+    "text": "About Us | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/academy/[slug]/page.tsx",
+    "line": 280,
+    "kind": "label-map",
+    "text": "TITANS of Manufacturing"
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/academy/page.tsx",
+    "line": 17,
+    "kind": "label-map",
+    "text": "Academies | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/events/[slug]/page.tsx",
+    "line": 157,
+    "kind": "jsx-text",
+    "text": "Event Details",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/events/[slug]/page.tsx",
+    "line": 258,
+    "kind": "jsx-text",
+    "text": "Virtual Access",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/events/page.tsx",
+    "line": 22,
+    "kind": "label-map",
+    "text": "Events | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/groups/layout.tsx",
+    "line": 3,
+    "kind": "label-map",
+    "text": "Study Groups | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/groups/page.tsx",
+    "line": 67,
+    "kind": "jsx-text",
+    "text": "Study Groups",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/groups/page.tsx",
+    "line": 123,
+    "kind": "jsx-text",
+    "text": "No study groups yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/privacy/page.tsx",
+    "line": 7,
+    "kind": "label-map",
+    "text": "Privacy Policy | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/refunds/page.tsx",
+    "line": 7,
+    "kind": "label-map",
+    "text": "Refund Policy | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/sponsors/layout.tsx",
+    "line": 3,
+    "kind": "label-map",
+    "text": "Our Partners | TITANS of Manufacturing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/sponsors/page.tsx",
+    "line": 46,
+    "kind": "jsx-text",
+    "text": "Our Partners",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/sponsors/page.tsx",
+    "line": 54,
+    "kind": "jsx-text",
+    "text": "Become a Partner",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/sponsors/page.tsx",
+    "line": 81,
+    "kind": "jsx-text",
+    "text": "No partners yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/titan-tv/page.tsx",
+    "line": 85,
+    "kind": "jsx-text",
+    "text": "Video Library",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/titan-tv/page.tsx",
+    "line": 118,
+    "kind": "jsx-text",
+    "text": "Unable to load video library",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/titan-tv/page.tsx",
+    "line": 128,
+    "kind": "jsx-text",
+    "text": "No video series yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/verify/[number]/page.tsx",
+    "line": 54,
+    "kind": "jsx-text",
+    "text": "Verification unavailable",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/verify/[number]/page.tsx",
+    "line": 62,
+    "kind": "jsx-text",
+    "text": "Certificate not found",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/verify/[number]/page.tsx",
+    "line": 71,
+    "kind": "jsx-text",
+    "text": "Valid certificate",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(main)/verify/page.tsx",
+    "line": 13,
+    "kind": "jsx-text",
+    "text": "Verify a certificate",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(public)/page.tsx",
+    "line": 14,
+    "kind": "label-map",
+    "text": "Machinist Pro | Master CNC Machining",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(public)/page.tsx",
+    "line": 59,
+    "kind": "label-map",
+    "text": "Ahmad CNC",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/(public)/page.tsx",
+    "line": 67,
+    "kind": "label-map",
+    "text": "CNC Manufacturing Academies",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/layout.tsx",
+    "line": 44,
+    "kind": "label-map",
+    "text": "Machinist Pro | Master CNC Machining",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/layout.tsx",
+    "line": 53,
+    "kind": "label-map",
+    "text": "Machinist Pro | Master CNC Machining",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/offline/page.tsx",
+    "line": 22,
+    "kind": "jsx-text",
+    "text": "You&apos;re offline",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/offline/page.tsx",
+    "line": 53,
+    "kind": "jsx-text",
+    "text": "Browse later",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/offline/page.tsx",
+    "line": 64,
+    "kind": "jsx-text",
+    "text": "Cached assets",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/offline/page.tsx",
+    "line": 75,
+    "kind": "jsx-text",
+    "text": "Live actions wait",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/offline/page.tsx",
+    "line": 87,
+    "kind": "jsx-text",
+    "text": "Works offline",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/app/offline/page.tsx",
+    "line": 94,
+    "kind": "jsx-text",
+    "text": "Needs online",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/academy/academy-pathways.tsx",
+    "line": 101,
+    "kind": "jsx-text",
+    "text": "No academies published yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/academy/language-availability.tsx",
+    "line": 24,
+    "kind": "jsx-text",
+    "text": "Some fields use English fallback",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/admin/admin-chrome.tsx",
+    "line": 212,
+    "kind": "attr:title",
+    "text": "Sync status",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/admin/admin-chrome.tsx",
+    "line": 240,
+    "kind": "attr:aria-label",
+    "text": "Clear search",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/admin/admin-form.tsx",
+    "line": 366,
+    "kind": "jsx-text",
+    "text": "All changes saved",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/admin/admin-rail.tsx",
+    "line": 209,
+    "kind": "attr:title",
+    "text": "TITANS Admin"
+  },
+  {
+    "file": "apps/frontend/src/components/admin/admin-ui.tsx",
+    "line": 221,
+    "kind": "attr:aria-label",
+    "text": "Remove filter",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/auth/reauth-modal.tsx",
+    "line": 92,
+    "kind": "attr:placeholder",
+    "text": "Enter your password",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/add-block-menu.tsx",
+    "line": 192,
+    "kind": "attr:placeholder",
+    "text": "Search blocks…"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/blocks/user-nav-menu.tsx",
+    "line": 42,
+    "kind": "attr:aria-label",
+    "text": "Account menu",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/canvas-controls.tsx",
+    "line": 38,
+    "kind": "attr:title",
+    "text": "Zoom viewport in"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/canvas-controls.tsx",
+    "line": 41,
+    "kind": "attr:title",
+    "text": "Zoom viewport out"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/canvas-controls.tsx",
+    "line": 58,
+    "kind": "attr:title",
+    "text": "Zoom viewport in"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/canvas-controls.tsx",
+    "line": 59,
+    "kind": "attr:title",
+    "text": "Zoom viewport out"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/canvas-controls.tsx",
+    "line": 95,
+    "kind": "attr:title",
+    "text": "Zoom viewport out"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/canvas-controls.tsx",
+    "line": 100,
+    "kind": "attr:title",
+    "text": "Zoom viewport in"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/controls.tsx",
+    "line": 186,
+    "kind": "jsx-text",
+    "text": "o.value === value) &&"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/controls.tsx",
+    "line": 333,
+    "kind": "attr:title",
+    "text": "Open the system color picker"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/controls.tsx",
+    "line": 394,
+    "kind": "attr:placeholder",
+    "text": "Search icons…"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 70,
+    "kind": "label-map",
+    "text": "Extra classes",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 154,
+    "kind": "label-map",
+    "text": "Letter spacing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 168,
+    "kind": "label-map",
+    "text": "Line height",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 217,
+    "kind": "label-map",
+    "text": "Letter spacing",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 254,
+    "kind": "label-map",
+    "text": "Line height",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 282,
+    "kind": "label-map",
+    "text": "Icon position",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 440,
+    "kind": "label-map",
+    "text": "Aspect ratio",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 536,
+    "kind": "label-map",
+    "text": "Icon size",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 594,
+    "kind": "label-map",
+    "text": "Circle size",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 633,
+    "kind": "label-map",
+    "text": "Bar height",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 666,
+    "kind": "label-map",
+    "text": "Mobile direction",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 785,
+    "kind": "label-map",
+    "text": "Accent bar color",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 877,
+    "kind": "label-map",
+    "text": "Icon gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 919,
+    "kind": "label-map",
+    "text": "Content padding",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 930,
+    "kind": "label-map",
+    "text": "Media aspect",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 960,
+    "kind": "label-map",
+    "text": "Toggle padding X",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 971,
+    "kind": "label-map",
+    "text": "Toggle padding Y",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 982,
+    "kind": "label-map",
+    "text": "Answer padding X",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 993,
+    "kind": "label-map",
+    "text": "Answer padding bottom",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1016,
+    "kind": "label-map",
+    "text": "Column gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1062,
+    "kind": "label-map",
+    "text": "Container width",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1073,
+    "kind": "label-map",
+    "text": "Min height",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1093,
+    "kind": "label-map",
+    "text": "Hide section",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1112,
+    "kind": "label-map",
+    "text": "Top offset",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1123,
+    "kind": "label-map",
+    "text": "Bar width",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1134,
+    "kind": "label-map",
+    "text": "Max width",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1153,
+    "kind": "label-map",
+    "text": "Padding X",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1164,
+    "kind": "label-map",
+    "text": "Padding Y",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1212,
+    "kind": "label-map",
+    "text": "Image opacity",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1224,
+    "kind": "label-map",
+    "text": "Gradient mesh",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1241,
+    "kind": "label-map",
+    "text": "Min height",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1253,
+    "kind": "label-map",
+    "text": "Content width",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1264,
+    "kind": "label-map",
+    "text": "Content padding X",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1285,
+    "kind": "label-map",
+    "text": "Indicator bottom",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1309,
+    "kind": "label-map",
+    "text": "Content alignment",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1321,
+    "kind": "label-map",
+    "text": "Trust Chips",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1327,
+    "kind": "label-map",
+    "text": "Show trust chips",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1335,
+    "kind": "label-map",
+    "text": "Trust note",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1343,
+    "kind": "label-map",
+    "text": "Trust note link",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1374,
+    "kind": "label-map",
+    "text": "Columns (mobile)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1384,
+    "kind": "label-map",
+    "text": "Columns (sm+)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1394,
+    "kind": "label-map",
+    "text": "Columns (lg+)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1429,
+    "kind": "label-map",
+    "text": "Logo gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1440,
+    "kind": "label-map",
+    "text": "Header bottom margin",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1473,
+    "kind": "label-map",
+    "text": "Section background",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1504,
+    "kind": "label-map",
+    "text": "Column gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1537,
+    "kind": "label-map",
+    "text": "Header bottom margin",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1548,
+    "kind": "label-map",
+    "text": "Card columns (md+)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1558,
+    "kind": "label-map",
+    "text": "Card gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1591,
+    "kind": "label-map",
+    "text": "Overlay opacity",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1603,
+    "kind": "label-map",
+    "text": "Banner padding",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1633,
+    "kind": "label-map",
+    "text": "Column gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1644,
+    "kind": "label-map",
+    "text": "Copy column (lg+)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1655,
+    "kind": "label-map",
+    "text": "Side column (lg+)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1678,
+    "kind": "label-map",
+    "text": "Inner max width",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1689,
+    "kind": "label-map",
+    "text": "Header bottom margin",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1700,
+    "kind": "label-map",
+    "text": "Items gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1711,
+    "kind": "label-map",
+    "text": "Footer top margin",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1734,
+    "kind": "label-map",
+    "text": "Columns (sm+)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1744,
+    "kind": "label-map",
+    "text": "Columns (md+)",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1754,
+    "kind": "label-map",
+    "text": "Column gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/fields.ts",
+    "line": 1765,
+    "kind": "label-map",
+    "text": "Bottom bar gap",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/smart-inspector.tsx",
+    "line": 70,
+    "kind": "jsx-text",
+    "text": "No properties for this block",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/inspector/smart-inspector.tsx",
+    "line": 118,
+    "kind": "jsx-text",
+    "text": "Select a component",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/node-inspector.tsx",
+    "line": 101,
+    "kind": "attr:title",
+    "text": "Copy the whole node (type + props + id) as JSON",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/builder/page-manager.tsx",
+    "line": 455,
+    "kind": "jsx-text",
+    "text": "void | Promise"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/page-manager.tsx",
+    "line": 603,
+    "kind": "jsx-text",
+    "text": "void | Promise"
+  },
+  {
+    "file": "apps/frontend/src/components/builder/structure-tree.tsx",
+    "line": 180,
+    "kind": "jsx-text",
+    "text": "The page is empty",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/chat/chat-widget.tsx",
+    "line": 102,
+    "kind": "jsx-text",
+    "text": "TITANS Support",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/chat/chat-widget.tsx",
+    "line": 103,
+    "kind": "jsx-text",
+    "text": "Typically replies in minutes",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/chat/chat-widget.tsx",
+    "line": 117,
+    "kind": "jsx-text",
+    "text": "Hi there! 👋",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/chat/chat-widget.tsx",
+    "line": 138,
+    "kind": "attr:placeholder",
+    "text": "Type your message...",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/chat/chat-widget.tsx",
+    "line": 140,
+    "kind": "attr:aria-label",
+    "text": "Chat message input",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/chat/chat-widget.tsx",
+    "line": 146,
+    "kind": "attr:aria-label",
+    "text": "Send message",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/events/events-board.tsx",
+    "line": 158,
+    "kind": "attr:placeholder",
+    "text": "Search events…"
+  },
+  {
+    "file": "apps/frontend/src/components/events/events-islands.tsx",
+    "line": 289,
+    "kind": "jsx-text",
+    "text": "new Date(e.startDate).getTime()",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/events/upcoming-events.tsx",
+    "line": 39,
+    "kind": "jsx-text",
+    "text": "Upcoming Events",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/events/upcoming-events.tsx",
+    "line": 40,
+    "kind": "jsx-text",
+    "text": "Workshops, webinars, and conferences.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/feed/community-feed-preview.tsx",
+    "line": 36,
+    "kind": "jsx-text",
+    "text": "From the Community",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/feed/post-card.tsx",
+    "line": 241,
+    "kind": "attr:aria-label",
+    "text": "Previous image"
+  },
+  {
+    "file": "apps/frontend/src/components/feed/post-card.tsx",
+    "line": 249,
+    "kind": "attr:aria-label",
+    "text": "Next image"
+  },
+  {
+    "file": "apps/frontend/src/components/home/home-builder.tsx",
+    "line": 224,
+    "kind": "jsx-text",
+    "text": "No academies published yet",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/layout/academies-dropdown.tsx",
+    "line": 23,
+    "kind": "label-map",
+    "text": "Browse Academies",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/layout/announcement-bar.tsx",
+    "line": 54,
+    "kind": "attr:aria-label",
+    "text": "Dismiss announcement",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/learning/lesson-block-renderer.tsx",
+    "line": 48,
+    "kind": "jsx-text",
+    "text": "isUploadedMediaRef(image?.src) ?"
+  },
+  {
+    "file": "apps/frontend/src/components/learning/lesson-block-renderer.tsx",
+    "line": 82,
+    "kind": "jsx-text",
+    "text": "hotspot.id === selected)?.detail &&"
+  },
+  {
+    "file": "apps/frontend/src/components/notifications/notification-item.tsx",
+    "line": 141,
+    "kind": "jsx-text",
+    "text": "void | Promise"
+  },
+  {
+    "file": "apps/frontend/src/components/pwa/update-toast.tsx",
+    "line": 23,
+    "kind": "jsx-text",
+    "text": "App updated — refresh to get the latest.",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/store/course-products-sidebar.tsx",
+    "line": 44,
+    "kind": "jsx-text",
+    "text": "Recommended Products",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/components/ui/modal.tsx",
+    "line": 65,
+    "kind": "attr:aria-label",
+    "text": "Close panel",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/hooks/use-notification-preferences.ts",
+    "line": 86,
+    "kind": "jsx-text",
+    "text": "normalizeNotificationPreferences(await api.get",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/hooks/use-notifications.ts",
+    "line": 289,
+    "kind": "jsx-text",
+    "text": "normalizeUnreadCount(await api.get",
+    "noCatalogInFile": true
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 647,
+    "kind": "label-map",
+    "text": "Axis readouts"
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 660,
+    "kind": "label-map",
+    "text": "Mode buttons"
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 714,
+    "kind": "label-map",
+    "text": "Code lines"
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 728,
+    "kind": "label-map",
+    "text": "Readout cells"
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 784,
+    "kind": "label-map",
+    "text": "Stats strip"
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 793,
+    "kind": "label-map",
+    "text": "Primary CTA"
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 806,
+    "kind": "label-map",
+    "text": "Secondary CTA"
+  },
+  {
+    "file": "apps/frontend/src/lib/builder/puck-config.tsx",
+    "line": 854,
+    "kind": "label-map",
+    "text": "Spotlight cards"
+  }
+]

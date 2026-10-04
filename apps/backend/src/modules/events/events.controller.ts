@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, HttpCode, HttpStatus, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Req, Get, Post, Patch, Delete, Param, Query, Body, HttpCode, HttpStatus, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { EventsService } from './events.service';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
@@ -24,6 +24,7 @@ export class EventsController {
   @ApiQuery({ name: 'upcoming', required: false })
   findAll(
     @CurrentTenant() tenant: { id: string },
+    @Req() req: any,
     @Query('type') type?: string,
     @Query('upcoming') upcoming?: string,
     @Query('page') page?: string,
@@ -34,6 +35,8 @@ export class EventsController {
       upcoming: upcoming === 'true',
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
+      // The resolver reads the cookie, then `?locale=`, then the header.
+      localeInput: req,
     });
   }
 
@@ -89,10 +92,11 @@ export class EventsController {
   @ApiOperation({ summary: 'Register for an event' })
   register(
     @CurrentUser() user: { id: string } | undefined,
+    @CurrentTenant() tenant: { id: string },
     @Param('id') id: string,
   ) {
     if (!user?.id) throw new UnauthorizedException('Authentication required');
-    return this.events.register(id, user.id);
+    return this.events.register(id, user.id, tenant.id);
   }
 
   @Delete(':id/register')
@@ -101,9 +105,10 @@ export class EventsController {
   @ApiOperation({ summary: 'Cancel event registration' })
   cancelRegistration(
     @CurrentUser() user: { id: string } | undefined,
+    @CurrentTenant() tenant: { id: string },
     @Param('id') id: string,
   ) {
     if (!user?.id) throw new UnauthorizedException('Authentication required');
-    return this.events.cancelRegistration(id, user.id);
+    return this.events.cancelRegistration(id, user.id, tenant.id);
   }
 }

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-github2';
 import { ConfigService } from '../../../config/config.service';
+import { callbackOrigin } from './oauth-callback-url';
+import { StatelessOAuthStateStore } from './stateless-oauth-state.store';
 
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
@@ -9,8 +11,10 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     super({
       clientID: config.get('GITHUB_CLIENT_ID') || 'missing',
       clientSecret: config.get('GITHUB_CLIENT_SECRET') || 'missing',
-      callbackURL: `${config.get('FRONTEND_URL') || 'http://localhost:3000'}/api/auth/github/callback`,
+      callbackURL: `${callbackOrigin(config)}/auth/oauth/github/callback`,
       scope: ['user:email'],
+      // See google.strategy.ts — no req.session in this app, so passport needs a store.
+      store: new StatelessOAuthStateStore(),
     } as any);
   }
 

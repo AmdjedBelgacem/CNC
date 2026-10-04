@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Put, Delete, Body, Param, HttpCode, HttpStatus,
-  UseGuards, Query, BadRequestException,
+  UseGuards, Query, BadRequestException, ConflictException, NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { DrizzleService } from '../../database/drizzle.service';
@@ -12,6 +12,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { OptionalAuthGuard } from './guards/optional-auth.guard';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @ApiTags('profile')
 @Controller()
@@ -20,6 +21,7 @@ export class ProfileController {
     private auth: AuthService,
     private upload: UploadService,
     private drizzle: DrizzleService,
+    private notifications: NotificationsService,
   ) {}
 
   @Public()
@@ -107,7 +109,16 @@ export class ProfileController {
     @Param('userId') targetUserId: string,
     @CurrentUser() currentUser: any,
   ) {
-    if (currentUser.id === targetUserId) throw new BadRequestException('Cannot follow yourself');
+    // Following yourself is never a valid state, on any route.
+    if (String(currentUser.id) === String(targetUserId)) {
+      throw new ConflictException('Cannot follow yourself');
+    }
+
+    const target = await this.drizzle.db.query.users.findFirst({
+      where: and(eq(users.id, targetUserId), eq(users.tenantId, currentUser.tenantId)),
+      columns: { id: true, username: true, name: true },
+    });
+    if (!target) throw new NotFoundException('User not found');
 
     const existing = await this.drizzle.db.query.follows.findFirst({
       where: and(eq(follows.followerId, currentUser.id), eq(follows.followingId, targetUserId)),
@@ -120,8 +131,30 @@ export class ProfileController {
       return { following: false };
     }
 
-    await this.drizzle.db.insert(follows).values({ followerId: currentUser.id, followingId: targetUserId });
+    // `onConflictDoNothing` is required now that `follows` carries a unique
+    // index: a plain insert would raise 23505 on a duplicate edge.
+    const inserted = await this.drizzle.db
+      .insert(follows)
+      .values({ followerId: currentUser.id, followingId: targetUserId })
+      .onConflictDoNothing({ target: [follows.followerId, follows.followingId] })
+      .returning({ followerId: follows.followerId });
+
+    if (inserted.length === 0) return { following: true };
+
     await this.auth.audit.log({ userId: currentUser.id, action: 'user.follow', entityType: 'user', entityId: targetUserId });
+    void this.notifications.notifyUser({
+      tenantId: currentUser.tenantId,
+      userId: target.id,
+      type: 'follow',
+      category: 'social',
+      title: `${currentUser.name || 'Someone'} started following you`,
+      body: 'You have a new follower.',
+      href: target.username ? `/u/${target.username}` : `/profile/${target.id}`,
+      actorId: currentUser.id,
+      entityType: 'user',
+      entityId: target.id,
+      idempotencyKey: `follow:${currentUser.tenantId}:${currentUser.id}:${target.id}`,
+    }).catch(() => {});
     return { following: true };
   }
 

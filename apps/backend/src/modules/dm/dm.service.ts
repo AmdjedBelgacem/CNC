@@ -1,15 +1,17 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Optional } from '@nestjs/common';
 import { DrizzleService } from '../../database/drizzle.service';
 import { dmConversations, dmParticipants, dmMessages, userBlocks } from '../../database/schema/dm';
 import { users } from '../../database/schema/users';
 import { eq, and, desc, asc, count, sql, or, ne, gt } from 'drizzle-orm';
 import { WsGateway } from '../ws/ws.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DmService {
   constructor(
     private drizzle: DrizzleService,
     private wsGateway: WsGateway,
+    @Optional() private notifications?: NotificationsService,
   ) {}
 
   private async ensureSameTenant(tenantId: string, peerId: string) {
@@ -220,6 +222,7 @@ export class DmService {
       .insert(dmMessages)
       .values({ conversationId, senderId, tenantId, body: body.trim() })
       .returning();
+    if (!msg) throw new Error('Failed to send message');
 
     await this.drizzle.db.update(dmConversations).set({ updatedAt: new Date() }).where(eq(dmConversations.id, conversationId));
 
@@ -231,6 +234,20 @@ export class DmService {
     for (const p of parts) {
       this.wsGateway.sendToUser(p.userId, 'dm:conversation:updated', { conversationId });
     }
+
+    void this.notifications?.notifyUser({
+      tenantId,
+      userId: peerId,
+      type: 'dm_message',
+      category: 'messages',
+      title: 'You have a new message',
+      body: msg.body.slice(0, 500),
+      href: `/messages?conversation=${conversationId}`,
+      actorId: senderId,
+      entityType: 'dm_message',
+      entityId: msg.id,
+      idempotencyKey: `dm:${tenantId}:${msg.id}`,
+    }).catch(() => {});
 
     return msg;
   }

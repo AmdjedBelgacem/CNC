@@ -1981,3 +1981,23 @@ body:has(._DropZone--isAnimating_1i2sv_68:empty) [data-puck-overlay] {
   grid-area: right;
   justify-self: start;
 }
+
+/* ==========================================================================
+   Precision Forge override — Puck's interactive ramp (azure) is remapped to
+   the product's forge-orange brand so the editor chrome is the same family
+   as the canvas it edits. Neutral greys and status ramps are unchanged.
+   ========================================================================== */
+:root {
+  --puck-color-azure-01: #2a1204;
+  --puck-color-azure-02: #3d1a06;
+  --puck-color-azure-03: #7a2e08;
+  --puck-color-azure-04: #9a3b0a;
+  --puck-color-azure-05: #c2410c;
+  --puck-color-azure-06: #d96633;
+  --puck-color-azure-07: #e88b5c;
+  --puck-color-azure-08: #f2b08a;
+  --puck-color-azure-09: #f9d7c2;
+  --puck-color-azure-10: #fce9dc;
+  --puck-color-azure-11: #fdf3eb;
+  --puck-color-azure-12: #fef9f4;
+}

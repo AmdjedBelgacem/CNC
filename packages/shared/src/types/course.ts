@@ -12,6 +12,10 @@ export interface Course {
   estimatedHours: number | null;
   isPublished: boolean;
   sortOrder: number;
+  priceCents?: number | null;
+  currency?: string | null;
+  accessMode?: string | null;
+  trailerUrl?: string | null;
   metadata: CourseMetadata | null;
   createdAt: Date;
   updatedAt: Date;

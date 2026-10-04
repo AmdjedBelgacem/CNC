@@ -16,6 +16,7 @@ import { CardBlock } from './card-block';
 import { SectionBlock } from './section-block';
 import { NavBlock } from './nav-block';
 import { HeroBlock } from './hero-block';
+import { HeroConsoleBlock } from './hero-console-block';
 import { StatsBlock } from './stats-block';
 import { StatItemBlock } from './stat-item-block';
 import { PartnerLogosBlock } from './partner-logos-block';
@@ -24,11 +25,22 @@ import { FeatureTilesBlock } from './feature-tiles-block';
 import { FeatureItemBlock } from './feature-item-block';
 import { AcademyGridBlock } from './academy-grid-block';
 import { AcademyCardBlock } from './academy-card-block';
+import { ProgramCardsBlock } from './program-cards-block';
+import { ProgramCardBlock } from './program-card-block';
+import { TwinSectionBlock } from './twin-section-block';
+import { TestimonialsBlock } from './testimonials-block';
+import { TestimonialCardBlock } from './testimonial-card-block';
+import { CtaSignupBlock } from './cta-signup-block';
 import { CtaBannerBlock } from './cta-banner-block';
 import { FaqBlock } from './faq-block';
 import { FaqItemBlock } from './faq-item-block';
 import { FooterBlock } from './footer-block';
-import { FooterColBlock } from './footer-col-block'; /** Puck-like slot bridge injected by the public renderer (or Puck itself in the editor). */
+import { FooterColBlock } from './footer-col-block';
+import { CatalogHeroBlock } from './catalog-hero-block';
+import { CardGridBlock } from './card-grid-block';
+import { SpotlightCardsBlock } from './spotlight-cards-block';
+import { ClosingCtaBlock } from './closing-cta-block';
+import { LiveIslandBlock } from './live-island-block'; /** Puck-like slot bridge injected by the public renderer (or Puck itself in the editor). */
 export interface PuckBridge {
   renderSlot: (slot: string) => ReactNode;
   /** Raw children of a slot (only the public renderer provides this). */ getSlotData?: (
@@ -42,6 +54,7 @@ export interface BlockComponentProps<T = Record<string, unknown>> {
 export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<any>>> = {
   nav: NavBlock,
   hero: HeroBlock,
+  'hero-console': HeroConsoleBlock,
   stats: StatsBlock,
   'stat-item': StatItemBlock,
   'partner-logos': PartnerLogosBlock,
@@ -50,6 +63,12 @@ export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<
   'feature-item': FeatureItemBlock,
   'academy-grid': AcademyGridBlock,
   'academy-card': AcademyCardBlock,
+  'program-cards': ProgramCardsBlock,
+  'program-card': ProgramCardBlock,
+  'twin-section': TwinSectionBlock,
+  testimonials: TestimonialsBlock,
+  'testimonial-card': TestimonialCardBlock,
+  'cta-signup': CtaSignupBlock,
   'cta-banner': CtaBannerBlock,
   faq: FaqBlock,
   'faq-item': FaqItemBlock,
@@ -69,4 +88,9 @@ export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<
   badge: BadgeBlock,
   'avatar-stack': AvatarStackBlock,
   'progress-card': ProgressCardBlock,
+  'catalog-hero': CatalogHeroBlock,
+  'card-grid': CardGridBlock,
+  'spotlight-cards': SpotlightCardsBlock,
+  'closing-cta': ClosingCtaBlock,
+  'live-island': LiveIslandBlock,
 };

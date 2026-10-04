@@ -67,9 +67,9 @@ function UploadPick({
         className={cn(
           'relative flex cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-dashed px-4 py-4 text-center text-xs transition',
           drag
-            ? 'border-blue-500 bg-blue-500/5'
+            ? 'border-primary bg-primary/5'
             : pending
-              ? 'border-emerald-300 bg-emerald-50/40 dark:border-emerald-800'
+              ? 'border-success/40 bg-success/40 '
               : 'border-border bg-muted/50 hover:bg-muted',
         )}
       >
@@ -80,27 +80,27 @@ function UploadPick({
             className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.15]"
           />
         ) : null}
-        {drag ? <div className="absolute inset-0 bg-blue-500/10" /> : null}
+        {drag ? <div className="absolute inset-0 bg-primary/10" /> : null}
         <div className="relative z-10 flex flex-col items-center gap-1.5">
           {pending ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white shadow">
-              <ImageIcon className="h-3.5 w-3.5" /> Selected — visible here
+            <span className="flex items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-2xs font-bold text-success-foreground shadow">
+              <ImageIcon className="size-3.5" /> Selected — visible here
             </span>
           ) : (
-            <Upload className="h-5 w-5 text-muted-foreground/70" />
+            <Upload className="size-5 text-muted-foreground/70" />
           )}
           {pending ? (
             <img
               src={pending.preview}
               alt=""
-              className="mt-1 h-20 w-20 rounded-lg border-2 border-white bg-white object-cover shadow-md"
+              className="mt-1 h-20 w-20 rounded-lg border-2 border-white bg-card object-cover shadow-md"
             />
           ) : null}
           <p className="font-sans font-medium text-foreground">
             {pending ? pending.file.name : drag ? 'Drop to add' : 'Drag & drop or click to upload'}
           </p>
-          <p className="max-w-[36ch] text-[11px] leading-4 text-muted-foreground/70">{hint}</p>
-          <p className="text-[11px] text-muted-foreground/50">
+          <p className="max-w-[36ch] text-2xs leading-4 text-muted-foreground/70">{hint}</p>
+          <p className="text-2xs text-muted-foreground/50">
             Only file upload — pasting a URL is disabled.
           </p>
         </div>
@@ -122,7 +122,7 @@ function UploadPick({
           <img
             src={pending.preview}
             alt=""
-            className="h-16 w-16 rounded-lg border bg-white object-cover"
+            className="h-16 w-16 rounded-lg border bg-card object-cover"
           />
           <span className="min-w-0 flex-1 truncate text-xs font-medium">
             {pending.file.name}{' '}
@@ -133,9 +133,9 @@ function UploadPick({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </button>
         </div>
       ) : (
@@ -150,7 +150,7 @@ export default function NewAcademyPage() {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [description, setDescription] = useState('');
-  const [accentColor, setAccentColor] = useState('#7c3aed');
+  const [accentColor, setAccentColor] = useState('#0E7490');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [hero, setHero] = useState<PendingFile>(null);
@@ -237,7 +237,7 @@ export default function NewAcademyPage() {
         actions={<BarButton onClick={() => router.push('/admin/academies')}>Cancel</BarButton>}
         primary={
           <BarPrimaryButton
-            icon={busy ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+            icon={busy ? <Loader2 className="size-4 animate-spin" /> : undefined}
             disabled={busy || !title.trim()}
             onClick={() => void submit()}
           >
@@ -252,14 +252,14 @@ export default function NewAcademyPage() {
           description="Create a branded destination — images are upload-only, no URL pasting."
           badge={
             <span className="flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground md:self-auto">
-              <ImageIcon className="h-4 w-4" />
+              <ImageIcon className="size-4" />
               Upload-only media
             </span>
           }
         />
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <section className="space-y-4 rounded-lg border border-border bg-card p-5 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Basics
             </h2>
@@ -269,7 +269,7 @@ export default function NewAcademyPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. CNC Milling Academy"
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10"
+                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
@@ -279,7 +279,7 @@ export default function NewAcademyPage() {
                 readOnly
                 className="h-9 w-full rounded-xl border border-border bg-muted px-3 font-mono text-sm text-muted-foreground outline-none"
               />
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 Auto-generated from title — /academy/{slugify(title)}
               </span>
             </label>
@@ -288,7 +288,7 @@ export default function NewAcademyPage() {
               <input
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10"
+                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
@@ -297,12 +297,12 @@ export default function NewAcademyPage() {
                 rows={5}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </label>
           </section>
 
-          <section className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <section className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Branding & SEO — upload only
             </h2>
@@ -332,7 +332,7 @@ export default function NewAcademyPage() {
                 <input
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="h-9 flex-1 rounded-xl border border-border bg-background px-3 font-mono text-sm outline-none transition focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10"
+                  className="h-9 flex-1 rounded-xl border border-border bg-background px-3 font-mono text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
                 />
               </div>
             </label>
@@ -343,7 +343,7 @@ export default function NewAcademyPage() {
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
                 placeholder="Custom <title> for search"
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10"
+                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
@@ -352,7 +352,7 @@ export default function NewAcademyPage() {
                 rows={3}
                 value={seoDescription}
                 onChange={(e) => setSeoDescription(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-blue-500/60 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <UploadPick
@@ -381,10 +381,10 @@ export default function NewAcademyPage() {
               'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50',
               busy || !title.trim()
                 ? 'bg-muted-foreground/40'
-                : 'bg-blue-600 shadow-blue-600/25 hover:bg-blue-700',
+                : 'bg-primary shadow-xs hover:bg-primary/90',
             )}
           >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             {busy ? 'Creating…' : 'Create academy'}
           </button>
         </div>

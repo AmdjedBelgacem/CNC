@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   DndContext,
   PointerSensor,
@@ -31,6 +32,7 @@ import {
   BookOpen,
   Sparkles,
 } from 'lucide-react';
+import type { ContentLocale } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { GLASS } from './glass';
 import type { Lesson, Section } from './types';
@@ -44,6 +46,7 @@ function renumber(sections: Section[]) {
 }
 function SectionCard({
   section,
+  locale,
   onRename,
   onDelete,
   onAddLesson,
@@ -52,7 +55,8 @@ function SectionCard({
   onDuplicateLesson,
 }: {
   section: Section;
-  onRename: (id: string, title: string) => void;
+  locale: ContentLocale;
+  onRename: (id: string, title: string, locale: ContentLocale) => void;
   onDelete: (id: string) => void;
   onAddLesson: (sectionId: string) => void;
   onOpenLesson: (lesson: Lesson) => void;
@@ -62,8 +66,10 @@ function SectionCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: 'sec:' + section.id,
   });
+  const t = useTranslations('courses');
   const style = { transform: CSS.Transform.toString(transform), transition };
   const lessons = section.lessons ?? [];
+  const displayTitle = locale === 'en' ? section.title : section.translations?.[locale]?.title || section.title;
   return (
     <div
       ref={setNodeRef}
@@ -78,37 +84,37 @@ function SectionCard({
           className="cursor-grab text-muted-foreground transition hover:text-foreground active:cursor-grabbing"
           {...attributes}
           {...listeners}
-          aria-label="Drag section"
+          aria-label={t('studio.dragSection', { default: 'Drag section' })}
         >
           {' '}
-          <GripVertical className="h-5 w-5" />{' '}
+          <GripVertical className="size-5" />{' '}
         </button>{' '}
         <input
-          value={section.title}
-          onChange={(e) => onRename(section.id, e.target.value)}
-          placeholder="Section title"
+           value={displayTitle}
+          onChange={(e) => onRename(section.id, e.target.value, locale)}
+          placeholder={t('studio.sectionTitle', { default: 'Section title' })}
           className="flex-1 bg-transparent font-display text-lg font-semibold text-foreground outline-none placeholder:text-muted-foreground/60"
         />{' '}
         <span className="rounded-md bg-transparent px-2 py-0.5 font-sans text-xs text-muted-foreground">
           {' '}
-          {lessons.length} lessons{' '}
+          {t('studio.lessonCount', { count: lessons.length, default: '{count, plural, one {# lesson} other {# lessons}}' })}{' '}
         </span>{' '}
         <button
           type="button"
           onClick={() => onAddLesson(section.id)}
-          className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 font-sans text-xs font-medium text-white transition hover:bg-blue-700"
+          className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 font-sans text-xs font-medium text-accent-foreground transition hover:bg-primary"
         >
           {' '}
-          <Plus className="h-4 w-4" /> Lesson{' '}
+          <Plus className="size-4" /> {t('lesson', { default: 'Lesson' })}{' '}
         </button>{' '}
         <button
           type="button"
           onClick={() => onDelete(section.id)}
-          aria-label="Delete section"
-          className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600"
+          aria-label={t('studio.deleteSection', { default: 'Delete section' })}
+          className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
         >
           {' '}
-          <Trash2 className="h-4 w-4" />{' '}
+          <Trash2 className="size-4" />{' '}
         </button>{' '}
       </div>{' '}
       <SortableContext
@@ -121,18 +127,18 @@ function SectionCard({
           {section.lessons.length === 0 && (
             <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 py-5 text-center">
               {' '}
-              <Video className="h-5 w-5 text-muted-foreground/60" />{' '}
+              <Video className="size-5 text-muted-foreground/60" />{' '}
               <p className="font-sans text-sm text-muted-foreground">
                 {' '}
-                No lessons yet — add your first lesson or drag one here.{' '}
+                {t('studio.noLessonsYet', { default: 'No lessons yet — add your first lesson or drag one here.' })}{' '}
               </p>{' '}
               <button
                 type="button"
                 onClick={() => onAddLesson(section.id)}
-                className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 font-sans text-xs font-medium text-white transition hover:bg-blue-700"
+                className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 font-sans text-xs font-medium text-accent-foreground transition hover:bg-primary"
               >
                 {' '}
-                <Plus className="h-3.5 w-3.5" /> Add lesson{' '}
+                <Plus className="size-3.5" /> {t('studio.addLesson', { default: 'Add lesson' })}{' '}
               </button>{' '}
             </div>
           )}{' '}
@@ -140,6 +146,7 @@ function SectionCard({
             <LessonRow
               key={l.id}
               lesson={l}
+              locale={locale}
               onOpen={onOpenLesson}
               onDelete={onDeleteLesson}
               onDuplicate={onDuplicateLesson}
@@ -152,11 +159,13 @@ function SectionCard({
 }
 function LessonRow({
   lesson,
+  locale,
   onOpen,
   onDelete,
   onDuplicate,
 }: {
   lesson: Lesson;
+  locale: ContentLocale;
   onOpen: (l: Lesson) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
@@ -164,7 +173,10 @@ function LessonRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: 'les:' + lesson.id,
   });
+  const t = useTranslations('courses');
+  const tCommon = useTranslations('common');
   const style = { transform: CSS.Transform.toString(transform), transition };
+  const displayTitle = locale === 'en' ? lesson.title : lesson.translations?.[locale]?.title || lesson.title;
   return (
     <div
       ref={setNodeRef}
@@ -180,10 +192,10 @@ function LessonRow({
         className="cursor-grab text-muted-foreground transition hover:text-foreground active:cursor-grabbing"
         {...attributes}
         {...listeners}
-        aria-label="Drag lesson"
+        aria-label={t('studio.dragLesson', { default: 'Drag lesson' })}
       >
         {' '}
-        <GripVertical className="h-4 w-4" />{' '}
+        <GripVertical className="size-4" />{' '}
       </button>{' '}
       {lesson.thumbnailUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -198,52 +210,53 @@ function LessonRow({
         </span>
       )}
       <span className="min-w-0 flex-1 truncate font-sans text-sm font-medium text-foreground">
-        {lesson.title}
-      </span>{' '}
+         {displayTitle}
+       </span>{' '}
       {lesson.freePreview && (
-        <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 font-sans text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+        <span className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 font-sans text-2xs font-semibold text-success dark:text-success">
           {' '}
-          <Eye className="h-3 w-3" /> Preview{' '}
+          <Eye className="size-3.5" /> {tCommon('preview', { default: 'Preview' })}{' '}
         </span>
       )}{' '}
       {lesson.videoDuration ? (
         <span className="flex items-center gap-1 font-sans text-xs text-muted-foreground">
           {' '}
-          <Clock className="h-3 w-3" /> {Math.round(lesson.videoDuration / 60)}m{' '}
+          <Clock className="size-3.5" /> {t('studio.durationMinutes', { count: Math.round(lesson.videoDuration / 60), default: '{count, plural, one {#m} other {#m}}' })}{' '}
         </span>
       ) : null}{' '}
       <button
         type="button"
         onClick={() => onOpen(lesson)}
-        aria-label="Edit lesson"
+        aria-label={t('studio.editLesson', { default: 'Edit lesson' })}
         className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground dark:hover:bg-[#2C2C2E]"
       >
         {' '}
-        <Pencil className="h-4 w-4" />{' '}
+        <Pencil className="size-4" />{' '}
       </button>{' '}
       <button
         type="button"
         onClick={() => onDuplicate(lesson.id)}
-        aria-label="Duplicate lesson"
+        aria-label={t('studio.duplicateLesson', { default: 'Duplicate lesson' })}
         className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground dark:hover:bg-[#2C2C2E]"
       >
         {' '}
-        <Copy className="h-4 w-4" />{' '}
+        <Copy className="size-4" />{' '}
       </button>{' '}
       <button
         type="button"
         onClick={() => onDelete(lesson.id)}
-        aria-label="Delete lesson"
-        className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600"
+        aria-label={t('studio.deleteLesson', { default: 'Delete lesson' })}
+        className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
       >
         {' '}
-        <Trash2 className="h-4 w-4" />{' '}
+        <Trash2 className="size-4" />{' '}
       </button>{' '}
     </div>
   );
 }
 export function CurriculumBuilder({
   sections,
+  locale,
   onReorder,
   onAddSection,
   onRenameSection,
@@ -254,9 +267,10 @@ export function CurriculumBuilder({
   onDuplicateLesson,
 }: {
   sections: Section[];
+  locale: ContentLocale;
   onReorder: (sections: Section[]) => void;
   onAddSection: () => void;
-  onRenameSection: (id: string, title: string) => void;
+  onRenameSection: (id: string, title: string, locale: ContentLocale) => void;
   onDeleteSection: (id: string) => void;
   onAddLesson: (sectionId: string) => void;
   onOpenLesson: (lesson: Lesson) => void;
@@ -264,10 +278,15 @@ export function CurriculumBuilder({
   onDuplicateLesson: (id: string) => void;
 }) {
   const [items, setItems] = useState<Section[]>(sections);
+  const t = useTranslations('courses');
   const dragging = useRef(false);
-  const handleRename = (id: string, title: string) => {
-    setItems((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
-    onRenameSection(id, title);
+  const handleRename = (id: string, title: string, sectionLocale: ContentLocale) => {
+    setItems((prev) => prev.map((s) => {
+      if (s.id !== id) return s;
+      if (sectionLocale === 'en') return { ...s, title };
+      return { ...s, translations: { ...(s.translations ?? {}), [sectionLocale]: { ...(s.translations?.[sectionLocale] ?? {}), title: title.trim() || undefined } } };
+    }));
+    onRenameSection(id, title, sectionLocale);
   };
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -362,8 +381,9 @@ export function CurriculumBuilder({
         {' '}
         <p className="font-sans text-sm text-muted-foreground">
           {' '}
-          {items.length} section{items.length === 1 ? '' : 's'} · drag to reorder sections and
-          lessons{' '}
+          {t('studio.sectionCount', { count: items.length, default: '{count, plural, one {# section} other {# sections}}' })}
+          {' · '}
+          {t('studio.reorderHint', { default: 'drag to reorder sections and lessons' })}{' '}
         </p>{' '}
         <button
           type="button"
@@ -371,7 +391,7 @@ export function CurriculumBuilder({
           className="flex items-center gap-1.5 rounded-lg border border-border bg-transparent px-3 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:text-foreground"
         >
           {' '}
-          <Plus className="h-4 w-4" /> Add section{' '}
+          <Plus className="size-4" /> {t('studio.addSection', { default: 'Add section' })}{' '}
         </button>{' '}
       </div>{' '}
       {items.length === 0 ? (
@@ -382,24 +402,23 @@ export function CurriculumBuilder({
             <BookOpen className="h-7 w-7" />{' '}
           </div>{' '}
           <p className="mt-3 font-display text-lg font-semibold text-foreground">
-            Build your curriculum
+            {t('studio.buildCurriculum', { default: 'Build your curriculum' })}
           </p>{' '}
           <p className="mx-auto mt-1 max-w-sm font-sans text-sm text-muted-foreground">
             {' '}
-            Group your lessons into sections. Drag to reorder sections and move lessons between them
-            at any time.{' '}
+            {t('studio.buildCurriculumHint', { default: 'Group your lessons into sections. Drag to reorder sections and move lessons between them at any time.' })}{' '}
           </p>{' '}
           <button
             type="button"
             onClick={onAddSection}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 font-sans text-sm font-medium text-white transition hover:bg-blue-700"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 font-sans text-sm font-medium text-accent-foreground transition hover:bg-primary"
           >
             {' '}
-            <Plus className="h-4 w-4" /> Add your first section{' '}
+            <Plus className="size-4" /> {t('studio.addFirstSection', { default: 'Add your first section' })}{' '}
           </button>{' '}
           <div className="mt-4 flex items-center justify-center gap-1.5 font-sans text-xs text-muted-foreground/70">
             {' '}
-            <Sparkles className="h-3.5 w-3.5" /> Tip: keep sections short and focused{' '}
+            <Sparkles className="size-3.5" /> {t('studio.sectionsTip', { default: 'Tip: keep sections short and focused' })}{' '}
           </div>{' '}
         </div>
       ) : (
@@ -421,8 +440,9 @@ export function CurriculumBuilder({
               {items.map((s) => (
                 <SectionCard
                   key={s.id}
-                  section={s}
-                  onRename={handleRename}
+                   section={s}
+                   locale={locale}
+                   onRename={handleRename}
                   onDelete={onDeleteSection}
                   onAddLesson={onAddLesson}
                   onOpenLesson={onOpenLesson}

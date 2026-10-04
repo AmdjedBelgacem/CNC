@@ -75,6 +75,99 @@ red.** Check the box only with evidence pasted next to it.
 - [ ] Uptime check on `GET /tenants` (or `/health` if added) with alert route.
 - [ ] Backend logs retained ≥14 days; MinIO/PG disk alerts configured.
 
+## Payments gates (Moyasar)
+
+### M1 — Fail closed, no silent acceptance
+- [ ] `SECRETS_ENCRYPTION_KEY` is 32 bytes and set on the server. Proof:
+      write a credential through `PUT /admin/payments/config` → row shows
+      `encrypted_secret_key` starting `v1:1:`, and `GET` returns
+      `secretKeyConfigured: true` with the key itself absent.
+- [ ] Unset encryption key → `PUT /admin/payments/config` returns `503` and the
+      row is unchanged. Command: temporarily blank the env, retry, restore.
+- [ ] Tenant with no credentials → `POST /payments/moyasar/create-order` returns
+      `503 Payments are not configured for this workspace` and writes no order.
+- [ ] A `pk_test_`/`sk_test_` pair that Moyasar rejects → order stays `pending`,
+      `lastErrorCode` populated. Never `paid` without a verified fetch.
+
+### M2 — Settlement cannot be forged
+- [ ] `GET /payments/moyasar/callback?order=<own>&payment=<not-a-real-id>` →
+      `status: failed` and `orders.status` still `pending`.
+- [ ] Webhook with a wrong `x-moyasar-token` → `{"handled":false,"reason":"bad_secret"}`
+      and no order mutation.
+- [ ] Webhook with no configured secret → `reason: "webhook_secret_not_configured"`.
+- [ ] Amount mismatch: order total edited after checkout (or gateway amount
+      altered) → `amount_mismatch`, no fulfilment, no enrolment granted.
+- [ ] `npx vitest run test/payments-google-invariants.spec.ts` → all pass.
+- [ ] `npx vitest run test/payment-pipeline.integration.spec.ts` → all pass
+      (real Postgres + a fixture gateway: webhook-only settlement, replay,
+      ownership, retry, purchase ledger).
+
+### M2b — The buyer can actually buy
+- [ ] `/checkout?order=<id>` for a direct-bought course and for an event ticket
+      renders that order's lines and total from the server, with an empty cart.
+- [ ] A direct buy of an order that is already paid, canceled, or owned by
+      someone else shows a message and no payment form.
+- [ ] Cart is still full after a failed payment, and empty after a verified
+      `paid`.
+- [ ] `analytics` purchase events report `SAR`, not a hardcoded `USD`.
+
+### M3 — Real money, once, end to end
+- [ ] Low-value live/test card through `/checkout` → success page shows `paid`.
+- [ ] Database: `orders.status='paid'`, `paid_at` set, `provider_payment_id` set,
+      matching line `fulfillment_state='fulfilled'`.
+- [ ] The entitlement exists: course enrolled, or event registered, or stock
+      decremented exactly once.
+- [ ] Callback replayed twice, then the same webhook again → still one
+      fulfilment, no double grant.
+- [ ] Tenant isolation: user B reading user A's order → `404`, and user B calling
+      the callback for user A's order → `404 Order not found` with the order
+      still `pending`.
+- [ ] A product order leaves a `product_purchases` row; inventory drops by the
+      quantity exactly once; a full refund marks the purchase `refunded`.
+
+### M4 — Refunds and cancellation
+- [ ] Refund a paid order → `status='refunded'`, refund visible in the Moyasar
+      dashboard for the same amount.
+- [ ] Refund a `pending` order → `400 Only a paid order can be refunded`.
+- [ ] Cancel stale pending order → `canceled`; its checkout page shows failure,
+      not a payable form.
+
+## Google integration gates
+
+### G-INT1 — Access is platform-only
+- [ ] `GET /admin/integrations` as `super_admin` → `200`; as `admin`/`learner` →
+      `403`; anonymous → `401`.
+- [ ] `POST /admin/integrations/:service/connect` as non-super-admin → `403`.
+- [ ] No response body from any read endpoint contains `refresh_token` or
+      `encryptedRefreshToken`. Proof: pipe the response through
+      `grep -ci 'refresh'` → `0`.
+
+### G-INT2 — Blocked, not fake
+- [ ] With `GOOGLE_OAUTH_CLIENT_ID` unset, all four services report
+      `status: blocked` with `blockedReason` naming the missing variables, and
+      `connect` returns `400`.
+- [ ] `platform.encryptionReady` is true and a secret write still succeeds.
+
+### G-INT3 — OAuth is bound to the human who started it
+- [ ] Callback with an unknown state → redirect with `result=unknown_state` and
+      no outbound call to Google's token endpoint.
+- [ ] Callback replayed with the same state → `result=state_already_used`.
+- [ ] Callback with another user's id in `initiated_by` → `initiator_mismatch`.
+- [ ] Callback with the wrong CSRF value → `csrf_mismatch`.
+- [ ] Expired state (>10 min) → `state_expired`.
+- [ ] Declining consent in Google's screen → `result=denied`.
+
+### G-INT4 — Stored tokens are usable and revocable
+- [ ] Real connect for each service → `status: connected` with a non-null
+      `externalAccountId` and the expected scopes.
+- [ ] `google_integrations.encrypted_refresh_token` starts `v1:1:`; the plaintext
+      token appears nowhere in logs or API responses.
+- [ ] `POST /admin/integrations/:service/test` refreshes the token and updates
+      `last_tested_at`; after revoking access in the Google account it reports
+      `revoked` with `invalid_grant`.
+- [ ] `POST /admin/integrations/:service/disconnect` clears the token and the
+      status returns to `not_connected`.
+
 ## How to record sign-off
 
 Copy this file to `docs/LAUNCH_GATES-YYYYMMDD.md`, paste command outputs under

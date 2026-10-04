@@ -12,10 +12,15 @@ import { users } from '../../database/schema/users';
 import { eq } from 'drizzle-orm';
 
 @WSGateway({
-  cors: { origin: '*', credentials: true },
+  cors: {
+    origin: (process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map((origin) => origin.trim()),
+    credentials: true,
+  },
   namespace: '/ws',
 })
 export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private static sharedServer: Server | null = null;
+
   @WebSocketServer()
   server!: Server;
 
@@ -52,7 +57,13 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  afterInit(server: Server) {
+    this.server = server;
+    WsGateway.sharedServer = server;
+  }
+
   async handleConnection(client: Socket) {
+    if (this.server) WsGateway.sharedServer = this.server;
     const token = this.extractToken(client);
     if (!token) {
       client.disconnect(true);
@@ -64,7 +75,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
     const user = await this.drizzle.db.query.users.findFirst({ where: eq(users.id, payload.sub) });
-    if (!user || user.accountStatus === 'deleted' || user.accountStatus === 'suspended') {
+    if (!user || !user.isActive || user.accountStatus === 'deleted' || user.accountStatus === 'suspended') {
       client.disconnect(true);
       return;
     }
@@ -93,10 +104,14 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   sendToUser(userId: string, event: string, data: any) {
-    this.server.to(`user:${userId}`).emit(event, data);
+    const server = this.server ?? WsGateway.sharedServer;
+    if (!server) return;
+    server.to(`user:${userId}`).emit(event, data);
   }
 
   broadcastToTenant(tenantId: string, event: string, data: any) {
-    this.server.to(`tenant:${tenantId}`).emit(event, data);
+    const server = this.server ?? WsGateway.sharedServer;
+    if (!server) return;
+    server.to(`tenant:${tenantId}`).emit(event, data);
   }
 }

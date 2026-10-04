@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import { isInternalHref } from '@/lib/builder/href';
 import type { BlockComponentProps } from './index';
+import { Icon } from '@/components/ui/icon';
 type ButtonVariant =
   | 'primary'
   | 'glass'
@@ -16,19 +17,19 @@ type ButtonVariant =
   | 'enroll'; /** Mockup button treatments, verbatim. Inline-flex roots so the buttons participate fully in * parent layout (line-box height, transforms, min-width) — matching how browsers blockify them * inside production flex containers, and how Puck's editor wrappers wrap them. */
 const BTN_VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'inline-flex items-center justify-center bg-primary text-on-primary px-10 py-4 rounded-xl font-label-sm text-[14px] font-bold hover:scale-[1.02] transition-transform shadow-lg min-w-[160px] sm:min-w-[200px]',
+    'inline-flex items-center justify-center bg-primary text-on-primary px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:scale-[1.02] transition-transform shadow-lg min-w-[160px] sm:min-w-[200px]',
   glass:
-    'inline-flex items-center justify-center bg-white border border-gray-200 text-primary px-10 py-4 rounded-xl font-label-sm text-[14px] font-bold hover:scale-[1.02] transition-transform min-w-[160px] sm:min-w-[200px]',
+    'inline-flex items-center justify-center bg-card border border-border text-primary px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:scale-[1.02] transition-transform min-w-[160px] sm:min-w-[200px]',
   white:
-    'inline-flex items-center justify-center bg-white text-primary px-10 py-4 rounded-xl font-label-sm text-[14px] font-bold hover:scale-[1.02] transition-transform shadow-sm min-w-[160px] sm:min-w-[200px]',
+    'inline-flex items-center justify-center bg-card text-primary px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:scale-[1.02] transition-transform shadow-sm min-w-[160px] sm:min-w-[200px]',
   'white-outline':
-    'inline-flex items-center justify-center bg-white text-white border border-gray-200 px-10 py-4 rounded-xl font-label-sm text-[14px] font-bold hover:bg-white transition-colors min-w-[160px] sm:min-w-[200px]',
-  pill: 'group flex items-center text-primary font-label-sm text-[12px] font-bold uppercase tracking-wider px-6 py-3 rounded-full border border-primary/20 hover:bg-primary/5 transition-all',
+    'inline-flex items-center justify-center bg-card text-card-foreground border border-border px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:bg-card transition-colors min-w-[160px] sm:min-w-[200px]',
+  pill: 'group flex items-center text-primary font-label-sm text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-full border border-primary/20 hover:bg-primary/5 transition-all',
   'nav-cta':
-    'inline-flex items-center bg-primary text-on-primary px-6 py-2 rounded-full font-label-sm text-[13px] font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95',
+    'inline-flex items-center bg-primary text-on-primary px-6 py-2 rounded-full font-label-sm text-13 font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95',
   link: 'inline-flex items-center text-primary font-bold font-label-sm uppercase tracking-wider hover:underline',
   enroll:
-    'inline-flex items-center gap-1 text-primary font-bold font-label-sm text-[12px] uppercase tracking-[0.2em] group-hover:translate-x-1 transition-transform',
+    'inline-flex items-center gap-1 text-primary font-bold font-label-sm text-xs uppercase tracking-[0.2em] group-hover:translate-x-1 transition-transform',
 }; /** Compact inline labels (enroll/link) drop the margin and shrink the icon, matching the mockup. */
 const COMPACT = new Set([
   'enroll',
@@ -61,18 +62,14 @@ export function ButtonBlock({ props }: BlockComponentProps<ButtonProps>) {
   const rootClass = cn(variantClass, width === 'full' && 'w-full', className);
   const resolvedIcon = icon ? resolveIconName(icon) : null;
   const iconEl = resolvedIcon ? (
-    <span
+    <Icon
+      name={resolvedIcon}
       className={cn(
-        'material-symbols-outlined',
-        COMPACT.has(variant) && 'text-[12px]',
-        COMPACT.has(variant) ? '' : iconPosition === 'left' ? 'mr-2' : 'ml-2',
-        variant === 'pill' && 'group-hover:translate-x-1 transition-transform',
+        COMPACT.has(variant) ? 'size-3.5' : 'size-4',
+        COMPACT.has(variant) ? '' : iconPosition === 'left' ? 'me-2' : 'ms-2',
+        variant === 'pill' && 'transition-transform group-hover:translate-x-1',
       )}
-       aria-hidden="true"
-      >
-        {' '}
-        {resolvedIcon}{' '}
-      </span>
+    />
   ) : null;
   const inner = (
     <>

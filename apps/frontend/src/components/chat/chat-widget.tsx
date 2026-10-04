@@ -90,39 +90,39 @@ export function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-6 end-6 z-50 flex flex-col items-end gap-3">
       {open && (
-        <div className="mb-2 flex h-[420px] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm shadow-black/30 animate-in slide-in-from-bottom-5 duration-300 sm:w-[360px]">
+        <div className="mb-2 flex h-[420px] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm shadow-black/30 animate-slide-in-from-bottom sm:w-[360px]">
           <div className="flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white">
-                <MessageCircle className="h-4 w-4" />
+              <div className="flex size-8 items-center justify-center rounded-full bg-card">
+                <MessageCircle className="size-4" />
               </div>
               <div>
                 <p className="text-sm font-semibold leading-tight">TITANS Support</p>
-                <p className="text-[11px] opacity-80">Typically replies in minutes</p>
+                <p className="text-2xs opacity-80">Typically replies in minutes</p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} className="rounded-full p-1 hover:bg-white transition-colors">
-              <X className="h-4 w-4" />
+            <button onClick={() => setOpen(false)} className="rounded-full p-1 hover:bg-card transition-colors">
+              <X className="size-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {showWelcome && messages.length === 0 && (
               <div className="flex items-start gap-2.5">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Bot className="h-3.5 w-3.5 text-primary" />
+                  <Bot className="size-3.5 text-primary" />
                 </div>
                 <div className="rounded-2xl rounded-tl-sm bg-secondary/50 px-3.5 py-2.5 text-sm max-w-[85%]">
                   <p className="font-medium">Hi there! 👋</p>
-                  <p className="mt-1 text-muted-foreground">I&apos;m here to help with courses, toolkits, or anything about our CNC education platform. How can I assist you today?</p>
+                  <p className="mt-1 text-muted-foreground">I&apos;m here to help with courses, products, or anything about our CNC education platform. How can I assist you today?</p>
                 </div>
               </div>
             )}
             {messages.map((msg) => (
               <div key={msg.id} className={`flex items-start gap-2.5 ${msg.senderType === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${msg.senderType === 'user' ? 'bg-primary/20' : 'bg-secondary/50'}`}>
-                  {msg.senderType === 'user' ? <User className="h-3.5 w-3.5 text-primary" /> : <Bot className="h-3.5 w-3.5 text-primary" />}
+                  {msg.senderType === 'user' ? <User className="size-3.5 text-primary" /> : <Bot className="size-3.5 text-primary" />}
                 </div>
                 <div className={`rounded-2xl px-3.5 py-2.5 text-sm max-w-[85%] ${msg.senderType === 'user' ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm bg-secondary/50'}`}>{msg.content}</div>
               </div>
@@ -142,10 +142,10 @@ export function ChatWidget() {
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || connecting}
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40 transition-opacity"
+                className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40 transition-opacity"
                 aria-label="Send message"
               >
-                {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {connecting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               </button>
             </div>
           </div>
@@ -156,7 +156,7 @@ export function ChatWidget() {
         className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:scale-105 hover:shadow-sm hover:shadow-primary/40 active:scale-95"
         aria-label={open ? 'Close chat' : 'Open chat'}
       >
-        {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}
       </button>
     </div>
   );

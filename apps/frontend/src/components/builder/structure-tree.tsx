@@ -8,11 +8,11 @@ import type { PuckNode } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 const ROOT_ZONE = 'root:default-zone';
 const CATEGORY_COLORS: Record<string, string> = {
-  Chrome: 'bg-amber-400',
-  Sections: 'bg-sky-500',
-  Items: 'bg-violet-500',
-  Layout: 'bg-emerald-500',
-  Content: 'bg-slate-400',
+  Chrome: 'bg-warning',
+  Sections: 'bg-info',
+  Items: 'bg-primary',
+  Layout: 'bg-success',
+  Content: 'bg-muted-foreground',
 };
 interface StructureNode {
   id: string;
@@ -117,7 +117,7 @@ export function StructureTree() {
       const isExpanded = expanded.has(node.id);
       const isSelected = node.id === selectedId;
       const color =
-        CATEGORY_COLORS[getBlockDefinition(node.type)?.category ?? ''] ?? 'bg-slate-400';
+        CATEGORY_COLORS[getBlockDefinition(node.type)?.category ?? ''] ?? 'bg-muted-foreground';
       return (
         <div key={node.id}>
           {' '}
@@ -150,14 +150,14 @@ export function StructureTree() {
                 toggle(node.id);
               }}
               className={cn(
-                'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded hover:bg-muted-foreground/15',
+                'flex size-3.5 shrink-0 items-center justify-center rounded hover:bg-muted-foreground/15',
               )}
             >
               {' '}
               {node.hasChildren && (
                 <ChevronDown
                   className={cn(
-                    'h-3 w-3 text-muted-foreground transition-transform duration-200',
+                    'size-3.5 text-muted-foreground transition-transform duration-200',
                     !isExpanded && '-rotate-90',
                   )}
                 />
@@ -165,7 +165,7 @@ export function StructureTree() {
             </span>{' '}
             <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', color)} />{' '}
             <span className="flex-1 truncate">{node.label}</span>{' '}
-            <span className="shrink-0 font-mono text-[9px] uppercase text-muted-foreground/60 group-hover:text-muted-foreground/80">
+            <span className="shrink-0 font-mono text-2xs uppercase text-muted-foreground/60 group-hover:text-muted-foreground/80">
               {node.type}
             </span>{' '}
           </div>{' '}

@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
 import type { FaqItemProps } from '@titan/shared';
-import { resolveIconName } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** FAQ card: question row toggles the answer panel open/closed. */
+import { Icon } from '@/components/ui/icon';
 export function FaqItemBlock({ props, puck }: BlockComponentProps<FaqItemProps>) {
   const [open, setOpen] = useState(false);
   const {
@@ -18,7 +18,7 @@ export function FaqItemBlock({ props, puck }: BlockComponentProps<FaqItemProps>)
   return (
     <div
       className={cn(
-        'bg-white border border-gray-200 rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg group',
+        'bg-card border border-border rounded-2xl overflow-hidden border border-border transition-all duration-300 hover:shadow-lg group',
         className,
       )}
       style={layoutStyle(props)}
@@ -36,16 +36,13 @@ export function FaqItemBlock({ props, puck }: BlockComponentProps<FaqItemProps>)
       >
         {' '}
         <span>{puck.renderSlot('toggle')}</span>{' '}
-        <span
+        <Icon
+          name={icon}
           className={cn(
-            'material-symbols-outlined text-primary transition-transform duration-300',
+            'size-5 text-primary transition-transform duration-300',
             open && 'rotate-45',
           )}
-          aria-hidden="true"
-        >
-          {' '}
-          {resolveIconName(icon)}{' '}
-        </span>{' '}
+        />{' '}
       </button>{' '}
       <div
         className={cn(

@@ -42,7 +42,7 @@ export function UpcomingEvents() {
           <Button variant="ghost" asChild>
             {' '}
             <Link href="/events">
-              View All <ArrowRight className="ml-2 h-4 w-4" />
+              View All <ArrowRight className="flip-rtl ms-2 size-4" />
             </Link>{' '}
           </Button>{' '}
         </div>{' '}
@@ -65,7 +65,7 @@ export function UpcomingEvents() {
                         {' '}
                         <div className="flex items-center gap-2">
                           {' '}
-                          <Calendar className="h-4 w-4 shrink-0" />{' '}
+                          <Calendar className="size-4 shrink-0" />{' '}
                           {new Date(event.startDate).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -74,7 +74,7 @@ export function UpcomingEvents() {
                         </div>{' '}
                         <div className="flex items-center gap-2">
                           {' '}
-                          <MapPin className="h-4 w-4 shrink-0" />{' '}
+                          <MapPin className="size-4 shrink-0" />{' '}
                           {event.isVirtual
                             ? 'Online'
                             : loc?.city

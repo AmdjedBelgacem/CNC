@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Boxes, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import {
@@ -26,6 +27,7 @@ const ROOT_ZONE = 'root:default-zone';
  * inserted subtree.
  */
 export function SavedSectionsActions() {
+  const tb = useTranslations('builder');
   const appState = useBuilderPuck((s) => s.appState);
   const selectedItemRaw = useBuilderPuck((s) => s.selectedItem);
   const dispatch = useBuilderPuck((s) => s.dispatch);
@@ -55,7 +57,7 @@ export function SavedSectionsActions() {
     } catch (e) {
       toast({
         type: 'err',
-        title: 'Could not load saved sections',
+        title: tb('savedSections.loadFailed', { default: 'Could not load saved sections' }),
         description: e instanceof Error ? e.message : undefined,
       });
     } finally {
@@ -70,7 +72,9 @@ export function SavedSectionsActions() {
     if (!sub) {
       toast({
         type: 'err',
-        title: 'Could not extract the selected section from the current layout',
+        title: tb('savedSections.extractFailed', {
+          default: 'Could not extract the selected section from the current layout',
+        }),
       });
       return;
     }
@@ -115,13 +119,13 @@ export function SavedSectionsActions() {
       setOpen(false);
       toast({
         type: 'ok',
-        title: 'Section inserted',
+        title: tb('savedSections.inserted', { default: 'Section inserted' }),
         description: s.name,
       });
     } catch (e) {
       toast({
         type: 'err',
-        title: 'Insert failed',
+        title: tb('savedSections.insertFailed', { default: 'Insert failed' }),
         description: e instanceof Error ? e.message : undefined,
       });
     }
@@ -141,34 +145,54 @@ export function SavedSectionsActions() {
           disabled={!canSave}
           title={
             canSave
-              ? 'Save the selected Section container as a reusable component'
-              : 'Select a Section container first to save it'
+              ? tb('savedSections.saveTooltip', {
+                  default: 'Save the selected Section container as a reusable component',
+                })
+              : tb('savedSections.saveTooltipBlocked', {
+                  default: 'Select a Section container first to save it',
+                })
           }
           className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <FolderPlus className="h-3.5 w-3.5" /> Save
+          <FolderPlus className="size-3.5" /> {tb('savedSections.save', { default: 'Save' })}
         </button>
         <button
           type="button"
           onClick={toggle}
-          title="Insert a previously saved section"
+          title={tb('savedSections.insertTooltip', {
+            default: 'Insert a previously saved section',
+          })}
           className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
-          <Boxes className="h-3.5 w-3.5" /> Sections {saved.length > 0 ? `(${saved.length})` : ''}
+          <Boxes className="size-3.5" />{' '}
+          {saved.length > 0
+            ? tb('savedSections.count', {
+                count: saved.length,
+                default: `Sections (${saved.length})`,
+              })
+            : tb('savedSections.label', { default: 'Sections' })}{' '}
         </button>
       </div>
       {open && (
-        <div className="fixed left-3 right-3 top-[48px] z-50 w-auto rounded-xl border border-border bg-popover p-2 shadow-sm lg:absolute lg:left-0 lg:right-auto lg:top-full lg:mt-1.5 lg:w-80">
-          <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-            Reusable sections — inserted after the selected block, or at the end of the page
+        <div className="fixed start-3 end-3 top-[48px] z-50 w-auto rounded-xl border border-border bg-popover p-2 shadow-sm lg:absolute lg:start-0 lg:end-auto lg:top-full lg:mt-1.5 lg:w-80">
+          <p className="px-2 pb-1.5 text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+            {tb('savedSections.listHint', {
+              default: 'Reusable sections — inserted after the selected block, or at the end of the page',
+            })}
           </p>
           {loading ? (
-            <p className="px-2 py-4 text-sm text-muted-foreground">Loading…</p>
+            <p className="px-2 py-4 text-sm text-muted-foreground">
+              {tb('savedSections.loading', { default: 'Loading…' })}
+            </p>
           ) : saved.length === 0 ? (
             <div className="px-2 py-4 text-center">
-              <p className="text-sm text-muted-foreground">Nothing saved yet.</p>
+              <p className="text-sm text-muted-foreground">
+                {tb('savedSections.empty', { default: 'Nothing saved yet.' })}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground/70">
-                Select a Section container on the canvas, then press “Save”.
+                {tb('savedSections.emptyHint', {
+                  default: 'Select a Section container on the canvas, then press “Save”.',
+                })}
               </p>
             </div>
           ) : (
@@ -179,7 +203,7 @@ export function SavedSectionsActions() {
                   className="flex items-center gap-1 rounded-lg px-2 py-1.5 transition hover:bg-muted"
                 >
                   <span
-                    className="flex-1 truncate text-[13px] font-medium text-foreground"
+                    className="flex-1 truncate text-13 font-medium text-foreground"
                     title={s.name}
                   >
                     {s.name}
@@ -187,10 +211,13 @@ export function SavedSectionsActions() {
                   <button
                     type="button"
                     onClick={() => handleInsert(s)}
-                    title="Insert after the selected block (or at the end of the page)"
-                    className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-bold text-white transition hover:opacity-90"
+                    title={tb('savedSections.insertAfter', {
+                      default: 'Insert after the selected block (or at the end of the page)',
+                    })}
+                    className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-2xs font-bold text-primary-foreground transition hover:opacity-90"
                   >
-                    <Plus className="h-3 w-3" /> Insert
+                    <Plus className="size-3.5" />{' '}
+                    {tb('savedSections.insert', { default: 'Insert' })}{' '}
                   </button>
                   <button
                     type="button"
@@ -201,10 +228,12 @@ export function SavedSectionsActions() {
                         name: s.name,
                       })
                     }
-                    title="Rename this saved section"
+                    title={tb('savedSections.renameTooltip', {
+                      default: 'Rename this saved section',
+                    })}
                     className="rounded-md p-1 text-muted-foreground transition hover:bg-muted-foreground/10 hover:text-foreground"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="size-3.5" />
                   </button>
                   <button
                     type="button"
@@ -215,10 +244,12 @@ export function SavedSectionsActions() {
                         name: s.name,
                       })
                     }
-                    title="Delete this saved section"
-                    className="rounded-md p-1 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-500"
+                    title={tb('savedSections.deleteTooltip', {
+                      default: 'Delete this saved section',
+                    })}
+                    className="rounded-md p-1 text-muted-foreground transition hover:bg-destructive/10 hover:text-red-500"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="size-3.5" />
                   </button>
                 </li>
               ))}

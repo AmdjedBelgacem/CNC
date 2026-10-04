@@ -1,11 +1,17 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import Link from 'next/link';
-import { X } from 'lucide-react';
+import { BookOpen, X } from 'lucide-react';
 import { CourseCard } from '@/components/academy/course-card';
+import { coerceLocale } from '@/i18n/config';
+import type { ContentLocale } from '@titan/shared';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle } from 'lucide-react';
+import { EmptyState, ErrorState } from '@/components/ui/states';
+import { getImageSrc } from '@/lib/images';
+import { LayoutBox, Stagger, StaggerItem } from '@/components/ui/motion';
 
 interface Course {
   id: string;
@@ -19,6 +25,9 @@ interface Course {
   academyId?: string | null;
   academySlug?: string | null;
   academyTitle?: string | null;
+  availableLocales?: ContentLocale[];
+  resolvedLocale?: ContentLocale;
+  fallbackFields?: string[];
 }
 
 interface AcademyHeader {
@@ -35,13 +44,15 @@ interface AcademyHeader {
 
 export function CourseGrid() {
   const searchParams = useSearchParams();
+  const locale = coerceLocale(useLocale());
   const academySlug = searchParams.get('academy')?.trim() || '';
+  const localeHeaders = { 'x-locale': locale, 'x-next-locale': locale, 'accept-language': `${locale},en;q=0.8` };
 
   const coursesQuery = useQuery<{ data: Course[] }>({
-    queryKey: ['courses', { academy: academySlug || 'all' }],
+    queryKey: ['courses', locale, { academy: academySlug || 'all' }],
     queryFn: () => {
       const qs = academySlug ? `?academy=${encodeURIComponent(academySlug)}` : '';
-      return fetch(`/api/proxy/courses${qs}`, { credentials: 'include' }).then((r) => {
+      return fetch(`/api/proxy/courses${qs}`, { credentials: 'include', headers: localeHeaders }).then((r) => {
         if (!r.ok) throw new Error('Failed to load courses');
         return r.json();
       });
@@ -50,11 +61,12 @@ export function CourseGrid() {
   });
 
   const academyQuery = useQuery<AcademyHeader | null>({
-    queryKey: ['academy-header', academySlug || 'none'],
+    queryKey: ['academy-header', locale, academySlug || 'none'],
     queryFn: async () => {
       if (!academySlug) return null;
       const res = await fetch(`/api/proxy/academies/${encodeURIComponent(academySlug)}`, {
         credentials: 'include',
+        headers: localeHeaders,
       });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('Failed to load academy');
@@ -72,7 +84,7 @@ export function CourseGrid() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        {academySlug ? <Skeleton className="h-28 w-full rounded-2xl" /> : null}
+        {academySlug ? <Skeleton className="h-28 w-full rounded-lg" /> : null}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="space-y-3">
@@ -87,44 +99,35 @@ export function CourseGrid() {
   }
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <AlertCircle className="mb-4 h-12 w-12 text-muted-foreground/50" />
-        <h3 className="text-lg font-semibold">Unable to load courses</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Please make sure the backend server is running.
-        </p>
-      </div>
+      <ErrorState
+        title="Unable to load courses"
+        description="Please make sure the backend server is running."
+        onRetry={() => void coursesQuery.refetch()}
+      />
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       {academySlug ? (
         academy ? (
-          <div className="relative overflow-hidden rounded-2xl border">
-            {academy.heroImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={academy.heroImageUrl} alt="" className="h-36 w-full object-cover md:h-44" />
-            ) : (
-              <div
-                className="h-24 w-full"
-                style={{ backgroundColor: `${academy.accentColor || '#7c3aed'}14` }}
+          <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={getImageSrc(academy.heroImageUrl, 'academy')} alt="" className="h-36 w-full object-cover md:h-44" />
+            <div className="flex flex-wrap items-center gap-4 border-t border-border p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getImageSrc(academy.logoUrl, 'academy')}
+                alt=""
+                className="size-14 rounded-md border border-border bg-card object-cover"
               />
-            )}
-            <div className="flex flex-wrap items-center gap-4 bg-card/95 p-4 backdrop-blur">
-              {academy.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={academy.logoUrl}
-                  alt=""
-                  className="h-14 w-14 rounded-xl border bg-white object-cover"
-                />
-              ) : null}
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                <p className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                   Academy
                 </p>
-                <h2 className="truncate text-xl font-bold">{academy.title}</h2>
+                <h2 className="truncate font-display text-xl font-semibold tracking-tight text-foreground">
+                  {academy.title}
+                </h2>
                 {academy.subtitle ? (
                   <p className="truncate text-sm text-muted-foreground">{academy.subtitle}</p>
                 ) : academy.description ? (
@@ -132,63 +135,71 @@ export function CourseGrid() {
                 ) : null}
               </div>
               <div className="flex items-center gap-2">
-                <Link
-                  href={`/academy/${academy.slug}`}
-                  className="rounded-lg border px-3 py-1.5 text-xs font-bold hover:bg-muted"
-                >
-                  View academy
-                </Link>
-                <Link
-                  href="/courses"
-                  className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" /> Clear
-                </Link>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/academy/${academy.slug}`}>View academy</Link>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/courses">
+                    <X />
+                    Clear
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>
         ) : academyMissing ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
-            <p className="text-sm text-amber-800 dark:text-amber-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
+            <p className="text-sm text-foreground">
               No such academy “{academySlug}” — showing all courses.
             </p>
-            <Link href="/courses" className="text-xs font-bold underline">
-              Clear filter
-            </Link>
+            <Button variant="outline" size="xs" asChild>
+              <Link href="/courses">Clear filter</Link>
+            </Button>
           </div>
         ) : null
       ) : null}
 
       {courses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <h3 className="text-lg font-semibold">
-            {academySlug ? `No courses in this academy yet` : 'No courses yet'}
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {academySlug
+        <EmptyState
+          icon={BookOpen}
+          title={academySlug ? 'No courses in this academy yet' : 'No courses yet'}
+          description={
+            academySlug
               ? 'Courses will appear here once they are assigned and published.'
-              : 'Courses will appear here once they are published.'}
-          </p>
-          {academySlug ? (
-            <Link href="/courses" className="mt-4 text-sm font-bold text-primary">
-              Browse all courses
-            </Link>
-          ) : null}
-        </div>
+              : 'Courses will appear here once they are published.'
+          }
+          action={
+            academySlug ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/courses">Browse all courses</Link>
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
-            <CourseCard
-              key={course.id}
-              slug={course.slug}
-              title={course.title}
-              subtitle={course.subtitle}
-              thumbnailUrl={course.thumbnailUrl}
-              difficulty={course.difficulty}
-              estimatedHours={course.estimatedHours}
-            />
+        // `Stagger`/`StaggerItem` are client components wrapping server-rendered
+        // cards, so the cascade costs one small shared component rather than a
+        // client boundary per card. `LayoutBox` animates the grid cells when a
+        // filter changes the result set, instead of every card popping.
+        <Stagger as="ul" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {courses.map((course, i) => (
+            <StaggerItem as="li" key={course.id} index={i}>
+              <LayoutBox>
+                <CourseCard
+                  slug={course.slug}
+                  title={course.title}
+                  subtitle={course.subtitle}
+                  thumbnailUrl={course.thumbnailUrl}
+                  difficulty={course.difficulty}
+                  estimatedHours={course.estimatedHours}
+                  availableLocales={course.availableLocales}
+                  resolvedLocale={course.resolvedLocale}
+                  fallbackFields={course.fallbackFields}
+                />
+              </LayoutBox>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
     </div>
   );

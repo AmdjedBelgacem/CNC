@@ -12,7 +12,11 @@ import {
   badgeDefaults,
   buttonDefaults,
   cardDefaults,
+  cardGridDefaults,
+  catalogHeroDefaults,
   ctaBannerDefaults,
+  ctaSignupDefaults,
+  closingCtaDefaults,
   faqDefaults,
   faqItemDefaults,
   featureItemDefaults,
@@ -21,19 +25,28 @@ import {
   footerDefaults,
   gridDefaults,
   headingDefaults,
+  heroConsoleDefaults,
   heroDefaults,
   iconDefaults,
   imageDefaults,
   linkDefaults,
+  liveIslandDefaults,
   logoItemDefaults,
   navDefaults,
   navLinkDefaults,
   partnerLogosDefaults,
+  programCardDefaults,
+  programCardsDefaults,
   progressCardDefaults,
+  spotlightCardsDefaults,
   stackDefaults,
   statItemDefaults,
   statsDefaults,
+  testimonialCardDefaults,
+  testimonialsDefaults,
   textDefaults,
+  twinSectionDefaults,
+  LIVE_ISLAND_VARIANTS,
 } from '@titan/shared';
 import { BLOCK_COMPONENTS } from '@/components/builder/blocks'; // ---------------------------------------------------------------- helpers
 const textField = (label: string, placeholder?: string) => ({
@@ -124,7 +137,7 @@ const render = (type: string) => (editorProps: any) => {
     });
   };
   return <C props={props} puck={{ ...puck, renderSlot }} />;
-}; // eslint-disable-next-line @typescript-eslint/no-explicit-any
+};
 const def = (
   type: string,
   label: string,
@@ -161,6 +174,8 @@ const heading: ComponentConfig = def('heading', 'Heading', headingDefaults, {
   ]),
   align: alignField,
   color: textField('Color class or hex', 'text-text-primary / #ffffff'),
+  accentText: textField('Accent text (italic, primary)'),
+  suffixText: textField('Suffix text (after accent)'),
 });
 const text: ComponentConfig = def('text', 'Text', textDefaults, {
   text: textareaField('Text'),
@@ -256,6 +271,7 @@ const badge: ComponentConfig = def('badge', 'Badge / Eyebrow', badgeDefaults, {
   uppercase: booleanSelect('Uppercase'),
   icon: iconField,
   iconSize: numberField('Icon size (px)', 4, 64),
+  pulse: booleanSelect('Pulsing dot'),
 });
 const avatarStack: ComponentConfig = def('avatar-stack', 'Avatar Stack', avatarStackDefaults, {
   count: textField('Count label', '+80'),
@@ -375,7 +391,7 @@ const nav: ComponentConfig = def('nav', 'Navbar', navDefaults, {
 });
 const hero: ComponentConfig = def('hero', 'Hero', heroDefaults, {
   imageUrl: textField('Background image URL'),
-  backgroundColor: textField('Background color (hex)', '#004ac6'),
+  backgroundColor: textField('Background color (hex)', '#1B4DB1'),
   backgroundOverlay: numberField('Background overlay (%)', 0, 100),
   backgroundOpacity: numberField('Background image opacity (%)', 0, 100),
   gradientVeil: booleanSelect('Gradient veil'),
@@ -461,6 +477,10 @@ const partnerLogos: ComponentConfig = def('partner-logos', 'Partner Logos', part
     { label: 'Large (64/128px)', value: 'gap-16 md:gap-32' },
   ]),
   headerMarginBottom: numberField('Header bottom margin (px)', 0, 320),
+  frame: selectField('Frame', [
+    { label: 'Wall (rounded card)', value: 'wall' },
+    { label: 'Strip (bare wordmarks)', value: 'strip' },
+  ]),
 });
 const logoItem: ComponentConfig = def('logo-item', 'Logo Item', logoItemDefaults, {});
 const featureTiles: ComponentConfig = def('feature-tiles', 'Feature Tiles', featureTilesDefaults, {
@@ -517,7 +537,7 @@ const academyCard: ComponentConfig = def('academy-card', 'Academy Card', academy
 });
 const ctaBanner: ComponentConfig = def('cta-banner', 'CTA Banner', ctaBannerDefaults, {
   imageUrl: textField('Background image URL'),
-  overlayColor: textField('Overlay color (hex)', '#004ac6'),
+  overlayColor: textField('Overlay color (hex)', '#1B4DB1'),
   overlayOpacity: numberField('Overlay opacity (%)', 0, 100),
   radialVeil: booleanSelect('Radial veil'),
   padding: selectField('Banner padding', [
@@ -607,10 +627,290 @@ const section: ComponentConfig = def(
   {},
   { className: textField('Extra classes', 'e.g. bg-secondary/10 border-b') },
 ); // ---------------------------------------------------------------- config
+const heroConsole: ComponentConfig = def('hero-console', 'Hero + Sim Console', heroConsoleDefaults, {
+  imageUrl: textField('Viewport image URL'),
+  imageAlt: textField('Image alt text'),
+  fileName: textField('Console file name'),
+  syncLabel: textField('Sync pill label'),
+  feedLabel: textField('Feed label'),
+  feedValue: textField('Feed value'),
+  feedTag: textField('Feed tag'),
+  spindleLabel: textField('Spindle label'),
+  spindleValue: textField('Spindle value'),
+  spindleTag: textField('Spindle tag'),
+  auditTitle: textField('Audit title'),
+  auditValue: textField('Audit value'),
+  axesTitle: textField('Axes drawer title'),
+  vibration: textField('Vibration note'),
+  axes: {
+    type: 'array',
+    label: 'Axis readouts',
+    arrayFields: {
+      label: { type: 'text', label: 'Axis' },
+      value: { type: 'text', label: 'Value' },
+      tone: selectField('Tone', [
+        { label: 'Normal', value: 'normal' },
+        { label: 'Accent', value: 'accent' },
+      ]),
+    },
+    getItemSummary: (item: { label?: string }) => item.label || 'Axis',
+  },
+  modes: {
+    type: 'array',
+    label: 'Mode buttons',
+    arrayFields: { label: { type: 'text', label: 'Label' } },
+    getItemSummary: (item: { label?: string }) => item.label || 'Mode',
+  },
+  controllerLabel: textField('Controller label'),
+  floatIcon: iconField,
+  floatLabel: textField('Floating badge label'),
+  floatValue: textField('Floating badge value'),
+  floatTag: textField('Floating badge tag'),
+});
+const programCards: ComponentConfig = def('program-cards', 'Program Cards', programCardsDefaults, {
+  headerMarginBottom: numberField('Header bottom margin (px)', 0, 320),
+  columnsLg: selectField('Columns (lg+)', [
+    { label: '2', value: 'lg:grid-cols-2' },
+    { label: '3', value: 'lg:grid-cols-3' },
+  ]),
+  cardsGap: selectField('Card gap', [
+    { label: '24px', value: 'gap-6' },
+    { label: '32px', value: 'gap-8' },
+    { label: '40px', value: 'gap-10' },
+  ]),
+});
+const programCard: ComponentConfig = def('program-card', 'Program Card', programCardDefaults, {
+  imageUrl: textField('Image URL'),
+  imageAlt: textField('Image alt text'),
+  level: textField('Level pill'),
+  levelTone: selectField('Level tone', [
+    { label: 'Primary', value: 'primary' },
+    { label: 'Secondary', value: 'secondary' },
+    { label: 'Accent', value: 'accent' },
+  ]),
+  duration: textField('Duration chip', '24 Modules · 120 Hrs'),
+  metaIcon: iconField,
+  metaLabel: textField('Meta label'),
+  title: textField('Title'),
+  description: textareaField('Description'),
+  tags: textField('Tags (comma separated)'),
+  instructorInitials: textField('Instructor initials'),
+  instructorName: textField('Instructor name'),
+  ctaLabel: textField('CTA label'),
+  href: textField('Card link URL'),
+});
+const twinSection: ComponentConfig = def('twin-section', 'Digital Twin', twinSectionDefaults, {
+  sectionBg: selectField('Section background', [
+    { label: 'Lowest', value: 'bg-surface-container-lowest' },
+    { label: 'Low', value: 'bg-surface-container-low' },
+    { label: 'Transparent', value: 'bg-transparent' },
+    { label: 'Card', value: 'bg-card' },
+    { label: 'Sunken', value: 'bg-surface-sunken' },
+  ]),
+  fileName: textField('Terminal file name'),
+  statusLabel: textField('Status label'),
+  codeLines: {
+    type: 'array',
+    label: 'Code lines',
+    arrayFields: {
+      text: { type: 'text', label: 'Line' },
+      tone: selectField('Tone', [
+        { label: 'Comment', value: 'comment' },
+        { label: 'Code', value: 'code' },
+        { label: 'Highlight', value: 'highlight' },
+        { label: 'OK', value: 'ok' },
+      ]),
+    },
+    getItemSummary: (item: { text?: string }) => (item.text || 'Line').slice(0, 40),
+  },
+  readouts: {
+    type: 'array',
+    label: 'Readout cells',
+    arrayFields: {
+      label: { type: 'text', label: 'Label' },
+      value: { type: 'text', label: 'Value' },
+      tone: selectField('Tone', [
+        { label: 'Success', value: 'success' },
+        { label: 'Normal', value: 'normal' },
+        { label: 'Accent', value: 'accent' },
+        { label: 'Primary', value: 'primary' },
+      ]),
+    },
+    getItemSummary: (item: { label?: string }) => item.label || 'Readout',
+  },
+});
+const testimonials: ComponentConfig = def('testimonials', 'Testimonials', testimonialsDefaults, {
+  headerMarginBottom: numberField('Header bottom margin (px)', 0, 320),
+  columnsMd: selectField('Columns (md+)', [
+    { label: '2', value: 'md:grid-cols-2' },
+    { label: '3', value: 'md:grid-cols-3' },
+  ]),
+  cardsGap: selectField('Card gap', [
+    { label: '24px', value: 'gap-6' },
+    { label: '32px', value: 'gap-8' },
+    { label: '40px', value: 'gap-10' },
+  ]),
+});
+const testimonialCard: ComponentConfig = def(
+  'testimonial-card',
+  'Testimonial Card',
+  testimonialCardDefaults,
+  {
+    quote: textareaField('Quote'),
+    name: textField('Name'),
+    role: textField('Role / company'),
+    avatarUrl: textField('Avatar URL'),
+    rating: numberField('Rating (0-5)', 0, 5),
+  },
+);
+const ctaSignup: ComponentConfig = def('cta-signup', 'CTA Signup Band', ctaSignupDefaults, {
+  pill: textField('Pill label'),
+  title: textareaField('Title'),
+  subtitle: textareaField('Subtitle'),
+  placeholder: textField('Input placeholder'),
+  buttonLabel: textField('Button label'),
+  note: textField('Fine print'),
+  formAction: textField('Form target URL', '/register'),
+});
+const catalogHero: ComponentConfig = def('catalog-hero', 'Catalog Hero', catalogHeroDefaults, {
+  eyebrow: textField('Eyebrow pill'),
+  eyebrowIcon: iconField,
+  metaLine: textField('Meta line (right of pill)'),
+  title: textField('Headline'),
+  titleAccent: textField('Accent line (primary)'),
+  subtitle: textareaField('Subtitle'),
+  stats: {
+    type: 'array',
+    label: 'Stats strip',
+    arrayFields: {
+      label: textField('Label'),
+      value: textField('Value'),
+    },
+    getItemSummary: (item: { label?: string }) => item.label || 'Stat',
+  },
+  primaryCta: {
+    type: 'object',
+    label: 'Primary CTA',
+    objectFields: {
+      label: textField('Label'),
+      href: textField('URL'),
+      variant: selectField('Style', [
+        { label: 'Primary', value: 'primary' },
+        { label: 'Secondary', value: 'secondary' },
+      ]),
+      icon: iconField,
+    },
+  },
+  secondaryCta: {
+    type: 'object',
+    label: 'Secondary CTA',
+    objectFields: {
+      label: textField('Label'),
+      href: textField('URL'),
+      variant: selectField('Style', [
+        { label: 'Primary', value: 'primary' },
+        { label: 'Secondary', value: 'secondary' },
+      ]),
+      icon: iconField,
+    },
+  },
+  borderBottom: booleanSelect('Bottom border'),
+});
+const cardGrid: ComponentConfig = def('card-grid', 'Card Grid', cardGridDefaults, {
+  eyebrow: textField('Eyebrow'),
+  title: textField('Title'),
+  subtitle: textareaField('Subtitle'),
+  items: {
+    type: 'array',
+    label: 'Cards',
+    arrayFields: {
+      title: textField('Title'),
+      body: textareaField('Body'),
+      icon: iconField,
+    },
+    getItemSummary: (item: { title?: string }) => item.title || 'Card',
+  },
+  showNumbers: booleanSelect('Show numbers'),
+  columns: selectField('Columns', [
+    { label: '3 columns', value: 'md:grid-cols-3' },
+    { label: '4 columns', value: 'sm:grid-cols-2 lg:grid-cols-4' },
+  ]),
+  band: selectField('Band', [
+    { label: 'None', value: 'none' },
+    { label: 'Sunken', value: 'sunken' },
+  ]),
+  note: textareaField('Note under grid'),
+});
+const spotlightCards: ComponentConfig = def(
+  'spotlight-cards',
+  'Spotlight Cards',
+  spotlightCardsDefaults,
+  {
+    eyebrow: textField('Eyebrow'),
+    title: textField('Title'),
+    subtitle: textareaField('Subtitle'),
+    items: {
+      type: 'array',
+      label: 'Spotlight cards',
+      arrayFields: {
+        tag: textField('Tag'),
+        title: textField('Title'),
+        meta: textField('Meta line'),
+        href: textField('URL'),
+      },
+      getItemSummary: (item: { title?: string }) => item.title || 'Spotlight',
+    },
+    columns: selectField('Columns', [
+      { label: '3 columns', value: 'md:grid-cols-3' },
+      { label: '2 columns', value: 'md:grid-cols-2' },
+    ]),
+    band: selectField('Band', [
+      { label: 'None', value: 'none' },
+      { label: 'Sunken', value: 'sunken' },
+    ]),
+  },
+);
+const closingCta: ComponentConfig = def('closing-cta', 'Closing CTA', closingCtaDefaults, {
+  eyebrow: textField('Eyebrow'),
+  title: textField('Title'),
+  body: textareaField('Body'),
+  primaryLabel: textField('Primary label'),
+  primaryHref: textField('Primary URL'),
+  primaryIcon: iconField,
+  secondaryLabel: textField('Secondary label'),
+  secondaryHref: textField('Secondary URL'),
+  secondaryIcon: iconField,
+  borderTop: booleanSelect('Top border'),
+});
+const liveIsland: ComponentConfig = def('live-island', 'Live Island', liveIslandDefaults, {
+  variant: selectField(
+    'Island',
+    LIVE_ISLAND_VARIANTS.map((v) => ({ label: v, value: v })),
+  ),
+  label: textField('Editor label'),
+});
+
+/**
+ * Block names shown in the add-block menu.
+ *
+ * The `label` passed to `def()` is persisted with saved pages (it is the block's
+ * stored name), so it must stay exactly as written. These helpers give the menu
+ * a separate `builder.puck.*` key and keep the English label as the fallback,
+ * so the stored name and the shown name can never drift apart.
+ */
+type LabelTranslator = (key: string, options: { default: string }) => string;
+export function puckBlockLabel(t: LabelTranslator, type: string, fallback: string) {
+  return t(`puck.blocks.${type}`, { default: fallback });
+}
+export function puckCategoryLabel(t: LabelTranslator, category: string, fallback: string) {
+  return t(`puck.categories.${category.toLowerCase()}`, { default: fallback });
+}
+
 export const puckConfig: Config = {
   components: {
     nav,
     hero,
+    'hero-console': heroConsole,
     stats,
     'stat-item': statItem,
     'partner-logos': partnerLogos,
@@ -619,6 +919,12 @@ export const puckConfig: Config = {
     'feature-item': featureItem,
     'academy-grid': academyGrid,
     'academy-card': academyCard,
+    'program-cards': programCards,
+    'program-card': programCard,
+    'twin-section': twinSection,
+    testimonials,
+    'testimonial-card': testimonialCard,
+    'cta-signup': ctaSignup,
     'cta-banner': ctaBanner,
     faq,
     'faq-item': faqItem,
@@ -638,19 +944,33 @@ export const puckConfig: Config = {
     badge,
     'avatar-stack': avatarStack,
     'progress-card': progressCard,
+    'catalog-hero': catalogHero,
+    'card-grid': cardGrid,
+    'spotlight-cards': spotlightCards,
+    'closing-cta': closingCta,
+    'live-island': liveIsland,
   },
   root: { fields: {} },
   categories: {
-    Chrome: { components: ['nav', 'footer'], defaultExpanded: true },
     Sections: {
       components: [
         'hero',
+        'hero-console',
+        'catalog-hero',
         'stats',
         'partner-logos',
         'feature-tiles',
         'academy-grid',
+        'program-cards',
+        'twin-section',
+        'testimonials',
         'cta-banner',
+        'cta-signup',
         'faq',
+        'card-grid',
+        'spotlight-cards',
+        'closing-cta',
+        'live-island',
         'section',
       ],
       defaultExpanded: true,
@@ -661,8 +981,9 @@ export const puckConfig: Config = {
         'logo-item',
         'feature-item',
         'academy-card',
+        'program-card',
+        'testimonial-card',
         'faq-item',
-        'footer-col',
       ],
     },
     Layout: { components: ['stack', 'grid', 'card'] },
@@ -672,7 +993,6 @@ export const puckConfig: Config = {
         'text',
         'button',
         'link',
-        'nav-link',
         'image',
         'icon',
         'badge',

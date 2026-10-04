@@ -1,5 +1,17 @@
 import { pgTable, uuid, varchar, text, integer, boolean, jsonb, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants';
+import type { ContentLocale } from '@titan/shared';
+
+/** Per-locale copy. Only human-readable text belongs here; never a price, a
+ * capacity, a date or a slug, because those are data and translating them
+ * would corrupt the row. Missing keys fall back to the English column. */
+export type AcademyContentTranslation = {
+  title?: string;
+  description?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+};
+
 
 export const academies = pgTable('academies', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -13,6 +25,7 @@ export const academies = pgTable('academies', {
   seoImageUrl: varchar('seo_image_url', { length: 500 }),
   accentColor: varchar('accent_color', { length: 7 }),
   seoTitle: varchar('seo_title', { length: 300 }),
+  translations: jsonb('translations').$type<Partial<Record<ContentLocale, AcademyContentTranslation>>>(),
   seoDescription: varchar('seo_description', { length: 500 }),
   isPublished: boolean('is_published').default(false),
   isArchived: boolean('is_archived').default(false),

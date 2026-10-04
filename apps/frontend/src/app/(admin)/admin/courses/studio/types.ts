@@ -1,3 +1,11 @@
+import type {
+  ContentLocale,
+  CourseContentTranslation,
+  LessonContentDocument,
+  LessonContentTranslation,
+  SeriesContentTranslation,
+} from '@titan/shared';
+
 export type AccessMode = 'open' | 'invite' | 'paid';
 export interface Attachment {
   id: string;
@@ -23,6 +31,8 @@ export interface Lesson {
   videoMeta: LessonVideoMeta | null;
   videoDuration: number | null;
   content: string | null;
+  contentBlocks?: LessonContentDocument | null;
+  translations?: Partial<Record<ContentLocale, LessonContentTranslation>> | null;
   attachments: Attachment[] | null;
   difficulty: number;
   isPublished: boolean;
@@ -40,6 +50,7 @@ export interface Section {
   sortOrder: number;
   isPublished: boolean;
   isArchived: boolean;
+  translations?: Partial<Record<ContentLocale, SeriesContentTranslation>> | null;
   lessons: Lesson[];
 }
 export interface CourseStudioData {
@@ -66,5 +77,16 @@ export interface CourseStudioData {
   isArchived: boolean;
   publishedAt: string | null;
   metadata: Record<string, unknown> | null;
+  translations?: Partial<Record<ContentLocale, CourseContentTranslation>> | null;
+  locale?: ContentLocale;
+  resolvedLocale?: ContentLocale;
+  availableLocales?: ContentLocale[];
+  fallbackFields?: string[];
+  localeMetadata?: {
+    locale: ContentLocale;
+    resolvedLocale: ContentLocale;
+    availableLocales: ContentLocale[];
+    fallbackFields: string[];
+  } | null;
   series: Section[];
 }

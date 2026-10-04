@@ -1,3 +1,0 @@
-module.exports=[26919,a=>{"use strict";var b=a.i(70613);a.s(["default",0,function({children:a}){return(0,b.jsx)(b.Fragment,{children:a})},"metadata",0,{title:"About Us | TITANS of Manufacturing",description:"From a single CNC shop to a global education movement — TITANS of Manufacturing is on a mission to save manufacturing education."}])},45525,a=>{a.n(a.i(26919))}];
-
-//# sourceMappingURL=apps_frontend_src_app_%28main%29_about_layout_tsx_0xj40d1._.js.map

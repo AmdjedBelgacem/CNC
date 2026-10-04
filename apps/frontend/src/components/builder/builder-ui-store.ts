@@ -2,16 +2,30 @@
 import { create } from 'zustand';
 import type { PuckNode } from '@titan/shared';
 export interface StatusInfo {
-  status: 'draft' | 'published';
+  /** `disabled` is a page that exists but is not publicly reachable. */
+  status: 'draft' | 'published' | 'disabled';
   version: number;
+  title?: string;
+  isSystem?: boolean;
+  showInNav?: boolean;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
 }
 export type SectionDialogState =
   | { mode: 'save'; suggested: string; node: PuckNode }
   | { mode: 'rename'; id: string; name: string }
   | { mode: 'delete'; id: string; name: string }
   | null;
+/**
+ * Builder UI state — panels, dirty flag, publish state.
+ *
+ * Deliberately NOT the open page. The page lives in the URL
+ * (`use-open-page.ts`), and keeping a second copy here is what caused the page to
+ * snap back to the homepage: a Fast Refresh rebuild re-evaluates this module, the
+ * copy resets to a default, and nothing reconciled it. A module-level store is
+ * the wrong home for something that must survive a reload.
+ */
 interface BuilderUIState {
-  slug: string;
   status: StatusInfo | null;
   dirty: boolean;
   saving: boolean;
@@ -21,7 +35,6 @@ interface BuilderUIState {
   publishOpen: boolean;
   resetOpen: boolean;
   sectionDialog: SectionDialogState;
-  setSlug: (slug: string) => void;
   setStatus: (status: StatusInfo | null) => void;
   setDirty: (dirty: boolean) => void;
   setSaving: (saving: boolean) => void;
@@ -33,7 +46,6 @@ interface BuilderUIState {
   setSectionDialog: (dialog: SectionDialogState) => void;
 }
 export const useBuilderUI = create<BuilderUIState>((set) => ({
-  slug: 'home',
   status: null,
   dirty: false,
   saving: false,
@@ -43,7 +55,6 @@ export const useBuilderUI = create<BuilderUIState>((set) => ({
   publishOpen: false,
   resetOpen: false,
   sectionDialog: null,
-  setSlug: (slug) => set({ slug }),
   setStatus: (status) => set({ status }),
   setDirty: (dirty) => set({ dirty }),
   setSaving: (saving) => set({ saving }),

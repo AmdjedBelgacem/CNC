@@ -1,12 +1,19 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { MoyasarService } from './moyasar.service';
+import { MoyasarController } from './moyasar.controller';
+import { AdminPaymentsController } from './admin-payments.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { CoursesModule } from '../courses/courses.module';
+import { EventsModule } from '../events/events.module';
+import { AuthModule } from '../auth/auth.module';
+import { SecretBoxService } from '../../common/security/secret-box.service';
 
 @Module({
-  imports: [AuthModule],
-  controllers: [PaymentsController],
-  providers: [PaymentsService],
-  exports: [PaymentsService],
+  imports: [AuthModule, NotificationsModule, CoursesModule, EventsModule],
+  controllers: [PaymentsController, MoyasarController, AdminPaymentsController],
+  providers: [PaymentsService, MoyasarService, SecretBoxService],
+  exports: [PaymentsService, MoyasarService, SecretBoxService],
 })
 export class PaymentsModule {}

@@ -5,6 +5,7 @@ import type { HeroProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Full-screen hero with soft-blended background image and a scroll parallax. */
+import { Icon } from '@/components/ui/icon';
 export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
   const {
     imageUrl,
@@ -77,7 +78,7 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
           <div className="mesh-blob mesh-blob-a"></div>{' '}
           <div className="mesh-blob mesh-blob-b"></div>{' '}
           <div className="mesh-blob mesh-blob-c"></div>{' '}
-          <style>{` .mesh-blob { position: absolute; border-radius: 9999px; filter: blur(90px); will-change: transform; } .mesh-blob-a { width: 34rem; height: 34rem; left: -8rem; top: 8%; background: linear-gradient(135deg, rgba(0,74,198,.40), rgba(59,130,246,.20)); animation: mesh-a 26s ease-in-out infinite; } .mesh-blob-b { width: 30rem; height: 30rem; right: -6rem; top: 18%; background: linear-gradient(135deg, rgba(14,165,233,.30), rgba(99,102,241,.18)); animation: mesh-b 32s ease-in-out infinite; } .mesh-blob-c { width: 26rem; height: 26rem; left: 38%; bottom: -8rem; background: linear-gradient(135deg, rgba(168,85,247,.16), rgba(0,74,198,.22)); animation: mesh-c 38s ease-in-out infinite; } @media (max-width: 640px) { .mesh-blob-a { width: 20rem; height: 20rem; left: -4rem; top: 6%; } .mesh-blob-b { width: 18rem; height: 18rem; right: -3rem; top: 14%; } .mesh-blob-c { width: 16rem; height: 16rem; left: 18%; bottom: -4rem; } } @keyframes mesh-a { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5rem,3rem) scale(1.18); } } @keyframes mesh-b { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-4rem,2.5rem) scale(1.12); } } @keyframes mesh-c { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3rem,-3rem) scale(1.2); } } @media (prefers-reduced-motion: reduce) { .mesh-blob { animation: none; } } `}</style>{' '}
+          <style>{` .mesh-blob { position: absolute; border-radius: 9999px; filter: blur(90px); will-change: transform; } .mesh-blob-a { width: 34rem; height: 34rem; left: -8rem; top: 8%; background: linear-gradient(135deg, rgb(var(--c-primary) / .32), rgb(var(--c-accent) / .18)); animation: mesh-a 26s ease-in-out infinite; } .mesh-blob-b { width: 30rem; height: 30rem; right: -6rem; top: 18%; background: linear-gradient(135deg, rgb(var(--c-accent) / .26), rgb(var(--c-primary) / .16)); animation: mesh-b 32s ease-in-out infinite; } .mesh-blob-c { width: 26rem; height: 26rem; left: 38%; bottom: -8rem; background: linear-gradient(135deg, rgb(var(--c-secondary) / .14), rgb(var(--c-primary) / .2)); animation: mesh-c 38s ease-in-out infinite; } @media (max-width: 640px) { .mesh-blob-a { width: 20rem; height: 20rem; left: -4rem; top: 6%; } .mesh-blob-b { width: 18rem; height: 18rem; right: -3rem; top: 14%; } .mesh-blob-c { width: 16rem; height: 16rem; left: 18%; bottom: -4rem; } } @keyframes mesh-a { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5rem,3rem) scale(1.18); } } @keyframes mesh-b { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-4rem,2.5rem) scale(1.12); } } @keyframes mesh-c { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3rem,-3rem) scale(1.2); } } @media (prefers-reduced-motion: reduce) { .mesh-blob { animation: none; } } `}</style>{' '}
         </div>
       )}{' '}
       <div
@@ -102,17 +103,14 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
             {' '}
             <div className="flex -space-x-2.5" aria-hidden="true">
               {' '}
-              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-gradient-to-br from-primary to-secondary"></span>{' '}
-              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-gradient-to-br from-secondary to-accent"></span>{' '}
-              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-gradient-to-br from-accent to-primary"></span>{' '}
+              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-primary"></span>{' '}
+              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-secondary"></span>{' '}
+              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-accent"></span>{' '}
             </div>{' '}
             <span className="flex items-center gap-0.5" aria-hidden="true">
               {' '}
               {[0, 1, 2, 3, 4].map((i) => (
-                <span key={i} className="material-symbols-outlined text-[17px] text-amber-400">
-                  {' '}
-                  star{' '}
-                </span>
+                <Icon key={i} name="star" className="size-[17px] text-warning" />
               ))}{' '}
             </span>{' '}
             {trustNoteHref ? (
@@ -135,10 +133,7 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
           style={{ bottom: scrollIndicatorBottom }}
         >
           {' '}
-          <span className="material-symbols-outlined" aria-hidden="true">
-            {' '}
-            expand_more{' '}
-          </span>{' '}
+          <Icon name="expand_more" />{' '}
         </div>
       )}{' '}
     </section>

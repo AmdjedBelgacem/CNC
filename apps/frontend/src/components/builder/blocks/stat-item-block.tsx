@@ -6,9 +6,9 @@ const STAT_PADDING: Record<string, string> = { none: '', sm: 'p-4', md: 'p-6', l
 const STAT_BG: Record<string, string> = {
   transparent: '',
   muted: 'bg-surface-container-low',
-  glass: 'bg-white border border-gray-200',
-  gradient: 'bg-gradient-to-br from-primary to-accent',
-  'gradient-muted': 'bg-gradient-to-br from-surface-container-low to-surface-container-lowest',
+  glass: 'bg-card border border-border',
+  gradient: 'bg-primary text-primary-foreground',
+  'gradient-muted': 'bg-surface-container-low',
 };
 const STAT_RADIUS: Record<string, string> = {
   none: '',
@@ -25,7 +25,7 @@ export function StatItemBlock({ props, puck }: BlockComponentProps<StatItemProps
     className,
     padding = 'lg',
     bg = 'glass',
-    radius = '3xl',
+    radius = 'xl',
     border = false,
     hover = true,
     accent = true,
@@ -48,7 +48,7 @@ export function StatItemBlock({ props, puck }: BlockComponentProps<StatItemProps
       {accent && (
         <div
           className={cn(
-            'absolute top-0 left-0 w-1 h-full opacity-0 group-hover:opacity-100 transition-opacity',
+            'absolute top-0 start-0 w-1 h-full opacity-0 group-hover:opacity-100 transition-opacity',
             accentColor,
           )}
         ></div>

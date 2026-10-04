@@ -1,3 +1,0 @@
-module.exports=[28564,a=>{"use strict";var b=a.i(70613);a.s(["default",0,function({children:a}){return(0,b.jsx)(b.Fragment,{children:a})},"metadata",0,{title:"Our Partners | TITANS of Manufacturing",description:"Free manufacturing education is made possible by the generous support of our industry partners."}])},39157,a=>{a.n(a.i(28564))}];
-
-//# sourceMappingURL=apps_frontend_src_app_%28main%29_sponsors_layout_tsx_0vuxn98._.js.map

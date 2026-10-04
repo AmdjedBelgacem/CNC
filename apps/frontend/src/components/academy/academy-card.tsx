@@ -1,77 +1,81 @@
 import Link from 'next/link';
-import { BookOpen, GraduationCap } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import type { AcademySummary } from '@/lib/academies';
 import { cn } from '@/lib/utils';
+import { getImageSrc } from '@/lib/images';
 
 export function AcademyCard({ academy }: { academy: AcademySummary }) {
-  const accent = academy.accentColor || '#7c3aed';
+  // Tenant brand color is real per-academy data; when absent we fall back to
+  // design tokens rather than a hardcoded hex.
+  const accent = academy.accentColor || undefined;
   const image = academy.heroImageUrl || academy.logoUrl || academy.seoImageUrl;
   const href = `/academy/${academy.slug}`;
 
   return (
-    <Link href={href} className="group block">
-      <article className="overflow-hidden rounded-3xl border border-border bg-card transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 group-hover:border-primary/40">
-        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-          {image ? (
-            // Plain <img>: uploaded branding art is served from MinIO/S3 on the
-            // configured public endpoint and must render without coupling to
-            // next.config remotePatterns.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image}
-              alt={academy.title}
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-          ) : (
-            <div
-              className="flex h-full items-center justify-center"
-              style={{ backgroundColor: `${accent}12` }}
-            >
-              <GraduationCap className="h-12 w-12 opacity-30" style={{ color: accent }} />
-            </div>
-          )}
+    // `card-hover` supplies the lift, shadow ramp and press-dip. It lives in
+    // globals.css rather than framer-motion so the card can stay a server
+    // component — an academy grid of 12 client cards would ship JS for a hover.
+    <Link href={href} className="group block h-full">
+      <article className="card-hover flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-xs transition-colors duration-200 group-hover:border-border-strong group-hover:shadow-sm">
+        <div className="relative aspect-[16/10] overflow-hidden border-b border-border bg-surface-sunken">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={getImageSrc(image, 'academy')}
+            alt={academy.title}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
+          />
           {academy.logoUrl && image !== academy.logoUrl ? (
-            <div className="absolute left-4 top-4 h-11 w-11 overflow-hidden rounded-xl border border-white/60 bg-white shadow-md">
+            <div className="absolute start-3 top-3 size-11 overflow-hidden rounded-md border border-border bg-card shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={academy.logoUrl} alt="" className="h-full w-full object-cover" />
             </div>
           ) : null}
-          <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
-            <BookOpen className="h-3.5 w-3.5" />
+          <div className="absolute end-3 top-3 inline-flex items-center gap-1.5 rounded-sm bg-overlay/70 px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-white">
+            <BookOpen className="size-3" />
             {academy.courseCount} {academy.courseCount === 1 ? 'course' : 'courses'}
           </div>
         </div>
-        <div className="p-6">
+        <div className="flex flex-1 flex-col p-5">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span
-              className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]"
-              style={{ backgroundColor: `${accent}15`, color: accent }}
+              className={cn(
+                'rounded-sm px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.08em]',
+                !accent && 'bg-primary/10 text-primary',
+              )}
+              style={accent ? { backgroundColor: `${accent}15`, color: accent } : undefined}
             >
               Academy
             </span>
             {academy.subtitle ? (
-              <span className="text-[11px] font-medium text-muted-foreground line-clamp-1">
+              <span className="line-clamp-1 text-xs text-muted-foreground">
                 {academy.subtitle}
               </span>
             ) : null}
           </div>
-          <h3 className="mb-2 text-xl font-semibold leading-tight text-foreground">
+          <h3 className="mb-2 font-display text-lg font-semibold leading-tight tracking-tight text-foreground">
             {academy.title}
           </h3>
           {academy.description ? (
-            <p className="mb-5 line-clamp-2 text-sm leading-6 text-muted-foreground">
+            <p className="mb-5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
               {academy.description}
             </p>
           ) : null}
-          <div className="flex items-center justify-between border-t border-border pt-4">
+          <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
             <span
-              className={cn('inline-block h-2 w-16 rounded-full')}
-              style={{ backgroundColor: accent }}
+              className={cn('inline-block h-1 w-10 rounded-sm', !accent && 'bg-primary')}
+              style={accent ? { backgroundColor: accent } : undefined}
               aria-hidden
             />
-            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: accent }}>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 font-mono text-[11px] font-medium uppercase tracking-[0.08em]',
+                !accent && 'text-primary',
+              )}
+              style={accent ? { color: accent } : undefined}
+            >
               View academy
+              <ArrowRight className="size-3 rtl:rotate-180" />
             </span>
           </div>
         </div>

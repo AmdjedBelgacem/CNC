@@ -60,7 +60,7 @@ export default function GroupsPage() {
   return (
     <div>
       {' '}
-      <section className="border-b bg-gradient-to-b from-background to-secondary/20 py-20 text-center">
+      <section className="border-b bg-surface-sunken/60 blueprint-grid py-20 text-center">
         {' '}
         <div className="container mx-auto px-4">
           {' '}
@@ -72,7 +72,7 @@ export default function GroupsPage() {
           </p>{' '}
           <Button>
             {' '}
-            <Plus className="mr-2 h-4 w-4" /> Start a Group{' '}
+            <Plus className="me-2 size-4" /> Start a Group{' '}
           </Button>{' '}
         </div>{' '}
       </section>{' '}
@@ -148,17 +148,17 @@ export default function GroupsPage() {
                   {' '}
                   {(g.city || g.state) && (
                     <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" />{' '}
+                      <MapPin className="size-3.5" />{' '}
                       {[g.city, g.state].filter(Boolean).join(', ')}
                     </span>
                   )}{' '}
                   {g.meetingSchedule && (
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" /> {g.meetingSchedule}
+                      <Calendar className="size-3.5" /> {g.meetingSchedule}
                     </span>
                   )}{' '}
                   <span className="flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" /> {g.memberCount}/{g.maxMembers}
+                    <Users className="size-3.5" /> {g.memberCount}/{g.maxMembers}
                   </span>{' '}
                 </div>{' '}
               </div>

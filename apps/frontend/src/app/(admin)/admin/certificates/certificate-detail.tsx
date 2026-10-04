@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   X,
   Loader2,
@@ -10,8 +11,10 @@ import {
   Award,
   Copy,
   Link2,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 export interface CertificateRow {
@@ -22,6 +25,11 @@ export interface CertificateRow {
   revokedAt: string | null;
   revokedReason?: string | null;
   pdfUrl?: string | null;
+  pdfStorageKey?: string | null;
+  source?: 'automatic' | 'manual' | null;
+  academyId?: string | null;
+  templateId?: string | null;
+  payload?: { usedDefaultLayout?: boolean; fields?: { key: string; value: string }[] } | null;
   metadata?: Record<string, unknown> | null;
   // flattened joins returned by the admin list endpoint
   userId?: string;
@@ -54,6 +62,8 @@ export function CertificateDetailDialog({
   onClose: () => void;
   onChanged: (message: string) => void;
 }) {
+  const t = useTranslations('admin.certificateDetail');
+  const tCommon = useTranslations('common');
   const [cert, setCert] = useState<CertificateDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +87,7 @@ export function CertificateDetailDialog({
       if (!res.ok) throw new Error(`Failed to load certificate (${res.status})`);
       setCert(await res.json());
     } catch (e: any) {
-      setError(e?.message || 'Failed to load');
+      setError(e?.message || t('loadFailed', { default: 'Failed to load' }));
     } finally {
       setLoading(false);
     }
@@ -100,12 +110,16 @@ export function CertificateDetailDialog({
         const data = await res.json().catch(() => null);
         throw new Error(data?.message ?? `Request failed (${res.status})`);
       }
-      onChanged('Certificate revoked');
+      onChanged(t('revoked', { default: 'Certificate revoked' }));
       setRevokeOpen(false);
       setReason('');
       load();
     } catch (e: any) {
-      toast({ type: 'err', title: 'Revoke failed', description: e?.message });
+      toast({
+        type: 'err',
+        title: t('revokeFailed', { default: 'Revoke failed' }),
+        description: e?.message,
+      });
     } finally {
       setRevoking(false);
     }
@@ -126,14 +140,21 @@ export function CertificateDetailDialog({
       if (!res.ok) throw new Error(data?.message ?? `Request failed (${res.status})`);
       toast({
         type: 'ok',
-        title: 'Certificate reissued',
-        description: `New number: ${data?.certificateNumber ?? '—'}`,
+        title: t('reissued', { default: 'Certificate reissued' }),
+        description: t('newNumber', {
+          number: data?.certificateNumber ?? '—',
+          default: 'New number: {number}',
+        }),
       });
       setReissueArmed(false);
-      onChanged('Certificate reissued');
+      onChanged(t('reissued', { default: 'Certificate reissued' }));
       onClose();
     } catch (e: any) {
-      toast({ type: 'err', title: 'Reissue failed', description: e?.message });
+      toast({
+        type: 'err',
+        title: t('reissueFailed', { default: 'Reissue failed' }),
+        description: e?.message,
+      });
       setReissueArmed(false);
     } finally {
       setReissuing(false);
@@ -149,33 +170,34 @@ export function CertificateDetailDialog({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100"
-            aria-label="Close"
+            className="absolute end-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100"
+            aria-label={tCommon('close', { default: 'Close' })}
           >
             {' '}
-            <X className="h-4 w-4" />{' '}
+            <X className="size-4" />{' '}
           </button>{' '}
           <DialogHeader>
             {' '}
             <DialogTitle className="flex items-center gap-2">
               {' '}
-              <Award className="h-5 w-5 text-primary" /> Certificate details{' '}
+              <Award className="size-5 text-primary" />{' '}
+              {t('title', { default: 'Certificate details' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
           {loading ? (
             <div className="space-y-3 py-4">
               {' '}
               {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-5 animate-pulse rounded bg-muted" />
+                <Skeleton key={i} className="h-5 rounded" />
               ))}{' '}
             </div>
           ) : error ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3">
+            <div className="rounded-xl border border-red-500/30 bg-destructive/5 px-4 py-3">
               {' '}
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>{' '}
+              <p className="text-sm text-destructive dark:text-destructive">{error}</p>{' '}
               <button type="button" onClick={load} className="mt-1 text-sm font-medium underline">
                 {' '}
-                Retry{' '}
+                {tCommon('retry', { default: 'Retry' })}{' '}
               </button>{' '}
             </div>
           ) : cert ? (
@@ -183,60 +205,115 @@ export function CertificateDetailDialog({
               {' '}
               <div className="rounded-xl border border-border bg-muted/40 p-3 text-center">
                 {' '}
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Certificate number
+                <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  {t('certificateNumber', { default: 'Certificate number' })}
                 </p>{' '}
                 <p className="mt-0.5 font-mono text-base font-bold">{cert.certificateNumber}</p>{' '}
-                <p className="mt-1 flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 flex items-center justify-center gap-1 text-2xs text-muted-foreground">
                   {' '}
-                  <Fingerprint className="h-3 w-3" /> signature{' '}
+                  <Fingerprint className="size-3.5" />{' '}
+                  {t('signature', { default: 'signature' })}{' '}
                   {cert.digitalSignature ? `${cert.digitalSignature.slice(0, 12)}…` : '—'}{' '}
                 </p>{' '}
               </div>{' '}
               <dl className="space-y-2 rounded-xl border border-border p-3">
                 {' '}
-                <DetailRow label="User">{cert.user.name || cert.user.email}</DetailRow>{' '}
-                <DetailRow label="Email">{cert.user.email}</DetailRow>{' '}
-                <DetailRow label="Course">{cert.course.title}</DetailRow>{' '}
-                <DetailRow label="Issued">{new Date(cert.issuedAt).toLocaleDateString()}</DetailRow>{' '}
-                <DetailRow label="Expires">
-                  {cert.expiresAt ? new Date(cert.expiresAt).toLocaleDateString() : 'Never'}
+                <DetailRow label={t('user', { default: 'User' })}>
+                  {cert.user.name || cert.user.email}
                 </DetailRow>{' '}
-                <DetailRow label="Status">
+                <DetailRow label={t('email', { default: 'Email' })}>{cert.user.email}</DetailRow>{' '}
+                <DetailRow label={t('course', { default: 'Course' })}>
+                  {cert.course.title}
+                </DetailRow>{' '}
+                <DetailRow label={t('issued', { default: 'Issued' })}>
+                  {new Date(cert.issuedAt).toLocaleDateString()}
+                </DetailRow>{' '}
+                <DetailRow label={t('expires', { default: 'Expires' })}>
+                  {cert.expiresAt
+                    ? new Date(cert.expiresAt).toLocaleDateString()
+                    : t('never', { default: 'Never' })}
+                </DetailRow>{' '}
+                <DetailRow label={t('source', { default: 'Source' })}>
+                  {cert.source === 'manual'
+                    ? t('sourceManual', { default: 'Manual (admin)' })
+                    : t('sourceAutomatic', { default: 'Automatic (completion)' })}
+                </DetailRow>
+                <DetailRow label={t('document', { default: 'Document' })}>
+                  {cert.pdfStorageKey || cert.pdfUrl ? (
+                    <a
+                      href={`/api/proxy/admin/certifications/${cert.id}/download`}
+                      className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                    >
+                      <Download className="size-3.5" />
+                      {t('downloadPdf', { default: 'Download PDF' })}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {t('noDocument', { default: 'Not generated yet' })}
+                    </span>
+                  )}
+                </DetailRow>
+                {/* The payload snapshot is what the PDF was drawn from. Showing
+                    it makes an issued certificate auditable: an admin can see
+                    the exact values and whether the default layout was used,
+                    even after the template has been edited. */}
+                {cert.payload?.fields?.length ? (
+                  <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
+                    <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('renderedFields', { default: 'Rendered fields (immutable snapshot)' })}
+                    </p>
+                    {cert.payload.usedDefaultLayout && (
+                      <p className="mt-1 text-2xs text-warning">
+                        {t('usedDefaultLayout', {
+                          default: 'Template had no fields, so the built-in layout was used.',
+                        })}
+                      </p>
+                    )}
+                    <dl className="mt-2 space-y-1">
+                      {cert.payload.fields.map((f) => (
+                        <div key={f.key} className="flex items-baseline gap-2 text-2xs">
+                          <dt className="shrink-0 font-mono text-muted-foreground">{f.key}</dt>
+                          <dd className="truncate font-medium text-foreground">{f.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ) : null}
+                <DetailRow label={t('status', { default: 'Status' })}>
                   {' '}
                   {isRevoked ? (
-                    <span className="rounded-md bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800 dark:bg-red-900 dark:text-red-100">
-                      Revoked
+                    <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-2xs font-semibold text-red-800 dark:bg-red-900 dark:text-red-100">
+                      {t('statusRevoked', { default: 'Revoked' })}
                     </span>
                   ) : cert.expiresAt && new Date(cert.expiresAt).getTime() <= Date.now() ? (
-                    <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-100">
-                      Expired
+                    <span className="rounded-md bg-warning/10 px-2 py-0.5 text-2xs font-semibold text-warning  ">
+                      {t('statusExpired', { default: 'Expired' })}
                     </span>
                   ) : (
-                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100">
-                      Active
+                    <span className="rounded-md bg-success/10 px-2 py-0.5 text-2xs font-semibold text-success  ">
+                      {t('statusActive', { default: 'Active' })}
                     </span>
                   )}{' '}
                 </DetailRow>{' '}
-                <DetailRow label="Source">
+                <DetailRow label={t('source', { default: 'Source' })}>
                   {' '}
                   {(() => {
                     const src = (cert.metadata as any)?.source as string | undefined;
                     if (src === 'automatic')
                       return (
-                        <span className="rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-                          Automatic
+                        <span className="rounded-md bg-primary/20 px-2 py-0.5 text-2xs font-semibold text-primary">
+                          {t('sourceAutomatic', { default: 'Automatic' })}
                         </span>
                       );
                     if (src === 'manual')
                       return (
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                          Manual
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-2xs font-semibold text-muted-foreground">
+                          {t('sourceManual', { default: 'Manual' })}
                         </span>
                       );
                     if (src)
                       return (
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold capitalize">
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-2xs font-semibold capitalize">
                           {src}
                         </span>
                       );
@@ -244,12 +321,14 @@ export function CertificateDetailDialog({
                   })()}{' '}
                 </DetailRow>{' '}
                 {isRevoked && cert.revokedReason && (
-                  <DetailRow label="Reason">{cert.revokedReason}</DetailRow>
+                  <DetailRow label={t('reason', { default: 'Reason' })}>
+                    {cert.revokedReason}
+                  </DetailRow>
                 )}{' '}
                 {!isRevoked &&
                   cert.revokedAt === null &&
                   typeof cert.metadata?.reissuedFrom === 'string' && (
-                    <DetailRow label="Reissued from">
+                    <DetailRow label={t('reissuedFrom', { default: 'Reissued from' })}>
                       {' '}
                       <code className="font-mono text-xs">
                         {String(cert.metadata.reissuedFrom)}
@@ -265,39 +344,46 @@ export function CertificateDetailDialog({
                   className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
                   {' '}
-                  <FileText className="h-3.5 w-3.5" /> View PDF{' '}
+                  <FileText className="size-3.5" /> {t('viewPdf', { default: 'View PDF' })}{' '}
                 </a>
               )}{' '}
               <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
                 {' '}
-                <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{' '}
-                <code className="min-w-0 flex-1 truncate font-mono text-xs">{`${typeof window !== 'undefined' ? window.location.origin : ''}/certificates/verify/${cert.certificateNumber}`}</code>{' '}
+                <Link2 className="size-3.5 shrink-0 text-muted-foreground" />{' '}
+                <code className="min-w-0 flex-1 truncate font-mono text-xs">{`${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${cert.certificateNumber}`}</code>{' '}
                 <button
                   type="button"
                   onClick={async () => {
-                    const link = `${window.location.origin}/certificates/verify/${cert.certificateNumber}`;
+                    const link = `${window.location.origin}/verify/${cert.certificateNumber}`;
                     try {
                       await navigator.clipboard.writeText(link);
-                      toast({ type: 'ok', title: 'Verification link copied' });
+                      toast({
+                        type: 'ok',
+                        title: t('linkCopied', { default: 'Verification link copied' }),
+                      });
                     } catch {
-                      toast({ type: 'err', title: 'Copy failed' });
+                      toast({
+                        type: 'err',
+                        title: t('copyFailed', { default: 'Copy failed' }),
+                      });
                     }
                   }}
                   className="shrink-0 rounded-md border border-border bg-card p-1.5 hover:bg-muted"
-                  aria-label="Copy verification link"
+                  aria-label={t('copyVerificationLinkAria', { default: 'Copy verification link' })}
                 >
                   {' '}
-                  <Copy className="h-3.5 w-3.5" />{' '}
+                  <Copy className="size-3.5" />{' '}
                 </button>{' '}
               </div>{' '}
               {!isRevoked ? (
                 <button
                   type="button"
                   onClick={() => setRevokeOpen(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
                 >
                   {' '}
-                  <ShieldX className="h-4 w-4" /> Revoke certificate{' '}
+                  <ShieldX className="size-4" />{' '}
+                  {t('revoke', { default: 'Revoke certificate' })}{' '}
                 </button>
               ) : (
                 <button
@@ -308,21 +394,21 @@ export function CertificateDetailDialog({
                   className={cn(
                     'flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition disabled:opacity-50',
                     reissueArmed
-                      ? 'border-blue-500 bg-blue-500 text-white'
-                      : 'border-blue-500/40 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400',
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-primary/40 text-primary hover:bg-primary/10 ',
                   )}
                 >
                   {' '}
                   {reissuing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    <RotateCcw className="h-4 w-4" />
+                    <RotateCcw className="size-4" />
                   )}{' '}
                   {reissuing
-                    ? 'Reissuing…'
+                    ? t('reissuing', { default: 'Reissuing…' })
                     : reissueArmed
-                      ? 'Click again to confirm reissue'
-                      : 'Reissue replacement'}{' '}
+                      ? t('confirmReissue', { default: 'Click again to confirm reissue' })
+                      : t('reissueReplacement', { default: 'Reissue replacement' })}{' '}
                 </button>
               )}{' '}
             </div>
@@ -336,9 +422,9 @@ export function CertificateDetailDialog({
           {' '}
           <DialogHeader>
             {' '}
-            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-destructive dark:text-destructive">
               {' '}
-              <ShieldX className="h-5 w-5" /> Revoke certificate{' '}
+              <ShieldX className="size-5" /> {t('revoke', { default: 'Revoke certificate' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
           <p className="text-sm text-muted-foreground">
@@ -346,14 +432,16 @@ export function CertificateDetailDialog({
             <span className="font-mono font-medium text-foreground">
               {cert?.certificateNumber}
             </span>{' '}
-            will be marked revoked and should no longer be honored.{' '}
+            {t('revokeWarning', {
+              default: 'will be marked revoked and should no longer be honored.',
+            })}{' '}
           </p>{' '}
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             maxLength={500}
-            placeholder="Reason (stored on the record)…"
+            placeholder={t('reasonPlaceholder', { default: 'Reason (stored on the record)…' })}
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />{' '}
           <div className="flex justify-end gap-2">
@@ -364,16 +452,17 @@ export function CertificateDetailDialog({
               className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
             >
               {' '}
-              Cancel{' '}
+              {tCommon('cancel', { default: 'Cancel' })}{' '}
             </button>{' '}
             <button
               type="button"
               onClick={revoke}
               disabled={revoking}
-              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground disabled:opacity-50"
             >
               {' '}
-              {revoking && <Loader2 className="h-4 w-4 animate-spin" />} Revoke{' '}
+              {revoking && <Loader2 className="size-4 animate-spin" />}{' '}
+              {t('revoke', { default: 'Revoke' })}{' '}
             </button>{' '}
           </div>{' '}
         </DialogContent>{' '}

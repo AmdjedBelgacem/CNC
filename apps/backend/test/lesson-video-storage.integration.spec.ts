@@ -73,8 +73,11 @@ describe('lesson video storage (integration)', () => {
     expect(key.startsWith(`tenants/${tenantId}/`)).toBe(true);
     expect(key).toContain(`lessons/${lessonId}/video/`);
     expect(uploadUrl).toContain('X-Amz-Signature');
-    // Path-style URL embeds the (literal-slash) key beneath the bucket.
-    expect(uploadUrl).toContain(`/titans-local/${key}`);
+    // Path-style URL embeds the (literal-slash) key beneath the bucket. Video lives in
+    // S3_MEDIA_BUCKET (private), deliberately separate from the public S3_BUCKET used
+    // for avatars and course images.
+    const bucket = process.env.S3_MEDIA_BUCKET || process.env.S3_BUCKET;
+    expect(uploadUrl).toContain(`/${bucket}/${key}`);
   });
 
   it('persists the object key and resolves a signed playback URL via getStudio', async () => {

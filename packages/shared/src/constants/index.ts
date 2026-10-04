@@ -2,6 +2,7 @@ import { USER_ROLES } from '../types/auth';
 
 export * from './theme-defaults';
 export * from './page-defaults';
+export * from './page-templates';
 export * from './academy';
 
 export const ROLES = USER_ROLES;

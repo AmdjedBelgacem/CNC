@@ -69,26 +69,26 @@ export function JsonInspectorSection() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-muted-foreground transition hover:bg-muted"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-2xs font-bold uppercase tracking-wide text-muted-foreground transition hover:bg-muted"
       >
         {' '}
         {open ? (
-          <ChevronDown className="h-3.5 w-3.5" />
+          <ChevronDown className="size-3.5" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="flip-rtl size-3.5" />
         )}{' '}
-        <Braces className="h-3.5 w-3.5" /> JSON{' '}
+        <Braces className="size-3.5" /> JSON{' '}
         {applied && (
-          <span className="ml-auto flex items-center gap-1 font-semibold normal-case text-green-600">
+          <span className="ms-auto flex items-center gap-1 font-semibold normal-case text-green-600">
             {' '}
-            <Check className="h-3 w-3" /> Applied{' '}
+            <Check className="size-3.5" /> Applied{' '}
           </span>
         )}{' '}
       </button>{' '}
       {open && (
         <div className="border-t border-border p-3">
           {' '}
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
             {' '}
             <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono font-bold text-primary">
               {selected.type}
@@ -97,11 +97,11 @@ export function JsonInspectorSection() {
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="ml-auto flex items-center gap-1 rounded-md border border-border px-2 py-1 font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              className="ms-auto flex items-center gap-1 rounded-md border border-border px-2 py-1 font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
               title="Copy the whole node (type + props + id) as JSON"
             >
               {' '}
-              <Copy className="h-3 w-3" /> Copy node JSON{' '}
+              <Copy className="size-3.5" /> Copy node JSON{' '}
             </button>{' '}
           </div>{' '}
           <textarea
@@ -111,7 +111,7 @@ export function JsonInspectorSection() {
               setJson(e.target.value);
             }}
             spellCheck={false}
-            className="h-56 w-full resize-y rounded-md border border-border bg-background p-2 font-mono text-[11px] leading-relaxed text-foreground outline-none focus:border-primary"
+            className="h-56 w-full resize-y rounded-md border border-border bg-background p-2 font-mono text-2xs leading-relaxed text-foreground outline-none focus:border-primary"
           />{' '}
           {issues && (
             <ul className="mt-2 space-y-0.5">
@@ -119,10 +119,10 @@ export function JsonInspectorSection() {
               {issues.map((issue, i) => (
                 <li
                   key={i}
-                  className="flex items-start gap-1.5 text-[11px] font-medium text-red-600"
+                  className="flex items-start gap-1.5 text-2xs font-medium text-destructive"
                 >
                   {' '}
-                  <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />{' '}
+                  <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />{' '}
                   <span>
                     {' '}
                     <span className="font-mono">{issue.path}</span> — {issue.message}{' '}
@@ -134,7 +134,7 @@ export function JsonInspectorSection() {
           <button
             type="button"
             onClick={handleApply}
-            className="mt-2 w-full rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
+            className="mt-2 w-full rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90"
           >
             {' '}
             Apply props (validated){' '}

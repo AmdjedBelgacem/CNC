@@ -4,7 +4,7 @@ import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Overlapping avatar circles with a "+N" pill (mockup academy cards). */
 export function AvatarStackBlock({ props }: BlockComponentProps<AvatarStackProps>) {
   const { count = '+80', size = 32, plainCircles = 2, className } = props;
-  const plainColors = ['bg-slate-200', 'bg-slate-300'];
+  const plainColors = ['bg-muted', 'bg-border-strong'];
   return (
     <div className={cn('flex -space-x-2', className)} style={layoutStyle(props)}>
       {' '}
@@ -16,7 +16,7 @@ export function AvatarStackBlock({ props }: BlockComponentProps<AvatarStackProps
         ></div>
       ))}{' '}
       <div
-        className="rounded-full border-2 border-white bg-primary flex items-center justify-center text-[10px] text-white font-bold"
+        className="rounded-full border-2 border-white bg-primary flex items-center justify-center text-2xs text-primary-foreground font-bold"
         style={{ width: size, height: size }}
       >
         {' '}

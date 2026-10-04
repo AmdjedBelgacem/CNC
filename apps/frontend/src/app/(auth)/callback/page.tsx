@@ -37,14 +37,14 @@ if (twoFactorRequired && userId) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
         {' '}
-        <p className="text-sm font-medium text-red-600">{error}</p>{' '}
+        <p className="text-sm font-medium text-destructive">{error}</p>{' '}
       </div>
     );
   }
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-muted-foreground">
       {' '}
-      <Loader2 className="h-5 w-5 animate-spin" />{' '}
+      <Loader2 className="size-5 animate-spin" />{' '}
       <p className="text-sm">Completing sign-in…</p>{' '}
     </div>
   );
@@ -55,7 +55,7 @@ export default function AuthCallbackPage() {
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
           {' '}
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />{' '}
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />{' '}
         </div>
       }
     >

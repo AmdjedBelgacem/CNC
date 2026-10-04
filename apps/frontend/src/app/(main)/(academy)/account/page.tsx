@@ -1,11 +1,12 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DifficultyBar } from '@/components/academy/difficulty-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Award, BookOpen, ArrowRight, Shield } from 'lucide-react';
+import { CertificateList } from '@/components/certificates/certificate-list';
 import Link from 'next/link';
 interface Enrollment {
   id: string;
@@ -23,19 +24,13 @@ interface Enrollment {
   };
 }
 export default function AccountPage() {
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { data: enrollments, isLoading } = useQuery<Enrollment[]>({
     queryKey: ['my-enrollments'],
     queryFn: () =>
       fetch('/api/proxy/courses/enrollments/mine', { credentials: 'include' }).then((r) =>
         r.json(),
       ),
-    enabled: isAuthenticated,
-  });
-  const { data: certifications } = useQuery({
-    queryKey: ['my-certifications'],
-    queryFn: () =>
-      fetch('/api/proxy/certifications/my', { credentials: 'include' }).then((r) => r.json()),
     enabled: isAuthenticated,
   });
   if (!isAuthenticated) {
@@ -61,17 +56,17 @@ export default function AccountPage() {
           {' '}
           <Link href="/settings/account/security">
             {' '}
-            <Shield className="mr-2 h-4 w-4" /> Security Settings{' '}
+            <Shield className="me-2 size-4" /> Security Settings{' '}
           </Link>{' '}
         </Button>{' '}
       </div>{' '}
       <div className="grid gap-8 lg:grid-cols-3">
         {' '}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           {' '}
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             {' '}
-            <BookOpen className="h-5 w-5 text-primary" /> Enrolled Courses{' '}
+            <BookOpen className="size-5 text-primary" /> Enrolled Courses{' '}
           </h2>{' '}
           {isLoading ? (
             <div className="space-y-4">
@@ -109,7 +104,7 @@ export default function AccountPage() {
                         </div>{' '}
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           {' '}
-                          <Award className="h-4 w-4" /> {lessonCount} series{' '}
+                          <Award className="size-4" /> {lessonCount} series{' '}
                         </div>{' '}
                       </div>{' '}
                     </CardHeader>{' '}
@@ -120,7 +115,7 @@ export default function AccountPage() {
                         <Link href={`/courses/${enrollment.course.slug}`}>
                           {' '}
                           {enrollment.status === 'completed' ? 'Review' : 'Continue'}{' '}
-                          <ArrowRight className="ml-1 h-3 w-3" />{' '}
+                          <ArrowRight className="flip-rtl ms-1 size-3.5" />{' '}
                         </Link>{' '}
                       </Button>{' '}
                     </CardFooter>{' '}
@@ -143,40 +138,14 @@ export default function AccountPage() {
             </div>
           )}{' '}
         </div>{' '}
-        <div>
-          {' '}
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            {' '}
-            <Award className="h-5 w-5 text-primary" /> Certifications{' '}
-          </h2>{' '}
-          {certifications && certifications.length > 0 ? (
-            <div className="space-y-3">
-              {' '}
-              {certifications.map(
-                (cert: { id: string; certificateNumber: string; course?: { title: string } }) => (
-                  <Card key={cert.id}>
-                    {' '}
-                    <CardContent className="p-4">
-                      {' '}
-                      <Award className="h-8 w-8 text-primary mb-2" />{' '}
-                      <p className="text-sm font-semibold">{cert.course?.title || 'Certificate'}</p>{' '}
-                      <p className="text-xs text-muted-foreground">{cert.certificateNumber}</p>{' '}
-                    </CardContent>{' '}
-                  </Card>
-                ),
-              )}{' '}
-            </div>
-          ) : (
-            <div className="rounded-lg border bg-card p-6 text-center">
-              {' '}
-              <Award className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />{' '}
-              <p className="text-sm text-muted-foreground">
-                Complete a course to earn a certificate.
-              </p>{' '}
-            </div>
-          )}{' '}
-        </div>{' '}
       </div>{' '}
+      <section className="mt-10">
+        <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
+          {' '}
+          <Award className="size-5 text-primary" /> Certifications{' '}
+        </h2>{' '}
+        <CertificateList />
+      </section>{' '}
     </div>
   );
 }

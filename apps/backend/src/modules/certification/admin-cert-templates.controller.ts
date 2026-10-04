@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards, Req, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { IsOptional, IsString, IsBoolean, IsArray, IsHexColor, MaxLength, IsIn, ValidateNested, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsArray, IsHexColor, MaxLength, IsIn, ValidateNested, IsNumber, Min, Max, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
@@ -21,6 +21,10 @@ class TemplateFieldDto {
 
 class CreateTemplateDto {
   @IsString() @MaxLength(255) name!: string;
+  /** Which level the template applies at. Inferred from the ids when omitted. */
+  @IsOptional() @IsString() @IsIn(['course', 'academy', 'tenant']) scopeType?: string;
+  @IsOptional() @IsUUID() courseId?: string | null;
+  @IsOptional() @IsUUID() academyId?: string | null;
   @IsOptional() @IsString() @IsIn(['modern', 'classic', 'minimal']) layout?: string;
   @IsOptional() @IsString() @IsHexColor() primaryColor?: string;
   @IsOptional() @IsString() @IsHexColor() secondaryColor?: string;
@@ -33,6 +37,9 @@ class CreateTemplateDto {
 
 class UpdateTemplateDto {
   @IsOptional() @IsString() @MaxLength(255) name?: string;
+  @IsOptional() @IsString() @IsIn(['course', 'academy', 'tenant']) scopeType?: string;
+  @IsOptional() @IsUUID() courseId?: string | null;
+  @IsOptional() @IsUUID() academyId?: string | null;
   @IsOptional() @IsString() @IsIn(['modern', 'classic', 'minimal']) layout?: string;
   @IsOptional() @IsString() @IsHexColor() primaryColor?: string;
   @IsOptional() @IsString() @IsHexColor() secondaryColor?: string;
@@ -73,17 +80,41 @@ export class AdminCertTemplatesController {
     @Req() req: any,
     @Query('q') q?: string,
     @Query('isActive') isActive?: string,
+    @Query('courseId') courseId?: string,
+    @Query('academyId') academyId?: string,
+    @Query('scopeType') scopeType?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride);
     return this.certification.listTemplates(tid, {
+      academyId: academyId || undefined,
+      scopeType: scopeType || undefined,
       q: q || undefined,
       isActive: isActive || undefined,
+      courseId: courseId || undefined,
       page: Number(page) || 1,
       limit: Number(limit) || 20,
     });
+  }
+
+  /**
+   * Which template would issue for a given course right now, and why.
+   *
+   * Surfaces the course -> academy -> tenant resolution chain so the Studio can
+   * show an operator the effective template *and* the reason a course has none,
+   * instead of leaving them to infer it from a silent skip.
+   */
+  @Get('resolve/course/:courseId')
+  @ApiOperation({ summary: 'Resolve the certificate template for a course' })
+  async resolveForCourse(
+    @Param('courseId') courseId: string,
+    @Query('tenantId') tenantIdOverride: string | undefined,
+    @Req() req: any,
+  ) {
+    const tid = this.effectiveTenant(req, tenantIdOverride);
+    return this.certification.describeTemplateResolution(tid, courseId);
   }
 
   @Get(':id')

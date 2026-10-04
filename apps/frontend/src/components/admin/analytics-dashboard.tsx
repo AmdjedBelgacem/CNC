@@ -1,41 +1,55 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import {
-  Users,
-  GraduationCap,
-  DollarSign,
-  UserPlus,
-  TrendingUp,
-  Award,
-  Clock,
-  RefreshCw,
-  Building2,
-  Trophy,
-  Package,
-  Percent,
-  ChevronRight,
+  Activity as ActivityIcon,
   AlertCircle,
-  FileEdit,
-  UserX,
-  TrendingDown,
+  Award,
+  Building2,
+  Clock,
+  DollarSign,
   Download,
+  FileEdit,
+  GraduationCap,
+  Percent,
+  Package,
+  RefreshCw,
   ShieldCheck,
+  Trophy,
+  UserPlus,
+  Users,
+  UserX,
+  type LucideIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getImageSrc } from '@/lib/images';
+import { formatMinorUnits } from '@/lib/money';
+import { DEFAULT_CURRENCY, type CurrencyCode } from '@titan/shared';
 import { useAuthStore } from '@/stores/auth-store';
-import { AdminCommandBar, BarButton, BarIconButton, AdminPageHeader } from './admin-chrome';
+import {
+  AdminCommandBar,
+  AdminKpiCard,
+  AdminPageHeader,
+  BarButton,
+  BarIconButton,
+} from './admin-chrome';
+import {
+  ErrorBanner,
+  PanelCard,
+  PillTabs,
+  Select,
+  Skeleton,
+  SkeletonPanel,
+  SkeletonRows,
+  StatusPill,
+  TONE_ICON,
+  type Tone,
+} from './admin-ui';
+import { RankedListItem, TrendChart, type TrendPoint } from './analytics-charts';
+
 type RangeKey = '7d' | '30d' | '90d' | '12m';
+
 type Kpi = { value: number; delta: number | null; sparkline: number[] };
 type Overview = {
   range: string;
@@ -51,9 +65,9 @@ type Overview = {
   upcomingEvents: number;
 };
 type Trends = {
-  signups: { date: string; count: number }[];
-  enrollments: { date: string; count: number }[];
-  activeUsers: { date: string; count: number }[];
+  signups: TrendPoint[];
+  enrollments: TrendPoint[];
+  activeUsers: TrendPoint[];
   revenue: { date: string; cents: number }[];
 };
 type Breakdowns = {
@@ -89,7 +103,7 @@ type Insights = {
   suspendedUsers: number;
   ordersSilent30d: boolean;
 };
-type Activity = {
+type ActivityFeed = {
   items: {
     id: string;
     type: 'signup' | 'enrollment' | 'payment_confirmed' | 'payment_failed';
@@ -102,60 +116,15 @@ type Activity = {
   updatedAt: string;
   range: string;
 };
-function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
-  if (!data || data.length < 2 || data.every((v) => v === 0))
-    return (
-      <div className="h-[28px] w-[80px] opacity-30 flex items-center justify-center text-[10px] text-muted-foreground">
-        no data
-      </div>
-    );
-  const w = 80,
-    h = 28;
-  const min = Math.min(...data),
-    max = Math.max(...data),
-    range = max - min || 1;
-  const d = data
-    .map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * (h - 6) - 3}`)
-    .join(' ');
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
-      {' '}
-      <polyline
-        fill="none"
-        stroke={positive ? 'rgb(16 185 129)' : 'rgb(239 68 68)'}
-        strokeWidth={1.75}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={d}
-        opacity={0.9}
-      />{' '}
-      <polyline
-        fill={positive ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'}
-        stroke="none"
-        points={`${d} ${w},${h} 0,${h}`}
-      />{' '}
-    </svg>
-  );
-}
-function DeltaChip({ delta }: { delta: number | null }) {
-  if (delta === null || delta === undefined)
-    return <span className="text-[11px] text-muted-foreground">— vs prev</span>;
-  const pos = delta >= 0;
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold',
-        pos
-          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100'
-          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
-      )}
-    >
-      {' '}
-      <TrendingUp className={cn('h-3 w-3', !pos && 'rotate-180')} /> {pos ? '+' : ''}
-      {delta.toFixed(1)}%{' '}
-    </span>
-  );
-}
+
+const RANGES: RangeKey[] = ['7d', '30d', '90d', '12m'];
+const RANGE_LABEL_KEY: Record<RangeKey, string> = {
+  '7d': 'range7d',
+  '30d': 'range30d',
+  '90d': 'range90d',
+  '12m': 'range12m',
+};
+
 function downloadCsv(filename: string, rows: (string | number)[][]) {
   const esc = (v: string | number) => {
     const s = String(v ?? '');
@@ -170,18 +139,43 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
   a.click();
   URL.revokeObjectURL(url);
 }
-function formatCurrency(cents: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+
+/** Delta badge for a KPI. `null` means "no comparable prior period". */
+function DeltaBadge({ delta }: { delta: number | null }) {
+  const t = useTranslations('analytics');
+  if (delta === null || delta === undefined) {
+    return <span className="text-2xs text-muted-foreground">{t('vsPrevShort', { default: '— vs prev' })}</span>;
+  }
+  const pos = delta >= 0;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-bold tabular-nums',
+        pos ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive',
+      )}
+    >
+      <svg viewBox="0 0 10 10" className={cn('size-2.5', !pos && 'rotate-180')} fill="currentColor" aria-hidden="true">
+        {pos ? <path d="M5 1l4 6H1z" /> : <path d="M5 9L1 3h8z" />}
+      </svg>
+      {pos ? '+' : ''}
+      {delta.toFixed(1)}%
+    </span>
+  );
 }
+
 export function AnalyticsDashboardView({ title }: { title: string }) {
+  const t = useTranslations('analytics');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const user = useAuthStore((s) => s.user);
   const role = user?.role ?? '';
   const isSuperAdmin = role === 'super_admin';
+
   const [overview, setOverview] = useState<Overview | null>(null);
   const [trends, setTrends] = useState<Trends | null>(null);
   const [breakdowns, setBreakdowns] = useState<Breakdowns | null>(null);
   const [insights, setInsights] = useState<Insights | null>(null);
-  const [activity, setActivity] = useState<Activity | null>(null);
+  const [activity, setActivity] = useState<ActivityFeed | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,220 +183,204 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
   const [compare, setCompare] = useState(true);
   const [tenantId, setTenantId] = useState<string>('');
   const [now, setNow] = useState(new Date());
+
+  // Keeps the "updated N minutes ago" label honest without a full refetch.
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
-  const fetchData = async (r: RangeKey, tid: string) => {
-    const isInitial = !overview;
-    if (isInitial) setLoading(true);
-    else setIsFetching(true);
-    setError(null);
-    try {
-      const qs = new URLSearchParams({ range: r });
-      if (compare) qs.set('compare', 'prev');
-      if (tid) qs.set('tenantId', tid);
-      const q = qs.toString();
-      const [overviewRes, trendsRes, breakdownsRes, insightsRes, activityRes] = await Promise.all([
-        fetch(`/api/proxy/admin/analytics/overview?${q}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/analytics/trends?${q}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/analytics/breakdowns?${q}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/analytics/insights?${q}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/analytics/activity?${q}`, { credentials: 'include' }),
-      ]);
-      if (!overviewRes.ok) throw new Error(`Overview ${overviewRes.status}`);
-      if (!trendsRes.ok) throw new Error(`Trends ${trendsRes.status}`);
-      const [o, t] = await Promise.all([overviewRes.json(), trendsRes.json()]);
-      setOverview(o);
-      setTrends(t);
-      if (breakdownsRes.ok) {
-        setBreakdowns(await breakdownsRes.json());
-      } else {
-        setBreakdowns({
-          topCoursesByEnrollment: [],
-          topCoursesByCompletion: [],
-          topProductsByRevenue: [],
-          updatedAt: new Date().toISOString(),
-          range: r,
-        });
+
+  const fetchData = useCallback(
+    async (r: RangeKey, tid: string, opts?: { silent?: boolean }) => {
+      const initial = !overview && !opts?.silent;
+      if (initial) setLoading(true);
+      else setIsFetching(true);
+      setError(null);
+      try {
+        const qs = new URLSearchParams({ range: r });
+        if (compare) qs.set('compare', 'prev');
+        if (tid) qs.set('tenantId', tid);
+        const q = qs.toString();
+        const get = (path: string) =>
+          fetch(`/api/proxy/admin/analytics/${path}?${q}`, { credentials: 'include' });
+
+        const [overviewRes, trendsRes, breakdownsRes, insightsRes, activityRes] = await Promise.all([
+          get('overview'),
+          get('trends'),
+          get('breakdowns'),
+          get('insights'),
+          get('activity'),
+        ]);
+
+        if (!overviewRes.ok) throw new Error(`${overviewRes.status}`);
+        if (!trendsRes.ok) throw new Error(`${trendsRes.status}`);
+
+        const [o, tr] = await Promise.all([overviewRes.json(), trendsRes.json()]);
+        setOverview(o);
+        setTrends(tr);
+
+        setBreakdowns(
+          breakdownsRes.ok
+            ? await breakdownsRes.json()
+            : {
+                topCoursesByEnrollment: [],
+                topCoursesByCompletion: [],
+                topProductsByRevenue: [],
+                updatedAt: new Date().toISOString(),
+                range: r,
+              },
+        );
+        setInsights(
+          insightsRes.ok
+            ? await insightsRes.json()
+            : {
+                range: r,
+                updatedAt: new Date().toISOString(),
+                zeroEnrollmentCourses: { count: 0, sample: [] },
+                draftCourses: { count: 0, sample: [] },
+                failedPayments: { count: 0, sample: [] },
+                suspendedUsers: 0,
+                ordersSilent30d: false,
+              },
+        );
+        setActivity(
+          activityRes.ok
+            ? await activityRes.json()
+            : { items: [], updatedAt: new Date().toISOString(), range: r },
+        );
+      } catch (e) {
+        setError(e instanceof Error ? e.message : tCommon('loadFailed', { default: 'Failed to load' }));
+      } finally {
+        if (initial) setLoading(false);
+        setIsFetching(false);
       }
-      if (insightsRes.ok) setInsights(await insightsRes.json());
-      else
-        setInsights({
-          range: r,
-          updatedAt: new Date().toISOString(),
-          zeroEnrollmentCourses: { count: 0, sample: [] },
-          draftCourses: { count: 0, sample: [] },
-          failedPayments: { count: 0, sample: [] },
-          suspendedUsers: 0,
-          ordersSilent30d: false,
-        });
-      if (activityRes.ok) setActivity(await activityRes.json());
-      else setActivity({ items: [], updatedAt: new Date().toISOString(), range: r });
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load analytics');
-    } finally {
-      if (isInitial) setLoading(false);
-      setIsFetching(false);
-    }
-  };
+    },
+    [compare, overview, tCommon],
+  );
+
   useEffect(() => {
-    fetchData(range, tenantId);
+    void fetchData(range, tenantId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, tenantId, compare]);
+
   const lastUpdated = useMemo(() => {
     if (!overview?.updatedAt) return null;
     const d = new Date(overview.updatedAt);
     const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }, [overview?.updatedAt, now]);
+    if (diff < 60) return tCommon('justNow', { default: 'Just now' });
+    if (diff < 3600) return tCommon('minutesAgo', { n: Math.floor(diff / 60), default: '{n}m ago' });
+    return d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  }, [overview?.updatedAt, now, locale, tCommon]);
+
+  const money = useCallback(
+    (cents: number) => formatMinorUnits(cents, DEFAULT_CURRENCY as CurrencyCode, locale),
+    [locale],
+  );
+
+  const hasRevenue = !!overview && overview.revenue.cents > 0;
+
   const kpis = useMemo(() => {
     if (!overview) return [];
     return [
       {
         key: 'totalUsers',
-        label: 'Total Users',
-        value: overview.users.value.toLocaleString(),
+        label: t('totalUsers', { default: 'Total users' }),
+        value: overview.users.value.toLocaleString(locale),
         delta: overview.users.delta,
         sparkline: overview.users.sparkline,
         icon: Users,
-        desc: 'All time',
+        sub: t('descAllTime', { default: 'All time' }),
+        tone: 'blue' as Tone,
       },
       {
         key: 'activeUsers',
-        label: 'Active Users',
-        value: overview.activeUsers.value.toLocaleString(),
+        label: t('activeUsers', { default: 'Active users' }),
+        value: overview.activeUsers.value.toLocaleString(locale),
         delta: overview.activeUsers.delta,
         sparkline: overview.activeUsers.sparkline,
         icon: GraduationCap,
-        desc: 'Completed a lesson',
+        sub: t('descCompletedLesson', { default: 'Completed a lesson' }),
+        tone: 'purple' as Tone,
       },
       {
         key: 'signups',
-        label: 'Signups',
-        value: overview.signups.value.toLocaleString(),
+        label: t('kpiSignups', { default: 'Signups' }),
+        value: overview.signups.value.toLocaleString(locale),
         delta: overview.signups.delta,
         sparkline: overview.signups.sparkline,
         icon: UserPlus,
-        desc: 'New accounts',
+        sub: t('descNewAccounts', { default: 'New accounts' }),
+        tone: 'cyan' as Tone,
       },
       {
         key: 'enrollments',
-        label: 'Enrollments',
-        value: overview.enrollments.value.toLocaleString(),
+        label: t('enrollments', { default: 'Enrollments' }),
+        value: overview.enrollments.value.toLocaleString(locale),
         delta: overview.enrollments.delta,
         sparkline: overview.enrollments.sparkline,
-        icon: GraduationCap,
-        desc: 'Started',
+        icon: Award,
+        sub: t('descStarted', { default: 'Started' }),
+        tone: 'emerald' as Tone,
       },
       {
         key: 'revenue',
-        label: 'Revenue',
-        value: formatCurrency(overview.revenue.cents),
+        label: t('revenue', { default: 'Revenue' }),
+        value: hasRevenue ? money(overview.revenue.cents) : '—',
         delta: overview.revenue.delta,
         sparkline: overview.revenue.sparkline,
         icon: DollarSign,
-        desc: 'Confirmed orders',
+        sub: hasRevenue
+          ? t('descConfirmedOrders', { default: 'Confirmed orders' })
+          : t('noConfirmedOrdersInRange', { default: 'No confirmed orders in range' }),
+        tone: 'amber' as Tone,
       },
       {
         key: 'conversion',
-        label: 'Completion Rate',
+        label: t('completionRate', { default: 'Completion rate' }),
         value: `${overview.conversion.value.toFixed(1)}%`,
         delta: overview.conversion.delta,
         sparkline: overview.conversion.sparkline,
-        icon: Award,
-        desc: 'Completed / enrolled',
+        icon: Percent,
+        sub: t('descCompletedEnrolled', { default: 'Completed / enrolled' }),
+        tone: 'rose' as Tone,
       },
     ];
-  }, [overview]);
-  const handleExport = () => {
+  }, [overview, hasRevenue, money, locale, t]);
+
+  const handleExport = useCallback(() => {
     if (!overview || !trends) return;
-    const meta = [
-      `Generated ${new Date().toISOString()}`,
-      `Range ${overview.range} ${compare ? 'vs prev' : ''}`,
-      `Tenant ${tenantId || 'current'}`,
-      `UpdatedAt ${overview.updatedAt}`,
-    ];
+    const tenant = tenantId || 'current';
     const rows: (string | number)[][] = [
-      ['Analytics Export', ...meta],
+      ['Analytics Export', `Generated ${new Date().toISOString()}`],
       ['Metric', 'Current', 'Delta %', 'Range', 'Tenant', 'UpdatedAt'],
-      [
-        'Total Users',
-        overview.users.value,
-        overview.users.delta ?? '',
-        overview.range,
-        tenantId || 'current',
-        overview.updatedAt,
-      ],
-      [
-        'Active Users',
-        overview.activeUsers.value,
-        overview.activeUsers.delta ?? '',
-        overview.range,
-        tenantId || 'current',
-        overview.updatedAt,
-      ],
-      [
-        'Signups',
-        overview.signups.value,
-        overview.signups.delta ?? '',
-        overview.range,
-        tenantId || 'current',
-        overview.updatedAt,
-      ],
-      [
-        'Enrollments',
-        overview.enrollments.value,
-        overview.enrollments.delta ?? '',
-        overview.range,
-        tenantId || 'current',
-        overview.updatedAt,
-      ],
-      [
-        'Revenue cents',
-        overview.revenue.cents,
-        overview.revenue.delta ?? '',
-        overview.range,
-        tenantId || 'current',
-        overview.updatedAt,
-      ],
-      [
-        'Conversion %',
-        overview.conversion.value,
-        overview.conversion.delta ?? '',
-        overview.range,
-        tenantId || 'current',
-        overview.updatedAt,
-      ],
+      ['Total Users', overview.users.value, overview.users.delta ?? '', overview.range, tenant, overview.updatedAt],
+      ['Active Users', overview.activeUsers.value, overview.activeUsers.delta ?? '', overview.range, tenant, overview.updatedAt],
+      ['Signups', overview.signups.value, overview.signups.delta ?? '', overview.range, tenant, overview.updatedAt],
+      ['Enrollments', overview.enrollments.value, overview.enrollments.delta ?? '', overview.range, tenant, overview.updatedAt],
+      ['Revenue minor units', overview.revenue.cents, overview.revenue.delta ?? '', overview.range, tenant, overview.updatedAt],
+      ['Completion %', overview.conversion.value, overview.conversion.delta ?? '', overview.range, tenant, overview.updatedAt],
       [],
       ['Trends - Signups', 'date', 'count'],
-      ...trends.signups.map((p) => ['signups', p.date, p.count] as (string | number)[]),
+      ...trends.signups.map((p) => ['signups', p.date, p.count ?? 0] as (string | number)[]),
       ['Trends - Enrollments', 'date', 'count'],
-      ...trends.enrollments.map((p) => ['enrollments', p.date, p.count] as (string | number)[]),
+      ...trends.enrollments.map((p) => ['enrollments', p.date, p.count ?? 0] as (string | number)[]),
       ['Trends - ActiveUsers', 'date', 'count'],
-      ...trends.activeUsers.map((p) => ['activeUsers', p.date, p.count] as (string | number)[]),
-      ['Trends - Revenue', 'date', 'cents'],
+      ...trends.activeUsers.map((p) => ['activeUsers', p.date, p.count ?? 0] as (string | number)[]),
+      ['Trends - Revenue', 'date', 'minor units'],
       ...trends.revenue.map((p) => ['revenue', p.date, p.cents] as (string | number)[]),
     ];
     if (breakdowns) {
       rows.push(
         [],
         ['Breakdown - Top Courses by Enrollment', 'title', 'enrollments'],
-        ...breakdowns.topCoursesByEnrollment.map(
-          (c) => [c.title, c.enrollments] as (string | number)[],
-        ),
-      );
-      rows.push(
+        ...breakdowns.topCoursesByEnrollment.map((c) => [c.title, c.enrollments] as (string | number)[]),
         [],
         ['Breakdown - Top Courses by Completion', 'title', 'rate %', 'completed/total'],
         ...breakdowns.topCoursesByCompletion.map(
           (c) => [c.title, c.rate, `${c.completed}/${c.total}`] as (string | number)[],
         ),
-      );
-      rows.push(
         [],
-        ['Breakdown - Top Products by Revenue', 'title', 'revenue_cents', 'units'],
+        ['Breakdown - Top Products by Revenue', 'title', 'minor units', 'units'],
         ...breakdowns.topProductsByRevenue.map(
           (p) => [p.title, p.revenueCents, p.units] as (string | number)[],
         ),
@@ -412,88 +390,78 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
       rows.push(
         [],
         ['Insights'],
-        [
-          'Zero-enrollment courses',
-          insights.zeroEnrollmentCourses.count,
-          ...insights.zeroEnrollmentCourses.sample.map((c) => c.title),
-        ],
-        [
-          'Draft courses',
-          insights.draftCourses.count,
-          ...insights.draftCourses.sample.map((c) => c.title),
-        ],
+        ['Zero-enrollment courses', insights.zeroEnrollmentCourses.count],
+        ['Draft courses', insights.draftCourses.count],
         ['Failed payments', insights.failedPayments.count],
         ['Suspended users', insights.suspendedUsers],
         ['Orders silent 30d', insights.ordersSilent30d ? 'true' : 'false'],
       );
     }
     if (activity) {
-      rows.push(
-        [],
-        ['Activity', 'type', 'title', 'at'],
-        ...activity.items.map((a) => [a.type, a.title, a.at] as (string | number)[]),
-      );
+      rows.push([], ['Activity', 'type', 'title', 'at'], ...activity.items.map((a) => [a.type, a.title, a.at] as (string | number)[]));
     }
     downloadCsv(`analytics-${range}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-  };
+  }, [overview, trends, breakdowns, insights, activity, tenantId, range]);
+
+  /* ------------------------------- loading ------------------------------- */
   if (loading) {
     return (
-      <div className="space-y-4">
-        {' '}
-        <div className="h-[104px] animate-pulse rounded-xl bg-gray-200" />{' '}
+      <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {' '}
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
-          ))}{' '}
-        </div>{' '}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {' '}
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-xl bg-muted" />
-          ))}{' '}
-        </div>{' '}
+            <Skeleton key={i} className="h-[132px] rounded-xl" />
+          ))}
+        </div>
         <div className="grid gap-6 lg:grid-cols-2">
-          {' '}
-          <div className="h-[360px] animate-pulse rounded-xl bg-muted" />{' '}
-          <div className="h-[360px] animate-pulse rounded-xl bg-muted" />{' '}
-        </div>{' '}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonPanel key={i} />
+          ))}
+        </div>
       </div>
     );
   }
-  if (error) {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
-        {' '}
-        <p className="text-sm font-semibold text-destructive">Failed to load analytics</p>{' '}
-        <p className="max-w-md text-xs text-muted-foreground">{error}</p>{' '}
-        <Button variant="outline" size="sm" onClick={() => fetchData(range, tenantId)}>
-          <RefreshCw className="mr-2 h-3 w-3" /> Retry
-        </Button>{' '}
-      </div>
-    );
-  }
-  const hasRevenue = overview ? overview.revenue.cents > 0 : false;
+
+  /* ------------------------------- render ------------------------------- */
+  const compareSuffix = compare
+    ? t('vsPrev', { default: 'vs prev' })
+    : t('noCompare', { default: 'no compare' });
+
+  const alertCount = insights
+    ? [
+        insights.zeroEnrollmentCourses.count,
+        insights.draftCourses.count,
+        insights.failedPayments.count,
+        insights.suspendedUsers,
+      ].filter(Boolean).length
+    : 0;
+
+  const topEnrollments = breakdowns?.topCoursesByEnrollment ?? [];
+  const topEnrollMax = Math.max(1, topEnrollments[0]?.enrollments ?? 1);
+
   return (
     <div className="w-full">
       <AdminCommandBar
         trail={[{ label: 'Titans of CNC' }, { label: title }]}
-        live={lastUpdated ? `Updated ${lastUpdated}` : 'Live'}
+        live={
+          lastUpdated
+            ? t('updatedAt', { time: lastUpdated, default: 'Updated {time}' })
+            : t('live', { default: 'Live' })
+        }
         actions={
           <>
             <BarButton
-              icon={<Download className="h-4 w-4" />}
+              icon={<Download className="size-4" />}
               disabled={!overview || isFetching}
               onClick={handleExport}
             >
-              Export CSV
+              {t('exportCsv', { default: 'Export CSV' })}
             </BarButton>
             <BarIconButton
-              title="Refresh analytics"
+              title={t('refreshAria', { default: 'Refresh analytics' })}
               spinning={isFetching}
-              onClick={() => fetchData(range, tenantId)}
+              onClick={() => fetchData(range, tenantId, { silent: true })}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="size-4" />
             </BarIconButton>
           </>
         }
@@ -502,936 +470,551 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
         <AdminPageHeader
           title={title}
-          description="Growth, revenue and learning health across your academy."
+          description={t('pageDescription', {
+            default: 'Growth, revenue and learning health across your academy.',
+          })}
           badge={
-            <span className="flex items-center gap-2 self-start rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-xs font-medium text-emerald-800 shadow-sm md:self-auto dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200">
-              <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              {isFetching ? 'Updating…' : 'Tenant-isolated · Admin only'}
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success md:self-auto">
+              <ShieldCheck className="size-4" />
+              {isFetching
+                ? t('updating', { default: 'Updating…' })
+                : t('tenantIsolatedBadge', { default: 'Tenant-isolated · Admin only' })}
             </span>
           }
         />
-        {/* Controls */}
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-2.5">
-          <div className="flex rounded-xl bg-muted p-1">
-            {(['7d', '30d', '90d', '12m'] as RangeKey[]).map((k) => (
-              <button
-                key={k}
-                onClick={() => setRange(k)}
-                disabled={isFetching}
-                className={cn(
-                  'rounded-lg px-3.5 py-1.5 text-xs font-semibold transition disabled:opacity-50',
-                  range === k
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {k}
-              </button>
-            ))}
-          </div>
-          <label
+
+        {/* Range + compare controls */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2 shadow-xs">
+          <PillTabs
+            value={range}
+            onChange={(k) => setRange(k)}
+            options={RANGES.map((k) => ({ key: k, label: t(RANGE_LABEL_KEY[k]) }))}
+          />
+          <button
+            type="button"
+            onClick={() => setCompare((c) => !c)}
+            aria-pressed={compare}
             className={cn(
-              'flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-muted-foreground transition hover:text-foreground',
-              isFetching && 'opacity-60',
+              'inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition',
+              compare
+                ? 'border-primary/30 bg-primary/10 text-primary'
+                : 'border-border bg-background text-muted-foreground hover:text-foreground',
             )}
           >
-            <input
-              type="checkbox"
-              checked={compare}
-              onChange={(e) => setCompare(e.target.checked)}
-              disabled={isFetching}
-              className="h-3 w-3 accent-blue-600"
-            />
-            Compare to previous
-          </label>
+            <span
+              className={cn(
+                'flex size-3.5 items-center justify-center rounded-[4px] border transition',
+                compare ? 'border-primary bg-primary' : 'border-border-strong',
+              )}
+              aria-hidden="true"
+            >
+              {compare && (
+                <svg viewBox="0 0 10 10" className="size-2.5 text-primary-foreground" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1.5 5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
+            {t('compareToPrevious', { default: 'Compare to previous' })}
+          </button>
           {isSuperAdmin && (
-            <div className="flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background px-2.5 text-muted-foreground">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex items-center gap-1.5">
+              <Building2 className="ms-1 size-3.5 shrink-0 text-muted-foreground" />
+              <Select value={tenantId} onChange={setTenantId} label={t('tenantFilter', { default: 'Filter by tenant' })}>
+                <option value="">{t('allTenants', { default: 'All tenants' })}</option>
+              </Select>
               <input
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value.trim())}
-                placeholder="tenantId (super_admin)"
-                className="w-40 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/60"
-                disabled={isFetching}
+                placeholder={t('tenantIdPlaceholder', { default: 'tenantId' })}
+                aria-label={t('tenantIdPlaceholder', { default: 'tenantId' })}
+                className="h-9 w-36 rounded-xl border border-border bg-background px-2.5 text-xs outline-none transition placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </div>
           )}
-          <span className="ml-auto hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
-            {' '}
-            Range {range} {compare ? 'vs prev' : 'no compare'} · Cached 5m{' '}
-          </span>{' '}
-        </div>{' '}
-        <div
-          className={cn(
-            'space-y-4',
-            isFetching && 'opacity-60 transition-opacity pointer-events-none',
-          )}
-        >
-          {' '}
-          {/* KPI Grid — 6 */}{' '}
+          <span className="ms-auto hidden text-xs text-muted-foreground sm:inline">
+            {t('rangeSummary', {
+              range,
+              compare: compare ? t('vsPrev', { default: 'vs prev' }) : t('noCompare', { default: 'no compare' }),
+              default: 'Range {range} {compare} · Cached 5m',
+            })}
+          </span>
+        </div>
+
+        {error && <ErrorBanner message={error} onRetry={() => fetchData(range, tenantId)} retryLabel={tCommon('retry', { default: 'Retry' })} />}
+
+        <div className={cn('space-y-6 transition-opacity', isFetching && 'pointer-events-none opacity-60')}>
+          {/* KPI grid */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {' '}
-            {kpis.map(({ key, label, value, delta, sparkline, icon: Icon, desc }) => {
-              const pos = delta === null ? true : delta >= 0;
-              const isRevenue = key === 'revenue';
-              const isEmpty = key === 'revenue' ? !hasRevenue : false;
-              return (
-                <div
-                  key={key}
-                  className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {label}
-                      </p>
-                      <p className="font-display text-2xl font-bold leading-none tracking-tight text-foreground">
-                        {isEmpty ? '—' : value}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{desc}</p>
-                      {isRevenue && isEmpty ? (
-                        <p className="text-xs text-muted-foreground">
-                          No confirmed orders in range
-                        </p>
-                      ) : (
-                        <DeltaChip delta={delta} />
-                      )}{' '}
-                    </div>{' '}
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                  </div>{' '}
-                  <div className="mt-3 flex justify-end">
-                    {' '}
-                    <Sparkline data={sparkline} positive={pos} />{' '}
-                  </div>{' '}
-                </div>
-              );
-            })}{' '}
-          </div>{' '}
-          {/* Trends */}{' '}
+            {kpis.map((k) => (
+              <AdminKpiCard
+                key={k.key}
+                icon={k.icon}
+                label={k.label}
+                value={k.value}
+                meta={<DeltaBadge delta={k.delta} />}
+                sub={k.sub}
+                tone={k.tone}
+                sparkline={k.sparkline}
+                trendUp={k.delta === null ? null : k.delta >= 0}
+              />
+            ))}
+          </div>
+
+          {/* Trends */}
           <div className="grid gap-6 lg:grid-cols-2">
-            {' '}
-            {/* Signups */}{' '}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="border-b border-border px-6 py-4">
-                {' '}
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <UserPlus className="h-4 w-4 text-primary" /> Signups Over Time
-                </h3>{' '}
-                <p className="text-xs text-muted-foreground">
-                  New accounts per bucket · {range} {compare ? 'vs prev' : ''}
-                </p>{' '}
-              </div>{' '}
-              <div className="p-6">
-                {' '}
-                {!trends || trends.signups.length === 0 ? (
-                  <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                    No signups in this period
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    {' '}
-                    <AreaChart data={trends.signups}>
-                      {' '}
-                      <defs>
-                        <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>{' '}
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />{' '}
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(v) =>
-                          new Date(v).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })
-                        }
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      />{' '}
-                      <YAxis
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                        allowDecimals={false}
-                      />{' '}
-                      <Tooltip
-                        formatter={
-                          ((value: any) => [
-                            value != null ? Number(value).toLocaleString() : '0',
-                            'Signups',
-                          ]) as any
-                        }
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />{' '}
-                      <Area
-                        type="monotone"
-                        dataKey="count"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        fill="url(#sg)"
-                      />{' '}
-                    </AreaChart>{' '}
-                  </ResponsiveContainer>
-                )}{' '}
-              </div>{' '}
-            </div>{' '}
-            {/* Enrollments */}{' '}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="border-b border-border px-6 py-4">
-                {' '}
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <GraduationCap className="h-4 w-4 text-primary" /> Enrollments Over Time
-                </h3>{' '}
-                <p className="text-xs text-muted-foreground">Started enrollments per bucket</p>{' '}
-              </div>{' '}
-              <div className="p-6">
-                {' '}
-                {!trends || trends.enrollments.length === 0 ? (
-                  <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                    No enrollments in this period
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    {' '}
-                    <AreaChart data={trends.enrollments}>
-                      {' '}
-                      <defs>
-                        <linearGradient id="enr" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>{' '}
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />{' '}
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(v) =>
-                          new Date(v).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })
-                        }
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      />{' '}
-                      <YAxis
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                        allowDecimals={false}
-                      />{' '}
-                      <Tooltip
-                        formatter={
-                          ((value: any) => [
-                            value != null ? Number(value).toLocaleString() : '0',
-                            'Enrollments',
-                          ]) as any
-                        }
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />{' '}
-                      <Area
-                        type="monotone"
-                        dataKey="count"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        fill="url(#enr)"
-                      />{' '}
-                    </AreaChart>{' '}
-                  </ResponsiveContainer>
-                )}{' '}
-              </div>{' '}
-            </div>{' '}
-            {/* Active Users */}{' '}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="border-b border-border px-6 py-4">
-                {' '}
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <Users className="h-4 w-4 text-primary" /> Active Users Over Time
-                </h3>{' '}
-                <p className="text-xs text-muted-foreground">
-                  Distinct users completing lessons per bucket
-                </p>{' '}
-              </div>{' '}
-              <div className="p-6">
-                {' '}
-                {!trends || trends.activeUsers.length === 0 ? (
-                  <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                    No active users in this period
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    {' '}
-                    <AreaChart data={trends.activeUsers}>
-                      {' '}
-                      <defs>
-                        <linearGradient id="act" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>{' '}
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />{' '}
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(v) =>
-                          new Date(v).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })
-                        }
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      />{' '}
-                      <YAxis
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                        allowDecimals={false}
-                      />{' '}
-                      <Tooltip
-                        formatter={
-                          ((value: any) => [
-                            value != null ? Number(value).toLocaleString() : '0',
-                            'Active',
-                          ]) as any
-                        }
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />{' '}
-                      <Area
-                        type="monotone"
-                        dataKey="count"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        fill="url(#act)"
-                      />{' '}
-                    </AreaChart>{' '}
-                  </ResponsiveContainer>
-                )}{' '}
-              </div>{' '}
-            </div>{' '}
-            {/* Revenue */}{' '}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="border-b border-border bg-muted/20 px-6 py-3">
-                {' '}
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <DollarSign className="h-4 w-4 text-primary" /> Revenue Over Time
-                </h3>{' '}
-                <p className="text-xs text-muted-foreground">
-                  Confirmed orders only · {hasRevenue ? '' : 'No confirmed orders in range'}
-                </p>{' '}
-              </div>{' '}
-              <div className="p-6">
-                {' '}
-                {!trends || trends.revenue.length === 0 || !hasRevenue ? (
-                  <div className="flex h-[300px] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-                    {' '}
-                    <DollarSign className="h-8 w-8 opacity-20" /> No revenue in this period{' '}
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    {' '}
-                    <AreaChart data={trends.revenue}>
-                      {' '}
-                      <defs>
-                        <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>{' '}
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />{' '}
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(v) =>
-                          new Date(v).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })
-                        }
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      />{' '}
-                      <YAxis
-                        tickFormatter={(v) => `$${(v / 100).toFixed(0)}`}
-                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                      />{' '}
-                      <Tooltip
-                        formatter={
-                          ((value: any) => [
-                            new Intl.NumberFormat('en-US', {
-                              style: 'currency',
-                              currency: 'USD',
-                            }).format(Number(value ?? 0) / 100),
-                            'Revenue',
-                          ]) as any
-                        }
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />{' '}
-                      <Area
-                        type="monotone"
-                        dataKey="cents"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        fill="url(#rev)"
-                      />{' '}
-                    </AreaChart>{' '}
-                  </ResponsiveContainer>
-                )}{' '}
-              </div>{' '}
-            </div>{' '}
-          </div>{' '}
-          {/* Breakdowns */}{' '}
-          <div className="grid gap-6 lg:grid-cols-3">
-            {' '}
-            {/* Top Courses by Enrollment */}{' '}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="flex items-center justify-between border-b border-border px-6 py-4">
-                {' '}
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <Trophy className="h-4 w-4 text-primary" /> Top Courses by Enrollment
-                </h3>{' '}
-                <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                  {breakdowns?.topCoursesByEnrollment.length ?? 0}
-                </span>{' '}
-              </div>{' '}
-              <div className="p-3">
-                {' '}
-                {!breakdowns ? (
-                  <div className="space-y-2">
-                    {' '}
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
-                    ))}{' '}
-                  </div>
-                ) : breakdowns.topCoursesByEnrollment.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                    {' '}
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                      <Trophy className="h-5 w-5 text-muted-foreground/60" />
-                    </div>{' '}
-                    <p className="text-sm font-medium">No enrollments in this period</p>{' '}
-                    <p className="max-w-[20ch] text-xs text-muted-foreground">
-                      Courses will appear here once learners enroll.
-                    </p>{' '}
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {' '}
-                    {breakdowns.topCoursesByEnrollment.map((course, idx) => (
-                      <Link
-                        key={course.id}
-                        href={course.slug ? `/admin/courses/${course.slug}/edit` : '/admin/courses'}
-                        className="group flex items-center gap-3 rounded-xl border border-transparent p-3 transition hover:border-border hover:bg-muted/50"
-                      >
-                        {' '}
-                        <span
-                          className={cn(
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold shadow-sm',
-                            idx === 0
-                              ? 'bg-amber-500 text-white'
-                              : idx === 1
-                                ? 'bg-zinc-400 text-white'
-                                : idx === 2
-                                  ? 'bg-amber-700 text-white'
-                                  : 'bg-muted text-muted-foreground',
-                          )}
-                        >
-                          {' '}
-                          {idx + 1}{' '}
-                        </span>{' '}
-                        <div className="min-w-0 flex-1">
-                          {' '}
-                          <p className="truncate text-sm font-medium">
-                            {course.title || 'Untitled course'}
-                          </p>{' '}
-                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-md bg-muted">
-                            {' '}
-                            <div
-                              className="h-full rounded-md bg-primary"
-                              style={{
-                                width: `${Math.min(100, (course.enrollments / Math.max(1, breakdowns.topCoursesByEnrollment[0]?.enrollments ?? 1)) * 100)}%`,
-                              }}
-                            />{' '}
-                          </div>{' '}
-                        </div>{' '}
-                        <div className="shrink-0 text-right">
-                          {' '}
-                          <p className="text-sm font-bold">
-                            {course.enrollments.toLocaleString()}
-                          </p>{' '}
-                          <p className="text-[11px] text-muted-foreground">enrollments</p>{' '}
-                        </div>{' '}
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />{' '}
-                      </Link>
-                    ))}{' '}
-                  </ul>
-                )}{' '}
-              </div>{' '}
-            </div>{' '}
-            {/* Top Courses by Completion */}{' '}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="flex items-center justify-between border-b border-border px-6 py-4">
-                {' '}
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <Percent className="h-4 w-4 text-primary" /> Top Courses by Completion
-                </h3>{' '}
-                <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                  {breakdowns?.topCoursesByCompletion.length ?? 0}
-                </span>{' '}
-              </div>{' '}
-              <div className="p-3">
-                {' '}
-                {!breakdowns ? (
-                  <div className="space-y-2">
-                    {' '}
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
-                    ))}{' '}
-                  </div>
-                ) : breakdowns.topCoursesByCompletion.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                    {' '}
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                      <Award className="h-5 w-5 text-muted-foreground/60" />
-                    </div>{' '}
-                    <p className="text-sm font-medium">No completions yet</p>{' '}
-                    <p className="max-w-[20ch] text-xs text-muted-foreground">
-                      Completion rates appear once courses have enrollments.
-                    </p>{' '}
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {' '}
-                    {breakdowns.topCoursesByCompletion.map((course, idx) => (
-                      <Link
-                        key={course.id}
-                        href={course.slug ? `/admin/courses/${course.slug}/edit` : '/admin/courses'}
-                        className="group flex items-center gap-3 rounded-xl border border-transparent p-3 transition hover:border-border hover:bg-muted/50"
-                      >
-                        {' '}
-                        <span
-                          className={cn(
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold shadow-sm',
-                            idx === 0
-                              ? 'bg-emerald-500 text-white'
-                              : 'bg-muted text-muted-foreground',
-                          )}
-                        >
-                          {' '}
-                          {idx + 1}{' '}
-                        </span>{' '}
-                        <div className="min-w-0 flex-1">
-                          {' '}
-                          <p className="truncate text-sm font-medium">
-                            {course.title || 'Untitled course'}
-                          </p>{' '}
-                          <div className="mt-1 flex items-center gap-2">
-                            {' '}
-                            <div className="h-1.5 flex-1 overflow-hidden rounded-md bg-muted">
-                              {' '}
-                              <div
-                                className="h-full rounded-md bg-emerald-500"
-                                style={{ width: `${course.rate}%` }}
-                              />{' '}
-                            </div>{' '}
-                            <span className="text-xs font-medium text-emerald-600">
-                              {course.rate.toFixed(1)}%
-                            </span>{' '}
-                          </div>{' '}
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {course.completed}/{course.total} completed
-                          </p>{' '}
-                        </div>{' '}
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />{' '}
-                      </Link>
-                    ))}{' '}
-                  </ul>
-                )}{' '}
-              </div>{' '}
-            </div>{' '}
-            {/* Top Products by Revenue */}{' '}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="flex items-center justify-between border-b border-border px-6 py-4">
-                {' '}
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <Package className="h-4 w-4 text-primary" /> Top Products by Revenue
-                </h3>{' '}
-                <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                  {breakdowns?.topProductsByRevenue.length ?? 0}
-                </span>{' '}
-              </div>{' '}
-              <div className="p-3">
-                {' '}
-                {!breakdowns ? (
-                  <div className="space-y-2">
-                    {' '}
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
-                    ))}{' '}
-                  </div>
-                ) : breakdowns.topProductsByRevenue.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                    {' '}
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                      <Package className="h-5 w-5 text-muted-foreground/60" />
-                    </div>{' '}
-                    <p className="text-sm font-medium">No revenue in this period</p>{' '}
-                    <p className="max-w-[20ch] text-xs text-muted-foreground">
-                      Confirmed orders will appear here.
-                    </p>{' '}
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {' '}
-                    {breakdowns.topProductsByRevenue.map((product, idx) => (
-                      <Link
+            <TrendChart
+              title={t('signupsOverTime', { default: 'Signups Over Time' })}
+              description={t('signupsOverTimeDesc', {
+                range,
+                compare: compare ? t('vsPrev', { default: 'vs prev' }) : '',
+                default: 'New accounts per bucket · {range} {compare}',
+              })}
+              icon={UserPlus}
+              data={trends?.signups ?? []}
+              color="primary"
+              unitLabel={t('signups', { default: 'Signups' })}
+              emptyMessage={t('noSignupsInPeriod', { default: 'No signups in this period' })}
+              compareSuffix={compareSuffix}
+              loading={isFetching}
+            />
+            <TrendChart
+              title={t('enrollmentsOverTime', { default: 'Enrollments Over Time' })}
+              description={t('enrollmentsOverTimeDesc', { default: 'Started enrollments per bucket' })}
+              icon={GraduationCap}
+              data={trends?.enrollments ?? []}
+              color="accent"
+              unitLabel={t('enrollments', { default: 'Enrollments' })}
+              emptyMessage={t('noEnrollmentsInPeriod', { default: 'No enrollments in this period' })}
+              compareSuffix={compareSuffix}
+              loading={isFetching}
+            />
+            <TrendChart
+              title={t('activeUsersOverTime', { default: 'Active Users Over Time' })}
+              description={t('activeUsersOverTimeDesc', { default: 'Distinct users completing lessons per bucket' })}
+              icon={Users}
+              data={trends?.activeUsers ?? []}
+              color="success"
+              unitLabel={t('activeShort', { default: 'Active' })}
+              emptyMessage={t('noActiveUsersInPeriod', { default: 'No active users in this period' })}
+              compareSuffix={compareSuffix}
+              loading={isFetching}
+            />
+            <TrendChart
+              title={t('revenueOverTime', { default: 'Revenue Over Time' })}
+              description={t('revenueOverTimeDesc', { default: 'Confirmed orders only' })}
+              icon={DollarSign}
+              data={trends?.revenue ?? []}
+              valueKey="cents"
+              color="warning"
+              formatValue={money}
+              unitLabel={t('revenue', { default: 'Revenue' })}
+              emptyMessage={t('noRevenueInPeriod', { default: 'No revenue in this period' })}
+              compareSuffix={compareSuffix}
+              loading={isFetching}
+            />
+          </div>
+
+          {/* Top lists */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <PanelCard
+              title={
+                <span className="flex items-center gap-2">
+                  <Trophy className="size-4 text-primary" />
+                  {t('topByEnrollments', { default: 'Top Courses by Enrollment' })}
+                </span>
+              }
+              action={<StatusPill label={String(topEnrollments.length)} tone="slate" dot={false} />}
+              bodyClassName="p-3"
+            >
+              {isFetching ? (
+                <SkeletonRows rows={5} columns={2} />
+              ) : topEnrollments.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  {t('noEnrollmentsInPeriod', { default: 'No enrollments in this period' })}
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {topEnrollments.map((course, i) => (
+                    <RankedListItem
+                      key={course.id}
+                      rank={i + 1}
+                      title={course.title || t('untitledCourse', { default: 'Untitled course' })}
+                      value={course.enrollments.toLocaleString(locale)}
+                      sub={t('enrollmentsLower', { default: 'enrollments' })}
+                      progress={(course.enrollments / topEnrollMax) * 100}
+                      href={course.slug ? `/admin/courses/${course.slug}/edit` : '/admin/courses'}
+                    />
+                  ))}
+                </ul>
+              )}
+            </PanelCard>
+
+            <PanelCard
+              title={
+                <span className="flex items-center gap-2">
+                  <Percent className="size-4 text-primary" />
+                  {t('topByCompletion', { default: 'Top Courses by Completion' })}
+                </span>
+              }
+              action={
+                <StatusPill
+                  label={String(breakdowns?.topCoursesByCompletion.length ?? 0)}
+                  tone="slate"
+                  dot={false}
+                />
+              }
+              bodyClassName="p-3"
+            >
+              {isFetching ? (
+                <SkeletonRows rows={5} columns={2} />
+              ) : (breakdowns?.topCoursesByCompletion.length ?? 0) === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-10 text-center">
+                  <Award className="size-7 text-muted-foreground/40" />
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t('noCompletionsYet', { default: 'No completions yet' })}
+                  </p>
+                  <p className="max-w-[28ch] text-xs text-muted-foreground">
+                    {t('completionRatesHint', { default: 'Completion rates appear once courses have enrollments.' })}
+                  </p>
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {breakdowns!.topCoursesByCompletion.map((course, i) => (
+                    <RankedListItem
+                      key={course.id}
+                      rank={i + 1}
+                      title={course.title || t('untitledCourse', { default: 'Untitled course' })}
+                      value={`${course.rate.toFixed(1)}%`}
+                      sub={t('completedOf', {
+                        completed: course.completed,
+                        total: course.total,
+                        default: '{completed}/{total} completed',
+                      })}
+                      progress={course.rate}
+                      progressTone="success"
+                      href={course.slug ? `/admin/courses/${course.slug}/edit` : '/admin/courses'}
+                    />
+                  ))}
+                </ul>
+              )}
+            </PanelCard>
+
+            <PanelCard
+              title={
+                <span className="flex items-center gap-2">
+                  <Package className="size-4 text-primary" />
+                  {t('topProductsByRevenue', { default: 'Top Products by Revenue' })}
+                </span>
+              }
+              action={
+                <StatusPill
+                  label={String(breakdowns?.topProductsByRevenue.length ?? 0)}
+                  tone="slate"
+                  dot={false}
+                />
+              }
+              bodyClassName="p-3"
+            >
+              {isFetching ? (
+                <SkeletonRows rows={5} columns={2} />
+              ) : (breakdowns?.topProductsByRevenue.length ?? 0) === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-10 text-center">
+                  <Package className="size-7 text-muted-foreground/40" />
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t('noRevenueInPeriod', { default: 'No revenue in this period' })}
+                  </p>
+                  <p className="max-w-[28ch] text-xs text-muted-foreground">
+                    {t('confirmedOrdersHint', { default: 'Confirmed orders will appear here.' })}
+                  </p>
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {breakdowns!.topProductsByRevenue.map((product, i) => {
+                    const max = Math.max(1, breakdowns!.topProductsByRevenue[0]?.revenueCents ?? 1);
+                    return (
+                      <RankedListItem
                         key={product.id}
+                        rank={i + 1}
+                        title={product.title || t('untitledProduct', { default: 'Untitled product' })}
+                        value={money(product.revenueCents)}
+                        sub={t('unitsSold', { count: product.units, default: '{count, plural, one {# unit} other {# units}}' })}
+                        progress={(product.revenueCents / max) * 100}
+                        progressTone="accent"
                         href={product.slug ? `/products/${product.slug}` : '#'}
-                        className="group flex items-center gap-3 rounded-xl border border-transparent p-3 transition hover:border-border hover:bg-muted/50"
-                      >
-                        {' '}
-                        <span
-                          className={cn(
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold shadow-sm',
-                            idx === 0
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-muted text-muted-foreground',
-                          )}
-                        >
-                          {' '}
-                          {idx + 1}{' '}
-                        </span>{' '}
-                        {product.thumbnailUrl ? (
-                          <img
-                            src={product.thumbnailUrl}
-                            alt=""
-                            className="h-9 w-9 shrink-0 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        )}{' '}
-                        <div className="min-w-0 flex-1">
-                          {' '}
-                          <p className="truncate text-sm font-medium">
-                            {product.title || 'Untitled product'}
-                          </p>{' '}
-                          <p className="text-xs text-muted-foreground">
-                            {product.units.toLocaleString()} units ·{' '}
-                            {formatCurrency(product.revenueCents)}
-                          </p>{' '}
-                        </div>{' '}
-                        <div className="shrink-0 text-right">
-                          {' '}
-                          <p className="text-sm font-bold">
-                            {formatCurrency(product.revenueCents)}
-                          </p>{' '}
-                        </div>{' '}
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />{' '}
-                      </Link>
-                    ))}{' '}
-                  </ul>
-                )}{' '}
-              </div>{' '}
-            </div>{' '}
-          </div>{' '}
-          {/* Insights */}{' '}
-          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            {' '}
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              {' '}
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <AlertCircle className="h-4 w-4 text-amber-500" /> Actionable Insights
-              </h3>{' '}
-              <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {insights
-                  ? [
-                      insights.zeroEnrollmentCourses.count,
-                      insights.draftCourses.count,
-                      insights.failedPayments.count,
-                      insights.suspendedUsers,
-                    ].filter(Boolean).length
-                  : 0}{' '}
-                alerts
-              </span>{' '}
-            </div>{' '}
-            {!insights ? (
-              <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-                {' '}
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />
-                ))}{' '}
-              </div>
-            ) : (
-              <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-                {' '}
-                {/* Zero-enrollment */}{' '}
-                <Link
-                  href="/admin/courses?enrollments=0"
-                  className={cn(
-                    'group flex flex-col gap-2 rounded-xl border p-4 transition ',
-                    insights.zeroEnrollmentCourses.count > 0
-                      ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950'
-                      : 'border-border bg-background',
-                  )}
-                >
-                  {' '}
-                  <span
+                        thumbnail={
+                          product.thumbnailUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={getImageSrc(product.thumbnailUrl, 'product')}
+                              alt=""
+                              className="size-9 shrink-0 rounded-lg object-cover"
+                            />
+                          ) : undefined
+                        }
+                      />
+                    );
+                  })}
+                </ul>
+              )}
+            </PanelCard>
+
+            {/* Actionable insights */}
+            <PanelCard
+              title={
+                <span className="flex items-center gap-2">
+                  <AlertCircle className="size-4 text-warning" />
+                  {t('actionableInsights', { default: 'Actionable Insights' })}
+                </span>
+              }
+              action={
+                <StatusPill
+                  label={t('alertCount', { count: alertCount, default: '{count} alerts' })}
+                  tone={alertCount > 0 ? 'amber' : 'emerald'}
+                  dot={false}
+                />
+              }
+              bodyClassName="p-4"
+            >
+              {isFetching ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-28 rounded-xl" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <InsightCard
+                    icon={Trophy}
+                    title={t('zeroEnrollmentCourses', { default: 'Zero-enrollment courses' })}
+                    count={insights?.zeroEnrollmentCourses.count ?? 0}
+                    description={t('zeroEnrollmentCoursesDesc', { default: 'Published courses with no enrollments' })}
+                    active={(insights?.zeroEnrollmentCourses.count ?? 0) > 0}
+                    tone="amber"
+                    samples={insights?.zeroEnrollmentCourses.sample.map((c) => c.title) ?? []}
+                    actionLabel={t('viewCourses', { default: 'View courses' })}
+                    href="/admin/courses?enrollments=0"
+                  />
+                  <InsightCard
+                    icon={FileEdit}
+                    title={t('draftsAwaitingPublish', { default: 'Drafts awaiting publish' })}
+                    count={insights?.draftCourses.count ?? 0}
+                    description={t('unpublishedCoursesDesc', { default: 'Unpublished courses in this tenant' })}
+                    active={(insights?.draftCourses.count ?? 0) > 0}
+                    tone="blue"
+                    samples={insights?.draftCourses.sample.map((c) => c.title) ?? []}
+                    actionLabel={t('reviewDrafts', { default: 'Review drafts' })}
+                    href="/admin/courses?status=draft"
+                  />
+                  <InsightCard
+                    icon={ActivityIcon}
+                    title={t('failedPayments', { default: 'Failed payments' })}
+                    count={insights?.failedPayments.count ?? 0}
+                    description={`${t('inSelectedRange', { default: 'In selected range' })} · ${
+                      (insights?.failedPayments.count ?? 0) > 0
+                        ? t('needsAttention', { default: 'Needs attention' })
+                        : t('noFailures', { default: 'No failures' })
+                    }`}
+                    active={(insights?.failedPayments.count ?? 0) > 0}
+                    tone="rose"
+                    samples={insights?.failedPayments.sample.map((o) => `${o.status} · ${money(o.total)}`) ?? []}
+                    actionLabel={t('viewOrders', { default: 'View orders' })}
+                    href="/admin/finance"
+                  />
+                  <div
                     className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-lg',
-                      insights.zeroEnrollmentCourses.count > 0
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-muted text-muted-foreground',
+                      'flex flex-col gap-2 rounded-xl border p-4',
+                      (insights?.suspendedUsers ?? 0) > 0 || insights?.ordersSilent30d
+                        ? 'border-warning/30 bg-warning/8'
+                        : 'border-border bg-card',
                     )}
                   >
-                    {' '}
-                    <Trophy className="h-4 w-4" />{' '}
-                  </span>{' '}
-                  <p className="text-sm font-semibold">Zero-enrollment courses</p>{' '}
-                  <p className="text-2xl font-bold">{insights.zeroEnrollmentCourses.count}</p>{' '}
-                  <p className="text-xs text-muted-foreground">
-                    Published courses with no enrollments
-                  </p>{' '}
-                  {insights.zeroEnrollmentCourses.sample.length > 0 && (
-                    <ul className="mt-1 space-y-1">
-                      {' '}
-                      {insights.zeroEnrollmentCourses.sample.slice(0, 3).map((c) => (
-                        <li key={c.id} className="truncate text-xs text-muted-foreground">
-                          · {c.title}
-                        </li>
-                      ))}{' '}
-                    </ul>
-                  )}{' '}
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">
-                    View courses <ChevronRight className="h-3 w-3" />
-                  </span>{' '}
-                </Link>{' '}
-                {/* Drafts */}{' '}
-                <Link
-                  href="/admin/courses?status=draft"
-                  className={cn(
-                    'group flex flex-col gap-2 rounded-xl border p-4 transition ',
-                    insights.draftCourses.count > 0
-                      ? 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950'
-                      : 'border-border bg-background',
-                  )}
-                >
-                  {' '}
-                  <span
-                    className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-lg',
-                      insights.draftCourses.count > 0
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {' '}
-                    <FileEdit className="h-4 w-4" />{' '}
-                  </span>{' '}
-                  <p className="text-sm font-semibold">Drafts awaiting publish</p>{' '}
-                  <p className="text-2xl font-bold">{insights.draftCourses.count}</p>{' '}
-                  <p className="text-xs text-muted-foreground">
-                    Unpublished courses in this tenant
-                  </p>{' '}
-                  {insights.draftCourses.sample.length > 0 && (
-                    <ul className="mt-1 space-y-1">
-                      {' '}
-                      {insights.draftCourses.sample.slice(0, 3).map((c) => (
-                        <li key={c.id} className="truncate text-xs text-muted-foreground">
-                          · {c.title}
-                        </li>
-                      ))}{' '}
-                    </ul>
-                  )}{' '}
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">
-                    Review drafts <ChevronRight className="h-3 w-3" />
-                  </span>{' '}
-                </Link>{' '}
-                {/* Failed payments */}{' '}
-                <Link
-                  href="/admin/analytics"
-                  className={cn(
-                    'group flex flex-col gap-2 rounded-xl border p-4 transition ',
-                    insights.failedPayments.count > 0
-                      ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950'
-                      : 'border-border bg-background',
-                  )}
-                >
-                  {' '}
-                  <span
-                    className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-lg',
-                      insights.failedPayments.count > 0
-                        ? 'bg-red-500 text-white'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {' '}
-                    <TrendingDown className="h-4 w-4" />{' '}
-                  </span>{' '}
-                  <p className="text-sm font-semibold">Failed payments</p>{' '}
-                  <p className="text-2xl font-bold">{insights.failedPayments.count}</p>{' '}
-                  <p className="text-xs text-muted-foreground">
-                    In selected range ·{' '}
-                    {insights.failedPayments.count > 0 ? 'Needs attention' : 'No failures'}
-                  </p>{' '}
-                  {insights.failedPayments.sample.length > 0 && (
-                    <ul className="mt-1 space-y-1">
-                      {' '}
-                      {insights.failedPayments.sample.slice(0, 2).map((o: any) => (
-                        <li key={o.id} className="truncate text-xs text-muted-foreground">
-                          · {o.status} · {(o.total / 100).toFixed(0)}
-                        </li>
-                      ))}{' '}
-                    </ul>
-                  )}{' '}
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">
-                    View orders <ChevronRight className="h-3 w-3" />
-                  </span>{' '}
-                </Link>{' '}
-                {/* Suspended / silent */}{' '}
-                <div
-                  className={cn(
-                    'flex flex-col gap-2 rounded-xl border p-4',
-                    insights.suspendedUsers > 0 || insights.ordersSilent30d
-                      ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950'
-                      : 'border-border bg-background',
-                  )}
-                >
-                  {' '}
-                  <span
-                    className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-lg',
-                      insights.suspendedUsers > 0
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {' '}
-                    <UserX className="h-4 w-4" />{' '}
-                  </span>{' '}
-                  <p className="text-sm font-semibold">Operational alerts</p>{' '}
-                  <p className="text-xs text-muted-foreground">
-                    {' '}
-                    {insights.suspendedUsers > 0
-                      ? `${insights.suspendedUsers} suspended accounts`
-                      : 'No suspended accounts'}{' '}
-                    {insights.ordersSilent30d ? ' · No confirmed orders in 30d' : ''}{' '}
-                  </p>{' '}
-                  <Link
-                    href="/admin/users?suspended=true"
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary"
-                  >
-                    Review users <ChevronRight className="h-3 w-3" />
-                  </Link>{' '}
-                </div>{' '}
-              </div>
-            )}{' '}
-          </div>{' '}
-          {/* Activity Feed */}{' '}
-          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            {' '}
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              {' '}
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <Clock className="h-4 w-4 text-primary" /> Recent Activity
-              </h3>{' '}
+                    <span className={cn('flex size-8 items-center justify-center rounded-lg', TONE_ICON.amber)}>
+                      <UserX className="size-4" />
+                    </span>
+                    <p className="text-sm font-semibold text-foreground">
+                      {t('operationalAlerts', { default: 'Operational alerts' })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(insights?.suspendedUsers ?? 0) > 0
+                        ? t('suspendedAccounts', {
+                            count: insights!.suspendedUsers,
+                            default: '{count} suspended accounts',
+                          })
+                        : t('noSuspendedAccounts', { default: 'No suspended accounts' })}
+                      {insights?.ordersSilent30d ? ` · ${t('noOrdersIn30d', { default: 'No confirmed orders in 30d' })}` : ''}
+                    </p>
+                    <Link
+                      href="/admin/users?suspended=true"
+                      className="mt-auto inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    >
+                      {t('reviewUsers', { default: 'Review users' })}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </PanelCard>
+          </div>
+
+          {/* Activity feed */}
+          <PanelCard
+            title={
+              <span className="flex items-center gap-2">
+                <Clock className="size-4 text-primary" />
+                {t('recentActivity', { default: 'Recent Activity' })}
+              </span>
+            }
+            action={
               <span className="text-xs text-muted-foreground">
-                {activity ? `${activity.items.length} events` : ''} · {range}
-              </span>{' '}
-            </div>{' '}
-            {!activity ? (
-              <div className="space-y-3 p-6">
-                {' '}
+                {activity
+                  ? t('eventsCount', {
+                      count: activity.items.length,
+                      default: '{count, plural, one {# event} other {# events}}',
+                    })
+                  : ''}
+                {` · ${range}`}
+              </span>
+            }
+          >
+            {isFetching ? (
+              <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
-                ))}{' '}
+                  <Skeleton key={i} className="h-12 rounded-xl" />
+                ))}
               </div>
-            ) : activity.items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                {' '}
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                  <Clock className="h-5 w-5 text-muted-foreground/60" />
-                </div>{' '}
-                <p className="text-sm font-medium">No activity in this period</p>{' '}
-                <p className="max-w-[30ch] text-xs text-muted-foreground">
-                  Signups, enrollments, and payments will appear here.
-                </p>{' '}
+            ) : (activity?.items.length ?? 0) === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <Clock className="size-7 text-muted-foreground/40" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t('noActivityInPeriod', { default: 'No activity in this period' })}
+                </p>
+                <p className="max-w-[36ch] text-xs text-muted-foreground">
+                  {t('activityEmptyHint', { default: 'Signups, enrollments, and payments will appear here.' })}
+                </p>
               </div>
             ) : (
-              <ul className="relative space-y-0 px-6 py-4 before:absolute before:bottom-4 before:left-[35px] before:top-4 before:w-px before:bg-border">
-                {' '}
-                {activity.items.map((item) => (
-                  <li key={item.id} className="relative flex gap-3 py-3 pl-8">
-                    {' '}
-                    <span
-                      className={cn(
-                        'absolute left-0 top-4 flex h-2.5 w-2.5 items-center justify-center rounded-full ring-4 ring-background',
-                        item.type === 'signup'
-                          ? 'bg-blue-500'
-                          : item.type === 'enrollment'
-                            ? 'bg-emerald-500'
-                            : item.type === 'payment_failed'
-                              ? 'bg-red-500'
-                              : 'bg-amber-500',
-                      )}
-                    />{' '}
-                    <div className="min-w-0 flex-1">
-                      {' '}
-                      <Link
-                        href={item.href}
-                        className="group flex items-center gap-1 truncate text-sm hover:underline"
-                      >
-                        {' '}
-                        <span className="font-medium">{item.title}</span>{' '}
-                        <ChevronRight className="h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-100" />{' '}
-                      </Link>{' '}
-                      <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>{' '}
-                    </div>{' '}
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {(() => {
-                        const d = new Date(item.at);
-                        const diff = Math.floor((Date.now() - d.getTime()) / 60000);
-                        if (diff < 1) return 'just now';
-                        if (diff < 60) return `${diff}m ago`;
-                        const h = Math.floor(diff / 60);
-                        if (h < 24) return `${h}h ago`;
-                        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      })()}
-                    </span>{' '}
-                  </li>
-                ))}{' '}
+              <ul className="relative space-y-1 before:absolute before:bottom-2 before:start-[7px] before:top-2 before:w-px before:bg-border">
+                {activity!.items.map((item) => {
+                  const tone: Tone =
+                    item.type === 'signup'
+                      ? 'blue'
+                      : item.type === 'enrollment'
+                        ? 'emerald'
+                        : item.type === 'payment_failed'
+                          ? 'rose'
+                          : 'amber';
+                  return (
+                    <li key={item.id} className="relative flex items-center gap-3 py-2.5 ps-6">
+                      <span
+                        className={cn(
+                          'absolute start-0 top-1/2 size-3.5 -translate-y-1/2 rounded-full border-2 border-card',
+                          tone === 'blue'
+                            ? 'bg-primary'
+                            : tone === 'emerald'
+                              ? 'bg-success'
+                              : tone === 'rose'
+                                ? 'bg-destructive'
+                                : 'bg-warning',
+                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <Link href={item.href} className="group flex items-center gap-1 truncate text-sm text-foreground hover:underline">
+                          <span className="truncate font-medium">{item.title}</span>
+                        </Link>
+                        <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {(() => {
+                          const d = new Date(item.at);
+                          const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+                          if (diff < 1) return tCommon('justNow', { default: 'Just now' });
+                          if (diff < 60) return tCommon('minutesAgo', { n: diff, default: '{n}m ago' });
+                          const h = Math.floor(diff / 60);
+                          if (h < 24) return tCommon('hoursAgo', { n: h, default: '{n}h ago' });
+                          return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+                        })()}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
-            )}{' '}
-          </div>{' '}
-          {/* Footer meta */}{' '}
-          <div className="flex items-center justify-between rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
-            {' '}
+            )}
+          </PanelCard>
+
+          {/* Footer meta */}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <Clock className="h-3 w-3" /> Last updated {lastUpdated ?? '—'} · Tenant isolated ·
-              Admin only
-            </span>{' '}
+              <Clock className="size-3.5" />
+              {t('lastUpdated', { time: lastUpdated ?? '—', default: 'Last updated {time}' })} ·{' '}
+              {t('tenantIsolatedShort', { default: 'Tenant isolated' })} ·{' '}
+              {t('adminOnlyShort', { default: 'Admin only' })}
+            </span>
             <span className="hidden sm:inline">
-              Range {range} · {compare ? 'Comparing to previous period' : 'No compare'} · Cached 5m
-            </span>{' '}
+              {t('footerRangeSummary', {
+                range,
+                compare: compare
+                  ? t('comparingToPrevious', { default: 'Comparing to previous period' })
+                  : t('noCompare', { default: 'No compare' }),
+                default: 'Range {range} · {compare} · Cached 5m',
+              })}
+            </span>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** A single actionable-insight tile. */
+function InsightCard({
+  icon: Icon,
+  title,
+  count,
+  description,
+  active,
+  tone,
+  samples,
+  actionLabel,
+  href,
+}: {
+  icon: LucideIcon;
+  title: string;
+  count: number;
+  description: string;
+  active: boolean;
+  tone: Tone;
+  samples: string[];
+  actionLabel: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'group flex flex-col gap-2 rounded-xl border p-4 transition hover:shadow-sm',
+        active ? cn('border-transparent', TONE_ICON[tone], 'bg-card') : 'border-border bg-card',
+        active && tone === 'amber' && 'border-warning/30 bg-warning/8',
+        active && tone === 'rose' && 'border-destructive/30 bg-destructive/8',
+        active && tone === 'blue' && 'border-primary/30 bg-primary/8',
+      )}
+    >
+      <span className={cn('flex size-8 items-center justify-center rounded-lg', TONE_ICON[tone])}>
+        <Icon className="size-4" />
+      </span>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="text-2xl font-bold tabular-nums text-foreground">{count}</p>
+      <p className="text-xs text-muted-foreground">{description}</p>
+      {samples.length > 0 && (
+        <ul className="mt-1 space-y-1">
+          {samples.slice(0, 3).map((s, i) => (
+            <li key={i} className="truncate text-xs text-muted-foreground">
+              · {s}
+            </li>
+          ))}
+        </ul>
+      )}
+      <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-semibold text-primary">
+        {actionLabel}
+      </span>
+    </Link>
   );
 }

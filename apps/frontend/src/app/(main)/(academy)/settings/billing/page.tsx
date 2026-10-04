@@ -9,7 +9,7 @@ export default function BillingPage() {
         {' '}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {' '}
-          <CreditCard className="h-5 w-5" />{' '}
+          <CreditCard className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -21,11 +21,11 @@ export default function BillingPage() {
       </div>{' '}
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {' '}
-        <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-primary p-8 text-white">
+        <div className="bg-primary p-8 text-white">
           {' '}
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
             {' '}
-            <Crown className="h-5 w-5" />{' '}
+            <Crown className="size-5" />{' '}
           </div>{' '}
           <h2 className="mt-4 text-lg font-semibold">Upgrade to Pro</h2>{' '}
           <p className="mt-1 max-w-md text-sm leading-relaxed text-white/80">
@@ -62,7 +62,7 @@ export default function BillingPage() {
             >
               {' '}
               {plan.highlight && (
-                <div className="absolute right-3 top-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                <div className="absolute end-3 top-3 rounded-full bg-primary px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-primary-foreground">
                   Popular
                 </div>
               )}{' '}
@@ -77,8 +77,8 @@ export default function BillingPage() {
                 {' '}
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-xs">
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                      <Check className="h-3 w-3" />
+                    <span className="flex size-4 items-center justify-center rounded-full bg-success/10 text-success">
+                      <Check className="size-3.5" />
                     </span>{' '}
                     {f}
                   </li>
@@ -90,7 +90,7 @@ export default function BillingPage() {
                 disabled={plan.active}
               >
                 {' '}
-                {plan.cta} {plan.highlight && <ArrowRight className="ml-1 h-3.5 w-3.5" />}{' '}
+                {plan.cta} {plan.highlight && <ArrowRight className="flip-rtl ms-1 size-3.5" />}{' '}
               </Button>{' '}
             </div>
           ))}{' '}
@@ -98,7 +98,7 @@ export default function BillingPage() {
         <div className="border-t border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Zap className="h-3.5 w-3.5 text-primary" /> Billing is managed securely via Stripe.
+            <Zap className="size-3.5 text-primary" /> Billing is managed securely via Stripe.
             Invoices are emailed monthly.
           </p>{' '}
         </div>{' '}
@@ -108,8 +108,8 @@ export default function BillingPage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <CreditCard className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <CreditCard className="size-3.5" />
             </span>{' '}
             Invoices
           </h2>{' '}
@@ -117,7 +117,7 @@ export default function BillingPage() {
         <div className="p-8 text-center">
           {' '}
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-            <CreditCard className="h-6 w-6 text-muted-foreground" />
+            <CreditCard className="size-6 text-muted-foreground" />
           </div>{' '}
           <p className="mt-3 text-sm font-medium">No invoices yet</p>{' '}
           <p className="text-xs text-muted-foreground">

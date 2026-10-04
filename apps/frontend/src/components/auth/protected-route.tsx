@@ -3,9 +3,13 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { Skeleton } from '@/components/ui/skeleton';
-export const AUTH_ONLY_ROUTES = ['/account', '/checkout', '/cart'];
+// `/cart` is intentionally public: the cart is local (persisted zustand) and guests
+// must be able to review it. Sign-in happens at `/checkout`.
+export const AUTH_ONLY_ROUTES = ['/account', '/checkout', '/notifications'];
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore(); // Cookie auth hydrates asynchronously (GET /auth/me) — wait for it before redirecting.
+  // Narrow selector: subscribing to the whole store re-renders this guard on
+  // every auth write, including ones that do not touch `isAuthenticated`.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated); // Cookie auth hydrates asynchronously (GET /auth/me) — wait for it before redirecting.
   const hydrated = useAuthStore((s) => s.hydrated);
   const router = useRouter();
   const pathname = usePathname();

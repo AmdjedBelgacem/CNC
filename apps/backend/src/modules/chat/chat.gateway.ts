@@ -74,13 +74,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.disconnect(true);
       return;
     }
-    // Anonymous support path — tenant from header slug, no user room
+    // Anonymous support path.
+    //
+    // The tenant is taken from a client-supplied header, so this socket must NOT
+    // join `tenant:<id>`: that room broadcasts `chat:new` (with real
+    // conversation ids) to everyone in it, which let an unauthenticated visitor
+    // subscribe to any tenant's support activity and then read those
+    // conversations. An anonymous visitor gets its own room and nothing else.
     const slug = (socket.handshake.headers['x-tenant-slug'] as string) || 'cnc-fundamentals';
     try {
       const tenant = await this.drizzle.db.query.tenants.findFirst({ where: eq(tenants.slug, slug) });
       if (tenant) {
         socket.data.tenantId = tenant.id;
-        socket.join(`tenant:${tenant.id}`);
+        socket.data.anonymous = true;
+        socket.join(`anon:${socket.id}`);
       }
     } catch {}
     // remain anonymous (no userId)
@@ -108,6 +115,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { conversationId: string; content: string },
   ) {
     const userId = socket.data.userId;
+    // Authorization before the write. `server.to(room).emit` broadcasts to a room
+    // whether or not the sender is in it, so without this check any socket could
+    // inject messages into any conversation whose id it could name.
+    const allowed = await this.chatService.getConversationForViewer(data.conversationId, {
+      userId,
+      tenantId: socket.data.tenantId,
+      role: socket.data.role,
+    });
+    if (!allowed) {
+      socket.emit('chat:error', { message: 'Not allowed to post in that conversation' });
+      return null;
+    }
     const msg = await this.chatService.addMessage(data.conversationId, userId || 'anonymous', 'user', data.content);
     this.server.to(`conv:${data.conversationId}`).emit('chat:message', msg);
     if (socket.data.tenantId) {
@@ -121,6 +140,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const allowed = await this.chatService.getConversationForViewer(data.conversationId, {
+      userId: socket.data.userId,
+      tenantId: socket.data.tenantId,
+      role: socket.data.role,
+    });
+    if (!allowed) {
+      socket.emit('chat:error', { message: 'Not allowed to read that conversation' });
+      return null;
+    }
     const messages = await this.chatService.getMessages(data.conversationId);
     socket.emit('chat:history', messages);
     return messages;

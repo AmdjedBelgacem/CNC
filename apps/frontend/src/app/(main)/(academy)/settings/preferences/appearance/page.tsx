@@ -8,6 +8,7 @@ export default function AppearancePage() {
   const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
     (async () => {
       try {
@@ -22,15 +23,27 @@ export default function AppearancePage() {
   }, []);
   const handleSave = async () => {
     setSaving(true);
+    setError('');
     try {
-      await apiProxyFetch('/api/proxy/auth/me/preferences', {
+      const res = await apiProxyFetch('/api/proxy/auth/me/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ theme, density }),
       });
+      // This used to ignore res.ok entirely and swallow every error, so a 400/403/500
+      // still rendered "Saved".
+      const applied = res.ok ? await res.json().catch(() => null) : null;
+      if (!applied) {
+        const detail = await res.json().catch(() => null);
+        throw new Error(typeof detail?.message === 'string' ? detail.message : 'Could not save appearance');
+      }
+      if (applied.theme !== theme || applied.density !== density) {
+        throw new Error('Appearance settings were not applied. Please try again.');
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch {
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save appearance');
     } finally {
       setSaving(false);
     }
@@ -42,7 +55,7 @@ export default function AppearancePage() {
         {' '}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {' '}
-          <Palette className="h-5 w-5" />{' '}
+          <Palette className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -53,8 +66,16 @@ export default function AppearancePage() {
         </div>{' '}
       </div>{' '}
       {saved && (
-        <div className="flex gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <Check className="h-4 w-4 shrink-0 mt-0.5" /> Appearance saved.
+        <div className="flex gap-2 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success">
+          <Check className="size-4 shrink-0 mt-0.5" /> Appearance saved.
+        </div>
+      )}{' '}
+      {error && (
+        <div
+          role="alert"
+          className="flex gap-2 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <Paintbrush className="size-4 shrink-0 mt-0.5" /> {error}
         </div>
       )}{' '}
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -62,8 +83,8 @@ export default function AppearancePage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <Paintbrush className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <Paintbrush className="size-3.5" />
             </span>{' '}
             Theme
           </h2>{' '}
@@ -87,15 +108,15 @@ export default function AppearancePage() {
               >
                 {' '}
                 {active && (
-                  <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
-                    <Check className="h-3 w-3" />
+                  <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Check className="size-3.5" />
                   </span>
                 )}{' '}
                 <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? 'bg-primary text-white shadow-md' : 'bg-muted text-muted-foreground'}`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground'}`}
                 >
                   {' '}
-                  <opt.icon className="h-5 w-5" />{' '}
+                  <opt.icon className="size-5" />{' '}
                 </span>{' '}
                 <span>
                   {' '}
@@ -107,7 +128,7 @@ export default function AppearancePage() {
                 >
                   {' '}
                   <span
-                    className={`block h-full w-full ${opt.id === 'dark' ? 'bg-zinc-900' : opt.id === 'light' ? 'bg-white' : 'bg-gradient-to-br from-white to-zinc-900'}`}
+                    className={`block h-full w-full ${opt.id === 'dark' ? 'bg-overlay' : opt.id === 'light' ? 'bg-card' : 'bg-gradient-to-br from-white to-overlay'}`}
                   />{' '}
                 </span>{' '}
               </button>
@@ -120,8 +141,8 @@ export default function AppearancePage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <LayoutGrid className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <LayoutGrid className="size-3.5" />
             </span>{' '}
             Density
           </h2>{' '}
@@ -153,7 +174,7 @@ export default function AppearancePage() {
           })}{' '}
         </div>{' '}
       </div>{' '}
-      <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-white px-4 py-3 shadow-lg">
+      <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-card px-4 py-3 shadow-lg">
         {' '}
         <Button onClick={handleSave} disabled={saving} className="h-9 rounded-full px-6 shadow-md">
           {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Changes'}

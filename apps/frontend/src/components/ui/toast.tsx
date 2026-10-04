@@ -1,8 +1,11 @@
 'use client';
 import { create } from 'zustand';
 import * as ToastPrimitive from '@radix-ui/react-toast';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import { CheckCircle2, Info, TriangleAlert, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 type ToastType = 'ok' | 'err' | 'info';
 export interface ToastItem {
   id: number;
@@ -24,57 +27,68 @@ export const useToasts = create<ToastStore>((set) => ({
     return id;
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })),
-})); /** Fire-and-forget toast; auto-dismisses after 4.5s. */
+}));
+
+/** Fire-and-forget toast; auto-dismisses after 4.5s. */
 export function toast(item: Omit<ToastItem, 'id'>) {
   const id = useToasts.getState().push(item);
-  window.setTimeout(() => useToasts.getState().dismiss(id), 4500);
+  if (typeof window !== 'undefined') {
+    window.setTimeout(() => useToasts.getState().dismiss(id), 4500);
+  }
 }
-const ICONS: Record<ToastType, React.ReactNode> = {
-  ok: <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />,
-  err: <TriangleAlert className="h-4 w-4 text-red-600 dark:text-red-400" />,
-  info: <Info className="h-4 w-4 text-primary" />,
+
+const TONE: Record<ToastType, { icon: React.ReactNode; ring: string }> = {
+  ok: { icon: <CheckCircle2 className="size-4 text-success" />, ring: 'bg-success/10' },
+  err: { icon: <TriangleAlert className="size-4 text-destructive" />, ring: 'bg-destructive/10' },
+  info: { icon: <Info className="size-4 text-info" />, ring: 'bg-info/10' },
 };
+
 export function ToastViewport() {
   const toasts = useToasts((s) => s.toasts);
   const dismiss = useToasts((s) => s.dismiss);
   return (
-    <ToastPrimitive.Provider duration={4500} swipeDirection="right">
-      {' '}
-      <ToastPrimitive.Viewport className="fixed bottom-20 right-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none lg:bottom-4" />{' '}
+    <ToastPrimitive.Provider duration={4500}>
+      <ToastPrimitive.Viewport className="fixed bottom-4 end-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none" />
       <AnimatePresence>
-        {' '}
-        {toasts.map((t) => (
-          <motion.div
-            key={t.id}
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-border bg-white p-3 shadow-sm dark:bg-white"
-          >
-            {' '}
-            <span className="mt-0.5 shrink-0">{ICONS[t.type]}</span>{' '}
-            <div className="min-w-0 flex-1">
-              {' '}
-              <p className="text-[13px] font-semibold text-foreground">{t.title}</p>{' '}
-              {t.description && (
-                <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">
-                  {t.description}
-                </p>
-              )}{' '}
-            </div>{' '}
-            <button
-              type="button"
-              onClick={() => dismiss(t.id)}
-              aria-label="Dismiss"
-              className="shrink-0 rounded-md p-1 text-muted-foreground/60 transition hover:bg-muted hover:text-foreground"
+        {toasts.map((t) => {
+          const tone = TONE[t.type];
+          return (
+            <m.div
+              key={t.id}
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.96 }}
+              transition={spring.snappy}
+              className="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg"
             >
-              {' '}
-              <X className="h-3 w-3" />{' '}
-            </button>{' '}
-          </motion.div>
-        ))}{' '}
-      </AnimatePresence>{' '}
+              <span
+                className={cn(
+                  'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg',
+                  tone.ring,
+                )}
+              >
+                {tone.icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-13 font-semibold text-foreground">{t.title}</p>
+                {t.description && (
+                  <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">
+                    {t.description}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => dismiss(t.id)}
+                aria-label="Dismiss"
+                className="shrink-0 rounded-md p-1 text-muted-foreground/60 transition hover:bg-muted hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </m.div>
+          );
+        })}
+      </AnimatePresence>
     </ToastPrimitive.Provider>
   );
 }

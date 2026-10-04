@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Rocket, RotateCcw, FolderPlus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +15,7 @@ import { useBuilderUI } from './builder-ui-store';
 import { deleteSavedSection, renameSavedSection, saveSection } from '@/lib/builder/saved-sections';
 import { toast } from '@/components/ui/toast'; /** * Apple-style dialogs replacing window.prompt/confirm: * publish note, page reset, and saved-section save/rename/delete. */
 export function BuilderDialogs() {
+  const tb = useTranslations('builder');
   const publishOpen = useBuilderUI((s) => s.publishOpen);
   const setPublishOpen = useBuilderUI((s) => s.setPublishOpen);
   const resetOpen = useBuilderUI((s) => s.resetOpen);
@@ -31,25 +33,29 @@ export function BuilderDialogs() {
             {' '}
             <DialogTitle className="flex items-center gap-2">
               {' '}
-              <Rocket className="h-4 w-4 text-primary" /> Publish this page{' '}
+              <Rocket className="size-4 text-primary" />{' '}
+              {tb('dialogs.publishTitle', { default: 'Publish this page' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
           <div className="-mt-2 space-y-4">
             {' '}
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {' '}
-              Publishing makes the current draft live for visitors. A version snapshot is kept for
-              history and rollback.{' '}
+              {tb('dialogs.publishDescription', {
+                default:
+                  'Publishing makes the current draft live for visitors. A version snapshot is kept for history and rollback.',
+              })}{' '}
             </p>{' '}
             <label className="block">
               {' '}
               <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                Release note (optional)
+                {tb('dialogs.releaseNoteLabel', { default: 'Release note (optional)' })}
               </span>{' '}
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="What changed in this version?"
+                placeholder={tb('dialogs.releaseNotePlaceholder', {
+                  default: 'What changed in this version?',
+                })}
                 className="h-20 w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
               />{' '}
             </label>{' '}
@@ -59,7 +65,7 @@ export function BuilderDialogs() {
             <DialogClose asChild>
               {' '}
               <Button variant="ghost" size="sm">
-                Cancel
+                {tb('dialogs.cancel', { default: 'Cancel' })}
               </Button>{' '}
             </DialogClose>{' '}
             <Button
@@ -72,7 +78,8 @@ export function BuilderDialogs() {
               }}
             >
               {' '}
-              <Rocket className="mr-1.5 h-3.5 w-3.5" /> Publish{' '}
+              <Rocket className="me-1.5 size-3.5" />{' '}
+              {tb('dialogs.publish', { default: 'Publish' })}{' '}
             </Button>{' '}
           </div>{' '}
         </DialogContent>{' '}
@@ -85,20 +92,22 @@ export function BuilderDialogs() {
             {' '}
             <DialogTitle className="flex items-center gap-2">
               {' '}
-              <RotateCcw className="h-4 w-4 text-destructive" /> Reset page?{' '}
+              <RotateCcw className="size-4 text-destructive" />{' '}
+              {tb('dialogs.resetTitle', { default: 'Reset page?' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
           <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
-            {' '}
-            The current draft will be replaced with the default layout. Your latest published
-            version is unaffected.{' '}
+            {tb('dialogs.resetDescription', {
+              default:
+                'The current draft will be replaced with the default layout. Your latest published version is unaffected.',
+            })}{' '}
           </p>{' '}
           <div className="mt-4 flex justify-end gap-2">
             {' '}
             <DialogClose asChild>
               {' '}
               <Button variant="ghost" size="sm">
-                Cancel
+                {tb('dialogs.cancel', { default: 'Cancel' })}
               </Button>{' '}
             </DialogClose>{' '}
             <Button
@@ -111,7 +120,7 @@ export function BuilderDialogs() {
               }}
             >
               {' '}
-              Reset page{' '}
+              {tb('dialogs.resetAction', { default: 'Reset page' })}{' '}
             </Button>{' '}
           </div>{' '}
         </DialogContent>{' '}
@@ -121,6 +130,7 @@ export function BuilderDialogs() {
   );
 }
 function SectionDialog() {
+  const tb = useTranslations('builder');
   const dialog = useBuilderUI((s) => s.sectionDialog);
   const setSectionDialog = useBuilderUI((s) => s.setSectionDialog);
   const [name, setName] = useState('');
@@ -132,27 +142,47 @@ function SectionDialog() {
   const isDelete = dialog.mode === 'delete';
   const title =
     dialog.mode === 'save'
-      ? 'Save reusable section'
+      ? tb('dialogs.sectionSaveTitle', { default: 'Save reusable section' })
       : dialog.mode === 'rename'
-        ? 'Rename section'
-        : 'Delete section';
+        ? tb('dialogs.sectionRenameTitle', { default: 'Rename section' })
+        : tb('dialogs.sectionDeleteTitle', { default: 'Delete section' });
   const confirm = async () => {
     try {
       if (dialog.mode === 'save') {
         await saveSection(name.trim(), dialog.node);
-        toast({ type: 'ok', title: 'Section saved', description: `Saved "${name.trim()}"` });
+        toast({
+          type: 'ok',
+          title: tb('dialogs.sectionSaved', { default: 'Section saved' }),
+          description: tb('dialogs.sectionSavedDetail', {
+            name: name.trim(),
+            default: `Saved "${name.trim()}"`,
+          }),
+        });
       } else if (dialog.mode === 'rename') {
         await renameSavedSection(dialog.id, name.trim());
-        toast({ type: 'ok', title: 'Section renamed', description: `Renamed to "${name.trim()}"` });
+        toast({
+          type: 'ok',
+          title: tb('dialogs.sectionRenamed', { default: 'Section renamed' }),
+          description: tb('dialogs.sectionRenamedDetail', {
+            name: name.trim(),
+            default: `Renamed to "${name.trim()}"`,
+          }),
+        });
       } else {
         await deleteSavedSection(dialog.id);
-        toast({ type: 'ok', title: 'Section deleted' });
+        toast({
+          type: 'ok',
+          title: tb('dialogs.sectionDeleted', { default: 'Section deleted' }),
+        });
       }
     } catch (e) {
       toast({
         type: 'err',
-        title: 'Failed',
-        description: e instanceof Error ? e.message : 'Something went wrong',
+        title: tb('dialogs.failed', { default: 'Failed' }),
+        description:
+          e instanceof Error
+            ? e.message
+            : tb('dialogs.somethingWentWrong', { default: 'Something went wrong' }),
       });
     } finally {
       setSectionDialog(null);
@@ -168,30 +198,34 @@ function SectionDialog() {
           <DialogTitle className="flex items-center gap-2">
             {' '}
             {dialog.mode === 'delete' ? (
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="size-4 text-destructive" />
             ) : dialog.mode === 'rename' ? (
-              <Pencil className="h-4 w-4 text-primary" />
+              <Pencil className="size-4 text-primary" />
             ) : (
-              <FolderPlus className="h-4 w-4 text-primary" />
+              <FolderPlus className="size-4 text-primary" />
             )}{' '}
             {title}{' '}
           </DialogTitle>{' '}
         </DialogHeader>{' '}
         {isDelete ? (
           <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
-            {' '}
-            Delete saved section{' '}
-            <span className="font-semibold text-foreground">“{dialog.name}”</span>? This cannot be
-            undone.{' '}
+            {tb('dialogs.deleteConfirm', {
+              name: dialog.name,
+              default: `Delete saved section “${dialog.name}”? This cannot be undone.`,
+            })}{' '}
           </p>
         ) : (
           <div className="-mt-2">
             {' '}
             <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-              {' '}
               {dialog.mode === 'save'
-                ? 'Saves the selected Section container (and everything inside it) as a reusable block you can insert anywhere.'
-                : 'Choose a new name for this saved section.'}{' '}
+                ? tb('dialogs.saveDescription', {
+                    default:
+                      'Saves the selected Section container (and everything inside it) as a reusable block you can insert anywhere.',
+                  })
+                : tb('dialogs.renameDescription', {
+                    default: 'Choose a new name for this saved section.',
+                  })}{' '}
             </p>{' '}
             <input
               autoFocus
@@ -200,7 +234,7 @@ function SectionDialog() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && name.trim()) void confirm();
               }}
-              placeholder="Section name"
+              placeholder={tb('dialogs.sectionNamePlaceholder', { default: 'Section name' })}
               className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
             />{' '}
           </div>
@@ -210,7 +244,7 @@ function SectionDialog() {
           <DialogClose asChild>
             {' '}
             <Button variant="ghost" size="sm">
-              Cancel
+              {tb('dialogs.cancel', { default: 'Cancel' })}
             </Button>{' '}
           </DialogClose>{' '}
           <Button
@@ -220,7 +254,11 @@ function SectionDialog() {
             onClick={() => void confirm()}
           >
             {' '}
-            {isDelete ? 'Delete' : dialog.mode === 'save' ? 'Save section' : 'Rename'}{' '}
+            {isDelete
+              ? tb('dialogs.delete', { default: 'Delete' })
+              : dialog.mode === 'save'
+                ? tb('dialogs.saveSection', { default: 'Save section' })
+                : tb('dialogs.rename', { default: 'Rename' })}{' '}
           </Button>{' '}
         </div>{' '}
       </DialogContent>{' '}

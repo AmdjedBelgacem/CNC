@@ -1,4 +1,5 @@
 export * from './types/index';
+export * from './pricing';
 export * from './constants';
 export * from './validators';
 export * from './utils';

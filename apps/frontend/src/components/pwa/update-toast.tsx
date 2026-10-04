@@ -25,7 +25,7 @@ export function PWAUpdateToast() {
         onClick={handleRefresh}
         className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
       >
-        <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        <RefreshCw className="size-3.5" /> Refresh
       </button>
       <button onClick={() => setVisible(false)} className="text-xs text-muted-foreground hover:text-foreground">
         Later

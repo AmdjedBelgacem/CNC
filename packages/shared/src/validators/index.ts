@@ -1,4 +1,6 @@
 import { z } from 'zod';
+
+export * from './navigation';
 import { USER_ROLES } from '../types/auth';
 
 export const tenantSlugSchema = z
@@ -166,3 +168,4 @@ export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 
 export * from './theme';
 export * from './page';
+export * from './lesson';

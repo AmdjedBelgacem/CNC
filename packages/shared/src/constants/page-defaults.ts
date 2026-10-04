@@ -2,6 +2,9 @@ import type { PageLayout, BuilderPageSlug } from '../types/page';
 import {
   seedHomeLayout,
   seedAcademyLandingLayout,
+  seedProductsLayout,
+  seedFeedLayout,
+  seedEventsLayout,
   seedAboutLayout,
   seedPrivacyLayout,
   seedRefundsLayout,
@@ -13,6 +16,9 @@ import {
 export const DEFAULT_LAYOUTS: Readonly<Record<string, PageLayout>> = {
   home: seedHomeLayout(),
   'academy-landing': seedAcademyLandingLayout(),
+  products: seedProductsLayout(),
+  feed: seedFeedLayout(),
+  events: seedEventsLayout(),
   about: seedAboutLayout(),
   privacy: seedPrivacyLayout(),
   refunds: seedRefundsLayout(),
@@ -24,7 +30,15 @@ export function getDefaultLayout(slug: string): PageLayout {
   return (DEFAULT_LAYOUTS[slug] ?? { root: { props: {} }, content: [] }) as PageLayout;
 }
 
-export const BUILDER_PAGE_DEFS: Readonly<{ slug: BuilderPageSlug; title: string; description: string }[]> = [
+export interface BuilderPageDef {
+  slug: BuilderPageSlug;
+  title: string;
+  description: string;
+  /** Public route path (for deep links from the editor). */
+  path?: string;
+}
+
+export const BUILDER_PAGE_DEFS: Readonly<BuilderPageDef[]> = [
   {
     slug: 'home',
     title: 'Homepage',
@@ -34,6 +48,25 @@ export const BUILDER_PAGE_DEFS: Readonly<{ slug: BuilderPageSlug; title: string;
     slug: 'academy-landing',
     title: 'Academy Landing',
     description: 'The academy landing page.',
+    path: '/academy',
+  },
+  {
+    slug: 'products',
+    title: 'Products',
+    description: 'Product catalog with live inventory and filters.',
+    path: '/products',
+  },
+  {
+    slug: 'feed',
+    title: 'Community Feed',
+    description: 'Social feed with posts, likes, and comments.',
+    path: '/feed',
+  },
+  {
+    slug: 'events',
+    title: 'Events',
+    description: 'Upcoming workshops, webinars, conferences, and meetups.',
+    path: '/events',
   },
   {
     slug: 'about',
@@ -61,3 +94,7 @@ export const BUILDER_PAGE_DEFS: Readonly<{ slug: BuilderPageSlug; title: string;
     description: 'Academic pricing and institutional licensing.',
   },
 ];
+
+export function getBuilderPageDef(slug: string): BuilderPageDef | undefined {
+  return BUILDER_PAGE_DEFS.find((d) => d.slug === slug);
+}

@@ -3,9 +3,10 @@ import { DmService } from './dm.service';
 import { DmController } from './dm.controller';
 import { UserBlocksController } from './user-blocks.controller';
 import { WsModule } from '../ws/ws.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [WsModule],
+  imports: [WsModule, NotificationsModule],
   controllers: [DmController, UserBlocksController],
   providers: [DmService],
   exports: [DmService],

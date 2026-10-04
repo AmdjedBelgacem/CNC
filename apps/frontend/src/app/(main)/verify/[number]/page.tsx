@@ -67,7 +67,7 @@ export default async function VerifyNumberPage(props: Props) {
           </>
         ) : (
           <>
-            <BadgeCheck className="mx-auto mb-4 h-12 w-12 text-emerald-600" />
+            <BadgeCheck className="mx-auto mb-4 h-12 w-12 text-success" />
             <h1 className="text-2xl font-bold">Valid certificate</h1>
             <p className="mt-2 font-mono text-sm">{cert.certificateNumber}</p>
             {cert.user?.name && <p className="mt-3 text-lg font-semibold">{cert.user.name}</p>}

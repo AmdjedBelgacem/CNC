@@ -17,6 +17,7 @@ import {
   ArrowLeft,
   Loader2,
 } from 'lucide-react';
+import { getImageSrc } from '@/lib/images';
 interface EventDetail {
   id: string;
   title: string;
@@ -41,7 +42,7 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const fetchEvent = () => {
     fetch(`/api/proxy/events/${slug}`, { credentials: 'include' })
       .then((r) => r.json())
@@ -111,27 +112,20 @@ export default function EventDetailPage() {
       <Button variant="ghost" size="sm" className="mb-6" asChild>
         {' '}
         <Link href="/events">
-          <ArrowLeft className="h-4 w-4 mr-1" /> All Events
+          <ArrowLeft className="flip-rtl size-4 me-1" /> All Events
         </Link>{' '}
       </Button>{' '}
       <div className="grid gap-8 lg:grid-cols-3">
         {' '}
         <div className="lg:col-span-2 space-y-6">
           {' '}
-          <div className="aspect-video rounded-xl bg-gradient-to-br from-primary/10 to-secondary/30 overflow-hidden">
+          <div className="aspect-video rounded-xl bg-muted blueprint-grid overflow-hidden">
             {' '}
-            {event.thumbnailUrl ? (
-              <img
-                src={event.thumbnailUrl}
-                alt={event.title}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                {' '}
-                <Calendar className="h-20 w-20 text-primary/30" />{' '}
-              </div>
-            )}{' '}
+            <img
+              src={getImageSrc(event.thumbnailUrl, 'event')}
+              alt={event.title}
+              className="h-full w-full object-cover"
+            />{' '}
           </div>{' '}
           <div>
             {' '}
@@ -142,7 +136,7 @@ export default function EventDetailPage() {
               {event.isFull && <Badge variant="destructive">Full</Badge>}{' '}
               {isRegistered && (
                 <Badge variant="outline" className="text-green-600 border-green-400">
-                  <CheckCircle className="h-3 w-3 mr-1" />
+                  <CheckCircle className="size-3.5 me-1" />
                   Registered
                 </Badge>
               )}{' '}
@@ -165,7 +159,7 @@ export default function EventDetailPage() {
               {' '}
               <div className="flex items-start gap-3">
                 {' '}
-                <Calendar className="h-4 w-4 text-primary mt-0.5 shrink-0" />{' '}
+                <Calendar className="size-4 text-primary mt-0.5 shrink-0" />{' '}
                 <div>
                   {' '}
                   <p className="font-medium">{formatDate(event.startDate)}</p>{' '}
@@ -179,7 +173,7 @@ export default function EventDetailPage() {
               </div>{' '}
               <div className="flex items-start gap-3">
                 {' '}
-                <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />{' '}
+                <MapPin className="size-4 text-primary mt-0.5 shrink-0" />{' '}
                 <div>
                   {' '}
                   <p className="font-medium">
@@ -198,7 +192,7 @@ export default function EventDetailPage() {
               {event.maxAttendees && (
                 <div className="flex items-center gap-3">
                   {' '}
-                  <Users className="h-4 w-4 text-primary shrink-0" />{' '}
+                  <Users className="size-4 text-primary shrink-0" />{' '}
                   <div className="flex-1">
                     {' '}
                     <div className="flex justify-between text-sm mb-1">
@@ -221,14 +215,14 @@ export default function EventDetailPage() {
               {event.price && event.price > 0 && (
                 <div className="flex items-center gap-3">
                   {' '}
-                  <DollarSign className="h-4 w-4 text-primary shrink-0" />{' '}
+                  <DollarSign className="size-4 text-primary shrink-0" />{' '}
                   <span className="font-medium">${(event.price / 100).toFixed(2)}</span>{' '}
                 </div>
               )}{' '}
               {event.isVirtual && (
                 <div className="flex items-center gap-3">
                   {' '}
-                  <Monitor className="h-4 w-4 text-primary shrink-0" />{' '}
+                  <Monitor className="size-4 text-primary shrink-0" />{' '}
                   <span className="text-muted-foreground">
                     Link provided after registration
                   </span>{' '}
@@ -245,16 +239,16 @@ export default function EventDetailPage() {
           >
             {' '}
             {registering ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="size-4 animate-spin me-2" />
             ) : isRegistered ? (
               <>
-                <XCircle className="h-4 w-4 mr-2" /> Cancel Registration
+                <XCircle className="size-4 me-2" /> Cancel Registration
               </>
             ) : event.isFull ? (
               'Event Full'
             ) : (
               <>
-                <CheckCircle className="h-4 w-4 mr-2" /> Register Now
+                <CheckCircle className="size-4 me-2" /> Register Now
               </>
             )}{' '}
           </Button>{' '}

@@ -1,27 +1,62 @@
 'use client';
 import { useMemo, useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { ChevronDown, Palette, RotateCcw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ICON_KEYS, ICON_LABELS, resolveIconName, type IconKey } from '@titan/shared';
 import type { FieldOption } from './types'; /** Curated marketing palette swatches (hex values). */
-const PALETTE: { label: string; value: string }[] = [
-  { label: 'Primary blue', value: '#004ac6' },
-  { label: 'Secondary green', value: '#006d30' },
-  { label: 'Accent blue', value: '#2563eb' },
-  { label: 'Ink', value: '#111827' },
-  { label: 'Slate', value: '#6b7280' },
-  { label: 'White', value: '#ffffff' },
+import { Icon } from '@/components/ui/icon';
+const PALETTE: Array<FieldOption & { value: string }> = [
+  { label: 'Primary blue', labelKey: 'primary-blue', value: '#1B4DB1' },
+  { label: 'Secondary green', labelKey: 'secondary-green', value: '#006d30' },
+  { label: 'Accent blue', labelKey: 'accent-blue', value: '#1B4DB1' },
+  { label: 'Ink', labelKey: 'ink', value: '#111827' },
+  { label: 'Slate', labelKey: 'slate', value: '#6b7280' },
+  { label: 'White', labelKey: 'white', value: '#ffffff' },
 ];
 const inputClass =
   'h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50'; // ------------------------------------------------------------------ FieldRow
 interface FieldRowProps {
   label: string;
+  /** `builder.fieldLabels.<key>`; `label` stays the fallback. */
+  labelKey?: string;
   hint?: string;
+  /** `builder.fieldHints.<key>` */
+  hintKey?: string;
   dirty?: boolean;
   onReset?: () => void;
   children: ReactNode;
 } /** Consistent label + control row for the inspector. */
-export function FieldRow({ label, hint, dirty, onReset, children }: FieldRowProps) {
+/**
+ * Resolve an inspector string.
+ *
+ * The English value is passed as the default so an untranslated key shows the
+ * label the designer wrote rather than a dotted key at the user.
+ */
+export function useInspectorText() {
+  const t = useTranslations('builder');
+  return {
+    label: (key: string | undefined, fallback: string) => (key ? t(`fieldLabels.${key}`, { default: fallback }) : fallback),
+    hint: (key: string | undefined, fallback: string | undefined) =>
+      key && fallback ? t(`fieldHints.${key}`, { default: fallback }) : fallback,
+    placeholder: (key: string | undefined, fallback: string | undefined) =>
+      key && fallback ? t(`fieldPlaceholders.${key}`, { default: fallback }) : fallback,
+    group: (key: string | undefined, fallback: string) => (key ? t(`groups.${key}`, { default: fallback }) : fallback),
+  };
+}
+
+export function FieldRow({
+  label,
+  labelKey,
+  hint,
+  hintKey,
+  dirty,
+  onReset,
+  children,
+}: FieldRowProps) {
+  const text = useInspectorText();
+  const shownLabel = text.label(labelKey, label);
+  const shownHint = text.hint(hintKey, hint);
   return (
     <div className="group/row px-3 py-2">
       {' '}
@@ -29,7 +64,7 @@ export function FieldRow({ label, hint, dirty, onReset, children }: FieldRowProp
         {' '}
         <label className="truncate text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
           {' '}
-          {label}{' '}
+          {shownLabel}{' '}
         </label>{' '}
         {onReset && (
           <button
@@ -40,13 +75,13 @@ export function FieldRow({ label, hint, dirty, onReset, children }: FieldRowProp
             className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded text-muted-foreground/50 opacity-0 transition group-hover/row:opacity-100 focus-visible:opacity-100 disabled:pointer-events-none hover:bg-muted hover:text-foreground"
           >
             {' '}
-            <RotateCcw className="h-3 w-3" />{' '}
+            <RotateCcw className="size-3.5" />{' '}
           </button>
         )}{' '}
       </div>{' '}
       {children}{' '}
       {hint && (
-        <p className="mt-1 text-[10px] leading-snug text-muted-foreground/70">{hint}</p>
+        <p className="mt-1 text-2xs leading-snug text-muted-foreground/70">{shownHint}</p>
       )}{' '}
     </div>
   );
@@ -135,6 +170,7 @@ export function SelectControl({
   onChange: (v: unknown) => void;
   options: FieldOption[];
 }) {
+  const text = useInspectorText();
   return (
     <div className="relative">
       {' '}
@@ -144,18 +180,18 @@ export function SelectControl({
           const opt = options.find((o) => String(o.value) === e.target.value);
           if (opt) onChange(opt.value);
         }}
-        className={cn(inputClass, 'appearance-none pr-8')}
+        className={cn(inputClass, 'appearance-none pe-8')}
       >
         {' '}
         {!options.some((o) => o.value === value) && <option value="">—</option>}{' '}
         {options.map((o) => (
           <option key={String(o.value)} value={String(o.value)}>
             {' '}
-            {o.label}{' '}
+            {text.label(o.labelKey, o.label)}{' '}
           </option>
         ))}{' '}
       </select>{' '}
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
+      <ChevronDown className="pointer-events-none absolute end-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
     </div>
   );
 } // ------------------------------------------------------------------ segmented
@@ -168,6 +204,7 @@ export function SegmentedControl({
   onChange: (v: unknown) => void;
   options: FieldOption[];
 }) {
+  const text = useInspectorText();
   return (
     <div className="flex rounded-md border border-border bg-background p-0.5" role="group">
       {' '}
@@ -180,14 +217,14 @@ export function SegmentedControl({
             aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              'flex-1 rounded-[5px] px-2 py-1.5 text-[11px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'flex-1 rounded-[5px] px-2 py-1.5 text-2xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               active
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
           >
             {' '}
-            {o.label}{' '}
+            {text.label(o.labelKey, o.label)}{' '}
           </button>
         );
       })}{' '}
@@ -216,7 +253,7 @@ export function ToggleControl({
       {' '}
       <span
         className={cn(
-          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200',
+          'inline-block size-4 transform rounded-full bg-card shadow transition-transform duration-200',
           on ? 'translate-x-[18px]' : 'translate-x-0.5',
         )}
       />{' '}
@@ -254,7 +291,7 @@ export function SliderControl({
         onPointerUp={onPointerUp}
         className="inspector-slider h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       />{' '}
-      <span className="w-14 shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-center font-mono text-[11px] tabular-nums text-foreground">
+      <span className="w-14 shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-center font-mono text-2xs tabular-nums text-foreground">
         {' '}
         {v} {suffix}{' '}
       </span>{' '}
@@ -269,6 +306,7 @@ export function ColorControl({
   onChange: (v: string) => void;
 }) {
   const hex = typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '';
+  const text = useInspectorText();
   return (
     <div className="flex items-center gap-2">
       {' '}
@@ -278,10 +316,11 @@ export function ColorControl({
           <button
             key={p.value}
             type="button"
-            title={p.label}
+            // The swatch name is shown as a tooltip, so it is localized too.
+            title={text.label(p.labelKey, p.label)}
             onClick={() => onChange(p.value)}
             className={cn(
-              'h-5 w-5 rounded-full border border-border transition hover:scale-110',
+              'size-5 rounded-full border border-border transition hover:scale-110',
               hex.toUpperCase() === p.value.toUpperCase() &&
                 'ring-2 ring-primary ring-offset-1 ring-offset-background',
             )}
@@ -294,10 +333,10 @@ export function ColorControl({
         title="Open the system color picker"
       >
         {' '}
-        <Palette className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+        <Palette className="size-3.5 text-muted-foreground" />{' '}
         <input
           type="color"
-          value={hex || '#004ac6'}
+          value={hex || '#1B4DB1'}
           onChange={(e) => onChange(e.target.value)}
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />{' '}
@@ -305,7 +344,7 @@ export function ColorControl({
       <input
         type="text"
         value={value ?? ''}
-        placeholder="#004ac6"
+        placeholder="#1B4DB1"
         onChange={(e) => onChange(e.target.value)}
         className={cn(inputClass, 'h-8 flex-1 font-mono text-xs')}
       />{' '}
@@ -330,16 +369,14 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
         className={cn(inputClass, 'flex items-center gap-2')}
       >
         {' '}
-        <span className="material-symbols-outlined text-[16px] text-primary">
-          {resolveIconName(value) || 'add'}
-        </span>{' '}
+        <Icon name={resolveIconName(value) || 'add'} className="text-base text-primary" />{' '}
         <span className="flex-1 truncate text-left text-xs font-medium text-foreground">
           {' '}
           {value ? (ICON_LABELS[value as IconKey] ?? value) : 'Select an icon…'}{' '}
         </span>{' '}
         <ChevronDown
           className={cn(
-            'h-3.5 w-3.5 text-muted-foreground transition-transform',
+            'size-3.5 text-muted-foreground transition-transform',
             open && 'rotate-180',
           )}
         />{' '}
@@ -349,13 +386,13 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
           {' '}
           <div className="relative mb-1.5">
             {' '}
-            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
+            <Search className="pointer-events-none absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search icons…"
-              className={cn(inputClass, 'h-8 pl-7 text-xs')}
+              className={cn(inputClass, 'h-8 ps-7 text-xs')}
             />{' '}
           </div>{' '}
           <div className="grid max-h-44 grid-cols-5 gap-0.5 overflow-auto">
@@ -378,11 +415,11 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
                 )}
               >
                 {' '}
-                <span className="material-symbols-outlined text-[18px]">{resolveIconName(k)}</span>{' '}
+                <Icon name={resolveIconName(k)} className="text-lg" />{' '}
               </button>
             ))}{' '}
             {list.length === 0 && (
-              <p className="col-span-5 py-3 text-center text-[11px] text-muted-foreground">
+              <p className="col-span-5 py-3 text-center text-2xs text-muted-foreground">
                 No icons match “{query}”
               </p>
             )}{' '}

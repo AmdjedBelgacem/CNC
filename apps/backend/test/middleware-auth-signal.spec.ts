@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 /**
  * Regression cover for the /login bounce on an expired access token.
  *
- * The Next middleware guards /admin, /account, /cart and /checkout, and it used to
+ * The Next middleware guards /admin, /account, /checkout and /notifications, and it used to
  * decide purely on the presence of the ACCESS cookie:
  *
  *     const isAuthenticated = !!request.cookies.get('access-token')?.value;
@@ -43,8 +43,16 @@ describe('middleware session signal', () => {
     expect(src).toMatch(/const mayHaveSession = !!\(accessCookie\?\.value \|\| refreshCookie\?\.value\)/);
   });
 
-  it('still protects the same routes', () => {
-    expect(src).toMatch(/const PROTECTED_ROUTES = \['\/account', '\/checkout', '\/cart', '\/admin'\]/);
+  it('still protects the account and checkout routes', () => {
+    expect(src).toMatch(/const PROTECTED_ROUTES = \['\/account', '\/checkout', '\/notifications', '\/admin'\]/);
+  });
+
+  it('leaves /cart public so guests can review their cart', () => {
+    // The cart is local (persisted zustand); gating it bounced guests to /login
+    // straight after "Add to cart". Sign-in is required at /checkout instead.
+    const list = src.match(/const PROTECTED_ROUTES = \[([^\]]*)\]/)?.[1] ?? '';
+    expect(list).not.toContain("'/cart'");
+    expect(list).toContain("'/checkout'");
   });
 });
 

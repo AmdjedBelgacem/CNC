@@ -29,10 +29,10 @@ function Verify2faForm() {
       {' '}
       <div className="mb-6 text-center">
         {' '}
-        <div className="mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#f59e0b]/30 bg-[#f59e0b]/10">
+        <div className="mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
           {' '}
           <svg
-            className="h-6 w-6 text-[#f59e0b]"
+            className="size-6 text-primary"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -46,11 +46,11 @@ function Verify2faForm() {
             />{' '}
           </svg>{' '}
         </div>{' '}
-        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]">
+        <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
           Security Authentication{' '}
         </p>{' '}
-        <p className="text-sm leading-relaxed text-[#8b8f96]">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           {' '}
           {useRecovery
             ? 'Enter one of your recovery codes'
@@ -60,7 +60,7 @@ function Verify2faForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {' '}
         {error && (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-red-400">
+          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-destructive">
             {' '}
             {error}{' '}
           </div>
@@ -69,7 +69,7 @@ function Verify2faForm() {
           {' '}
           <label
             htmlFor="token"
-            className="block text-center text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]"
+            className="block text-center text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
             {useRecovery ? 'Recovery Code' : 'Authentication Code'}{' '}
@@ -84,13 +84,13 @@ function Verify2faForm() {
             required
             autoFocus
             maxLength={useRecovery ? 10 : 6}
-            className="h-12 w-full rounded-xl border border-[#2a2e36] bg-[#16181c] text-center text-xl tracking-[0.3em] text-[#e8e8e8] outline-none ring-0 transition-all duration-200 placeholder:text-[#3d4148] focus:border-[#f59e0b]/60 focus:ring-1 focus:ring-[#f59e0b]/30"
+            className="h-12 w-full rounded-xl border border-border bg-background text-center text-xl tracking-[0.3em] text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
           />{' '}
         </div>{' '}
         <button
           type="submit"
           disabled={loading}
-          className="h-12 w-full rounded-xl bg-[#f59e0b] text-[13px] font-bold text-[#16181c] transition-all duration-200 hover:scale-[1.01] hover:bg-[#d97706] active:scale-[0.99] disabled:opacity-50"
+          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {' '}
           {loading ? 'Verifying...' : 'Verify'}{' '}
@@ -102,7 +102,7 @@ function Verify2faForm() {
             setToken('');
             setError('');
           }}
-          className="w-full text-center text-[11px] font-medium text-[#f59e0b] transition-all duration-200 hover:text-[#d97706]"
+          className="w-full text-center text-2xs font-medium text-primary transition-all duration-200 hover:text-primary/80"
         >
           {' '}
           {useRecovery ? 'Use authenticator code instead' : 'Use a recovery code instead'}{' '}
@@ -117,7 +117,7 @@ export default function Verify2faPage() {
       fallback={
         <div className="flex h-full flex-col items-center justify-center">
           {' '}
-          <p className="text-sm text-[#5c6068]">Loading...</p>{' '}
+          <p className="text-sm text-muted-foreground">Loading...</p>{' '}
         </div>
       }
     >

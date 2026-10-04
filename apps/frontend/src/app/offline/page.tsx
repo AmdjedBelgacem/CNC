@@ -17,7 +17,7 @@ export default function OfflinePage() {
       {' '}
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/60">
         {' '}
-        <WifiOff className="h-8 w-8 text-muted-foreground" />{' '}
+        <WifiOff className="size-8 text-muted-foreground" />{' '}
       </div>{' '}
       <h1 className="mt-5 text-2xl font-bold tracking-tight">You&apos;re offline</h1>{' '}
       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
@@ -32,7 +32,7 @@ export default function OfflinePage() {
           className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
         >
           {' '}
-          <RefreshCw className="h-4 w-4" /> {online ? 'Reload' : 'Retry when online'}{' '}
+          <RefreshCw className="size-4" /> {online ? 'Reload' : 'Retry when online'}{' '}
         </button>{' '}
         <a
           href="/"
@@ -46,9 +46,9 @@ export default function OfflinePage() {
         {' '}
         <div className="rounded-2xl border bg-card p-4">
           {' '}
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
             {' '}
-            <BookOpen className="h-4 w-4" />{' '}
+            <BookOpen className="size-4" />{' '}
           </div>{' '}
           <p className="mt-3 text-sm font-semibold">Browse later</p>{' '}
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -57,9 +57,9 @@ export default function OfflinePage() {
         </div>{' '}
         <div className="rounded-2xl border bg-card p-4">
           {' '}
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/60 text-foreground">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-secondary/60 text-foreground">
             {' '}
-            <Layers className="h-4 w-4" />{' '}
+            <Layers className="size-4" />{' '}
           </div>{' '}
           <p className="mt-3 text-sm font-semibold">Cached assets</p>{' '}
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -68,9 +68,9 @@ export default function OfflinePage() {
         </div>{' '}
         <div className="rounded-2xl border bg-card p-4">
           {' '}
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-accent/15 text-accent">
             {' '}
-            <Sparkles className="h-4 w-4" />{' '}
+            <Sparkles className="size-4" />{' '}
           </div>{' '}
           <p className="mt-3 text-sm font-semibold">Live actions wait</p>{' '}
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

@@ -37,7 +37,7 @@ function VerifyEmailChangeInner() {
       });
   }, [token]);
   return (
-    <Card className="w-full max-w-md border-[#2a2d35] bg-[#1e2128]">
+    <Card className="w-full max-w-md border-border bg-card">
       {' '}
       <CardHeader className="text-center">
         {' '}
@@ -49,16 +49,16 @@ function VerifyEmailChangeInner() {
         {status === 'loading' && (
           <>
             {' '}
-            <Loader2 className="h-12 w-12 animate-spin text-[#f59e0b]" />{' '}
-            <p className="text-sm text-zinc-400">Verifying your email change...</p>{' '}
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />{' '}
+            <p className="text-sm text-muted-foreground">Verifying your email change...</p>{' '}
           </>
         )}{' '}
         {status === 'success' && (
           <>
             {' '}
-            <CheckCircle2 className="h-12 w-12 text-emerald-500" />{' '}
-            <p className="text-sm text-zinc-300">{message}</p>{' '}
-            <Button asChild className="mt-2 bg-[#f59e0b] text-black hover:bg-[#f59e0b]/90">
+            <CheckCircle2 className="h-12 w-12 text-success" />{' '}
+            <p className="text-sm text-muted-foreground">{message}</p>{' '}
+            <Button asChild className="mt-2 bg-primary text-black hover:bg-primary/90">
               {' '}
               <Link href="/login">Sign In</Link>{' '}
             </Button>{' '}
@@ -68,7 +68,7 @@ function VerifyEmailChangeInner() {
           <>
             {' '}
             <XCircle className="h-12 w-12 text-red-500" />{' '}
-            <p className="text-sm text-zinc-300">{message}</p>{' '}
+            <p className="text-sm text-muted-foreground">{message}</p>{' '}
             <Button asChild variant="outline" className="mt-2">
               {' '}
               <Link href="/settings/account/security">Back to Security Settings</Link>{' '}
@@ -81,15 +81,15 @@ function VerifyEmailChangeInner() {
 }
 export default function VerifyEmailChangePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#16181c] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       {' '}
       <Suspense
         fallback={
-          <Card className="w-full max-w-md border-[#2a2d35] bg-[#1e2128]">
+          <Card className="w-full max-w-md border-border bg-card">
             {' '}
             <CardContent className="flex items-center justify-center py-12">
               {' '}
-              <Loader2 className="h-8 w-8 animate-spin text-[#f59e0b]" />{' '}
+              <Loader2 className="size-8 animate-spin text-primary" />{' '}
             </CardContent>{' '}
           </Card>
         }

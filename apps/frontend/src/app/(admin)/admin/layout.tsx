@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { AdminGate } from './admin-gate';
 import { AdminRail } from '@/components/admin/admin-rail';
-import { AdminSearchPalette } from '@/components/admin/admin-search-palette';
-import { ToastViewport } from '@/components/ui/toast';
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Fast path: no session cookie AT ALL -> login. Real role verification happens
   // client-side in <AdminGate>, which can refresh an expired access token and re-sync
@@ -27,12 +25,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-background">
       {' '}
-      <AdminRail /> <AdminSearchPalette />{' '}
-      <main className="p-4 pb-14 sm:p-6 sm:pb-14 lg:p-8 lg:pb-8 lg:pl-20">
+      <AdminRail />{' '}
+      <main className="p-4 pb-14 sm:p-6 sm:pb-14 lg:p-8 lg:pb-8 lg:ps-20">
         {' '}
         <AdminGate>{children}</AdminGate>{' '}
       </main>{' '}
-      <ToastViewport />{' '}
     </div>
   );
 }

@@ -1,689 +1,982 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+
+/**
+ * Admin overview.
+ *
+ * Redesigned around one question: *what needs a decision, and what changed?*
+ *
+ * The previous layout was four loose KPI cards, then an "attention" panel that
+ * could never populate (it read five fields the `pulse` endpoint does not return),
+ * then a donut built from those same missing fields, so it rendered "1 course"
+ * forever. Momentum bars were drawn from a single KPI compared against itself,
+ * which is not a trend. Currency was formatted as USD on a SAR merchant, and
+ * every label was a hardcoded English string on a platform that is now bilingual.
+ *
+ * What replaced it:
+ *  - a composed hero band where the four KPIs are one reading, each with the
+ *    sparkline the API already computes and nobody was using;
+ *  - an attention rail fed by the real `insights` endpoint, naming the affected
+ *    items rather than a bare count;
+ *  - daily series drawn from the real `enrollments` / `revenue` endpoints;
+ *  - catalogue health as a proportion bar over counts that actually exist;
+ *  - SAR, the active locale, and no clock reads during render.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Users,
-  GraduationCap,
-  DollarSign,
+  AlertTriangle,
+  Award,
+  BarChart3,
+  BookOpen,
+  CircleDollarSign,
+  ExternalLink,
+  FileEdit,
   LayoutTemplate,
   Palette,
-  BarChart2,
-  Award,
-  Settings,
-  ArrowUpRight,
-  AlertCircle,
-  FileEdit,
-  UserX,
-  TrendingDown,
-  CheckCircle2,
-  Plus,
-  TrendingUp,
-  BookOpen,
-  UserPlus,
   RefreshCw,
+  Settings,
+  TrendingDown,
+  UserPlus,
+  Users,
+  UserX,
+  type LucideIcon,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
+import { AdminCommandBar, BarIconButton, BarPrimaryButton } from './admin-chrome';
 import {
-  AdminCommandBar,
-  AdminKpiCard,
-  AdminPageHeader,
-  BarIconButton,
-  BarPrimaryButton,
-} from './admin-chrome';
-import { TableCard, EmptyState } from './admin-ui';
+  DeltaBadge,
+  Panel,
+  PLATFORM_CURRENCY,
+  SegmentedBar,
+  SeriesBars,
+  Skeleton,
+  Sparkline,
+  relativeFrom,
+  useFormats,
+  useMountedNow,
+} from './dashboard-parts';
 
-interface DeltaValue {
+/* -------------------------------------------------------------------------- */
+/* Data                                                                       */
+/* -------------------------------------------------------------------------- */
+
+interface Metric {
   value: number;
   delta: number | null;
-}
-interface OverviewData {
-  users?: DeltaValue;
-  activeUsers?: DeltaValue;
-  enrollments?: DeltaValue;
-  revenue?: { cents: number; delta: number | null };
-}
-interface AdminStats {
-  recentUsers: { id: string; name: string | null; email: string; createdAt: string }[];
-}
-interface PulseData {
-  draftCourses: number;
-  zeroEnrollmentCourses: number;
-  suspendedUsers: number;
-  ordersSilent30d: boolean;
-  recentEnrollments: {
-    id: string;
-    userName: string | null;
-    userEmail: string;
-    courseTitle: string;
-    startedAt: string;
-  }[];
+  sparkline?: number[];
 }
 
-const QUICK_LINKS_KEYS = [
-  {
-    href: '/admin/builder',
-    key: 'builder',
-    desc: 'Edit homepage sections',
-    icon: LayoutTemplate,
-    roles: ['super_admin', 'admin', 'instructor'],
-  },
-  {
-    href: '/admin/theme',
-    key: 'theme',
-    desc: 'Colors & typography',
-    icon: Palette,
-    roles: ['super_admin', 'admin'],
-  },
-  {
-    href: '/admin/analytics',
-    key: 'analytics',
-    desc: 'Trends & top courses',
-    icon: BarChart2,
-    roles: ['super_admin', 'admin'],
-  },
-  {
-    href: '/admin/users',
-    key: 'users',
-    desc: 'Roles & sessions',
-    icon: Users,
-    roles: ['super_admin', 'admin'],
-  },
-  {
-    href: '/admin/certificates',
-    key: 'certificates',
-    desc: 'Issued certificates',
-    icon: Award,
-    roles: ['super_admin', 'admin'],
-  },
-  {
-    href: '/admin/settings',
-    key: 'settings',
-    desc: 'Tenant configuration',
-    icon: Settings,
-    roles: ['super_admin', 'admin'],
-  },
-];
+interface Overview {
+  range?: string;
+  updatedAt?: string;
+  users?: Metric;
+  activeUsers?: Metric;
+  enrollments?: Metric;
+  revenue?: { cents: number; delta: number | null; sparkline?: number[] };
+  coursesPublished?: number;
+  upcomingEvents?: number;
+  signups?: Metric;
+  conversion?: Metric;
+}
 
-/* Tone tiles mirror AdminKpiCard's palette so quick-links read as one system. */
-const TILE: Record<string, string> = {
-  blue: 'border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-300',
-  emerald:
-    'border-emerald-100 bg-emerald-50 text-emerald-600 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300',
-  cyan: 'border-cyan-100 bg-cyan-50 text-cyan-600 dark:border-cyan-900/40 dark:bg-cyan-950/40 dark:text-cyan-300',
-  amber:
-    'border-amber-100 bg-amber-50 text-amber-600 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-300',
-  violet:
-    'border-violet-100 bg-violet-50 text-violet-600 dark:border-violet-900/40 dark:bg-violet-950/40 dark:text-violet-300',
-  rose: 'border-rose-100 bg-rose-50 text-rose-600 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300',
-  slate:
-    'border-border bg-muted text-muted-foreground dark:border-white/10 dark:bg-white/10 dark:text-slate-300',
+interface Insights {
+  range?: string;
+  updatedAt?: string;
+  zeroEnrollmentCourses?: { count: number; sample: Array<{ id: string; title: string; slug: string }> };
+  draftCourses?: { count: number; sample: Array<{ id: string; title: string; slug: string }> };
+  failedPayments?: { count: number; sample?: unknown[] };
+  suspendedUsers?: number;
+  ordersSilent30d?: boolean;
+}
+
+interface StatsRow {
+  users?: number;
+  courses?: number;
+  posts?: number;
+  events?: number;
+  orders?: number;
+  revenue?: string;
+  recentUsers?: Array<{ id: string; name: string | null; email: string; createdAt: string }>;
+}
+
+interface SeriesPoint {
+  date: string;
+  count?: number;
+  cents?: number;
+}
+
+interface TopCourse {
+  id: string;
+  title: string;
+  slug?: string;
+  enrollments: number;
+}
+
+const RANGES = [
+  { key: '7d', days: 7 },
+  { key: '30d', days: 30 },
+  { key: '90d', days: 90 },
+  { key: '12m', days: 365 },
+] as const;
+
+type RangeKey = (typeof RANGES)[number]['key'];
+
+/** Only the endpoints that exist; anything else would render a permanent error. */
+const getJson = async (url: string) => {
+  const response = await fetch(url, { credentials: 'include' });
+  if (!response.ok) throw new Error(`${url} → ${response.status}`);
+  return response.json() as Promise<unknown>;
 };
-const QUICK_TONES = ['blue', 'violet', 'cyan', 'emerald', 'amber', 'slate'];
+
+/* -------------------------------------------------------------------------- */
+/* Small local pieces                                                         */
+/* -------------------------------------------------------------------------- */
 
 function initials(name: string | null, email: string) {
   const source = name?.trim() || email;
-  return source
-    .split(/[\s@._]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]!.toUpperCase())
-    .join('');
-}
-function relativeTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function DeltaChip({ delta }: { delta: number | null }) {
-  if (delta === null || delta === undefined || Number.isNaN(delta)) return null;
-  const positive = delta >= 0;
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
-        positive
-          ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300'
-          : 'bg-rose-500/10 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300',
-      )}
-    >
-      <TrendingUp className={cn('h-3 w-3', !positive && 'rotate-180')} /> {positive ? '+' : ''}
-      {delta.toFixed(1)}%
-    </span>
+    source
+      .split(/[\s@._]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]!.toUpperCase())
+      .join('') || '?'
   );
 }
 
+function RangePicker({
+  value,
+  onChange,
+  label,
+  labels,
+}: {
+  value: RangeKey;
+  onChange: (next: RangeKey) => void;
+  label: string;
+  labels: Record<RangeKey, string>;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
+    >
+      {RANGES.map((range) => (
+        <button
+          key={range.key}
+          type="button"
+          onClick={() => onChange(range.key)}
+          aria-pressed={value === range.key}
+          className={cn(
+            'rounded-md px-2.5 py-1 text-2xs font-semibold transition active:scale-[0.98]',
+            value === range.key
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {labels[range.key]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function KpiCell({
+  icon: Icon,
+  label,
+  sub,
+  value,
+  delta,
+  sparkline,
+  tone,
+  href,
+  deltaLabels,
+  sparkLabel,
+  noData,
+}: {
+  icon: LucideIcon;
+  label: string;
+  sub: string;
+  value: string;
+  delta: number | null;
+  sparkline?: number[];
+  tone: 'primary' | 'success' | 'warning';
+  href: string;
+  deltaLabels: { up: string; down: string; flat: string };
+  sparkLabel: string;
+  noData: string;
+}) {
+  const ring = {
+    primary: 'bg-primary/10 text-primary',
+    success: 'bg-success/10 text-success',
+    warning: 'bg-warning/10 text-warning',
+  }[tone];
+
+  return (
+    <Link
+      href={href}
+      className="group relative flex min-w-0 flex-col gap-3 px-4 py-4 transition-colors hover:bg-muted/40 sm:px-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          <p className="mt-1.5 flex flex-wrap items-baseline gap-2">
+            <span className="font-display text-2xl font-bold tabular-nums tracking-tight text-foreground">
+              {value}
+            </span>
+            <DeltaBadge delta={delta} labels={deltaLabels} />
+          </p>
+          <p className="mt-0.5 truncate text-2xs text-muted-foreground">{sub}</p>
+        </div>
+        <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', ring)}>
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
+      </div>
+      {sparkline && sparkline.length > 1 ? (
+        <Sparkline
+          points={sparkline}
+          tone={tone}
+          label={sparkLabel}
+          className="-mb-1 opacity-80 transition-opacity group-hover:opacity-100"
+        />
+      ) : (
+        <div className="h-7" aria-label={noData} />
+      )}
+    </Link>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* View                                                                       */
+/* -------------------------------------------------------------------------- */
+
 export function DashboardView() {
+  const t = useTranslations('admin.overview');
   const tAdmin = useTranslations('admin');
+  const locale = useLocale();
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const searchParams = useSearchParams();
+  const { currency, count, percent, date } = useFormats();
+  const now = useMountedNow();
+
+  const user = useAuthStore((state) => state.user);
   const role = user?.role ?? '';
-  const can = (roles: string[]) => roles.includes(role);
-  const tenantSlug = user?.tenantRoles?.find((t) => t.tenantId === user.tenantId)?.tenantSlug;
-  const [overview, setOverview] = useState<OverviewData | null>(null);
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [pulse, setPulse] = useState<PulseData | null>(null);
+  const tenantSlug =
+    user?.tenantRoles?.find((entry) => entry.tenantId === user.tenantId)?.tenantSlug ?? '';
+  const isManager = role === 'super_admin' || role === 'admin';
+
+  const initialRange = (searchParams.get('range') as RangeKey | null) ?? '30d';
+  const [range, setRange] = useState<RangeKey>(
+    RANGES.some((entry) => entry.key === initialRange) ? initialRange : '30d',
+  );
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [insights, setInsights] = useState<Insights | null>(null);
+  const [stats, setStats] = useState<StatsRow | null>(null);
+  const [enrollSeries, setEnrollSeries] = useState<SeriesPoint[] | null>(null);
+  const [revenueSeries, setRevenueSeries] = useState<SeriesPoint[] | null>(null);
+  const [topCourses, setTopCourses] = useState<TopCourse[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState<string[]>([]);
 
-  const load = useMemo(
-    () =>
-      async (silent = false) => {
-        if (silent) setRefreshing(true);
+  const load = useCallback(
+    async (silent = false) => {
+      if (silent) setRefreshing(true);
+      else setLoading(true);
+      setFailed([]);
+      const problems: string[] = [];
+
+      // Each panel settles independently: one failing endpoint must not blank the
+      // whole overview, it just marks that panel incomplete.
+      const settle = async <T,>(
+        key: string,
+        url: string,
+        apply: (value: T) => void,
+        fallback: T,
+      ) => {
         try {
-          const [overviewRes, statsRes, pulseRes] = await Promise.all([
-            fetch('/api/proxy/admin/analytics/overview?range=30d', { credentials: 'include' }),
-            fetch('/api/proxy/admin/stats', { credentials: 'include' }),
-            fetch('/api/proxy/admin/dashboard/pulse', { credentials: 'include' }),
-          ]);
-          if (overviewRes.ok) setOverview(await overviewRes.json());
-          if (statsRes.ok) {
-            const statsData = await statsRes.json();
-            if (statsData && typeof statsData === 'object' && Array.isArray(statsData.recentUsers))
-              setStats(statsData);
-          }
-          if (pulseRes.ok) setPulse(await pulseRes.json());
+          apply((await getJson(url)) as T);
         } catch {
-          // Widgets fall back to their empty states when a dashboard endpoint fails.
-        } finally {
-          setLoading(false);
-          setRefreshing(false);
+          problems.push(key);
+          apply(fallback);
         }
-      },
-    [],
+      };
+
+      await Promise.all([
+        settle<Overview>(
+          'overview',
+          `/api/proxy/admin/analytics/overview?range=${range}`,
+          setOverview,
+          {},
+        ),
+        settle<Insights>(
+          'insights',
+          `/api/proxy/admin/analytics/insights?range=${range}`,
+          setInsights,
+          {},
+        ),
+        settle<StatsRow>('stats', '/api/proxy/admin/stats', setStats, {}),
+        settle<SeriesPoint[]>(
+          'enrollments',
+          `/api/proxy/admin/analytics/enrollments?range=${range}`,
+          setEnrollSeries,
+          [],
+        ),
+        settle<SeriesPoint[]>(
+          'revenue',
+          `/api/proxy/admin/analytics/revenue?range=${range}`,
+          setRevenueSeries,
+          [],
+        ),
+        settle<TopCourse[]>(
+          'topCourses',
+          `/api/proxy/admin/analytics/top-courses?range=${range}`,
+          setTopCourses,
+          [],
+        ),
+      ]);
+
+      setFailed(problems);
+      setLoading(false);
+      setRefreshing(false);
+    },
+    [range],
   );
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const formatCurrency = (cents: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
-  const today = useMemo(
+  const rangeDays = RANGES.find((entry) => entry.key === range)?.days ?? 30;
+
+  const shortcuts = useMemo(
     () =>
-      new Intl.DateTimeFormat('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      }).format(new Date()),
-    [],
-  );
-  const firstName = user?.name?.trim().split(' ')[0];
-
-  const kpis = useMemo(
-    () => [
-      {
-        label: tAdmin('totalUsers'),
-        sub: 'Registered accounts',
-        value: (overview?.users?.value ?? 0).toLocaleString(),
-        delta: overview?.users?.delta ?? null,
-        icon: Users,
-        tone: 'blue',
-        href: '/admin/users',
-      },
-      {
-        label: tAdmin('activeLearners'),
-        sub: 'Completed a lesson',
-        value: (overview?.activeUsers?.value ?? 0).toLocaleString(),
-        delta: overview?.activeUsers?.delta ?? null,
-        icon: GraduationCap,
-        tone: 'emerald',
-        href: '/admin/analytics',
-      },
-      {
-        label: tAdmin('enrollments'),
-        sub: 'Course starts',
-        value: (overview?.enrollments?.value ?? 0).toLocaleString(),
-        delta: overview?.enrollments?.delta ?? null,
-        icon: BookOpen,
-        tone: 'cyan',
-        href: '/admin/analytics',
-      },
-      {
-        label: tAdmin('revenue'),
-        sub: 'Confirmed orders',
-        value: formatCurrency(overview?.revenue?.cents ?? 0),
-        delta: overview?.revenue?.delta ?? null,
-        icon: DollarSign,
-        tone: 'amber',
-        href: '/admin/analytics',
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [overview, tAdmin],
+      [
+        { href: '/admin/courses', key: 'sc_courses', icon: BookOpen, roles: ['super_admin', 'admin', 'instructor'] },
+        { href: '/admin/builder', key: 'sc_builder', icon: LayoutTemplate, roles: ['super_admin', 'admin', 'instructor'] },
+        { href: '/admin/analytics', key: 'sc_analytics', icon: BarChart3, roles: ['super_admin', 'admin'] },
+        { href: '/admin/users', key: 'sc_users', icon: Users, roles: ['super_admin', 'admin'] },
+        { href: '/admin/theme', key: 'sc_theme', icon: Palette, roles: ['super_admin', 'admin'] },
+        { href: '/admin/certificates', key: 'sc_certificates', icon: Award, roles: ['super_admin', 'admin'] },
+        { href: '/admin/settings', key: 'sc_settings', icon: Settings, roles: ['super_admin', 'admin'] },
+      ].filter((entry) => entry.roles.includes(role)),
+    [role],
   );
 
-  type PulseItem = {
-    key: string;
-    severity: 'high' | 'medium' | 'low';
-    icon: typeof FileEdit;
-    text: string;
-    href: string;
-  };
-  const pulseItems = useMemo<PulseItem[]>(() => {
-    if (!pulse) return [];
-    const items: PulseItem[] = [];
-    if (pulse.draftCourses > 0)
+  /**
+   * The attention rail, built from the `insights` endpoint.
+   *
+   * Ordered by how much they cost if ignored, and each one names the affected
+   * items so it can be acted on without a second trip to a list page.
+   */
+  const attention = useMemo(() => {
+    if (!insights) return [];
+    const items: Array<{
+      key: string;
+      severity: 'high' | 'medium' | 'low';
+      icon: LucideIcon;
+      count: number;
+      text: string;
+      href: string;
+      samples: string[];
+    }> = [];
+
+    const zero = insights.zeroEnrollmentCourses?.count ?? 0;
+    if (zero > 0) {
+      items.push({
+        key: 'zero-enrollment',
+        severity: 'high',
+        icon: TrendingDown,
+        count: zero,
+        text: t('itemZeroEnroll', { count: zero }),
+        href: '/admin/courses?enrollments=0',
+        samples: (insights.zeroEnrollmentCourses?.sample ?? []).map((course) => course.title),
+      });
+    }
+
+    const drafts = insights.draftCourses?.count ?? 0;
+    if (drafts > 0) {
       items.push({
         key: 'drafts',
         severity: 'medium',
         icon: FileEdit,
-        text: `${pulse.draftCourses} draft course${pulse.draftCourses === 1 ? '' : 's'} awaiting publish`,
+        count: drafts,
+        text: t('itemDrafts', { count: drafts }),
         href: '/admin/courses?status=draft',
+        samples: (insights.draftCourses?.sample ?? []).map((course) => course.title),
       });
-    if (pulse.zeroEnrollmentCourses > 0)
+    }
+
+    const failedPayments = insights.failedPayments?.count ?? 0;
+    if (failedPayments > 0) {
       items.push({
-        key: 'zero-enr',
+        key: 'payments',
         severity: 'high',
-        icon: AlertCircle,
-        text: `${pulse.zeroEnrollmentCourses} published course${pulse.zeroEnrollmentCourses === 1 ? ' has' : 's have'} zero enrollments`,
-        href: '/admin/courses?enrollments=0',
+        icon: CircleDollarSign,
+        count: failedPayments,
+        text: t('itemFailedPayments', { count: failedPayments }),
+        href: '/admin/finance',
+        samples: [],
       });
-    if (pulse.suspendedUsers > 0)
+    }
+
+    const suspended = insights.suspendedUsers ?? 0;
+    if (suspended > 0) {
       items.push({
-        key: 'susp',
+        key: 'suspended',
         severity: 'low',
         icon: UserX,
-        text: `${pulse.suspendedUsers} suspended account${pulse.suspendedUsers === 1 ? '' : 's'} to review`,
+        count: suspended,
+        text: t('itemSuspended', { count: suspended }),
         href: '/admin/users?suspended=true',
+        samples: [],
       });
-    if (pulse.ordersSilent30d)
+    }
+
+    if (insights.ordersSilent30d) {
       items.push({
         key: 'silent',
         severity: 'medium',
         icon: TrendingDown,
-        text: 'No confirmed orders in the last 30 days',
-        href: '/admin/analytics',
+        count: 0,
+        text: t('itemSilentOrders'),
+        href: '/admin/finance',
+        samples: [],
       });
-    return items;
-  }, [pulse]);
+    }
 
+    const rank = { high: 0, medium: 1, low: 2 } as const;
+    return items.sort((a, b) => rank[a.severity] - rank[b.severity]);
+  }, [insights, t]);
+
+  /**
+   * Catalogue health, from counts that exist.
+   *
+   * `zero` is a subset of published, not a peer of it: a course with no learners
+   * is still live. The bar therefore shows published (split into engaged and
+   * silent) against drafts.
+   */
   const health = useMemo(() => {
-    const draft = pulse?.draftCourses ?? 0;
-    const zero = pulse?.zeroEnrollmentCourses ?? 0;
-    const total = (overview?.enrollments?.value ?? 0) + draft + zero || 1;
-    const published = Math.max(0, total - draft);
-    return { draft, zero, published, total };
-  }, [pulse, overview]);
+    const drafts = insights?.draftCourses?.count ?? 0;
+    const zero = insights?.zeroEnrollmentCourses?.count ?? 0;
+    const published = overview?.coursesPublished ?? stats?.courses ?? 0;
+    const engaged = Math.max(0, published - zero);
+    return {
+      engaged,
+      zero,
+      drafts,
+      published,
+      total: published + drafts,
+      share: published + drafts > 0 ? percent((engaged / (published + drafts)) * 100) : null,
+    };
+  }, [insights, overview, stats, percent]);
+
+  const enrolledSeries = useMemo(
+    () =>
+      (enrollSeries ?? []).map((point) => ({
+        label: date(point.date),
+        value: Number(point.count ?? 0),
+      })),
+    [enrollSeries, date],
+  );
+  const revenuePoints = useMemo(
+    () => (revenueSeries ?? []).map((point) => ({ cents: Number(point.cents ?? 0) })),
+    [revenueSeries],
+  );
+  const revenueDaily = useMemo(
+    () =>
+      revenuePoints.map((point, index) => ({
+        label: date(revenueSeries?.[index]?.date ?? new Date().toISOString()),
+        value: point.cents,
+      })),
+    [revenuePoints, revenueSeries, date],
+  );
+  const hasSeries = enrolledSeries.some((point) => point.value > 0) || revenueDaily.some((p) => p.value > 0);
+
+  const firstName = user?.name?.trim().split(' ')[0] ?? '';
+  const todayLabel = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()),
+    [locale],
+  );
+
+  const kpis = [
+    {
+      icon: Users,
+      label: t('kpiUsers'),
+      sub: t('kpiUsersSub'),
+      value: count(overview?.users?.value ?? 0),
+      delta: overview?.users?.delta ?? null,
+      sparkline: overview?.users?.sparkline,
+      tone: 'primary' as const,
+      href: '/admin/users',
+      sparkLabel: t('kpiUsers'),
+    },
+    {
+      icon: BookOpen,
+      label: t('kpiActive'),
+      sub: t('kpiActiveSub'),
+      value: count(overview?.activeUsers?.value ?? 0),
+      delta: overview?.activeUsers?.delta ?? null,
+      sparkline: overview?.activeUsers?.sparkline,
+      tone: 'success' as const,
+      href: '/admin/analytics',
+      sparkLabel: t('kpiActive'),
+    },
+    {
+      icon: UserPlus,
+      label: t('kpiEnrollments'),
+      sub: t('kpiEnrollmentsSub'),
+      value: count(overview?.enrollments?.value ?? 0),
+      delta: overview?.enrollments?.delta ?? null,
+      sparkline: overview?.enrollments?.sparkline,
+      tone: 'primary' as const,
+      href: '/admin/analytics',
+      sparkLabel: t('kpiEnrollments'),
+    },
+    {
+      icon: CircleDollarSign,
+      label: t('kpiRevenue'),
+      sub: t('kpiRevenueSub'),
+      value: currency(overview?.revenue?.cents ?? 0),
+      delta: overview?.revenue?.delta ?? null,
+      sparkline: overview?.revenue?.sparkline,
+      tone: 'warning' as const,
+      href: '/admin/finance',
+      sparkLabel: t('kpiRevenue'),
+    },
+  ];
+
+  const relativeLabels = useMemo(
+    () => ({
+      justNow: t('justNow'),
+      minutes: (n: number) => t('minutesAgoShort', { n }),
+      hours: (n: number) => t('hoursAgoShort', { n }),
+      days: (n: number) => t('daysAgoShort', { n }),
+    }),
+    [t, count],
+  );
 
   return (
     <div className="w-full">
       <AdminCommandBar
         trail={[{ label: 'Titans of CNC' }, { label: tAdmin('dashboard') }]}
-        live="Live"
+        live={t('live')}
         actions={
           <>
-            <Link
-              href="/admin/settings"
-              className="hidden h-9 shrink-0 items-center rounded-xl border border-border bg-background px-3 text-[13px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground sm:inline-flex"
-            >
-              {tenantSlug || 'academy'} · {role || '—'}
-            </Link>
+            <RangePicker
+              value={range}
+              onChange={setRange}
+              label={t('range')}
+              labels={{
+                '7d': t('range7d'),
+                '30d': t('range30d'),
+                '90d': t('range90d'),
+                '12m': t('range12m'),
+              }}
+            />
             <BarIconButton
-              title="Refresh dashboard"
+              title={t('refresh')}
+              ariaLabel={t('refresh')}
               spinning={refreshing}
               onClick={() => void load(true)}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="size-4" />
             </BarIconButton>
           </>
         }
         primary={
-          can(['super_admin', 'admin']) ? (
+          isManager ? (
             <BarPrimaryButton
-              icon={<Plus className="h-4 w-4" strokeWidth={2.5} />}
+              icon={<FileEdit className="size-4" strokeWidth={2.25} />}
               onClick={() => router.push('/admin/courses/new')}
             >
-              New course
+              {t('newCourse')}
             </BarPrimaryButton>
           ) : undefined
         }
       />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
-        <AdminPageHeader
-          title={`${tAdmin('welcomeBack')}${firstName ? `, ${firstName}` : ''}`}
-          description={`${today} · ${tenantSlug || 'academy'} · ${role ? role.replace('_', ' ') : '—'}`}
-          badge={
-            <span className="flex items-center gap-2 self-start rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-xs font-medium text-emerald-800 shadow-sm md:self-auto dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              </span>
-              Live · 30-day window
-            </span>
-          }
-        />
+      <div className="mx-auto w-full max-w-[1560px] space-y-5 pt-5">
+        {/* Hero band: greeting plus the four numbers as one reading. */}
+        <header className="rounded-xl border border-border bg-card">
+          <div className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="min-w-0">
+              <p className="font-mono text-2xs uppercase tracking-[0.12em] text-muted-foreground">
+                {t('eyebrow')}
+              </p>
+              <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                {/* Two messages rather than one `select` with two `other`
+                    branches: ICU allows a single `other`, and the duplicate threw
+                    INVALID_MESSAGE on every dashboard render. Each locale also owns
+                    its own separator, so Arabic keeps "، " instead of a hardcoded ", ". */}
+                {firstName ? t('heroTitleNamed', { name: firstName }) : t('heroTitle')}
+              </h1>
+              <p className="mt-1 truncate text-2xs text-muted-foreground">
+                {t('heroSubtitle', {
+                  tenant: tenantSlug || 'academy',
+                  role: role ? role.replace(/_/g, ' ') : '—',
+                  date: todayLabel,
+                })}
+                {' · '}
+                {t('windowLabel', { days: rangeDays })}
+                {overview?.updatedAt && now
+                  ? ` · ${t('lastUpdated', {
+                      time: relativeFrom(overview.updatedAt, now, relativeLabels),
+                    })}`
+                  : null}
+              </p>
+            </div>
+          </div>
 
-        {/* KPI row — identical primitive to Learners / Staff so the surfaces agree. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {loading
-            ? [0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-[104px] animate-pulse rounded-2xl border border-border bg-card"
-                />
-              ))
-            : kpis.map(({ label, sub, value, delta, icon, tone, href }) => (
-                <Link key={label} href={href} className="block focus:outline-none">
-                  <AdminKpiCard
-                    icon={icon}
-                    label={label}
-                    value={value}
-                    meta={<DeltaChip delta={delta} />}
-                    sub={sub}
-                    tone={tone}
+          <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+            {loading
+              ? [0, 1, 2, 3].map((index) => (
+                  <div key={index} className="px-4 py-4 sm:px-5">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="mt-2 h-7 w-24" />
+                    <Skeleton className="mt-3 h-7 w-full" />
+                  </div>
+                ))
+              : kpis.map((kpi) => (
+                  <KpiCell
+                    key={kpi.label}
+                    {...kpi}
+                    deltaLabels={{
+                      up: t('vsPreviousUp'),
+                      down: t('vsPreviousDown'),
+                      flat: t('vsPreviousFlat'),
+                    }}
+                    noData={t('noData')}
                   />
-                </Link>
-              ))}
-        </div>
+                ))}
+          </div>
+        </header>
 
-        {/* Attention needed */}
-        <TableCard
-          header={
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 normal-case">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {tAdmin('attentionNeeded')}
-                </span>
-                <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
-                  {pulseItems.length}
-                </span>
-              </span>
-              <span className="hidden text-[11px] font-medium normal-case tracking-normal text-muted-foreground sm:block">
-                Sorted by urgency
-              </span>
-            </div>
-          }
-        >
-          {!pulseItems.length ? (
-            <EmptyState
-              icon={CheckCircle2}
-              title={tAdmin('allClear')}
-              body="No drafts, no zero-enrollment courses, no suspended accounts. Everything looks healthy."
-            />
-          ) : (
-            <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-              {pulseItems.map(({ key, severity, icon: Icon, text, href }) => (
-                <Link
-                  key={key}
-                  href={href}
-                  className="group flex flex-col gap-3 rounded-xl border border-border bg-background p-4 transition duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-md"
-                >
-                  <span
-                    className={cn(
-                      'flex h-9 w-9 items-center justify-center rounded-xl border transition-transform group-hover:scale-110',
-                      severity === 'high'
-                        ? TILE.rose
-                        : severity === 'medium'
-                          ? TILE.amber
-                          : TILE.slate,
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="line-clamp-2 min-h-[40px] text-sm font-medium leading-snug text-foreground">
-                    {text}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                    Fix
-                    <ArrowUpRight className="h-3 w-3 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </TableCard>
-
-        <div className="grid gap-6 lg:grid-cols-12">
-          <div className="space-y-6 lg:col-span-8">
-            {/* Momentum + course health */}
-            <div className="grid gap-6 sm:grid-cols-5">
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:col-span-3">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
-                    30-day momentum
-                  </h3>
-                  <span className="text-xs text-muted-foreground">vs previous period</span>
-                </div>
-                <div className="space-y-4">
-                  {[
-                    { label: 'Users', v: overview?.users?.value ?? 0, d: overview?.users?.delta },
-                    {
-                      label: 'Enrollments',
-                      v: overview?.enrollments?.value ?? 0,
-                      d: overview?.enrollments?.delta,
-                    },
-                    {
-                      label: 'Revenue',
-                      v: overview?.revenue?.cents ?? 0,
-                      d: overview?.revenue?.delta,
-                      isCurrency: true,
-                    },
-                  ].map((row) => (
-                    <div key={row.label} className="flex items-center justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-muted-foreground">{row.label}</p>
-                        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-400"
-                            style={{
-                              width: `${Math.min(100, Math.max(8, (row.v / Math.max(1, overview?.users?.value ?? 1)) * 100))}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-sm font-semibold tabular-nums text-foreground">
-                          {row.isCurrency
-                            ? new Intl.NumberFormat('en-US', {
-                                style: 'currency',
-                                currency: 'USD',
-                              }).format((row.v as number) / 100)
-                            : (row.v as number).toLocaleString()}
-                        </p>
-                        <DeltaChip delta={row.d ?? null} />
-                      </div>
-                    </div>
-                  ))}
-                  <p className="border-t border-border pt-3 text-xs text-muted-foreground">
-                    Full chart →{' '}
-                    <Link href="/admin/analytics" className="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                      Analytics
-                    </Link>
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:col-span-2">
-                <h3 className="mb-4 text-[15px] font-semibold tracking-tight text-foreground">
-                  Course health
-                </h3>
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative flex h-28 w-28 items-center justify-center">
-                    <div className="absolute inset-0 rounded-full border-[10px] border-muted" />
-                    <div
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        background: `conic-gradient(rgb(16 185 129) 0 ${(health.published / health.total) * 360}deg, rgb(245 158 11) ${(health.published / health.total) * 360}deg ${((health.published + health.draft) / health.total) * 360}deg, rgb(244 63 94) ${((health.published + health.draft) / health.total) * 360}deg 360deg)`,
-                        WebkitMask:
-                          'radial-gradient(circle 36px at center, transparent 36px, black 37px)',
-                        mask: 'radial-gradient(circle at center, transparent 36px, black 37px)',
-                      }}
-                    />
-                    <div className="text-center">
-                      <p className="text-xl font-bold tabular-nums text-foreground">
-                        {health.total}
-                      </p>
-                      <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                        courses
-                      </p>
-                    </div>
-                  </div>
-                  <div className="w-full space-y-2 text-xs">
-                    {[
-                      { label: 'Published', value: health.published, dot: 'bg-emerald-500' },
-                      { label: 'Drafts', value: health.draft, dot: 'bg-amber-500' },
-                      { label: 'Zero-enrollment', value: health.zero, dot: 'bg-rose-500' },
-                    ].map((r) => (
-                      <div key={r.label} className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                          <span className={cn('h-2 w-2 rounded-full', r.dot)} /> {r.label}
-                        </span>
-                        <span className="font-semibold tabular-nums text-foreground">
-                          {r.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent signups */}
-            <TableCard
-              header={
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 normal-case">
-                    <UserPlus className="h-3.5 w-3.5 text-blue-500" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {tAdmin('recentSignups')}
-                    </span>
-                  </span>
-                  {can(['super_admin', 'admin']) && (
-                    <Link
-                      href="/admin/users"
-                      className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-semibold normal-case tracking-normal text-white shadow-sm shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[0.98]"
-                    >
-                      {tAdmin('viewAll')} <ArrowUpRight className="h-3 w-3" />
-                    </Link>
-                  )}
-                </div>
-              }
+        {failed.length > 0 && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/5 px-4 py-3"
+          >
+            <p className="flex items-center gap-2 text-13 text-foreground">
+              <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
+              {t('errorTitle')}
+            </p>
+            <button
+              type="button"
+              onClick={() => void load(true)}
+              className="rounded-md border border-border bg-background px-2.5 py-1 text-2xs font-semibold text-foreground transition hover:bg-muted"
             >
-              {(stats?.recentUsers ?? []).length === 0 ? (
-                <p className="px-6 py-10 text-center text-sm text-muted-foreground">
-                  {tAdmin('noUsersYet')}
-                </p>
+              {t('errorAction')}
+            </button>
+          </div>
+        )}
+
+        <div className="grid gap-5 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-8">
+            {/* Attention rail */}
+            <Panel
+              title={t('attention')}
+              subtitle={t('attentionSub')}
+              tone="attention"
+              action={
+                attention.length > 0 ? (
+                  <span className="rounded-md bg-warning/15 px-1.5 py-0.5 text-2xs font-semibold tabular-nums text-warning">
+                    {count(attention.length)}
+                  </span>
+                ) : null
+              }
+              bodyClassName="p-0"
+            >
+              {loading ? (
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : attention.length === 0 ? (
+                <div className="flex items-center gap-3 px-4 py-5 sm:px-5">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                    <BarChart3 className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-13 font-semibold text-foreground">{t('attentionEmpty')}</p>
+                    <p className="text-2xs text-muted-foreground">{t('attentionEmptyBody')}</p>
+                  </div>
+                </div>
               ) : (
                 <ul className="divide-y divide-border">
-                  {stats?.recentUsers.slice(0, 5).map((u) => (
-                    <li key={u.id}>
+                  {attention.map((item) => (
+                    <li key={item.key}>
                       <Link
-                        href={`/admin/users?focus=${u.id}`}
-                        className="group flex items-center gap-3 px-5 py-3 transition hover:bg-muted/50"
+                        href={item.href}
+                        className="group flex items-start gap-3 px-4 py-3 transition hover:bg-muted/40 sm:px-5"
                       >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-foreground text-xs font-bold text-background">
-                          {initials(u.name, u.email)}
+                        <span
+                          className={cn(
+                            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
+                            item.severity === 'high'
+                              ? 'bg-destructive/10 text-destructive'
+                              : item.severity === 'medium'
+                                ? 'bg-warning/10 text-warning'
+                                : 'bg-muted text-muted-foreground',
+                          )}
+                        >
+                          <item.icon className="size-4" aria-hidden="true" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-foreground transition group-hover:text-blue-600">
-                            {u.name || u.email.split('@')[0]}
-                          </span>
-                          <span className="block truncate text-[11px] text-muted-foreground">
-                            {u.email}
-                          </span>
+                          <p className="text-13 font-medium leading-snug text-foreground">{item.text}</p>
+                          {item.samples.length > 0 && (
+                            <p className="mt-1 line-clamp-1 text-2xs text-muted-foreground">
+                              {item.samples.slice(0, 3).join(' · ')}
+                              {item.samples.length > 3
+                                ? ` · ${t('sampleMore', { count: item.samples.length - 3 })}`
+                                : ''}
+                            </p>
+                          )}
                         </div>
-                        <span className="shrink-0 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground">
-                          {relativeTime(u.createdAt)}
+                        <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-2xs font-semibold text-primary">
+                          {t('fix')}
+                          <ExternalLink
+                            className="size-3 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                            aria-hidden="true"
+                          />
                         </span>
                       </Link>
                     </li>
                   ))}
                 </ul>
               )}
-            </TableCard>
+            </Panel>
+
+            {/* Momentum, from the real daily series */}
+            <Panel
+              title={t('momentum')}
+              subtitle={t('momentumSub')}
+              action={
+                <Link
+                  href="/admin/analytics"
+                  className="inline-flex items-center gap-1 text-2xs font-semibold text-primary transition hover:underline"
+                >
+                  {t('fullAnalytics')}
+                  <ExternalLink className="size-3" aria-hidden="true" />
+                </Link>
+              }
+            >
+              {loading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : !hasSeries ? (
+                <p className="py-6 text-center text-2xs text-muted-foreground">{t('seriesEmpty')}</p>
+              ) : (
+                <div className="space-y-5">
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                      <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('enrollmentsLabel')}
+                      </p>
+                      <p className="text-13 font-semibold tabular-nums text-foreground">
+                        {count(enrolledSeries.reduce((sum, point) => sum + point.value, 0))}
+                      </p>
+                    </div>
+                    <SeriesBars points={enrolledSeries} />
+                  </div>
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                      <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t('revenueLabel')}
+                      </p>
+                      <p className="text-13 font-semibold tabular-nums text-foreground">
+                        {currency(revenueDaily.reduce((sum, point) => sum + point.value, 0), PLATFORM_CURRENCY)}
+                      </p>
+                    </div>
+                    <SeriesBars points={revenueDaily} tone="success" />
+                  </div>
+                </div>
+              )}
+            </Panel>
+
+            {/* Most enrolled, from the real ranking endpoint */}
+            <Panel
+              title={t('topCourses')}
+              bodyClassName="p-0"
+              action={
+                isManager ? (
+                  <Link
+                    href="/admin/courses"
+                    className="inline-flex items-center gap-1 text-2xs font-semibold text-primary transition hover:underline"
+                  >
+                    {t('viewAll')}
+                    <ExternalLink className="size-3" aria-hidden="true" />
+                  </Link>
+                ) : null
+              }
+            >
+              {loading ? (
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (topCourses ?? []).length === 0 ? (
+                <p className="px-4 py-8 text-center text-2xs text-muted-foreground sm:px-5">
+                  {t('topCoursesEmpty')}
+                </p>
+              ) : (
+                <ol className="divide-y divide-border">
+                  {(topCourses ?? []).slice(0, 6).map((course, index) => {
+                    const max = Math.max(1, ...(topCourses ?? []).map((entry) => entry.enrollments));
+                    return (
+                      <li key={course.id}>
+                        <Link
+                          href={`/admin/courses/${course.slug ?? course.id}/edit`}
+                          className="group flex items-center gap-3 px-4 py-2.5 transition hover:bg-muted/40 sm:px-5"
+                        >
+                          <span className="w-4 shrink-0 text-2xs font-semibold tabular-nums text-muted-foreground">
+                            {index + 1}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-13 font-medium text-foreground">
+                              {course.title}
+                            </span>
+                            <span className="mt-1 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-muted">
+                              <span
+                                className="block h-full rounded-full bg-primary/70"
+                                style={{ width: `${(course.enrollments / max) * 100}%` }}
+                              />
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
+                            {t('enrollmentCount', { count: course.enrollments })}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </Panel>
           </div>
 
-          <div className="space-y-6 lg:col-span-4">
-            {can(['super_admin', 'admin']) && (
-              <TableCard
-                header={
-                  <span className="flex items-center gap-2 normal-case">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {tAdmin('recentActivity')}
-                    </span>
-                    <span className="text-[11px] font-medium normal-case tracking-normal text-muted-foreground">
-                      Latest enrollments
-                    </span>
-                  </span>
-                }
-              >
-                {(pulse?.recentEnrollments ?? []).length === 0 ? (
-                  <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-                    {tAdmin('noEnrollmentsYet')}
-                  </p>
-                ) : (
-                  <ul className="relative space-y-0 px-5 py-4 before:absolute before:bottom-4 before:left-[27px] before:top-4 before:w-px before:bg-border">
-                    {pulse!.recentEnrollments.slice(0, 5).map((e) => (
-                      <li key={e.id} className="relative flex gap-3 py-3 pl-6">
-                        <span className="absolute left-0 top-[22px] h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm leading-snug text-muted-foreground">
-                            <span className="font-semibold text-foreground">
-                              {e.userName || e.userEmail.split('@')[0]}
-                            </span>{' '}
-                            enrolled in{' '}
-                            <span className="font-medium text-foreground">{e.courseTitle}</span>
-                          </p>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {relativeTime(e.startedAt)}
-                          </p>
-                        </div>
-                      </li>
+          <div className="space-y-5 lg:col-span-4">
+            {/* Catalogue health, over counts that exist */}
+            <Panel title={t('health')} subtitle={t('healthSub')}>
+              {loading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : (
+                <div className="space-y-4">
+                  <SegmentedBar
+                    segments={[
+                      { value: health.engaged, color: 'var(--success)', label: t('published') },
+                      { value: health.zero, color: 'var(--destructive)', label: t('zeroEnrollment') },
+                      { value: health.drafts, color: 'var(--warning)', label: t('drafts') },
+                    ]}
+                  />
+                  <dl className="space-y-2.5">
+                    {[
+                      { key: 'published', value: health.published, color: 'bg-success' },
+                      { key: 'zeroEnrollment', value: health.zero, color: 'bg-destructive' },
+                      { key: 'drafts', value: health.drafts, color: 'bg-warning' },
+                    ].map((row) => (
+                      <div key={row.key} className="flex items-center justify-between gap-2">
+                        <dt className="flex items-center gap-2 text-2xs text-muted-foreground">
+                          <span className={cn('size-2 rounded-full', row.color)} aria-hidden="true" />
+                          {t(row.key)}
+                        </dt>
+                        <dd className="text-13 font-semibold tabular-nums text-foreground">
+                          {count(row.value)}
+                        </dd>
+                      </div>
                     ))}
-                  </ul>
-                )}
-              </TableCard>
-            )}
+                  </dl>
+                  <p className="border-t border-border pt-3 text-2xs text-muted-foreground">
+                    {health.share
+                      ? t('progressShare', { value: health.share, total: count(health.total) })
+                      : t('courseCount', { count: health.total })}
+                  </p>
+                </div>
+              )}
+            </Panel>
 
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
-                  {tAdmin('quickActions')}
-                </h3>
-                <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Jump to
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {QUICK_LINKS_KEYS.filter((l) => can(l.roles)).map(
-                  ({ href, key, desc, icon: Icon }, idx) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className="group flex flex-col gap-2 rounded-xl border border-border bg-background p-4 transition duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-md"
-                    >
-                      <span
-                        className={cn(
-                          'flex h-9 w-9 items-center justify-center rounded-xl border transition-transform group-hover:scale-110',
-                          TILE[QUICK_TONES[idx % QUICK_TONES.length] ?? 'blue'],
-                        )}
+            {/* New accounts */}
+            <Panel
+              title={t('recentSignups')}
+              bodyClassName="p-0"
+              action={
+                isManager ? (
+                  <Link
+                    href="/admin/users"
+                    className="inline-flex items-center gap-1 text-2xs font-semibold text-primary transition hover:underline"
+                  >
+                    {t('viewAll')}
+                    <ExternalLink className="size-3" aria-hidden="true" />
+                  </Link>
+                ) : null
+              }
+            >
+              {loading ? (
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (stats?.recentUsers ?? []).length === 0 ? (
+                <p className="px-4 py-8 text-center text-2xs text-muted-foreground sm:px-5">
+                  {t('noUsersYet')}
+                </p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {(stats?.recentUsers ?? []).slice(0, 5).map((account) => (
+                    <li key={account.id}>
+                      <Link
+                        href={`/admin/users?focus=${account.id}`}
+                        className="group flex items-center gap-3 px-4 py-2.5 transition hover:bg-muted/40 sm:px-5"
                       >
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="text-sm font-semibold leading-tight text-foreground">
-                        {tAdmin(key)}
-                      </span>
-                      <span className="line-clamp-2 text-xs leading-snug text-muted-foreground">
-                        {desc}
-                      </span>
-                    </Link>
-                  ),
-                )}
-              </div>
-            </div>
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-2xs font-bold text-background">
+                          {initials(account.name, account.email)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-13 font-medium text-foreground">
+                            {account.name || account.email.split('@')[0]}
+                          </span>
+                          <span className="block truncate text-2xs text-muted-foreground">
+                            {account.email}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
+                          {relativeFrom(account.createdAt, now, relativeLabels)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+
+            {/* Shortcuts */}
+            <Panel title={t('shortcuts')} subtitle={t('shortcutsSub')} bodyClassName="p-3">
+              <nav className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
+                {shortcuts.map((shortcut) => (
+                  <Link
+                    key={shortcut.href}
+                    href={shortcut.href}
+                    className="group flex items-center gap-3 rounded-lg px-2.5 py-2 transition hover:bg-muted/60"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition group-hover:border-primary/40 group-hover:text-primary">
+                      <shortcut.icon className="size-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-13 font-medium text-foreground">
+                      {t(shortcut.key)}
+                    </span>
+                    <ExternalLink
+                      className="size-3 shrink-0 text-muted-foreground/50 transition group-hover:text-primary"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                ))}
+              </nav>
+            </Panel>
           </div>
         </div>
       </div>

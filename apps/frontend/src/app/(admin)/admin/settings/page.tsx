@@ -1,41 +1,81 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { RefreshCw, Loader2, Palette, Copy, Check, AlertCircle, Save } from 'lucide-react';
+import {
+  AlertTriangle,
+  BarChart3,
+  TriangleAlert,
+  Bot,
+  Check,
+  Copy,
+  Palette,
+  RotateCcw,
+  Save,
+  Sparkles,
+  Store,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ErrorBanner } from '@/components/admin/admin-ui';
+import { useAuthStore } from '@/stores/auth-store';
+import { PlatformAlertSettings } from './platform-alert-settings';
 import { toast } from '@/components/ui/toast';
 import {
   AdminCommandBar,
-  BarButton,
-  BarPrimaryButton,
   AdminPageHeader,
+  BarIconButton,
+  BarPrimaryButton,
 } from '@/components/admin/admin-chrome';
+import {
+  Field,
+  FormSection,
+  FormSkeleton,
+  TextAreaField,
+  TextField,
+  TextInput,
+} from '@/components/admin/admin-form';
+
+/* Settings is grouped by concern and, for branding, needs to be *seen* rather
+ * than described: the live preview renders a storefront header from the values
+ * currently in the form, so a colour or font choice is judged by what it looks
+ * like instead of by reading a hex value. */
+
 interface TenantProfile {
   id: string;
   slug: string;
-  name: string;
+  name: string | null;
   description: string | null;
-  logoUrl: string | null;
-  faviconUrl: string | null;
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  fontFamily: string | null;
-  domain: string | null;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  accentColor?: string | null;
+  fontFamily?: string | null;
+  domain?: string | null;
+  settings?: { analytics?: { gaMeasurementId?: string | null; snapchatPixelId?: string | null } } | null;
 }
-type FormState = { [K in Exclude<keyof TenantProfile, 'id' | 'slug'>]: string };
+
+type FormState = {
+  [K in Exclude<keyof TenantProfile, 'id' | 'slug' | 'settings'>]: string;
+} & {
+  gaMeasurementId: string;
+  snapchatPixelId: string;
+};
+
 const EMPTY: FormState = {
   name: '',
   description: '',
   logoUrl: '',
   faviconUrl: '',
-  primaryColor: '#7c3aed',
-  secondaryColor: '#0a1628',
-  accentColor: '#ff6b35',
+  primaryColor: '#C2410C',
+  secondaryColor: '#333F4C',
+  accentColor: '#0F766E',
   fontFamily: '',
   domain: '',
+  gaMeasurementId: '',
+  snapchatPixelId: '',
 };
+
 const FONT_SUGGESTIONS = [
   'Inter',
   'Geist',
@@ -45,85 +85,69 @@ const FONT_SUGGESTIONS = [
   'Playfair Display',
   'JetBrains Mono',
 ];
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const valid = /^#[0-9a-fA-F]{6}$/.test(value);
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
+const SECTIONS = [
+  { key: 'identity', icon: Store, superAdminOnly: false },
+  { key: 'branding', icon: Palette, superAdminOnly: false },
+  { key: 'analytics', icon: BarChart3, superAdminOnly: false },
+  { key: 'integrations', icon: Bot, superAdminOnly: false },
+  { key: 'platformAlerts', icon: TriangleAlert, superAdminOnly: true },
+] as const;
+
+type SectionKey = (typeof SECTIONS)[number]['key'];
+
+/** Relative luminance, used to warn about unreadable brand colours. */
+function luminance(hex: string): number {
+  if (!HEX.test(hex)) return 0;
+  const n = parseInt(hex.slice(1), 16);
+  const channel = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
   return (
-    <div className="space-y-1.5">
-      {' '}
-      <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </label>{' '}
-      <div className="flex items-center gap-2">
-        {' '}
-        <input
-          type="color"
-          value={valid ? value : '#000000'}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-input bg-background p-1"
-          aria-label={`${label} color picker`}
-        />{' '}
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="#7c3aed"
-          className={cn(
-            'h-9 w-full rounded-xl border border-border bg-background px-3 font-mono text-sm uppercase outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            !valid && value && 'border-red-500/60',
-          )}
-        />{' '}
-      </div>{' '}
-    </div>
+    0.2126 * channel((n >> 16) & 255) +
+    0.7152 * channel((n >> 8) & 255) +
+    0.0722 * channel(n & 255)
   );
 }
-function UrlField({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      {' '}
-      <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </label>{' '}
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      />{' '}
-    </div>
-  );
+
+/** WCAG contrast against white, which is what sits behind header text. */
+function contrastWithWhite(hex: string): number {
+  return (1.05 / (luminance(hex) + 0.05));
 }
+
 export default function AdminSettingsPage() {
   const tAdmin = useTranslations('admin');
+  const t = useTranslations('admin.settingsPage');
   const tCommon = useTranslations('common');
+
   const [profile, setProfile] = useState<TenantProfile | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [savedTick, setSavedTick] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [active, setActive] = useState<SectionKey>('identity');
+  // Platform alerting is a super-admin responsibility: the backend refuses
+  // everyone else, so the section must not be offered to them either.
+  const role = useAuthStore((s) => s.user?.role) ?? '';
+  const isSuperAdmin = role === 'super_admin';
+  // Memoised so the scroll-spy effect can depend on it without re-registering
+  // its listener on every render.
+  const sections = useMemo(
+    () => SECTIONS.filter((s) => !s.superAdminOnly || isSuperAdmin),
+    [isSuperAdmin],
+  );
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/proxy/admin/tenant', { credentials: 'include' });
-      if (!res.ok) throw new Error(`Failed to load settings (${res.status})`);
+      if (!res.ok) throw new Error(`${res.status}`);
       const data: TenantProfile = await res.json();
       setProfile(data);
       setForm({
@@ -131,21 +155,28 @@ export default function AdminSettingsPage() {
         description: data.description ?? '',
         logoUrl: data.logoUrl ?? '',
         faviconUrl: data.faviconUrl ?? '',
-        primaryColor: data.primaryColor ?? '#7c3aed',
-        secondaryColor: data.secondaryColor ?? '#0a1628',
-        accentColor: data.accentColor ?? '#ff6b35',
+        primaryColor: data.primaryColor ?? '#C2410C',
+        secondaryColor: data.secondaryColor ?? '#333F4C',
+        accentColor: data.accentColor ?? '#0F766E',
         fontFamily: data.fontFamily ?? '',
         domain: data.domain ?? '',
+        gaMeasurementId: data.settings?.analytics?.gaMeasurementId ?? '',
+        snapchatPixelId: data.settings?.analytics?.snapchatPixelId ?? '',
       });
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('loadFailed', { default: 'Failed to load' }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
+
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
+
+  const prevGa = profile?.settings?.analytics?.gaMeasurementId ?? '';
+  const prevSnap = profile?.settings?.analytics?.snapchatPixelId ?? '';
+
   const dirty = useMemo(() => {
     if (!profile) return false;
     return (
@@ -157,23 +188,39 @@ export default function AdminSettingsPage() {
       form.secondaryColor !== (profile.secondaryColor ?? '') ||
       form.accentColor !== (profile.accentColor ?? '') ||
       form.fontFamily !== (profile.fontFamily ?? '') ||
-      form.domain !== (profile.domain ?? '')
+      form.domain !== (profile.domain ?? '') ||
+      form.gaMeasurementId !== prevGa ||
+      form.snapchatPixelId !== prevSnap
     );
-  }, [form, profile]);
+  }, [form, profile, prevGa, prevSnap]);
+
   const hexValid = useMemo(
-    () =>
-      ['primaryColor', 'secondaryColor', 'accentColor'].every((k) =>
-        /^#[0-9a-fA-F]{6}$/.test(form[k as keyof FormState] as string),
-      ),
+    () => ['primaryColor', 'secondaryColor', 'accentColor'].every((k) => HEX.test(form[k as keyof FormState])),
     [form],
   );
+
+  const analyticsValid = useMemo(() => {
+    const ga = form.gaMeasurementId.trim();
+    const snap = form.snapchatPixelId.trim();
+    return (ga === '' || /^G-[A-Z0-9]{4,}$/i.test(ga)) && (snap === '' || /^\d{5,}$/.test(snap));
+  }, [form.gaMeasurementId, form.snapchatPixelId]);
+
+  const domainValid = useMemo(() => {
+    const d = form.domain.trim();
+    return d === '' || /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(d);
+  }, [form.domain]);
+
+  const canSave = dirty && hexValid && analyticsValid && domainValid && !!form.name.trim();
+
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
+
   const save = async () => {
-    if (!dirty || !hexValid || !form.name.trim()) return;
+    if (!profile || !canSave) return;
     setSaving(true);
     try {
-      // Send only changed whitelisted fields
-      const patch: Record<string, string> = {};
+      // Only changed whitelisted fields are sent, so a partial save can never
+      // blank something the form does not own.
+      const patch: Record<string, unknown> = {};
       const keys: (keyof FormState)[] = [
         'name',
         'description',
@@ -186,10 +233,17 @@ export default function AdminSettingsPage() {
         'domain',
       ];
       for (const key of keys) {
-        const before = profile
-          ? ((profile[key as keyof TenantProfile] as string | null) ?? '')
-          : '';
+        const before = profile ? ((profile[key as keyof TenantProfile] as string | null) ?? '') : '';
         if (form[key] !== before) patch[key] = form[key];
+      }
+      const ga = form.gaMeasurementId.trim();
+      const snap = form.snapchatPixelId.trim();
+      if (ga !== prevGa || snap !== prevSnap) {
+        patch.analytics = { gaMeasurementId: ga, snapchatPixelId: snap };
+      }
+      if (Object.keys(patch).length === 0) {
+        setSaving(false);
+        return;
       }
       const res = await fetch('/api/proxy/admin/tenant', {
         method: 'PATCH',
@@ -199,295 +253,603 @@ export default function AdminSettingsPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Save failed (${res.status})`);
+        throw new Error(data?.message ?? `${res.status}`);
       }
-      toast({ type: 'ok', title: 'Settings saved' });
-      setSavedTick(true);
-      setTimeout(() => setSavedTick(false), 2500);
-      load();
-    } catch (e: any) {
-      toast({ type: 'err', title: 'Save failed', description: e?.message });
+      toast({ type: 'ok', title: t('savedToast', { default: 'Settings saved' }) });
+      void load();
+    } catch (e) {
+      toast({
+        type: 'err',
+        title: t('saveFailed', { default: 'Save failed' }),
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       setSaving(false);
     }
   };
+
+  const copySlug = async () => {
+    try {
+      await navigator.clipboard.writeText(profile?.slug ?? '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast({ type: 'err', title: t('copyFailed', { default: 'Could not copy' }) });
+    }
+  };
+
+  // Highlight the section nearest the top of the viewport as the user scrolls.
+  useEffect(() => {
+    if (loading) return;
+    const onScroll = () => {
+      let current: SectionKey = 'identity';
+      for (const s of sections) {
+        const el = sectionRefs.current[s.key];
+        if (el && el.getBoundingClientRect().top <= 120) current = s.key;
+      }
+      setActive(current);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [loading, sections]);
+
+  const scrollTo = (key: SectionKey) => {
+    const el = sectionRefs.current[key];
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActive(key);
+  };
+
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-3xl space-y-6">
-        {' '}
-        <div className="h-8 w-40 animate-pulse rounded-lg bg-muted" />{' '}
-        {[0, 1].map((i) => (
-          <div key={i} className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-            {' '}
-            <div className="h-4 w-32 animate-pulse rounded bg-muted" />{' '}
-            {[0, 1, 2].map((j) => (
-              <div key={j} className="h-9 animate-pulse rounded-lg bg-muted" />
-            ))}{' '}
-          </div>
-        ))}{' '}
+      <div className="mx-auto w-full max-w-[1500px] pt-6">
+        <FormSkeleton fields={5} />
       </div>
     );
   }
+
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('settings') }]}
-        live="Live"
+        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('settings', { default: 'Settings' })}]}
+        live={
+          dirty
+            ? t('unsaved', { default: 'Unsaved changes' })
+            : t('allSaved', { default: 'All changes saved' })
+        }
         actions={
-          <BarButton icon={<RefreshCw className="h-4 w-4" />} onClick={load}>
-            Reset
-          </BarButton>
+          dirty ? (
+            <BarIconButton
+              title={t('discard', { default: 'Discard changes' })}
+              onClick={() => void load()}
+            >
+              <RotateCcw className="size-4" />
+            </BarIconButton>
+          ) : undefined
         }
         primary={
           <BarPrimaryButton
-            icon={<Save className="h-4 w-4" strokeWidth={2.5} />}
-            disabled={!dirty || saving || !hexValid || !form.name.trim()}
-            onClick={save}
+            icon={<Save className="size-4" strokeWidth={2.5} />}
+            disabled={!canSave || saving}
+            onClick={() => void save()}
           >
-            {saving ? 'Saving…' : tCommon('saveChanges')}
+            {saving ? t('saving', { default: 'Saving…' }) : t('saveChanges', { default: 'Save changes' })}
           </BarPrimaryButton>
         }
       />
 
-      <div className="mx-auto w-full max-w-3xl space-y-6 pt-6">
+      <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
         <AdminPageHeader
-          title={tAdmin('settings')}
-          description={`${tAdmin('tenantProfile')} & ${tAdmin('branding')}`}
+          title={tAdmin('settings', { default: 'Settings' })}
+          description={t('description', {
+            default:
+              'Tenant identity, brand appearance, measurement and connected tools for this workspace.',
+          })}
           badge={
-            dirty ? (
-              <span className="flex items-center gap-2 self-start rounded-full border border-amber-200/80 bg-amber-50/80 px-3 py-1.5 text-xs font-medium text-amber-800 shadow-sm md:self-auto dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
-                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                {tCommon('unsavedChanges')}
-              </span>
-            ) : (
-              <span className="flex items-center gap-2 self-start rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-xs font-medium text-emerald-800 shadow-sm md:self-auto dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200">
-                <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                {savedTick ? tCommon('saved') : tCommon('noChanges')}
-              </span>
-            )
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground md:self-auto">
+              <Store className="size-4" />
+              {profile?.slug ?? '—'}
+            </span>
           }
         />
-        {error && (
-          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3">
-            {' '}
-            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>{' '}
-            <button
-              type="button"
-              onClick={load}
-              className="text-sm font-medium text-red-600 hover:underline dark:text-red-400"
-            >
-              {' '}
-              Retry{' '}
-            </button>{' '}
-          </div>
-        )}{' '}
-        {/* Slug card */}{' '}
-        {profile && (
-          <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-sm">
-            {' '}
-            <div className="min-w-0">
-              {' '}
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                {tAdmin('tenantSlug')}
-              </p>{' '}
-              <p className="truncate font-mono text-sm font-medium">{profile.slug}</p>{' '}
-            </div>{' '}
-            <span className="ml-3 flex shrink-0 items-center gap-2">
-              {' '}
-              <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {' '}
-                {tAdmin('immutable')}{' '}
-              </span>{' '}
-              <button
-                type="button"
-                title="Copy slug"
-                onClick={() => {
-                  navigator.clipboard?.writeText(profile.slug).then(
-                    () => toast({ type: 'info', title: 'Slug copied' }),
-                    () => {},
-                  );
-                }}
-                className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              >
-                {' '}
-                {savedTick ? (
-                  <Check className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}{' '}
-              </button>{' '}
-            </span>{' '}
-          </div>
-        )}{' '}
-        {/* Profile group */}{' '}
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          {' '}
-          <h3 className="text-sm font-semibold">{tAdmin('tenantProfile')}</h3>{' '}
-          <div className="space-y-1.5">
-            {' '}
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Name *
-            </label>{' '}
-            <input
-              value={form.name}
-              onChange={(e) => set({ name: e.target.value })}
-              className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />{' '}
-          </div>{' '}
-          <div className="space-y-1.5">
-            {' '}
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Description
-            </label>{' '}
-            <textarea
-              value={form.description}
-              onChange={(e) => set({ description: e.target.value })}
-              rows={2}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />{' '}
-          </div>{' '}
-          <UrlField
-            label="Custom domain"
-            value={form.domain}
-            onChange={(v) => set({ domain: v })}
-            placeholder="academy.example.com"
-          />{' '}
-        </section>{' '}
-        {/* Branding group */}{' '}
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          {' '}
-          <h3 className="text-sm font-semibold">{tAdmin('branding')}</h3>{' '}
-          {(form.logoUrl || form.faviconUrl) && (
-            <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-3">
-              {' '}
-              {form.logoUrl /* eslint-disable-next-line @next/next/no-img-element */ && (
-                <img
-                  src={form.logoUrl}
-                  alt="Logo preview"
-                  className="h-12 w-12 rounded-lg object-contain"
-                  onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-                />
-              )}{' '}
-              {form.faviconUrl /* eslint-disable-next-line @next/next/no-img-element */ && (
-                <img
-                  src={form.faviconUrl}
-                  alt="Favicon preview"
-                  className="h-6 w-6 rounded object-contain"
-                  onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-                />
-              )}{' '}
-              <span className="text-xs text-muted-foreground">Live preview</span>{' '}
-            </div>
-          )}{' '}
-          <UrlField
-            label="Logo URL"
-            value={form.logoUrl}
-            onChange={(v) => set({ logoUrl: v })}
-            placeholder="https://…/logo.png"
-          />{' '}
-          <UrlField
-            label="Favicon URL"
-            value={form.faviconUrl}
-            onChange={(v) => set({ faviconUrl: v })}
-            placeholder="https://…/favicon.png"
-          />{' '}
-          <div className="grid gap-4 sm:grid-cols-3">
-            {' '}
-            <ColorField
-              label="Primary"
-              value={form.primaryColor}
-              onChange={(v) => set({ primaryColor: v })}
-            />{' '}
-            <ColorField
-              label="Secondary"
-              value={form.secondaryColor}
-              onChange={(v) => set({ secondaryColor: v })}
-            />{' '}
-            <ColorField
-              label="Accent"
-              value={form.accentColor}
-              onChange={(v) => set({ accentColor: v })}
-            />{' '}
-          </div>{' '}
-          <div className="space-y-1.5">
-            {' '}
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Font family
-            </label>{' '}
-            <input
-              list="font-suggestions"
-              value={form.fontFamily}
-              onChange={(e) => set({ fontFamily: e.target.value })}
-              placeholder="Inter"
-              className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />{' '}
-            <datalist id="font-suggestions">
-              {' '}
-              {FONT_SUGGESTIONS.map((f) => (
-                <option key={f} value={f} />
-              ))}{' '}
-            </datalist>{' '}
-          </div>{' '}
-        </section>{' '}
-        {/* Theme link-out */}{' '}
-        <Link
-          href="/admin/theme"
-          className="group flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40"
-        >
-          {' '}
-          <div className="flex items-center gap-3">
-            {' '}
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              {' '}
-              <Palette className="h-5 w-5" />{' '}
-            </span>{' '}
-            <div>
-              {' '}
-              <p className="text-sm font-semibold">{tAdmin('theme')}</p>{' '}
-              <p className="text-xs text-muted-foreground">{tAdmin('themeEditorLink')}</p>{' '}
-            </div>{' '}
-          </div>{' '}
-          <span className="text-sm font-medium text-primary transition group-hover:translate-x-0.5">
-            Open →
-          </span>{' '}
-        </Link>{' '}
-        {/* Save bar */}{' '}
-        <div className="sticky bottom-16 z-10 lg:bottom-4">
-          {' '}
-          <div
-            className={cn(
-              'flex items-center justify-between gap-3 rounded-2xl border bg-card p-3 shadow-lg transition',
-              dirty ? 'border-primary/50 opacity-100' : 'border-border opacity-60',
-            )}
+
+        {error && <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry')} />}
+
+        <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+          {/* Section nav */}
+          <nav
+            aria-label={t('sections', { default: 'Settings sections' })}
+            className="hidden lg:block"
           >
-            {' '}
-            <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              {' '}
-              {!hexValid && (
-                <>
-                  {' '}
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" /> Fix invalid colors
-                  to save.{' '}
-                </>
-              )}{' '}
-              {dirty
-                ? tCommon('unsavedChanges')
-                : savedTick
-                  ? tCommon('saved')
-                  : tCommon('noChanges')}{' '}
-            </p>{' '}
-            <button
-              type="button"
-              onClick={save}
-              disabled={!dirty || saving || !hexValid || !form.name.trim()}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40"
+            <div className="sticky top-24 space-y-1">
+              {sections.map((s) => {
+                const Icon = s.icon;
+                const isActive = active === s.key;
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => scrollTo(s.key)}
+                    aria-current={isActive ? 'true' : undefined}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-start text-13 font-semibold transition',
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                  >
+                    <Icon className={cn('size-4', isActive ? 'text-primary' : 'text-muted-foreground')} />
+                    {t(`nav.${s.key}`, { default: s.key })}
+                  </button>
+                );
+              })}
+
+              <div className="mt-4 rounded-xl border border-border bg-card p-3">
+                <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('tenantSlug', { default: 'Tenant slug' })}
+                </p>
+                <p className="mt-1 truncate font-mono text-xs text-foreground">{profile?.slug ?? '—'}</p>
+                <button
+                  type="button"
+                  onClick={() => void copySlug()}
+                  className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5 text-2xs font-semibold text-foreground transition hover:bg-muted"
+                >
+                  {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+                  {copied ? t('copied', { default: 'Copied' }) : t('copy', { default: 'Copy' })}
+                </button>
+              </div>
+            </div>
+          </nav>
+
+          <div className="min-w-0 space-y-6">
+            {/* ---------------- Identity ---------------- */}
+            <section
+              ref={(el) => {
+                sectionRefs.current.identity = el;
+              }}
+              className="scroll-mt-24"
             >
-              {' '}
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />} {tCommon('saveChanges')}
-            </button>
+              <FormSection
+                title={t('identity.title', { default: 'Identity' })}
+                icon={Store}
+                description={t('identity.desc', {
+                  default: 'How this workspace is named and addressed across the platform.',
+                })}
+              >
+                <div className="space-y-4">
+                  <TextField
+                    label={t('identity.name', { default: 'Name' })}
+                    required
+                    value={form.name}
+                    onChange={(e) => set({ name: e.target.value })}
+                    error={!form.name.trim() ? t('identity.nameRequired', { default: 'A name is required.' }) : undefined}
+                  />
+                  <TextAreaField
+                    label={t('identity.description', { default: 'Description' })}
+                    hint={t('identity.descriptionHint', {
+                      default: 'Shown in page metadata and wherever the workspace is introduced.',
+                    })}
+                    rows={3}
+                    value={form.description}
+                    onChange={(e) => set({ description: e.target.value })}
+                  />
+                  <TextField
+                    label={t('identity.domain', { default: 'Custom domain' })}
+                    hint={t('identity.domainHint', {
+                      default: 'Leave blank to use the default address.',
+                    })}
+                    value={form.domain}
+                    onChange={(e) => set({ domain: e.target.value })}
+                    placeholder="academy.example.com"
+                    dir="ltr"
+                    spellCheck={false}
+                    error={
+                      !domainValid ? t('identity.domainInvalid', { default: 'Enter a valid hostname.' }) : undefined
+                    }
+                  />
+                </div>
+              </FormSection>
+            </section>
+
+            {/* ---------------- Branding ---------------- */}
+            <section
+              ref={(el) => {
+                sectionRefs.current.branding = el;
+              }}
+              className="scroll-mt-24"
+            >
+              <FormSection
+                title={t('branding.title', { default: 'Branding' })}
+                icon={Palette}
+                description={t('branding.desc', {
+                  default: 'Colours, logo and typography applied across the storefront.',
+                })}
+                bodyClassName="p-0"
+              >
+                <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <div className="space-y-5 p-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <TextField
+                        label={t('branding.logo', { default: 'Logo URL' })}
+                        value={form.logoUrl}
+                        onChange={(e) => set({ logoUrl: e.target.value })}
+                        placeholder="https://…/logo.png"
+                        dir="ltr"
+                        spellCheck={false}
+                      />
+                      <TextField
+                        label={t('branding.favicon', { default: 'Favicon URL' })}
+                        value={form.faviconUrl}
+                        onChange={(e) => set({ faviconUrl: e.target.value })}
+                        placeholder="https://…/favicon.png"
+                        dir="ltr"
+                        spellCheck={false}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      {(
+                        [
+                          ['primaryColor', t('branding.primary', { default: 'Primary' })],
+                          ['secondaryColor', t('branding.secondary', { default: 'Secondary' })],
+                          ['accentColor', t('branding.accent', { default: 'Accent' })],
+                        ] as const
+                      ).map(([key, label]) => {
+                        const value = form[key];
+                        const valid = HEX.test(value);
+                        const lowContrast = valid && contrastWithWhite(value) < 3;
+                        return (
+                          <Field
+                            key={key}
+                            label={label}
+                            error={!valid ? t('branding.hexInvalid', { default: 'Use a 6-digit hex value.' }) : undefined}
+                            hint={
+                              lowContrast
+                                ? t('branding.lowContrast', {
+                                    default: 'Too light for white text on this colour.',
+                                  })
+                                : undefined
+                            }
+                          >
+                            {(a) => (
+                              <div className="flex items-center gap-2">
+                                <span className="relative shrink-0">
+                                  <input
+                                    type="color"
+                                    value={valid ? value : '#000000'}
+                                    onChange={(e) => set({ [key]: e.target.value } as Partial<FormState>)}
+                                    aria-label={label}
+                                    className="size-10 cursor-pointer rounded-xl border border-border bg-transparent p-1"
+                                  />
+                                </span>
+                                <TextInput
+                                  {...a}
+                                  value={value}
+                                  onChange={(e) => set({ [key]: e.target.value } as Partial<FormState>)}
+                                  dir="ltr"
+                                  spellCheck={false}
+                                  className="font-mono"
+                                />
+                              </div>
+                            )}
+                          </Field>
+                        );
+                      })}
+                    </div>
+
+                    <Field
+                      label={t('branding.font', { default: 'Font family' })}
+                      hint={t('branding.fontHint', {
+                        default: 'Applied to storefront headings and body copy.',
+                      })}
+                    >
+                      {(a) => (
+                        <>
+                          <TextInput
+                            {...a}
+                            list="font-suggestions"
+                            value={form.fontFamily}
+                            onChange={(e) => set({ fontFamily: e.target.value })}
+                            dir="ltr"
+                            placeholder={t('branding.fontPlaceholder', { default: 'e.g. Inter' })}
+                          />
+                          <datalist id="font-suggestions">
+                            {FONT_SUGGESTIONS.map((f) => (
+                              <option key={f} value={f} />
+                            ))}
+                          </datalist>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {FONT_SUGGESTIONS.map((f) => (
+                              <button
+                                key={f}
+                                type="button"
+                                onClick={() => set({ fontFamily: f })}
+                                className={cn(
+                                  'rounded-lg border px-2 py-1 text-2xs font-semibold transition',
+                                  form.fontFamily === f
+                                    ? 'border-primary/40 bg-primary/10 text-primary'
+                                    : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                                )}
+                              >
+                                {f}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </Field>
+                  </div>
+
+                  <BrandPreview
+                    name={form.name || t('preview.placeholderName', { default: 'Your academy' })}
+                    tagline={form.description}
+                    logoUrl={form.logoUrl}
+                    primary={HEX.test(form.primaryColor) ? form.primaryColor : '#C2410C'}
+                    secondary={HEX.test(form.secondaryColor) ? form.secondaryColor : '#333F4C'}
+                    accent={HEX.test(form.accentColor) ? form.accentColor : '#0F766E'}
+                    fontFamily={form.fontFamily}
+                  />
+                </div>
+              </FormSection>
+            </section>
+
+            {/* ---------------- Analytics ---------------- */}
+            <section
+              ref={(el) => {
+                sectionRefs.current.analytics = el;
+              }}
+              className="scroll-mt-24"
+            >
+              <FormSection
+                title={t('analytics.title', { default: 'Analytics & pixels' })}
+                icon={BarChart3}
+                description={t('analytics.desc', {
+                  default: 'Measurement IDs for this workspace. Leave a field blank to disable it.',
+                })}
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TextField
+                    label={t('analytics.ga', { default: 'GA4 Measurement ID' })}
+                    value={form.gaMeasurementId}
+                    onChange={(e) => set({ gaMeasurementId: e.target.value })}
+                    placeholder="G-XXXXXXXXXX"
+                    dir="ltr"
+                    spellCheck={false}
+                    className="font-mono"
+                    error={
+                      form.gaMeasurementId.trim() !== '' && !/^G-[A-Z0-9]{4,}$/i.test(form.gaMeasurementId.trim())
+                        ? t('analytics.gaInvalid', { default: 'Expected a value like G-ABC1234.' })
+                        : undefined
+                    }
+                  />
+                  <TextField
+                    label={t('analytics.snapchat', { default: 'Snapchat Pixel ID' })}
+                    value={form.snapchatPixelId}
+                    onChange={(e) => set({ snapchatPixelId: e.target.value })}
+                    placeholder="123456789012"
+                    dir="ltr"
+                    spellCheck={false}
+                    inputMode="numeric"
+                    className="font-mono"
+                    error={
+                      form.snapchatPixelId.trim() !== '' && !/^\d{5,}$/.test(form.snapchatPixelId.trim())
+                        ? t('analytics.snapInvalid', { default: 'Must be empty or digits only.' })
+                        : undefined
+                    }
+                  />
+                </div>
+              </FormSection>
+            </section>
+
+            {/* ---------------- Integrations ---------------- */}
+            <section
+              ref={(el) => {
+                sectionRefs.current.integrations = el;
+              }}
+              className="scroll-mt-24"
+            >
+              <FormSection
+                title={t('integrations.title', { default: 'Tools & integrations' })}
+                icon={Sparkles}
+                description={t('integrations.desc', {
+                  default: 'Deeper configuration lives in each tool.',
+                })}
+                bodyClassName="p-3"
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <IntegrationCard
+                    href="/admin/settings/ai-assistant"
+                    icon={Bot}
+                    title={tAdmin('aiAssistant', { default: 'AI Assistant' })}
+                    description={tAdmin('aiAssistantLink', {
+                      default: 'Configure provider, access, retrieval, and indexing',
+                    })}
+                    actionLabel={tAdmin('configure', { default: 'Configure' })}
+                  />
+                  <IntegrationCard
+                    href="/admin/theme"
+                    icon={Palette}
+                    title={tAdmin('theme', { default: 'Theme' })}
+                    description={tAdmin('themeEditorLink', {
+                      default: 'Manage colors & typography in Theme Editor',
+                    })}
+                    actionLabel={t('open', { default: 'Open' })}
+                  />
+                </div>
+              </FormSection>
+            </section>
+
+            {isSuperAdmin && (
+              <section
+                id="section-platformAlerts"
+                ref={(el) => {
+                  sectionRefs.current.platformAlerts = el;
+                }}
+                className="scroll-mt-28"
+              >
+                <PlatformAlertSettings />
+              </section>
+            )}
+
+            {/* Validation summary, so a blocked save explains itself. */}
+            {dirty && !canSave && (
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                <div className="text-xs text-foreground">
+                  <p className="font-semibold">
+                    {t('cannotSave', { default: 'Some changes still need attention' })}
+                  </p>
+                  <ul className="mt-1 list-disc space-y-0.5 ps-4 text-muted-foreground">
+                    {!form.name.trim() && <li>{t('identity.nameRequired', { default: 'A name is required.' })}</li>}
+                    {!hexValid && <li>{t('branding.hexInvalid', { default: 'Use a 6-digit hex value.' })}</li>}
+                    {!domainValid && <li>{t('identity.domainInvalid', { default: 'Enter a valid hostname.' })}</li>}
+                    {!analyticsValid && <li>{t('analytics.fixIds', { default: 'Check the measurement IDs.' })}</li>}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Live brand preview                                                  */
+/* ------------------------------------------------------------------ */
+function BrandPreview({
+  name,
+  tagline,
+  logoUrl,
+  primary,
+  secondary,
+  accent,
+  fontFamily,
+}: {
+  name: string;
+  tagline?: string;
+  logoUrl: string;
+  primary: string;
+  secondary: string;
+  accent: string;
+  fontFamily: string;
+}) {
+  const t = useTranslations('admin.settingsPage');
+  // White text sits on the primary colour, so the preview is honest about
+  // whether that combination is actually readable.
+  const readable = contrastWithWhite(primary) >= 3;
+
+  return (
+    <div className="border-t border-border bg-muted/25 p-5 lg:border-s lg:border-t-0">
+      <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Sparkles className="size-3" />
+        {t('preview.label', { default: 'Live preview' })}
+      </p>
+
+      <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background shadow-xs">
+        <div
+          className="flex items-center justify-between gap-3 px-4 py-3"
+          style={{ backgroundColor: primary, fontFamily: fontFamily || undefined }}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className="size-7 rounded-lg bg-white/90 object-contain p-0.5" />
+            ) : (
+              <span
+                className="flex size-7 items-center justify-center rounded-lg text-2xs font-bold"
+                style={{ backgroundColor: accent }}
+              >
+                {name.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span
+              className={cn(
+                'truncate text-sm font-bold',
+                readable ? 'text-white' : 'text-black',
+              )}
+            >
+              {name}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className="rounded-md px-2 py-1 text-2xs font-semibold"
+              style={{ backgroundColor: accent, color: readable ? '#fff' : '#000' }}
+            >
+              {t('preview.cta', { default: 'Enroll' })}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2 p-4" style={{ fontFamily: fontFamily || undefined }}>
+          <p className="text-2xs font-semibold uppercase tracking-wider" style={{ color: accent }}>
+            {t('preview.section', { default: 'Featured' })}
+          </p>
+          <p className="text-sm font-semibold text-foreground">
+            {t('preview.headline', { default: 'Precision CNC training' })}
+          </p>
+          <p className="line-clamp-2 text-2xs text-muted-foreground">
+            {tagline || t('preview.taglinePlaceholder', { default: 'Your description appears here.' })}
+          </p>
+          <div className="flex items-center gap-1.5 pt-1">
+            <span className="h-1.5 w-10 rounded-full" style={{ backgroundColor: primary }} />
+            <span className="h-1.5 w-6 rounded-full" style={{ backgroundColor: secondary }} />
+            <span className="h-1.5 w-3 rounded-full" style={{ backgroundColor: accent }} />
+          </div>
+        </div>
+      </div>
+
+      {!readable && (
+        <p className="mt-2 flex items-start gap-1.5 text-2xs text-warning">
+          <AlertTriangle className="mt-px size-3 shrink-0" />
+          {t('preview.lowContrast', {
+            default: 'This primary colour is too light for white text.',
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function IntegrationCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+  actionLabel,
+}: {
+  href: string;
+  icon: typeof Bot;
+  title: string;
+  description: string;
+  actionLabel: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-primary/40 hover:bg-muted/40"
+    >
+      <span className="flex min-w-0 items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-primary">
+          <Icon className="size-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-foreground">{title}</span>
+          <span className="block truncate text-xs text-muted-foreground">{description}</span>
+        </span>
+      </span>
+      <span className="inline-flex shrink-0 items-center gap-1 text-2xs font-semibold text-primary">
+        {actionLabel}
+        <span aria-hidden="true" className="transition group-hover:translate-x-0.5">
+          →
+        </span>
+      </span>
+    </Link>
   );
 }

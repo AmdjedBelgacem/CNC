@@ -6,9 +6,9 @@ const CARD_PADDING: Record<string, string> = { none: '', sm: 'p-4', md: 'p-6', l
 const CARD_BG: Record<string, string> = {
   transparent: '',
   muted: 'bg-surface-container-low',
-  glass: 'bg-white border border-gray-200',
-  gradient: 'bg-gradient-to-br from-primary to-accent',
-  'gradient-muted': 'bg-gradient-to-br from-surface-container-low to-surface-container-lowest',
+  glass: 'bg-card border border-border',
+  gradient: 'bg-primary text-primary-foreground',
+  'gradient-muted': 'bg-surface-container-low',
 };
 const CARD_SHADOW: Record<string, string> = {
   none: '',
@@ -16,7 +16,7 @@ const CARD_SHADOW: Record<string, string> = {
   md: 'shadow-md',
   lg: 'shadow-lg',
   xl: 'shadow-sm',
-  glow: 'shadow-[0_0_44px_-12px_rgba(37,99,235,0.55)]',
+  glow: 'shadow-[0_0_44px_-12px_rgb(var(--c-primary)/0.35)]',
 };
 const CARD_RADIUS: Record<string, string> = {
   none: '',
@@ -60,7 +60,7 @@ export function CardBlock({ props, puck }: BlockComponentProps<CardProps>) {
       {accent && (
         <div
           className={cn(
-            'absolute top-0 left-0 w-1 h-full opacity-0 group-hover:opacity-100 transition-opacity',
+            'absolute top-0 start-0 w-1 h-full opacity-0 group-hover:opacity-100 transition-opacity',
             accentColor,
           )}
         ></div>

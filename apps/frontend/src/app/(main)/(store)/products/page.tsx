@@ -1,94 +1,91 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { ProductCard, type Product } from '@/components/store/product-card';
-import { Skeleton } from '@/components/ui/skeleton';
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState('All');
-  const [search, setSearch] = useState('');
-  // Category options derived from real catalog rows (no hardcoded taxonomy).
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  useEffect(() => {
-    fetch(`/api/proxy/products?limit=100`, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((res) => setAllProducts(res.data || []))
-      .catch(() => {});
-  }, []);
-  const categories = [
-    'All',
-    ...Array.from(
-      new Set(
-        allProducts
-          .map((p) => (p as { category?: string | null }).category)
-          .filter((c): c is string => !!c),
-      ),
-    ),
-  ];
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (category !== 'All') params.set('category', category);
-    if (search) params.set('search', search);
-    params.set('limit', '50');
-    fetch(`/api/proxy/products?${params}`, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((res) => setProducts(res.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [category, search]);
+import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { HomeBuilder } from '@/components/home/home-builder';
+import {
+  ProductsDepartments,
+  ProductsFeatured,
+  ProductsInventory,
+  productsHeroStats,
+} from '@/components/store/products-islands';
+import { fetchCatalogProducts } from '@/lib/products';
+import { resolvePageLayout } from '@/lib/builder/theme';
+import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
+import { serializeJsonLd } from '@/lib/json-ld';
+
+export const metadata: Metadata = {
+  title: 'Products',
+  description:
+    'Shop precision tooling, workholding, and shop essentials curated for aerospace, medical, and production machining.',
+  alternates: { canonical: '/products' },
+  openGraph: {
+    title: 'Products | TITANS of Manufacturing',
+    description: 'Precision tooling and shop essentials with free shipping on orders over $99.',
+    type: 'website',
+    url: '/products',
+  },
+};
+
+export default async function ProductsPage() {
+  const cookieStore = await cookies();
+  const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
+  const [layout, products] = await Promise.all([
+    resolvePageLayout(tenantSlug, 'products'),
+    fetchCatalogProducts(tenantSlug, { limit: 100 }),
+  ]);
+
+  const categoryCounts = new Map<string, number>();
+  for (const p of products) {
+    if (p.category) categoryCounts.set(p.category, (categoryCounts.get(p.category) ?? 0) + 1);
+  }
+  const categories = Array.from(categoryCounts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Products',
+    numberOfItems: products.length,
+    itemListElement: products.slice(0, 20).map((product, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Product',
+        name: product.title,
+        description: product.tagline || product.description || undefined,
+        image: product.thumbnailUrl || undefined,
+        url: `/products/${product.slug}`,
+        category: product.category || undefined,
+        offers:
+          product.price != null
+            ? {
+                '@type': 'Offer',
+                price: (product.price / 100).toFixed(2),
+                priceCurrency: product.currency || 'USD',
+                availability: (product.inventory ?? 0) > 0 || product.allowBackorder
+                  ? 'https://schema.org/InStock'
+                  : 'https://schema.org/OutOfStock',
+              }
+            : undefined,
+      },
+    })),
+  };
+
   return (
-    <div className="container mx-auto px-4 py-12">
-      {' '}
-      <h1 className="text-3xl font-bold mb-2">Tool Store</h1>{' '}
-      <p className="text-muted-foreground mb-8">Everything you need for the shop.</p>{' '}
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        {' '}
-        <div className="flex gap-2 flex-wrap">
-          {' '}
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategory(cat)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${category === cat ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-            >
-              {' '}
-              {cat}{' '}
-            </button>
-          ))}{' '}
-        </div>{' '}
-        <input
-          type="search"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="ml-auto px-4 py-2 rounded-lg border bg-background text-sm w-full sm:w-64"
-        />{' '}
-      </div>{' '}
-      {loading ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {' '}
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="space-y-3">
-              {' '}
-              <Skeleton className="aspect-square w-full rounded-lg" />{' '}
-              <Skeleton className="h-4 w-2/3" /> <Skeleton className="h-4 w-1/3" />{' '}
-            </div>
-          ))}{' '}
-        </div>
-      ) : products.length === 0 ? (
-        <div className="text-center py-24 text-muted-foreground">
-          {' '}
-          No products found. Try adjusting your filters.{' '}
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {' '}
-          {products.map((product) => (
-            <ProductCard key={product.id || product.slug} product={product} />
-          ))}{' '}
-        </div>
-      )}{' '}
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
+      <HomeBuilder
+        layout={layout}
+        heroStats={productsHeroStats(products, categories)}
+        islands={{
+          'products-featured': <ProductsFeatured products={products} />,
+          'products-inventory': <ProductsInventory categories={categories} />,
+          'products-departments': <ProductsDepartments categories={categories} />,
+        }}
+      />
+    </>
   );
 }

@@ -1,184 +1,312 @@
 'use client';
-import { useState } from 'react';
+
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { useTranslations } from 'next-intl';
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  MessageCircle,
+  MoreHorizontal,
+  Trash2,
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-export interface PostData {
-  id: string;
-  content: string;
-  mediaUrls?: string[];
-  likeCount: number;
-  commentCount: number;
-  likedByMe?: boolean;
-  createdAt: string;
-  user: { id: string; name: string | null; avatarUrl: string | null; headline?: string | null };
-  comments?: {
-    id: string;
-    content: string;
-    createdAt: string;
-    user: { id: string; name: string | null; avatarUrl: string | null };
-  }[];
-}
-interface PostCardProps {
-  post: PostData;
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { PostAiActions } from '@/components/ai/post-ai-actions';
+import { CommentThread } from '@/components/feed/comment-thread';
+
+import { useVotePost } from '@/hooks/use-feed';
+import { useAuthStore } from '@/stores/auth-store';
+import { initialsOf, timeAgo } from '@/lib/format';
+
+import type { FeedAuthor, FeedPost } from '@/lib/api/types';
+import { cn } from '@/lib/utils';
+
+export interface PostCardProps {
+  post: FeedPost;
   currentUserId?: string;
-  onLike: (postId: string) => void;
+  onVote?: (postId: string, value: number) => void;
   onDelete?: (postId: string) => void;
-  onCommentClick: (post: PostData) => void;
+  /** Pre-selects a comment from a notification deep link. */
+  focusCommentId?: string | null;
 }
-export function PostCard({ post, currentUserId, onLike, onDelete, onCommentClick }: PostCardProps) {
+
+const ROLE_BADGE: Record<string, string> = {
+  super_admin: 'Owner',
+  admin: 'Staff',
+  instructor: 'Instructor',
+  moderator: 'Mod',
+  sponsor: 'Sponsor',
+};
+
+/**
+ * A post, with the person who wrote it made obvious.
+ *
+ * The author block used to read `post.author` while the API sent `user`, so every
+ * post rendered as "Unknown" and linked to a profile with an empty id. Both the
+ * field name and the missing `username` are fixed at the source now; this renders
+ * whatever the API actually sends.
+ */
+export function PostCard({ post, currentUserId, onVote, onDelete, focusCommentId }: PostCardProps) {
+  const t = useTranslations('feed');
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  const viewerId = currentUserId ?? user?.id;
+
   const [mediaIdx, setMediaIdx] = useState(0);
-  const media = post.mediaUrls || [];
-  const timeAgo = getTimeAgo(post.createdAt);
+  const [threadOpen, setThreadOpen] = useState(Boolean(focusCommentId));
+  const [collapsed, setCollapsed] = useState(false);
+
+  const media = useMemo(() => (Array.isArray(post.mediaUrls) ? post.mediaUrls.filter(Boolean) : []), [post.mediaUrls]);
+  const author: FeedAuthor | null = post.author ?? null;
+  const authorName = author?.name || author?.username || t('unknownAuthor');
+  const authorHandle = author?.username ? `@${author.username}` : null;
+  const profileHref = author?.username ? `/u/${author.username}` : author?.id ? `/profile/${author.id}` : null;
+  const roleLabel = author?.role ? ROLE_BADGE[author.role] : undefined;
+  const isMine = !!viewerId && post.userId === viewerId;
+  const vote = useVotePost();
+
+  const score = post.score ?? 0;
+  const myVote = post.myVote ?? 0;
+
+  const cast = (value: number) => {
+    if (!isAuthenticated) return;
+    // Tapping the arrow you already chose withdraws the vote, like Reddit.
+    if (onVote) onVote(post.id, value);
+    else vote.mutate({ postId: post.id, value });
+  };
+
   return (
-    <Card className="overflow-hidden">
-      {' '}
-      <CardHeader className="flex-row items-start gap-3 space-y-0 p-4">
-        {' '}
-        <Link href={`/profile/${post.user.id}`}>
-          {' '}
-          <Avatar>
-            {' '}
-            <AvatarImage src={post.user.avatarUrl || undefined} />{' '}
-            <AvatarFallback>{(post.user.name || '?')[0]}</AvatarFallback>{' '}
-          </Avatar>{' '}
-        </Link>{' '}
-        <div className="flex-1 min-w-0">
-          {' '}
-          <div className="flex items-center justify-between">
-            {' '}
-            <div>
-              {' '}
-              <Link
-                href={`/profile/${post.user.id}`}
-                className="text-sm font-semibold hover:underline"
-              >
-                {' '}
-                {post.user.name || 'Unknown'}{' '}
-              </Link>{' '}
-              {post.user.headline && (
-                <p className="text-xs text-muted-foreground">{post.user.headline}</p>
-              )}{' '}
-            </div>{' '}
-            <div className="flex items-center gap-2">
-              {' '}
-              <span className="text-xs text-muted-foreground">{timeAgo}</span>{' '}
-              {currentUserId === post.user.id && onDelete && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                  onClick={() => onDelete(post.id)}
-                >
-                  {' '}
-                  <Trash2 className="h-3.5 w-3.5" />{' '}
-                </Button>
-              )}{' '}
-            </div>{' '}
-          </div>{' '}
-        </div>{' '}
-      </CardHeader>{' '}
-      <CardContent className="px-4 pb-3">
-        {' '}
-        <p className="text-sm whitespace-pre-line mb-3">{post.content}</p>{' '}
-        {media.length > 0 && (
-          <div className="relative rounded-lg overflow-hidden bg-muted mb-3">
-            {' '}
-            <img src={media[mediaIdx]} alt="" className="w-full max-h-96 object-cover" />{' '}
-            {media.length > 1 && (
-              <>
-                {' '}
-                <button
-                  onClick={() => setMediaIdx((i) => (i - 1 + media.length) % media.length)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-1 hover:bg-background"
-                >
-                  {' '}
-                  <ChevronLeft className="h-4 w-4" />{' '}
-                </button>{' '}
-                <button
-                  onClick={() => setMediaIdx((i) => (i + 1) % media.length)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-1 hover:bg-background"
-                >
-                  {' '}
-                  <ChevronRight className="h-4 w-4" />{' '}
-                </button>{' '}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                  {' '}
-                  {media.map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-1.5 w-1.5 rounded-full ${i === mediaIdx ? 'bg-white' : 'bg-white'}`}
-                    />
-                  ))}{' '}
-                </div>{' '}
-              </>
-            )}{' '}
-          </div>
-        )}{' '}
-        <div className="flex items-center gap-4">
-          {' '}
+    <article
+      id={`post-${post.id}`}
+      className="group/post border-b border-border px-4 py-4 transition-colors last:border-0 hover:bg-surface-sunken/30"
+    >
+      <div className="flex gap-3">
+        {/* Vote column. Reddit-style: a stacked arrow / score / arrow. */}
+        <div className="flex w-9 shrink-0 flex-col items-center gap-0.5 pt-0.5">
           <button
-            onClick={() => onLike(post.id)}
-            className={`flex items-center gap-1 text-xs transition-colors ${post.likedByMe ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'}`}
+            type="button"
+            onClick={() => cast(myVote === 1 ? 0 : 1)}
+            disabled={!isAuthenticated || isMine}
+            aria-label={t('upvote')}
+            aria-pressed={myVote === 1}
+            title={isMine ? t('cannotVoteOwn') : t('upvote')}
+            className={cn(
+              'rounded p-0.5 transition-colors',
+              myVote === 1
+                ? 'text-primary'
+                : 'text-muted-foreground hover:bg-primary/10 hover:text-primary',
+              (!isAuthenticated || isMine) && 'cursor-not-allowed opacity-40',
+            )}
           >
-            {' '}
-            <Heart className={`h-4 w-4 ${post.likedByMe ? 'fill-current' : ''}`} />{' '}
-            {post.likeCount > 0 && post.likeCount}{' '}
-          </button>{' '}
+            <ChevronUp className={cn('size-5', myVote === 1 && 'stroke-[2.5]')} />
+          </button>
+          <span
+            className={cn(
+              'font-mono text-xs font-semibold tabular-nums',
+              score > 0 && 'text-primary',
+              score < 0 && 'text-destructive',
+              score === 0 && 'text-muted-foreground',
+            )}
+            aria-label={t('score')}
+          >
+            {score}
+          </span>
           <button
-            onClick={() => onCommentClick(post)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+            type="button"
+            onClick={() => cast(myVote === -1 ? 0 : -1)}
+            disabled={!isAuthenticated || isMine}
+            aria-label={t('downvote')}
+            aria-pressed={myVote === -1}
+            title={isMine ? t('cannotVoteOwn') : t('downvote')}
+            className={cn(
+              'rounded p-0.5 transition-colors',
+              myVote === -1
+                ? 'text-destructive'
+                : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive',
+              (!isAuthenticated || isMine) && 'cursor-not-allowed opacity-40',
+            )}
           >
-            {' '}
-            <MessageCircle className="h-4 w-4" /> {post.commentCount > 0 && post.commentCount}{' '}
-          </button>{' '}
-          <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
-            {' '}
-            <Share2 className="h-4 w-4" />{' '}
-          </button>{' '}
-        </div>{' '}
-        {post.comments && post.comments.length > 0 && (
-          <div className="mt-3 border-t pt-3 space-y-2">
-            {' '}
-            {post.comments.map((c) => (
-              <div key={c.id} className="flex items-start gap-2">
-                {' '}
-                <Avatar className="h-6 w-6">
-                  {' '}
-                  <AvatarImage src={c.user.avatarUrl || undefined} />{' '}
-                  <AvatarFallback className="text-[10px]">
-                    {(c.user.name || '?')[0]}
-                  </AvatarFallback>{' '}
-                </Avatar>{' '}
-                <div>
-                  {' '}
-                  <span className="text-xs font-medium">{c.user.name}</span>{' '}
-                  <p className="text-xs text-muted-foreground">{c.content}</p>{' '}
-                </div>{' '}
+            <ChevronDown className={cn('size-5', myVote === -1 && 'stroke-[2.5]')} />
+          </button>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          {/* Author */}
+          <header className="mb-2 flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              {profileHref ? (
+                <Link href={profileHref} className="shrink-0" aria-label={authorName}>
+                  <Avatar className="size-8">
+                    {author?.avatarUrl && <AvatarImage src={author.avatarUrl} alt={authorName} />}
+                    <AvatarFallback className="text-2xs">{initialsOf(author?.name, author?.username)}</AvatarFallback>
+                  </Avatar>
+                </Link>
+              ) : (
+                <Avatar className="size-8">
+                  <AvatarFallback className="text-2xs">?</AvatarFallback>
+                </Avatar>
+              )}
+
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm leading-tight">
+                  {profileHref ? (
+                    <Link href={profileHref} className="truncate font-semibold text-foreground hover:underline">
+                      {authorName}
+                    </Link>
+                  ) : (
+                    <span className="truncate font-semibold text-foreground">{authorName}</span>
+                  )}
+                  {roleLabel && (
+                    <span className="rounded-sm border border-primary/30 bg-primary/10 px-1 py-px font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-primary">
+                      {roleLabel}
+                    </span>
+                  )}
+                  {authorHandle && <span className="truncate font-mono text-2xs text-muted-foreground">{authorHandle}</span>}
+                  <span className="text-2xs text-muted-foreground">·</span>
+                  <time
+                    dateTime={post.createdAt}
+                    className="shrink-0 font-mono text-2xs text-muted-foreground"
+                    title={post.createdAt ?? undefined}
+                  >
+                    {post.createdAt ? timeAgo(post.createdAt) : ''}
+                  </time>
+                </p>
+                {author?.headline && (
+                  <p className="truncate text-2xs text-muted-foreground">{author.headline}</p>
+                )}
               </div>
-            ))}{' '}
-            {post.commentCount > 2 && (
-              <button
-                onClick={() => onCommentClick(post)}
-                className="text-xs text-primary hover:underline"
-              >
-                {' '}
-                View all {post.commentCount} comments{' '}
-              </button>
-            )}{' '}
+            </div>
+
+            <div className="flex shrink-0 items-center gap-0.5">
+              <PostAiActions post={post as never} />
+              {isMine && onDelete && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-xs" aria-label={t('postActions')}>
+                      <MoreHorizontal className="size-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => onDelete(post.id)} className="text-destructive">
+                      <Trash2 className="size-4" />
+                      {t('deletePost')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </header>
+
+          <button
+            type="button"
+            onClick={() => setCollapsed((value) => !value)}
+            className="mb-2 w-full text-start"
+            aria-expanded={!collapsed}
+          >
+            <p
+              className={cn(
+                'whitespace-pre-line text-sm leading-relaxed text-foreground',
+                collapsed && 'line-clamp-3',
+              )}
+            >
+              {post.content}
+            </p>
+            {!collapsed && post.content.length > 320 && (
+              <span className="mt-1 inline-block text-2xs font-medium text-primary">{t('collapse')}</span>
+            )}
+          </button>
+
+          {media.length > 0 && !collapsed && (
+            <div className="relative mb-3 overflow-hidden rounded-xl bg-muted">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={media[mediaIdx]}
+                alt=""
+                className="max-h-96 w-full object-cover"
+                loading="lazy"
+              />
+              {media.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous image"
+                    onClick={() => setMediaIdx((i) => (i - 1 + media.length) % media.length)}
+                    className="absolute start-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-1 text-foreground backdrop-blur transition hover:bg-background"
+                  >
+                    <ChevronLeft className="size-4 rtl:rotate-180" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next image"
+                    onClick={() => setMediaIdx((i) => (i + 1) % media.length)}
+                    className="absolute end-2 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-1 text-foreground backdrop-blur transition hover:bg-background"
+                  >
+                    <ChevronRight className="size-4 rtl:rotate-180" />
+                  </button>
+                  <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
+                    {media.map((_, i) => (
+                      <span
+                        key={i}
+                        className={cn('h-1.5 w-1.5 rounded-full bg-card', i === mediaIdx ? 'opacity-100' : 'opacity-50')}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Tags: real, clickable, and they filter the feed. */}
+          {post.tags?.length ? (
+            <ul className="mb-2 flex flex-wrap gap-1.5">
+              {post.tags.map((tag) => (
+                <li key={tag.slug}>
+                  <Link
+                    href={`/tags/${tag.slug}`}
+                    className="inline-flex items-center rounded-sm border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+                  >
+                    {tag.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setThreadOpen((open) => !open)}
+              aria-expanded={threadOpen}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors',
+                threadOpen
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-primary',
+              )}
+            >
+              <MessageCircle className="size-4" />
+              {(post.commentCount ?? 0) > 0 ? post.commentCount : t('comment')}
+            </button>
           </div>
-        )}{' '}
-      </CardContent>{' '}
-    </Card>
+
+          {threadOpen && (
+            <CommentThread
+              postId={post.id}
+              focusCommentId={focusCommentId}
+              className="mt-3"
+            />
+          )}
+        </div>
+      </div>
+    </article>
   );
-}
-function getTimeAgo(date: string) {
-  const sec = (Date.now() - new Date(date).getTime()) / 1000;
-  if (sec < 60) return 'just now';
-  if (sec < 3600) return `${Math.floor(sec / 60)}m`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h`;
-  if (sec < 2592000) return `${Math.floor(sec / 86400)}d`;
-  return `${Math.floor(sec / 2592000)}mo`;
 }

@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 interface ReauthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onVerified: () => void;
+  /** Receives the password the user just proved, so callers don't re-prompt or send ''. */
+  onVerified: (password: string) => void;
   title?: string;
   description?: string;
 }
@@ -34,18 +35,21 @@ export function ReauthModal({
           body: JSON.stringify({ password }),
         });
         if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          // 401/403 mean the password itself was wrong; anything else is transport/server.
           setError(
             res.status === 401 || res.status === 403
-              ? 'Incorrect password'
+              ? (typeof body?.message === 'string' ? body.message : 'Incorrect password')
               : 'Something went wrong. Please try again.',
           );
           setStatus('idle');
           return;
         }
         setStatus('success');
+        const verifiedPassword = password;
         setTimeout(() => {
           onOpenChange(false);
-          onVerified();
+          onVerified(verifiedPassword);
         }, 800);
       } catch {
         setError('Something went wrong. Please try again.');
@@ -96,7 +100,7 @@ export function ReauthModal({
               autoFocus
             />{' '}
           </div>{' '}
-          {error && <p className="text-sm text-red-400">{error}</p>}{' '}
+          {error && <p className="text-sm text-destructive">{error}</p>}{' '}
           <div className="flex gap-3 pt-2">
             {' '}
             <Button

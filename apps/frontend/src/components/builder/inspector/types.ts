@@ -19,20 +19,32 @@ export type ControlKind =
 
 export interface FieldOption {
   label: string;
+  /**
+   * Catalog key for `label`. The English text stays as the value so it can act
+   * as the fallback, and so nothing outside the UI depends on a translation.
+   */
+  labelKey?: string;
   value: string | number | boolean;
 }
 
 export interface InspectorFieldDef<TProps = Record<string, unknown>> {
   /** Prop name on the block's schema (compile-checked). */
   key: keyof TProps & string;
+  /** English label. Kept as the fallback and as the source for `labelKey`. */
   label: string;
+  /** `builder.fieldLabels.<key>` */
+  labelKey?: string;
   control: ControlKind;
   options?: FieldOption[];
   min?: number;
   max?: number;
   step?: number;
   placeholder?: string;
+  /** `builder.fieldPlaceholders.<key>` */
+  placeholderKey?: string;
   hint?: string;
+  /** `builder.fieldHints.<key>` */
+  hintKey?: string;
   /** Hide the field unless the current props satisfy this. */
   showWhen?: (props: TProps) => boolean;
   /** "Reset" target when it differs from the registry defaultProps. */
@@ -41,7 +53,10 @@ export interface InspectorFieldDef<TProps = Record<string, unknown>> {
 
 export interface InspectorGroup<TProps = Record<string, unknown>> {
   id: string;
+  /** English group title; `titleKey` carries the translation. */
   title: string;
+  /** `builder.groups.<key>` */
+  titleKey?: string;
   icon?: LucideIcon;
   fields: InspectorFieldDef<TProps>[];
 }

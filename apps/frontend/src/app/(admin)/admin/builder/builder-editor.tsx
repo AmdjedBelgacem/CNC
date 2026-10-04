@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Puck, useGetPuck } from '@measured/puck';
 import type { Content, Data } from '@measured/puck';
-import { BUILDER_PAGE_DEFS, getBlockDefinition } from '@titan/shared';
+import { useTranslations } from 'next-intl';
+import { getBlockDefinition } from '@titan/shared';
 import {
   findNodeById,
   getSlotChildren,
@@ -15,7 +16,7 @@ import {
 } from '@titan/shared';
 import { puckConfig } from '@/lib/builder/puck-config';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { BuilderHeader, VIEWPORTS } from '@/components/builder/editor-header';
 import { BuilderDialogs } from '@/components/builder/dialogs';
 import { ToastViewport, toast } from '@/components/ui/toast';
@@ -24,17 +25,20 @@ import { useBuilderUI } from '@/components/builder/builder-ui-store';
 import { StructureSidebar } from '@/components/builder/structure-sidebar';
 import { InspectorPanel } from '@/components/builder/inspector-panel';
 import { CanvasControls } from '@/components/builder/canvas-controls';
-import { MATERIAL_SYMBOLS_HREF } from '@/components/fonts/material-symbols-href';
 import { useMediaQuery, IS_DESKTOP_QUERY } from '@/lib/use-media-query';
-interface PageRecord {
-  id: string;
-  slug: string;
-  title: string;
-  layout: Data;
-  status: 'draft' | 'published';
-  version: number;
-  publishedAt: string | null;
-}
+import { NoPageSelected } from '@/components/builder/builder-shell';
+import { VersionDrawer } from '@/components/builder/version-drawer';
+import { BuilderShortcuts } from '@/components/builder/publish-checklist';
+import { useOpenPage } from '@/components/builder/use-open-page';
+import type { PageRecord as SharedPageRecord } from '@titan/shared';
+/**
+ * The editor's view of a page.
+ *
+ * Extends the shared record with the two editor-specific shapes rather than
+ * re-declaring it: the previous local copy had already drifted and was missing
+ * `isSystem`/`seo*`/`showInNav`, so anything reading those got `undefined`.
+ */
+type PageRecord = SharedPageRecord & { layout: Data };
 interface VersionRecord {
   id: string;
   version: number;
@@ -65,7 +69,7 @@ const CANVAS_CSS = `
 --puck-color-azure-04:#a7c4ff;
 --puck-color-azure-05:#7da6ff;
 --puck-color-azure-06:#3b82f6;
---puck-color-azure-07:#2563eb;
+--puck-color-azure-07:#1B4DB1;
 --puck-color-azure-08:#1d4ed8;
 --puck-color-azure-09:#1e40af;
 --puck-color-azure-10:#17367f;
@@ -111,16 +115,15 @@ const HOST_CSS = `
 ._PuckCanvas_18jay_1{padding:10px;}
 }
 `;
+/**
+ * Nothing loaded.
+ *
+ * The old version said "choose a page from the list above" and rendered no list,
+ * so it was a dead end. It now offers the pages as cards, which is the only
+ * useful thing to do in this state.
+ */
 function PageDataView() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-      {' '}
-      <p className="font-medium text-foreground">No page selected</p>{' '}
-      <p className="max-w-sm text-sm text-muted-foreground">
-        Choose a page from the list above to start editing.
-      </p>{' '}
-    </div>
-  );
+  return <NoPageSelected />;
 }
 /**
  * Puck only initializes its store from the `data` prop on mount, so loading a * different page (or reverting) requires an explicit store reset. Puck's * `dispatch` is only reachable inside its tree, so this bridge registers the * store dispatch on BuilderEditor's ref when Puck mounts. All syncs are then * triggered imperatively from load/save/publish/revert — never from effects * (header children remount on store changes, so effect-based syncing is * unreliable and can clobber in-flight edits). * * Uses `useGetPuck` (non-subscribing) instead of `usePuck()`: the bridge must * never re-render on store changes, or every commit triggers a React effect * disconnect/reconnect traversal across the whole tree (~800ms in dev). */
@@ -141,8 +144,20 @@ function PuckDispatchBridge({
   }) => void;
 }) {
   const puck = useGetPuck()();
-  onDispatch(puck.dispatch as (action: unknown) => void);
-  onPuck(puck as never);
+
+  // Registration MUST happen in an effect, never during render.
+  //
+  // `onPuck` re-applies the open page into a freshly-registered canvas, and that
+  // path calls into the builder store. Calling it while rendering made
+  // `BuilderHeader` receive a store update from inside `PuckDispatchBridge`'s own
+  // render: "Cannot update a component (BuilderHeader) while rendering a
+  // different component (PuckDispatchBridge)". Registering from an effect also
+  // means the canvas is patched after the commit, which is what React expects.
+  useEffect(() => {
+    onDispatch(puck.dispatch as (action: unknown) => void);
+    onPuck(puck as never);
+  }, [onDispatch, onPuck, puck]);
+
   return null;
 }
 
@@ -168,7 +183,9 @@ function BuilderPuckShell({
   const inspectorOpen = useBuilderUI((s) => s.inspectorOpen);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <>
+      <BuilderShortcuts />
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <PuckDispatchBridge onDispatch={onDispatch} onPuck={onPuck} />
       <BuilderHeader />
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -179,17 +196,55 @@ function BuilderPuckShell({
         </div>
         {inspectorOpen && <InspectorPanel />}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 export function BuilderEditor() {
-  const [slug, setSlug] = useState<string>(BUILDER_PAGE_DEFS[0]?.slug ?? 'home');
+  const tb = useTranslations('builder');
+  /**
+   * The open page lives in the shared UI store, NOT in local state.
+   *
+   * `PageManager` (the header) writes the store when you pick a page. While this
+   * component kept its own `useState` copy, that write changed nothing here, so
+   * `useEffect(..., [slug, load])` never fired and switching pages silently did
+   * nothing — the header updated and the canvas stayed on the old page. The
+   * previous switcher only appeared to work because it also called `load()`
+   * directly, which hid the split.
+   */
+  // The open page comes from `useOpenPage`, the single owner of both the store
+  // write and the URL. The ad-hoc "restore once" effect that used to live here
+  // was the wrong shape: React Refresh preserves hook state, so its `useRef`
+  // guard survived a Fast Refresh and the restore never ran again — which is
+  // exactly why the page still snapped back to home until a hard reload.
+  // The open page comes straight from the URL. There is no store copy, so there
+  // is nothing that a reload, a Fast Refresh rebuild or a second writer can send
+  // out of step with what is on screen.
+  const { slug } = useOpenPage();
+
   const [page, setPage] = useState<PageRecord | null>(null);
   const [data, setData] = useState<Data | null>(null);
+  /**
+   * The page the canvas is currently mounted against, and the `key` that keeps
+   * Puck honest.
+   *
+   * Puck reads its `data` prop exactly once, at mount. Every later change has to
+   * come through `dispatch({type:'setData'})`, and that is an imperative path: it
+   * silently does nothing if the dispatch is not registered yet, and Puck gives
+   * no acknowledgement. Page switching was relying on it, which is why the ribbon
+   * and the URL could move to a new page while the canvas kept showing the old
+   * one.
+   *
+   * So a page switch remounts Puck instead. `key` changes only once the new
+   * layout has actually been fetched, so the remount happens with the right data
+   * as Puck's *initial* prop — the one path Puck guarantees. In-page edits, saves,
+   * reverts and resets still go through the dispatch, so ordinary editing does not
+   * remount and stays cheap.
+   */
+  const [canvasPage, setCanvasPage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<VersionRecord[]>([]);
   const [showVersions, setShowVersions] = useState(false);
-  const setUI = useBuilderUI((s) => s.setSlug);
   const setStatus = useBuilderUI((s) => s.setStatus);
   const setDirty = useBuilderUI((s) => s.setDirty);
   const saving = useBuilderUI((s) => s.saving);
@@ -221,6 +276,19 @@ export function BuilderEditor() {
   const pageCache = useRef<Map<string, PageRecord>>(new Map());
   const puckDispatch = useRef<((action: unknown) => void) | null>(null);
   /**
+   * A layout that could not be handed to Puck yet.
+   *
+   * Puck registers through a child effect, so a page load can complete before it
+   * is ready — and after a Fast Refresh the canvas subtree re-registers while a
+   * load may already be in flight. The old code had `if (!puck) return` and
+   * `puckDispatch.current?.(...)`, so those loads were *silently discarded*: the
+   * header and the URL updated to the new page while the canvas kept rendering
+   * the previous one. That is the reported "the ribbon changes but the content
+   * doesn't". The handoff is now queued and flushed on registration, so it
+   * cannot be lost.
+   */
+  const pendingLayout = useRef<{ layout: Data; clearSelection: boolean } | null>(null);
+  /**
 Stable registration callback (unstable identity would re-run the bridge effect on every commit). */
   const registerDispatch = useCallback((dispatch: (action: unknown) => void) => {
     puckDispatch.current = dispatch;
@@ -239,6 +307,11 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       ) => void;
     };
   } | null>(null);
+  // `registerPuck` feeds Puck's `overrides` useMemo, so its identity must stay
+  // stable: changing it recreates the overrides object, remounts Puck, and
+  // re-triggers the registration it services. It therefore reads nothing from the
+  // render scope — it only flushes a queued layout — and declares no dependencies.
+
   const registerPuck = useCallback(
     (puck: {
       dispatch?: (action: unknown) => void;
@@ -255,6 +328,31 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       };
     }) => {
       puckRef.current = puck as any;
+
+      // Flush anything that arrived before Puck was ready. Without this the load
+      // is lost and the canvas keeps the previous page's blocks.
+      const pending = pendingLayout.current;
+      if (pending) {
+        pendingLayout.current = null;
+        if (pending.clearSelection) {
+          (puck as any).dispatch?.({
+            type: 'setUi',
+            ui: { itemSelector: null } as never,
+          } as never);
+        }
+        (puck as any).dispatch?.({
+          type: 'setData',
+          data: () => pending.layout,
+        } as never);
+        return;
+      }
+
+      // Nothing else. Registration used to decide which page the canvas should
+      // show and, on disagreement, start its own load — which raced the switch
+      // already in flight and could land the previous page afterwards. A page
+      // switch now remounts Puck with the correct layout as its initial `data`,
+      // and `load` is the only thing that fetches a page, so registration has
+      // nothing to decide.
     },
     [],
   );
@@ -271,33 +369,43 @@ Stable registration callback (unstable identity would re-run the bridge effect o
     // changes) — so an armed latch would leak and swallow the user's first
     // real edit as "clean".
     const puck = puckRef.current;
-    baselineLatch.current = puck != null && puckDispatch.current != null;
-    if (!puck) return;
+    const dispatch = puckDispatch.current;
+    baselineLatch.current = puck != null && dispatch != null;
+    if (!puck || !dispatch) {
+      // Queue rather than drop. `registerPuck` flushes this.
+      pendingLayout.current = { layout, clearSelection };
+      return;
+    }
     if (clearSelection) {
       (puck as any).dispatch({
         type: 'setUi',
         ui: { itemSelector: null } as never,
       } as never);
     }
-    // Puck only reads `data` when it first mounts. Keep its live store in
-    // sync for page changes, saves, reverts, and resets.
-    puckDispatch.current?.({
+    // Puck only reads the `data` prop when it first mounts, so this dispatch is
+    // the ONLY way a page change reaches the canvas. It must never be optional.
+    pendingLayout.current = null;
+    dispatch({
       type: 'setData',
       data: () => layout,
     });
-    const anchor = () => {
-      const current = puck.appState?.data as Data | undefined;
-      const ui = puck.appState?.ui as never;
-      puck.history.setHistories([
-        {
-          state: {
-            data: current ?? layout,
-            ui,
-          } as never,
-        },
-      ]);
-    };
-    setTimeout(anchor, 300);
+    // Reset Puck's history so the previous page's edits are not undoable on the
+    // page that replaced it.
+    //
+    // This used to be a `setTimeout(anchor, 300)` that read `puck.appState.data`
+    // at fire time. On a page switch the canvas is remounted, so that closure held
+    // the *previous* Puck instance and wrote the *previous* page's data 300ms
+    // later — which is precisely the reported "it switches to the new page, then
+    // snaps back". Anchor synchronously, from the layout we just set, so there is
+    // no window in which anything stale can be written.
+    puck.history.setHistories([
+      {
+        state: {
+          data: layout,
+          ui: puck.appState?.ui as never,
+        } as never,
+      },
+    ]);
   }, []);
 
   const overrides = useMemo(
@@ -310,29 +418,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           {children}
         </BuilderPuckShell>
       ),
-      // Puck clones host stylesheets into the canvas iframe via
-      // `CopyHostStyles` (`style, link[rel="stylesheet"]`). The old
-      // `preload` → `stylesheet` swap for Material Symbols happened
-      // after the initial clone and was missed by the `childList`
-      // observer, leaving the iframe without the icon font (icons
-      // rendered as literal words like "star"). Directly injecting
-      // here guarantees the font is present even before the host
-      // link is cloned.
-      iframe: ({
-        children,
-        document: doc,
-      }: {
-        children: React.ReactNode;
-        document?: Document;
-      }) => {
-        if (doc && !doc.querySelector(`link[href="${MATERIAL_SYMBOLS_HREF}"]`)) {
-          const link = doc.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = MATERIAL_SYMBOLS_HREF;
-          doc.head.appendChild(link);
-        }
-        return <>{children}</>;
-      },
     }),
     [registerDispatch, registerPuck],
   );
@@ -348,13 +433,16 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       const nodes: {
         type: string;
         id: string;
+        isNew: boolean;
       }[] = [];
       walkLayoutNodes(layout, (node) => {
+        const id = (node.props?.id as string | undefined) ?? '';
         nodes.push({
           type: node.type,
-          id: (node.props?.id as string | undefined) ?? '',
+          id,
+          isNew: Boolean(id) && !seen.has(id),
         });
-        if (node.props?.id) seen.add(node.props.id as string);
+        if (id) seen.add(id);
       });
       const missing: {
         type: string;
@@ -362,7 +450,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       }[] = [];
       for (const node of nodes) {
         const def = node.id ? getBlockDefinition(node.type) : undefined;
-        if (!def?.seed || !def.zones) continue;
+        if (!node.isNew || !def?.seed || !def.zones) continue;
         const live = findNodeById(layout, node.id);
         const filled =
           live != null &&
@@ -447,7 +535,19 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         // slot children on load, so the editor store — and the next save —
         // are always in the canonical slot shape.
         const migrated = migrateLegacyLayout(layout as unknown as PageLayout) as unknown as Data;
+        const loadedIds = new Set<string>();
+        walkLayoutNodes(migrated as unknown as PageLayout, (node) => {
+          const id = node.props?.id;
+          if (typeof id === 'string') loadedIds.add(id);
+        });
+        // Existing nodes—including intentionally empty containers—have already
+        // been authored. Only nodes inserted after this load should auto-seed.
+        seenIds.current.set(target, loadedIds);
         setData(migrated);
+        // The canvas is remounted against this page: `canvasPage` drives Puck's
+        // `key`, so a page switch re-reads `data` at mount instead of depending
+        // on an imperative setData that cannot be acknowledged.
+        setCanvasPage(target);
         liveRef.current = migrated;
         baselineRef.current = migrated;
         syncStore(migrated, clearSelection);
@@ -457,11 +557,14 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         setStatus({
           status: cached.status,
           version: cached.version,
+          title: cached.title,
+          isSystem: cached.isSystem,
+          showInNav: cached.showInNav,
+          seoTitle: cached.seoTitle,
+          seoDescription: cached.seoDescription,
         });
         apply(cached.layout, true);
         setDirty(false);
-        setSlug(target);
-        setUI(target);
         setShowVersions(false);
         setVersionsOpen(false);
       }
@@ -475,27 +578,30 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         setStatus({
           status: body.status,
           version: body.version,
+          title: body.title,
+          isSystem: body.isSystem,
+          showInNav: body.showInNav,
+          seoTitle: body.seoTitle,
+          seoDescription: body.seoDescription,
         });
         if (JSON.stringify(body.layout) !== JSON.stringify(cached?.layout) || !cached) {
           apply(body.layout, true);
         }
         setDirty(false);
-        setSlug(target);
-        setUI(target);
         setShowVersions(false);
         setVersionsOpen(false);
       } catch (err) {
         if (token !== loadToken.current) return;
         toast({
           type: 'err',
-          title: 'Failed to load page',
+          title: tb('editor.loadFailed', { default: 'Failed to load page' }),
           description: err instanceof Error ? err.message : undefined,
         });
       } finally {
         if (token === loadToken.current) setLoading(false);
       }
     },
-    [syncStore, setStatus, setDirty, setSlug, setUI, setVersionsOpen],
+    [syncStore, setStatus, setDirty, setVersionsOpen, tb],
   );
   useEffect(() => {
     void load(slug);
@@ -510,7 +616,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
     } catch (err) {
       toast({
         type: 'err',
-        title: 'Failed to load versions',
+        title: tb('editor.versionsFailed', { default: 'Failed to load versions' }),
         description: err instanceof Error ? err.message : undefined,
       });
     }
@@ -535,6 +641,11 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       setStatus({
         status: updated.status,
         version: updated.version,
+        title: updated.title,
+        isSystem: updated.isSystem,
+        showInNav: updated.showInNav,
+        seoTitle: updated.seoTitle,
+        seoDescription: updated.seoDescription,
       });
       setData(updated.layout);
       liveRef.current = updated.layout;
@@ -544,31 +655,33 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       setDirty(false);
       toast({
         type: 'ok',
-        title: 'Draft saved',
-        description: `Saved ${
-          updated.version
-            ? `v${updated.version}
-`
-            : ''
-        }to ${updated.slug}`,
+        title: tb('editor.draftSaved', { default: 'Draft saved' }),
+        description: tb('editor.draftSavedDetail', {
+          version: updated.version ? `v${updated.version}\n` : '',
+          slug: updated.slug,
+          default: `Saved ${updated.version ? `v${updated.version}\n` : ''}to ${updated.slug}`,
+        }),
       });
     } catch (err) {
       toast({
         type: 'err',
-        title: 'Save failed',
+        title: tb('editor.saveFailed', { default: 'Save failed' }),
         description: err instanceof Error ? err.message : undefined,
       });
     } finally {
       setSaving(false);
     }
-  }, [slug, page?.title, syncStore, setSaving, setDirty, setStatus]);
+  }, [slug, page?.title, syncStore, setSaving, setDirty, setStatus, tb]);
   const publish = useCallback(
     async (note?: string) => {
       setSaving(true);
       try {
+        if (!liveRef.current) throw new Error('The page is not ready to publish');
         const res = await apiProxyFetch(`/api/proxy/builder/pages/${slug}/publish`, {
           method: 'POST',
           body: JSON.stringify({
+            layout: liveRef.current,
+            title: page?.title,
             note: note || undefined,
           }),
         });
@@ -582,24 +695,34 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           status: updated.status,
           version: updated.version,
         });
+        setData(updated.layout);
+        liveRef.current = updated.layout;
+        baselineRef.current = updated.layout;
+        syncStore(updated.layout);
+        setDirty(false);
+        pageCache.current.set(slug, updated);
         toast({
           type: 'ok',
-          title: 'Page published',
-          description: `${updated.slug}
-is now live (v${updated.version})`,
+          title: tb('editor.pagePublished', { default: 'Page published' }),
+          description: tb('editor.pagePublishedDetail', {
+            slug: updated.slug,
+            version: updated.version,
+            default: `${updated.slug} is now live (v${updated.version})`,
+          }),
         });
       } catch (err) {
         toast({
           type: 'err',
-          title: 'Publish failed',
+          title: tb('editor.publishFailed', { default: 'Publish failed' }),
           description: err instanceof Error ? err.message : undefined,
         });
       } finally {
         setSaving(false);
       }
     },
-    [slug, setSaving, setStatus],
+    [slug, page?.title, syncStore, setDirty, setSaving, setStatus, tb],
   );
+
   const reset = useCallback(async () => {
     setSaving(true);
     try {
@@ -612,6 +735,11 @@ is now live (v${updated.version})`,
       setStatus({
         status: updated.status,
         version: updated.version,
+        title: updated.title,
+        isSystem: updated.isSystem,
+        showInNav: updated.showInNav,
+        seoTitle: updated.seoTitle,
+        seoDescription: updated.seoDescription,
       });
       setData(updated.layout);
       liveRef.current = updated.layout;
@@ -621,19 +749,19 @@ is now live (v${updated.version})`,
       setDirty(false);
       toast({
         type: 'ok',
-        title: 'Page reset',
-        description: 'Restored the default layout',
+        title: tb('editor.pageReset', { default: 'Page reset' }),
+        description: tb('editor.pageResetDetail', { default: 'Restored the default layout' }),
       });
     } catch (err) {
       toast({
         type: 'err',
-        title: 'Reset failed',
+        title: tb('editor.resetFailed', { default: 'Reset failed' }),
         description: err instanceof Error ? err.message : undefined,
       });
     } finally {
       setSaving(false);
     }
-  }, [slug, syncStore, setSaving, setDirty, setStatus]);
+  }, [slug, syncStore, setSaving, setDirty, setStatus, tb]);
   const revert = useCallback(
     async (version: number) => {
       setSaving(true);
@@ -661,19 +789,19 @@ is now live (v${updated.version})`,
         setVersionsOpen(false);
         toast({
           type: 'ok',
-          title: `Restored v${version}`,
+          title: tb('editor.restoredVersion', { version, default: `Restored v${version}` }),
         });
       } catch (err) {
         toast({
           type: 'err',
-          title: 'Revert failed',
+          title: tb('editor.revertFailed', { default: 'Revert failed' }),
           description: err instanceof Error ? err.message : undefined,
         });
       } finally {
         setSaving(false);
       }
     },
-    [slug, syncStore, setSaving, setDirty, setStatus, setVersionsOpen],
+    [slug, syncStore, setSaving, setDirty, setStatus, setVersionsOpen, tb],
   );
   /** Expose page operations to components inside Puck's tree (header etc.). */
   useEffect(() => {
@@ -698,92 +826,56 @@ is now live (v${updated.version})`,
     return () => window.removeEventListener('keydown', onKey);
   }, [saveDraft]);
   return (
-    <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-background sm:-m-6 sm:-mb-14 lg:-my-8 lg:-mr-8 lg:-ml-4 lg:h-dvh">
+    <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-background sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
       {' '}
       <style>{HOST_CSS}</style>
       <style>{CANVAS_CSS}</style>{' '}
       {!data ? (
         <div className="flex h-full items-center justify-center gap-3 text-muted-foreground">
           {' '}
-          {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-          {loading ? 'Loading page…' : <PageDataView />}
+          {loading && <Loader2 className="size-5 animate-spin" />}
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+              {tb('editor.loadingPage', { default: 'Loading page…' })}
+            </span>
+          ) : (
+            <PageDataView />
+          )}
         </div>
       ) : (
-        <div className="h-full min-h-0">
+        <div className="flex h-full min-h-0 flex-col">
           {' '}
-          <Puck
-            config={puckConfig}
-            data={data}
-            onChange={handleChange}
-            viewports={PUCK_VIEWPORTS}
-            iframe={PUCK_IFRAME}
-            /**
-             * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
-              PUCK_UI
-            }
-            overrides={overrides}
-          />{' '}
+          <div className="min-h-0 flex-1">
+            {' '}
+            <Puck
+              // A page switch remounts the canvas with the new page as Puck's
+              // initial `data`, instead of hoping an imperative setData landed.
+              key={canvasPage ?? 'empty'}
+              config={puckConfig}
+              data={data}
+              onChange={handleChange}
+              viewports={PUCK_VIEWPORTS}
+              iframe={PUCK_IFRAME}
+              /**
+               * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
+                PUCK_UI
+              }
+              overrides={overrides}
+            />{' '}
+          </div>{' '}
         </div>
       )}
       {showVersions && (
-        <div className="absolute right-4 top-16 z-50 w-96 overflow-hidden rounded-xl border border-border bg-card shadow-sm max-lg:left-3 max-lg:right-3 max-lg:top-[96px] max-lg:w-auto">
-          {' '}
-          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            {' '}
-            <h3 className="text-sm font-semibold">Version history</h3>{' '}
-            <button
-              type="button"
-              className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              onClick={() => {
-                setShowVersions(false);
-                setVersionsOpen(false);
-              }}
-            >
-              {' '}
-              <X className="h-4 w-4" />{' '}
-            </button>{' '}
-          </div>{' '}
-          <div className="scrollbar-thin max-h-80 space-y-1 overflow-auto p-2">
-            {' '}
-            {versions.length === 0 && (
-              <p className="px-2 py-3 text-sm text-muted-foreground">
-                No versions yet. Publish to create the first snapshot.
-              </p>
-            )}
-            {versions.map((v) => (
-              <div
-                key={v.id}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-muted"
-              >
-                {' '}
-                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-                  v{v.version}
-                </span>{' '}
-                <span
-                  className={`text-[10px] font-bold uppercase ${v.status === 'published' ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}
-                >
-                  {' '}
-                  {v.status}
-                </span>{' '}
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {v.note || '—'}
-                </span>{' '}
-                <span className="hidden text-xs text-muted-foreground md:inline">
-                  {v.changedByName || 'Unknown'}
-                </span>{' '}
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-primary hover:underline"
-                  onClick={() => void revert(v.version)}
-                  disabled={saving}
-                >
-                  {' '}
-                  Restore{' '}
-                </button>{' '}
-              </div>
-            ))}
-          </div>{' '}
-        </div>
+        <VersionDrawer
+          versions={versions}
+          saving={saving}
+          onClose={() => {
+            setShowVersions(false);
+            setVersionsOpen(false);
+          }}
+          onRevert={(version) => void revert(version)}
+        />
       )}
       <BuilderDialogs /> <ToastViewport />{' '}
     </div>

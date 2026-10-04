@@ -41,10 +41,10 @@ function ResetPasswordForm() {
     return (
       <div className="flex h-full flex-col items-center justify-center text-center">
         {' '}
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-900/60 bg-emerald-950/40">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-success/60 bg-success/40">
           {' '}
           <svg
-            className="h-7 w-7 text-emerald-400"
+            className="h-7 w-7 text-success"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -54,17 +54,17 @@ function ResetPasswordForm() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />{' '}
           </svg>{' '}
         </div>{' '}
-        <h1 className="font-display text-[24px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#e8e8e8]">
+        <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
           Password Reset!{' '}
         </h1>{' '}
-        <p className="mb-6 mt-3 text-sm leading-relaxed text-[#8b8f96]">
+        <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">
           {' '}
           Your password has been updated successfully.{' '}
         </p>{' '}
         <button
           onClick={() => router.push('/login')}
-          className="h-12 w-full rounded-xl bg-[#f59e0b] text-[13px] font-bold text-[#16181c] transition-all duration-200 hover:scale-[1.01] hover:bg-[#d97706]"
+          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
         >
           {' '}
           Sign In with New Password{' '}
@@ -77,15 +77,15 @@ function ResetPasswordForm() {
       {' '}
       <div className="mb-6">
         {' '}
-        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]">
+        <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
           Security Credentials{' '}
         </p>{' '}
-        <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#e8e8e8]">
+        <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
           Set New Password{' '}
         </h1>{' '}
-        <p className="mt-1.5 text-sm leading-relaxed text-[#8b8f96]">
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           {' '}
           Enter your new password below{' '}
         </p>{' '}
@@ -93,13 +93,13 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {' '}
         {error && (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-red-400">
+          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-destructive">
             {' '}
             {error}{' '}
           </div>
         )}{' '}
         {!token && (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-red-400">
+          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-destructive">
             {' '}
             Invalid or missing reset token. Please request a new password reset link.{' '}
           </div>
@@ -108,7 +108,7 @@ function ResetPasswordForm() {
           {' '}
           <label
             htmlFor="password"
-            className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]"
+            className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
             New Password{' '}
@@ -121,14 +121,14 @@ function ResetPasswordForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoFocus
-            className="h-12 w-full rounded-xl border border-[#2a2e36] bg-[#16181c] px-4 text-sm text-[#e8e8e8] outline-none ring-0 transition-all duration-200 placeholder:text-[#5c6068] focus:border-[#f59e0b]/60 focus:ring-1 focus:ring-[#f59e0b]/30"
+            className="h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
           />{' '}
         </div>{' '}
         <div className="space-y-1">
           {' '}
           <label
             htmlFor="confirmPassword"
-            className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]"
+            className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
             Confirm New Password{' '}
@@ -140,13 +140,13 @@ function ResetPasswordForm() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            className="h-12 w-full rounded-xl border border-[#2a2e36] bg-[#16181c] px-4 text-sm text-[#e8e8e8] outline-none ring-0 transition-all duration-200 placeholder:text-[#5c6068] focus:border-[#f59e0b]/60 focus:ring-1 focus:ring-[#f59e0b]/30"
+            className="h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
           />{' '}
         </div>{' '}
         <button
           type="submit"
           disabled={loading || !token}
-          className="h-12 w-full rounded-xl bg-[#f59e0b] text-[13px] font-bold text-[#16181c] transition-all duration-200 hover:scale-[1.01] hover:bg-[#d97706] active:scale-[0.99] disabled:opacity-50"
+          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {' '}
           {loading ? 'Resetting...' : 'Reset Password'}{' '}
@@ -157,7 +157,7 @@ function ResetPasswordForm() {
 }
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-[#5c6068]">Loading...</div>}>
+    <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
       {' '}
       <ResetPasswordForm />{' '}
     </Suspense>

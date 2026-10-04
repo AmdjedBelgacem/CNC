@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { TenantScoped } from '../../common/decorators/tenant-scoped.decorator';
@@ -17,13 +17,15 @@ export class AcademiesController {
 
   @Get()
   @ApiOperation({ summary: 'Public: list published academies for the tenant' })
-  findAll(@CurrentTenant() tenant: { id: string }) {
-    return this.academies.findPublished(tenant.id);
+  findAll(@CurrentTenant() tenant: { id: string }, @Req() req: any) {
+    // The resolver reads the locale cookie, then `?locale=`, then the browser
+    // header, so the caller does not have to pass it explicitly.
+    return this.academies.findPublished(tenant.id, req);
   }
 
   @Get(':slug')
   @ApiOperation({ summary: 'Public: academy detail with its published courses' })
-  findBySlug(@CurrentTenant() tenant: { id: string }, @Param('slug') slug: string) {
-    return this.academies.findPublishedBySlug(tenant.id, slug);
+  findBySlug(@CurrentTenant() tenant: { id: string }, @Param('slug') slug: string, @Req() req: any) {
+    return this.academies.findPublishedBySlug(tenant.id, slug, req);
   }
 }

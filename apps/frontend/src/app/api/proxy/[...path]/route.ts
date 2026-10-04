@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
+import { LOCALE_COOKIE, coerceLocale, localeFromAcceptLanguage, type Locale } from '@/i18n/config';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -90,12 +91,27 @@ async function resolveCsrf(
   return { token, cookieHeader: withCsrfCookie(cookieHeader, token) };
 }
 
+function requestLocale(request: NextRequest, store: Awaited<ReturnType<typeof cookies>>): Locale {
+  const explicit = request.headers.get('x-client-locale') || request.headers.get('x-next-locale') || request.headers.get('x-locale');
+  const cookieValue = store.get(LOCALE_COOKIE)?.value;
+  return coerceLocale(
+    explicit || cookieValue || localeFromAcceptLanguage(request.headers.get('accept-language')),
+  );
+}
+
 async function proxyRequest(request: NextRequest, path: string[], method: string) {
   const store = await cookies();
   const tenantSlug = store.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
+  const locale = requestLocale(request, store);
   const url = `${API_BASE}/${path.join('/')}${request.nextUrl.search}`;
   const body = method !== 'GET' ? await request.text().catch(() => null) : null;
-  const headers: Record<string, string> = { 'x-tenant-slug': tenantSlug };
+  const headers: Record<string, string> = {
+    'x-tenant-slug': tenantSlug,
+    'x-locale': locale,
+    'x-next-locale': locale,
+    'x-client-locale': locale,
+    'accept-language': `${locale},en;q=0.8`,
+  };
   if (body && body.length > 0) {
     headers['Content-Type'] = 'application/json';
   }
@@ -119,7 +135,7 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
       synthesizedCsrf = !clientToken;
     }
   }
-  let response = await fetch(url, { method, headers, body });
+  let response = await fetch(url, { method, headers, body, cache: 'no-store' });
   // The signing secret is derived from AUTH_SECRET, so a cached token goes stale if
   // that secret rotates. Only our own minted token can be stale — a client-supplied
   // one is the client's business — so re-mint and replay once, on the fallback path.
@@ -136,6 +152,7 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
             cookie: withCsrfCookie(headers['cookie'], fresh),
           },
           body,
+          cache: 'no-store',
         });
       }
     }

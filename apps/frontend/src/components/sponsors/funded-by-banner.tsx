@@ -3,7 +3,7 @@ export function FundedByBanner() {
   return (
     <div className="flex items-center justify-center gap-2 rounded-lg border bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
       {' '}
-      <Heart className="h-4 w-4 text-red-500" /> Free education made possible by our partners{' '}
+      <Heart className="size-4 text-red-500" /> Free education made possible by our partners{' '}
     </div>
   );
 }

@@ -41,7 +41,7 @@ export function CommunityFeedPreview() {
           <Button variant="ghost" asChild>
             {' '}
             <Link href="/feed">
-              View Feed <ArrowRight className="ml-2 h-4 w-4" />
+              View Feed <ArrowRight className="flip-rtl ms-2 size-4" />
             </Link>{' '}
           </Button>{' '}
         </div>{' '}
@@ -53,7 +53,7 @@ export function CommunityFeedPreview() {
                   {' '}
                   <div className="flex items-center gap-3">
                     {' '}
-                    <Skeleton className="h-8 w-8 rounded-full" />{' '}
+                    <Skeleton className="size-8 rounded-full" />{' '}
                     <Skeleton className="h-4 w-24" />{' '}
                   </div>{' '}
                   <Skeleton className="h-4 w-full" /> <Skeleton className="h-4 w-3/4" />{' '}
@@ -72,7 +72,7 @@ export function CommunityFeedPreview() {
                   {' '}
                   <div className="flex items-center gap-3">
                     {' '}
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                    <div className="size-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
                       {' '}
                       {(post.user.name || '?')[0]}{' '}
                     </div>{' '}
@@ -88,10 +88,10 @@ export function CommunityFeedPreview() {
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     {' '}
                     <span className="flex items-center gap-1">
-                      <Heart className="h-3.5 w-3.5" /> {post.likeCount}
+                      <Heart className="size-3.5" /> {post.likeCount}
                     </span>{' '}
                     <span className="flex items-center gap-1">
-                      <MessageCircle className="h-3.5 w-3.5" /> {post.commentCount}
+                      <MessageCircle className="size-3.5" /> {post.commentCount}
                     </span>{' '}
                   </div>{' '}
                 </Link>

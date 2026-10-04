@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-google-oauth20';
 import { ConfigService } from '../../../config/config.service';
+import { callbackOrigin } from './oauth-callback-url';
+import { StatelessOAuthStateStore } from './stateless-oauth-state.store';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -9,8 +11,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     super({
       clientID: config.get('GOOGLE_CLIENT_ID') || 'missing',
       clientSecret: config.get('GOOGLE_CLIENT_SECRET') || 'missing',
-      callbackURL: `${config.get('FRONTEND_URL') || 'http://localhost:3000'}/api/auth/google/callback`,
+      callbackURL: `${callbackOrigin(config)}/auth/oauth/google/callback`,
       scope: ['email', 'profile'],
+      // Required: without a store (or a truthy `state`) passport installs NullStore,
+      // which throws because this app has no req.session. See the store's doc comment.
+      store: new StatelessOAuthStateStore(),
     } as any);
   }
 

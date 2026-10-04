@@ -4,8 +4,17 @@ const API_BASE =
   process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const REVALIDATE = 60;
 
-function tenantHeaders(tenantSlug: string): HeadersInit {
-  return { 'x-tenant-slug': tenantSlug };
+function tenantHeaders(tenantSlug: string, locale?: string): HeadersInit {
+  return {
+    'x-tenant-slug': tenantSlug,
+    ...(locale
+      ? {
+          'x-locale': locale,
+          'x-next-locale': locale,
+          'accept-language': `${locale},en;q=0.8`,
+        }
+      : {}),
+  };
 }
 
 /** Server-side: list published academies for a tenant (real backend data, ISR 60s). */
@@ -31,10 +40,11 @@ export async function fetchPublishedAcademies(tenantSlug: string): Promise<Acade
 export async function fetchAcademyDetail(
   tenantSlug: string,
   slug: string,
+  locale?: string,
 ): Promise<AcademyDetail | null> {
   try {
     const res = await fetch(`${API_BASE}/academies/${encodeURIComponent(slug)}`, {
-      headers: tenantHeaders(tenantSlug),
+      headers: tenantHeaders(tenantSlug, locale),
       next: { revalidate: REVALIDATE },
     });
     if (res.status === 404) return null;

@@ -83,12 +83,12 @@ export default function RepairPage() {
           placeholder="Search by name or city..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="ml-auto px-4 py-2 rounded-lg border bg-background text-sm w-full sm:w-64"
+          className="ms-auto px-4 py-2 rounded-lg border bg-background text-sm w-full sm:w-64"
         />{' '}
       </div>{' '}
       <div className="grid gap-6 lg:grid-cols-5">
         {' '}
-        <div className="lg:col-span-2 space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+        <div className="lg:col-span-2 space-y-3 max-h-[70vh] overflow-y-auto pe-2">
           {' '}
           {loading ? (
             [1, 2, 3].map((i) => (
@@ -127,14 +127,14 @@ export default function RepairPage() {
                         {shop.isVerified && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] px-1 text-green-600 border-green-400"
+                            className="text-2xs px-1 text-green-600 border-green-400"
                           >
                             Verified
                           </Badge>
                         )}{' '}
                       </h3>{' '}
                       {shop.category && (
-                        <Badge variant="secondary" className="text-[10px] mt-1">
+                        <Badge variant="secondary" className="text-2xs mt-1">
                           {shop.category}
                         </Badge>
                       )}{' '}
@@ -142,14 +142,14 @@ export default function RepairPage() {
                     {shop.rating && (
                       <span className="flex items-center gap-1 text-sm font-medium">
                         {' '}
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{' '}
+                        <Star className="size-3.5 fill-warning text-warning" />{' '}
                         {shop.rating}{' '}
                       </span>
                     )}{' '}
                   </div>{' '}
                   <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                     {' '}
-                    <MapPin className="h-3 w-3 shrink-0" />{' '}
+                    <MapPin className="size-3.5 shrink-0" />{' '}
                     {shop.city
                       ? `${shop.city}${shop.state ? `, ${shop.state}` : ''}`
                       : shop.address}{' '}
@@ -158,12 +158,12 @@ export default function RepairPage() {
                     <div className="flex flex-wrap gap-1 mt-2">
                       {' '}
                       {shop.specialties.slice(0, 3).map((s) => (
-                        <Badge key={s} variant="outline" className="text-[10px] px-1.5">
+                        <Badge key={s} variant="outline" className="text-2xs px-1.5">
                           {s}
                         </Badge>
                       ))}{' '}
                       {shop.specialties.length > 3 && (
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-2xs text-muted-foreground">
                           +{shop.specialties.length - 3}
                         </span>
                       )}{' '}
@@ -172,7 +172,7 @@ export default function RepairPage() {
                   {shop.phone && (
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                       {' '}
-                      <Phone className="h-3 w-3" /> {shop.phone}{' '}
+                      <Phone className="size-3.5" /> {shop.phone}{' '}
                     </p>
                   )}{' '}
                 </CardContent>{' '}
@@ -209,7 +209,7 @@ export default function RepairPage() {
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground">
                 {' '}
-                <MapPin className="h-8 w-8 mr-2 opacity-50" /> No map data available{' '}
+                <MapPin className="size-8 me-2 opacity-50" /> No map data available{' '}
               </div>
             )}{' '}
           </div>{' '}
@@ -224,17 +224,17 @@ export default function RepairPage() {
                 {' '}
                 <p className="text-muted-foreground">{selectedShop.description}</p>{' '}
                 <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4 text-muted-foreground" /> {selectedShop.address}
+                  <MapPin className="size-4 text-muted-foreground" /> {selectedShop.address}
                 </div>{' '}
                 {selectedShop.phone && (
                   <div className="flex items-center gap-1">
-                    <Phone className="h-4 w-4 text-muted-foreground" /> {selectedShop.phone}
+                    <Phone className="size-4 text-muted-foreground" /> {selectedShop.phone}
                   </div>
                 )}{' '}
                 {selectedShop.website && (
                   <div className="flex items-center gap-1">
                     {' '}
-                    <Globe className="h-4 w-4 text-muted-foreground" />{' '}
+                    <Globe className="size-4 text-muted-foreground" />{' '}
                     <a
                       href={selectedShop.website}
                       target="_blank"

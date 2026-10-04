@@ -11,6 +11,13 @@ import { courses, series } from '../../database/schema/courses';
 import { tenants } from '../../database/schema/tenants';
 import { isReservedAcademySlug } from '@titan/shared';
 import { CreateAcademyDto, UpdateAcademyDto } from './dto/academies.dto';
+import { SearchService } from '../search/search.service';
+import type { LessonLocaleMetadata } from '@titan/shared';
+import {
+  localizeAcademyFields,
+  localizeCourseFields,
+  resolveContentLocale,
+} from '../courses/lesson-content';
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,198}[a-z0-9])?$/;
 
@@ -34,7 +41,14 @@ const KIND_TO_COLUMN: Record<AcademyImageKind, 'heroImageUrl' | 'logoUrl' | 'seo
 export class AcademiesService {
   private readonly logger = new Logger(AcademiesService.name);
 
-  constructor(private drizzle: DrizzleService) {}
+  constructor(
+    private drizzle: DrizzleService,
+    private search?: SearchService,
+  ) {}
+
+  private syncSearch(tenantId: string, id: string) {
+    void this.search?.indexEntity(tenantId, 'academy', id);
+  }
 
   private validateSlugFormat(slug: string) {
     if (!SLUG_RE.test(slug)) {
@@ -89,16 +103,23 @@ export class AcademiesService {
     tenantId: string,
     opts: { status?: string; search?: string; page?: number; limit?: number },
   ) {
-    const conditions = [eq(academies.tenantId, tenantId)];
-    if (opts.status === 'draft') {
-      conditions.push(eq(academies.isPublished, false), eq(academies.isArchived, false));
-    } else if (opts.status === 'published') {
-      conditions.push(eq(academies.isPublished, true), eq(academies.isArchived, false));
-    } else if (opts.status === 'archived') {
-      conditions.push(eq(academies.isArchived, true));
-    }
-    if (opts.search) conditions.push(ilike(academies.title, `%${opts.search}%`));
+    // Status-agnostic filters are shared with the facet counts, so each filter
+    // tab can report how many academies it would actually return.
+    const baseConditions: any[] = [eq(academies.tenantId, tenantId)];
+    if (opts.search) baseConditions.push(ilike(academies.title, `%${opts.search}%`));
 
+    const statusConditions = (status?: string): any[] => {
+      if (status === 'draft') {
+        return [eq(academies.isPublished, false), eq(academies.isArchived, false)];
+      }
+      if (status === 'published') {
+        return [eq(academies.isPublished, true), eq(academies.isArchived, false)];
+      }
+      if (status === 'archived') return [eq(academies.isArchived, true)];
+      return [];
+    };
+
+    const conditions = [...baseConditions, ...statusConditions(opts.status)];
     const where = and(...conditions);
     const page = Math.max(1, Number(opts.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(opts.limit) || 20));
@@ -111,7 +132,25 @@ export class AcademiesService {
       .limit(limit)
       .offset((page - 1) * limit);
 
-    const [totalRow] = await this.drizzle.db.select({ n: count() }).from(academies).where(where);
+    const [totalRows, facetRows] = await Promise.all([
+      this.drizzle.db.select({ n: count() }).from(academies).where(where),
+      Promise.all(
+        (['published', 'draft', 'archived'] as const).map((st) =>
+          this.drizzle.db
+            .select({ n: count() })
+            .from(academies)
+            .where(and(...baseConditions, ...statusConditions(st)))
+            .then((r) => [st, Number(r[0]?.n ?? 0)] as const),
+        ),
+      ),
+    ]);
+
+    const facets: Record<string, number> = { published: 0, draft: 0, archived: 0 };
+    let facetTotal = 0;
+    for (const [key, n] of facetRows) {
+      facets[key] = n;
+      facetTotal += n;
+    }
 
     // One grouped count query for course rosters (non-archived courses).
     const ids = rows.map((r) => r.id);
@@ -133,7 +172,9 @@ export class AcademiesService {
 
     return {
       items: rows.map((r) => ({ ...r, courseCount: countMap.get(r.id) ?? 0 })),
-      total: Number(totalRow?.n ?? 0),
+      total: Number(totalRows[0]?.n ?? 0),
+      facets,
+      facetTotal,
       page,
       limit,
     };
@@ -186,6 +227,7 @@ export class AcademiesService {
         sortOrder: dto.sortOrder ?? 0,
       })
       .returning();
+    if (academy) this.syncSearch(tenantId, academy.id);
     return { ...academy, courseCount: 0 };
   }
 
@@ -214,6 +256,7 @@ export class AcademiesService {
       .set(patch)
       .where(and(eq(academies.tenantId, tenantId), eq(academies.id, academy.id)))
       .returning();
+    if (updated) this.syncSearch(tenantId, updated.id);
     return { ...updated, courseCount: await this.courseCount(tenantId, academy.id, false) };
   }
 
@@ -342,23 +385,29 @@ export class AcademiesService {
     const ext = this.sanitizeExt(mime, originalName);
     const filename = `${randomUUID()}.${ext}`;
 
-    let newUrl: string;
+    let newUrl: string | undefined;
     if (this.isS3Configured()) {
       const bucket = process.env.S3_BUCKET!;
       const key = `tenants/${tenantId}/academies/${academy.id}/${kind}/${filename}`;
       const client = this.buildS3Client();
-      await client.send(
-        new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer, ContentType: mime }),
-      );
-      const publicBase = (process.env.S3_PUBLIC_URL || '').replace(/\/$/, '');
-      if (publicBase) {
-        newUrl = `${publicBase}/${key}`;
-      } else {
-        const endpoint = (process.env.S3_ENDPOINT || '').replace(/\/$/, '');
-        newUrl = endpoint ? `${endpoint}/${bucket}/${key}` : key;
+      try {
+        await client.send(
+          new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer, ContentType: mime }),
+        );
+        const publicBase = (process.env.S3_PUBLIC_URL || '').replace(/\/$/, '');
+        if (publicBase) {
+          newUrl = `${publicBase}/${key}`;
+        } else {
+          const endpoint = (process.env.S3_ENDPOINT || '').replace(/\/$/, '');
+          newUrl = endpoint ? `${endpoint}/${bucket}/${key}` : key;
+        }
+        this.logger.log(`Stored academy ${kind} image to S3 ${bucket}/${key} (${buffer.length} bytes)`);
+      } catch (error) {
+        if ((process.env.NODE_ENV || 'development') === 'production') throw error;
+        this.logger.warn(`S3 academy image upload failed; using local storage for ${kind}`, error as any);
       }
-      this.logger.log(`Stored academy ${kind} image to S3 ${bucket}/${key} (${buffer.length} bytes)`);
-    } else {
+    }
+    if (!newUrl) {
       const dir = join(this.getUploadDir(), 'academies', academy.id, kind);
       if (!existsSync(dir)) await mkdir(dir, { recursive: true });
       const filePath = join(dir, filename);
@@ -422,6 +471,7 @@ export class AcademiesService {
       .where(and(eq(academies.tenantId, tenantId), eq(academies.slug, slug)))
       .returning();
     if (!updated) throw new NotFoundException('Academy not found');
+    this.syncSearch(tenantId, updated.id);
     return updated;
   }
 
@@ -432,6 +482,7 @@ export class AcademiesService {
       .where(and(eq(academies.tenantId, tenantId), eq(academies.slug, slug)))
       .returning();
     if (!updated) throw new NotFoundException('Academy not found');
+    this.syncSearch(tenantId, updated.id);
     return updated;
   }
 
@@ -443,6 +494,7 @@ export class AcademiesService {
       .where(and(eq(academies.tenantId, tenantId), eq(academies.slug, slug)))
       .returning();
     if (!updated) throw new NotFoundException('Academy not found');
+    this.syncSearch(tenantId, updated.id);
     return updated;
   }
 
@@ -453,6 +505,7 @@ export class AcademiesService {
       .where(and(eq(academies.tenantId, tenantId), eq(academies.slug, slug)))
       .returning();
     if (!updated) throw new NotFoundException('Academy not found');
+    this.syncSearch(tenantId, updated.id);
     return updated;
   }
 
@@ -465,6 +518,7 @@ export class AcademiesService {
       });
     }
     await this.drizzle.db.delete(academies).where(and(eq(academies.tenantId, tenantId), eq(academies.id, academy.id)));
+    void this.search?.removeEntity(tenantId, 'academy', academy.id);
     return { success: true };
   }
 
@@ -489,6 +543,7 @@ export class AcademiesService {
       .update(courses)
       .set({ academyId: academy.id, updatedAt: new Date() })
       .where(and(eq(courses.tenantId, tenantId), inArray(courses.slug, courseSlugs)));
+    for (const row of rows) void this.search?.indexEntity(tenantId, 'course', row.id);
 
     return { success: true, assigned: courseSlugs.length, academyId: academy.id };
   }
@@ -602,7 +657,32 @@ export class AcademiesService {
 
   // --- Public endpoints ---
 
-  async findPublished(tenantId: string) {
+  /**
+   * Public academy list, localized.
+   *
+   * The locale comes from the request (cookie, `?locale=`, or Accept-Language),
+   * so the same endpoint serves both languages without a second route.
+   */
+  /**
+   * Attach the resolved locale alongside the copy, exactly as CoursesService
+   * does, so the client has one shape to read for every content type.
+   */
+  private localeFields<T extends Record<string, any>>(
+    value: T,
+    localized: { value: T; metadata: LessonLocaleMetadata },
+  ) {
+    return {
+      ...value,
+      ...localized.value,
+      locale: localized.metadata.locale,
+      resolvedLocale: localized.metadata.resolvedLocale,
+      availableLocales: localized.metadata.availableLocales,
+      fallbackFields: localized.metadata.fallbackFields,
+      localeMetadata: localized.metadata,
+    };
+  }
+
+  async findPublished(tenantId: string, localeInput?: unknown) {
     const rows = await this.drizzle.db
       .select()
       .from(academies)
@@ -633,10 +713,14 @@ export class AcademiesService {
       for (const c of counts) countMap.set(c.academyId!, Number(c.n));
     }
 
-    return rows.map((r) => ({ ...r, courseCount: countMap.get(r.id) ?? 0 }));
+    const locale = resolveContentLocale(localeInput);
+    return rows.map((r) => ({
+      ...this.localeFields(r, localizeAcademyFields(r as Record<string, any>, locale)),
+      courseCount: countMap.get(r.id) ?? 0,
+    }));
   }
 
-  async findPublishedBySlug(tenantId: string, slug: string) {
+  async findPublishedBySlug(tenantId: string, slug: string, localeInput?: unknown) {
     const [academy] = await this.drizzle.db
       .select()
       .from(academies)
@@ -673,6 +757,16 @@ export class AcademiesService {
       },
     });
 
-    return { ...academy, courseCount: academyCourses.length, courses: academyCourses };
+    // The academy and its course list are localized together, so a card and the
+    // course it links to cannot be shown in two different languages.
+    const locale = resolveContentLocale(localeInput);
+    const localizedCourses = academyCourses.map((course) =>
+      localizeCourseFields(course as Record<string, any>, locale).value,
+    );
+    return {
+      ...this.localeFields(academy, localizeAcademyFields(academy as Record<string, any>, locale)),
+      courseCount: localizedCourses.length,
+      courses: localizedCourses,
+    };
   }
 }

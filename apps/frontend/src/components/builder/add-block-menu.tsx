@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import {
   Anchor,
@@ -20,6 +21,9 @@ import {
   Link2,
   ListTree,
   Megaphone,
+  MessageSquareQuote,
+  MonitorPlay,
+  MailPlus,
   MousePointerClick,
   Navigation,
   PanelBottom,
@@ -30,12 +34,13 @@ import {
   Shapes,
   Sparkles,
   Tag,
+  TerminalSquare,
   TrendingUp,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { puckConfig } from '@/lib/builder/puck-config';
+import { puckBlockLabel, puckCategoryLabel, puckConfig } from '@/lib/builder/puck-config';
 import { getZoneItems, type PageLayout } from '@titan/shared';
 import { cn } from '@/lib/utils';
 const ROOT_ZONE = 'root:default-zone';
@@ -43,17 +48,24 @@ const BLOCK_ICONS: Record<string, LucideIcon> = {
   nav: Navigation,
   footer: PanelBottom,
   hero: Sparkles,
+  'hero-console': MonitorPlay,
   stats: BarChart3,
   'partner-logos': Building2,
   'feature-tiles': LayoutGrid,
   'academy-grid': GraduationCap,
+  'program-cards': LayoutGrid,
+  'twin-section': TerminalSquare,
+  testimonials: MessageSquareQuote,
   'cta-banner': Megaphone,
+  'cta-signup': MailPlus,
   faq: HelpCircle,
   section: Container,
   'stat-item': TrendingUp,
   'logo-item': Image,
   'feature-item': CheckSquare2,
   'academy-card': BookOpen,
+  'program-card': BookOpen,
+  'testimonial-card': MessageSquareQuote,
   'faq-item': HelpCircle,
   'footer-col': ListTree,
   stack: Rows3,
@@ -71,6 +83,7 @@ const BLOCK_ICONS: Record<string, LucideIcon> = {
   'progress-card': Gauge,
 }; /** * Header dropdown replacing Puck's left sidebar palette: click a block type to * insert it after the current selection (or at the end of the root zone). * Includes search and keyboard navigation (↑/↓/Enter). */
 export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
+  const tb = useTranslations('builder');
   const appState = useBuilderPuck((s) => s.appState);
   const dispatch = useBuilderPuck((s) => s.dispatch);
   const [open, setOpen] = useState(false);
@@ -107,10 +120,12 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
     } as never);
     setOpen(false);
   };
+  /** The stored English `label` is the fallback, so an untranslated block still reads as written. */
   const label = (type: string) => {
     const component = puckConfig.components[type] as { label?: string; title?: string } | undefined;
-    return component?.label ?? component?.title ?? type;
+    return puckBlockLabel(tb, type, component?.label ?? component?.title ?? type);
   };
+  const categoryLabel = (category: string) => puckCategoryLabel(tb, category, category);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out: { category: string; type: string; label: string }[] = [];
@@ -123,7 +138,7 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
       }
     }
     return out;
-  }, [query]);
+  }, [query, tb]);
   useEffect(() => {
     setHighlight(0);
   }, [query]);
@@ -151,17 +166,17 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
           className="flex w-full flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 text-xs font-medium transition hover:bg-muted active:scale-95"
         >
           {' '}
-          <Plus className="h-5 w-5" /> Add Block{' '}
+          <Plus className="size-5" /> Add Block{' '}
         </button>
       ) : (
         <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => setOpen((v) => !v)}>
           {' '}
-          <Plus className="h-3.5 w-3.5" /> Add Block{' '}
+          <Plus className="size-3.5" /> Add Block{' '}
         </Button>
       )}{' '}
       {open && (
         <div
-          className="fixed left-3 right-3 top-[48px] z-50 w-auto overflow-hidden rounded-xl border border-border bg-popover shadow-sm lg:absolute lg:left-0 lg:right-auto lg:top-full lg:mt-1.5 lg:w-64"
+          className="fixed start-3 end-3 top-[48px] z-50 w-auto overflow-hidden rounded-xl border border-border bg-popover shadow-sm lg:absolute lg:start-0 lg:end-auto lg:top-full lg:mt-1.5 lg:w-64"
           onKeyDown={onKeyDown}
         >
           {' '}
@@ -169,13 +184,13 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
             {' '}
             <div className="relative">
               {' '}
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
+              <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
               <input
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search blocks…"
-                className="h-8 w-full rounded-lg border border-border bg-background pl-8 pr-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-8 w-full rounded-lg border border-border bg-background ps-8 pe-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
               />{' '}
             </div>{' '}
           </div>{' '}
@@ -202,10 +217,10 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
                     )}
                   >
                     {' '}
-                    <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{' '}
+                    <Icon className="size-3.5 shrink-0 text-muted-foreground" />{' '}
                     <span className="truncate">{row.label}</span>{' '}
-                    <span className="ml-auto shrink-0 font-mono text-[9px] uppercase text-muted-foreground/60">
-                      {row.category}
+                    <span className="ms-auto shrink-0 font-mono text-2xs uppercase text-muted-foreground/60">
+                      {categoryLabel(row.category)}
                     </span>{' '}
                   </button>
                 );
@@ -214,7 +229,7 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
           </div>{' '}
           <div className="border-t border-border px-2 py-1.5">
             {' '}
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-2xs text-muted-foreground/70">
               {' '}
               Inserts after the selected block — or at the end of the page.{' '}
               <kbd className="rounded border border-border bg-muted px-1 font-mono">↑↓</kbd>{' '}

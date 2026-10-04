@@ -1,0 +1,32 @@
+{
+  "createPage": [
+    "slug",
+    "title",
+    "template",
+    "showInNav",
+    "seoTitle",
+    "seoDescription",
+    "copyFromSlug"
+  ],
+  "updatePage": [
+    "title",
+    "slug",
+    "status",
+    "showInNav",
+    "seoTitle",
+    "seoDescription",
+    "draft",
+    "published",
+    "disabled"
+  ],
+  "navItem": [
+    "label",
+    "labelAr",
+    "type",
+    "href",
+    "pageSlug",
+    "children",
+    "visible",
+    "openInNewTab"
+  ]
+}

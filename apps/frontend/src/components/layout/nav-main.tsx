@@ -1,256 +1,313 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ArrowUpRight, Search, LogOut, User, Bell, BookOpen, MessageCircle, Settings, Shield, LayoutTemplate } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import {
+  BookOpen,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings,
+  Shield,
+  ShoppingCart,
+  User,
+  X,
+} from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/auth-store';
+import { useCartStore } from '@/stores/cart-store';
 import { api } from '@/lib/api-client';
-import { apiProxyFetch } from '@/hooks/use-api-proxy';
-import { openPublicSearch } from '@/components/search/public-search-palette';
+import { NavbarSearch } from '@/components/search/navbar-search';
+import { NotificationBell } from '@/components/notifications/notification-bell';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { LocaleSwitcher } from '@/components/layout/locale-switcher';
+import { BrandMark } from '@/components/layout/brand';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { SiteNavDesktop, SiteNavMobile } from '@/components/layout/site-nav';
+import type { NavItemView } from '@titan/shared';
 
-const navKeys = [
-  { key: 'academies', link: '/academy' },
-  { key: 'toolkits', link: '/products' },
-  { key: 'resources', link: '/feed' },
-  { key: 'events', link: '/events' },
-] as const;
-
-export function NavMain() {
+export function NavMain({ items }: { items: NavItemView[] }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, user, logout, impersonating } = useAuthStore();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const t = useTranslations('nav');
+  const tp = useTranslations('products');
+  // Shallow-compared rather than a whole-store read: the navbar sits in every
+  // public layout, so re-rendering it on unrelated auth writes is the most
+  // visible instance of the `` `set` is expensive `` problem.
+  const { isAuthenticated, user, logout, impersonating } = useAuthStore(
+    useShallow((s) => ({
+      isAuthenticated: s.isAuthenticated,
+      user: s.user,
+      logout: s.logout,
+      impersonating: s.impersonating,
+    })),
+  );
+  const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
+
   const [hasHydrated, setHasHydrated] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => setHasHydrated(true), []);
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setUserMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-  useEffect(() => {
-    if (!hasHydrated || !isAuthenticated) {
-      setUnreadCount(0);
-      return;
-    }
-    const controller = new AbortController();
-    apiProxyFetch('/api/proxy/notifications/unread-count', { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data !== null) setUnreadCount(data.count ?? data ?? 0);
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, [hasHydrated, isAuthenticated]);
+  useEffect(() => setMobileOpen(false), [pathname]);
 
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  // ── Scroll-aware header ──────────────────────────────────────────────
+  // The header is `sticky top-0`, so it is the first thing you see after the
+  // announcement bar scrolls away. It stays borderless and shadowless while
+  // you're at the top — the page's own top edge is the divider — and picks up a
+  // hairline plus a soft shadow the moment content passes underneath it.
+  //
+  // The 8px threshold rather than 0: a scrollbar drag or trackpad nudge of a
+  // pixel or two shouldn't make the chrome jump.
+  const [lifted, setLifted] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setLifted(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // ── Cart badge ───────────────────────────────────────────────────────
+  // Springs on mount rather than appearing, so the first paint after adding to
+  // the cart reads as a change instead of a stray dot.
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (cartCount > 0)
+      badgeRef.current?.animate(
+        [
+          { transform: 'scale(0.4)', opacity: 0 },
+          { transform: 'scale(1.18)', opacity: 1, offset: 0.6 },
+          { transform: 'scale(1)', opacity: 1 },
+        ],
+        { duration: 320, easing: 'cubic-bezier(0.32,0.72,0,1)' },
+      );
+  }, [cartCount]);
+
   const showAuthenticated = hasHydrated && isAuthenticated;
-  void user;
   const isAdmin =
     user?.role === 'super_admin' ||
     user?.role === 'admin' ||
     !!user?.tenantRoles?.some((r) => r.role === 'super_admin' || r.role === 'admin');
-  const tNav = useTranslations('nav');
-  const navItems = navKeys.map((k) => ({ name: tNav(k.key), link: k.link }));
+
+  const initial = (user?.name || user?.email || '?').charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     try {
       await api.post('/auth/logout');
-    } catch {}
+    } catch {
+      /* signed out locally regardless */
+    }
     logout();
     router.push('/');
   };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-card/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-        <div className="flex items-center gap-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-display text-xl font-semibold text-violet-600 dark:text-violet-400"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7c3aed] text-xs font-black text-white">
-              AC
-            </span>
-            Ahmad CNC
-          </Link>
-          <nav className="hidden items-center gap-1 md:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.link}
-                href={item.link}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium ${pathname.startsWith(item.link) ? 'bg-violet-600/10 text-violet-600 dark:text-violet-400' : 'text-muted-foreground hover:text-violet-600 dark:text-violet-400'}`}
-              >
-                {item.name}
+    <>
+      <header
+        className={cn(
+          'sticky top-0 z-40 w-full bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75',
+          // Transitioning only the two properties that change keeps this off the
+          // layout path — no reflow while scrolling.
+          'transition-[border-color,box-shadow] duration-200',
+          lifted ? 'border-b border-border shadow-xs' : 'border-b border-transparent',
+        )}
+      >
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+          <BrandMark />
+
+          {/* Desktop nav: managed tree, hairline active indicator at the lower edge. */}
+          <SiteNavDesktop items={items} />
+
+          <div className="ms-auto flex items-center gap-1">
+            <NavbarSearch />
+
+            <LocaleSwitcher />
+            {/* On phones the theme toggle lives in the mobile menu panel. */}
+            <div className="hidden md:inline-flex">
+              <ThemeToggle />
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="relative"
+              aria-label={cartCount > 0 ? `${tp('cart')} (${cartCount})` : tp('cart')}
+            >
+              <Link href="/cart">
+                <ShoppingCart className="size-4" />
+                {hasHydrated && cartCount > 0 && (
+                  <span
+                    ref={badgeRef}
+                    className="absolute end-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-semibold text-primary-foreground tabular-nums"
+                  >
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
               </Link>
-            ))}
-          </nav>
+            </Button>
+
+            {impersonating && (
+              <span className="hidden rounded-sm bg-warning/15 px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-warning sm:inline-flex">
+                Impersonating
+              </span>
+            )}
+
+            {showAuthenticated ? (
+              <>
+                <NotificationBell />
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      aria-label={t('profile')}
+                      className="rounded-full ring-offset-2 ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Avatar className="size-8 rounded-sm">
+                        {user?.avatarUrl && (
+                          <AvatarImage src={user.avatarUrl} alt={user?.name || 'User'} />
+                        )}
+                        <AvatarFallback className="rounded-sm font-mono text-xs">
+                          {initial}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="normal-case">
+                      <span className="block truncate text-sm font-semibold text-foreground">
+                        {user?.name || 'User'}
+                      </span>
+                      <span className="block truncate font-mono text-xs font-normal text-muted-foreground">
+                        {user?.email}
+                      </span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => router.push('/learning')}>
+                      <BookOpen />
+                      {t('myLearning')}
+                    </DropdownMenuItem>
+                    {user?.id && (
+                      <DropdownMenuItem onSelect={() => router.push(`/profile/${user.id}`)}>
+                        <User />
+                        {t('profile')}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={() => router.push('/settings')}>
+                      <Settings />
+                      {t('settings')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => router.push('/settings/account/security')}>
+                      <Shield />
+                      {t('security')}
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => router.push('/admin')}>
+                          <LayoutDashboard />
+                          {t('admin')}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem destructive onSelect={() => void handleLogout()}>
+                      <LogOut />
+                      {t('signOut')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <div className="hidden items-center gap-2 lg:flex">
+                <Button variant="ghost" asChild>
+                  <Link href="/login">{t('signIn')}</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">{t('getStarted')}</Link>
+                </Button>
+              </div>
+            )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              aria-label={mobileOpen ? t('closeMenu') : t('openMenu')}
+              onClick={() => setMobileOpen((v) => !v)}
+            >
+              {mobileOpen ? <X /> : <Menu />}
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" aria-label="Search" onClick={openPublicSearch}>
-            <Search className="h-4 w-4" />
-          </Button>
-          {impersonating && (
-            <span className="rounded-md bg-amber-500/20 px-2 py-1 text-xs font-medium text-amber-600">
-              Impersonating
-            </span>
-          )}
-          {showAuthenticated ? (
-            <>
-              <Button variant="ghost" size="icon" aria-label="Messages" asChild>
-                <Link href="/messages">
-                  <MessageCircle className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Notifications"
-                className="relative"
-                asChild
+        {/* Inline expanding panel — left-edge active marker, route mono labels. */}
+        {/* The panel expands the header rather than overlaying it, so the page
+            below doesn't have to be padded to compensate. Height is animated
+            because it is a layout property — but the panel is short and the
+            header is already sticky, so the reflow is contained. */}
+        <AnimatePresence initial={false}>
+          {mobileOpen && (
+            <m.div
+              key="mobile-nav"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1, transition: spring.gentle }}
+              exit={{ height: 0, opacity: 0, transition: transition.leave }}
+              className="overflow-hidden border-t border-border bg-background md:hidden"
+            >
+              <nav
+                className="mx-auto flex max-w-7xl flex-col gap-0.5 px-4 py-3"
+                aria-label="Mobile"
               >
-                <Link href="/notifications">
-                  <Bell className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </Link>
-              </Button>
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 rounded-full bg-muted px-2 py-1.5 text-sm font-medium"
-                >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                    {user?.name?.charAt(0)?.toUpperCase() ||
-                      user?.email?.charAt(0)?.toUpperCase() ||
-                      '?'}
-                  </div>
-                </button>
-                {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-[280px] overflow-hidden rounded-2xl border bg-card shadow-sm">
-                    <div className="flex gap-2.5 px-4 pb-3 pt-4">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-xs font-bold text-white">
-                        {user?.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user?.name || 'User'}
-                            className="h-full w-full object-cover rounded-xl"
-                          />
-                        ) : (
-                          <span>{user?.name?.charAt(0)?.toUpperCase() || '?'}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">{user?.name || 'User'}</p>
-                        <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
-                      </div>
-                    </div>
-                    <div className="px-1.5 pb-1">
-                      {/* `/profile/[userId]` is id-addressed; the username-addressed
-                          public profile lives at `/u/[username]`. */}
-                      <Link
-                        href={`/profile/${user?.id}`}
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-muted"
-                      >
-                        <User className="h-3.5 w-3.5" />
-                        Profile
-                      </Link>
-                      <Link
-                        href="/account"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-muted"
-                      >
-                        <BookOpen className="h-3.5 w-3.5" />
-                        My learning
-                      </Link>
-                      <Link
-                        href="/settings"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-muted"
-                      >
-                        <Settings className="h-3.5 w-3.5" />
-                        Settings
-                      </Link>
-                      <Link
-                        href="/settings/account/security"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-muted"
-                      >
-                        <Shield className="h-3.5 w-3.5" />
-                        Security
-                      </Link>
-                      {isAdmin && (
-                        <Link
-                          href="/admin"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-600/10"
-                        >
-                          <LayoutTemplate className="h-3.5 w-3.5" />
-                          {tNav('admin')}
-                        </Link>
-                      )}
-                    </div>
-                    <div className="border-t p-1.5">
-                      <button
-                        onClick={handleLogout}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:bg-muted"
-                      >
-                        <LogOut className="h-3.5 w-3.5" /> Sign out
-                      </button>
-                    </div>
+                <SiteNavMobile items={items} onNavigate={() => setMobileOpen(false)} />
+                {!showAuthenticated && (
+                  <div className="mt-2 flex gap-2">
+                    <Button variant="outline" className="flex-1" asChild>
+                      <Link href="/login">{t('signIn')}</Link>
+                    </Button>
+                    <Button className="flex-1" asChild>
+                      <Link href="/register">{t('getStarted')}</Link>
+                    </Button>
                   </div>
                 )}
-              </div>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" asChild>
-                <Link href="/login">Sign in</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/register" className="gap-2">
-                  Get Started <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </>
+                {showAuthenticated && (
+                  <Button
+                    variant="ghost"
+                    className="mt-2 justify-start"
+                    onClick={() => void handleLogout()}
+                  >
+                    <LogOut />
+                    {t('signOut')}
+                  </Button>
+                )}
+                <Button variant="outline" className="mt-2 justify-start" asChild>
+                  <Link href="/cart">
+                    <ShoppingCart className="size-4" />
+                    {tp('cart')}
+                    {hasHydrated && cartCount > 0 ? ` (${cartCount})` : ''}
+                  </Link>
+                </Button>
+                <div className="mt-2 flex items-center justify-between rounded-md border border-border px-3 py-2 md:hidden">
+                  <span className="text-sm text-muted-foreground">{t('toggleTheme')}</span>
+                  <ThemeToggle />
+                </div>
+              </nav>
+            </m.div>
           )}
-          <button
-            className="md:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            ☰
-          </button>
-        </div>
-      </div>
-      {isMobileMenuOpen && (
-        <div className="border-t border-border bg-card p-4 md:hidden">
-          <nav className="flex flex-col gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.link}
-                href={item.link}
-                onClick={closeMobileMenu}
-                className={`rounded-xl px-4 py-3 text-sm font-semibold ${pathname.startsWith(item.link) ? 'bg-violet-600/10 text-violet-600 dark:text-violet-400' : 'text-muted-foreground'}`}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
-    </header>
+        </AnimatePresence>
+      </header>
+    </>
   );
 }

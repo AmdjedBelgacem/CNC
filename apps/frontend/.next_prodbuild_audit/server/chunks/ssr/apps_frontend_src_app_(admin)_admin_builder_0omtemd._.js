@@ -1,3 +1,0 @@
-module.exports=[45550,a=>{"use strict";var b=a.i(17454),c=a.i(137);a.s(["default",0,function(){let[d,e]=(0,c.useState)(null);return((0,c.useEffect)(()=>{let b=!1;return a.A(40503).then(a=>{b||e(()=>a.BuilderEditor)}),()=>{b=!0}},[]),d)?(0,b.jsx)(d,{}):(0,b.jsx)("div",{className:"flex h-screen items-center justify-center text-muted-foreground",children:"Loading builder…"})}])},40503,a=>{a.v(b=>Promise.all(["server/chunks/ssr/[root-of-the-server]__1b2y-d4._.js","server/chunks/ssr/_0jm-zqj._.js","server/chunks/ssr/_1rak5qd._.js"].map(b=>a.l(b))).then(()=>b(84824)))}];
-
-//# sourceMappingURL=apps_frontend_src_app_%28admin%29_admin_builder_0omtemd._.js.map

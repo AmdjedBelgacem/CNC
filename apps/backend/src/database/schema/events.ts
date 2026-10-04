@@ -1,6 +1,14 @@
+import type { ContentLocale } from '@titan/shared';
 import { pgTable, uuid, varchar, text, boolean, integer, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants';
 import { users } from './users';
+
+export type EventContentTranslation = {
+  title?: string;
+  description?: string | null;
+  /** Venue name as a person would say it, e.g. "الرياض، السعودية". */
+  location?: string | null;
+};
 
 export const events = pgTable('events', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -17,6 +25,7 @@ export const events = pgTable('events', {
   price: integer('price'),
   thumbnailUrl: varchar('thumbnail_url', { length: 500 }),
   isPublished: boolean('is_published').default(false),
+  translations: jsonb('translations').$type<Partial<Record<ContentLocale, EventContentTranslation>>>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

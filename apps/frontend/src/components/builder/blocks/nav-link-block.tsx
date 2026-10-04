@@ -7,7 +7,7 @@ import type { BlockComponentProps } from './index'; /** Small uppercase navbar l
 export function NavLinkBlock({ props }: BlockComponentProps<NavLinkProps>) {
   const { label = '', href = '#', active, className } = props;
   const classes = cn(
-    'inline-flex items-center font-label-sm text-[11px] font-bold tracking-[0.1em]',
+    'inline-flex items-center font-label-sm text-2xs font-bold tracking-[0.1em]',
     active ? 'text-primary' : 'text-text-muted hover:text-primary transition-colors',
     className,
   );

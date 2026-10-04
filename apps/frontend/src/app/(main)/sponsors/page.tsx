@@ -4,6 +4,7 @@ import { ExternalLink, Crown, Shield, Medal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { getImageSrc } from '@/lib/images';
 interface Sponsor {
   id: string;
   name: string;
@@ -15,7 +16,7 @@ interface Sponsor {
 const tierConfig: Record<string, { icon: typeof Crown; className: string }> = {
   Platinum: { icon: Crown, className: 'border-yellow-500/50 bg-yellow-500/5' },
   Gold: { icon: Shield, className: 'border-yellow-600/30 bg-yellow-600/5' },
-  Silver: { icon: Medal, className: 'border-gray-400/30 bg-gray-400/5' },
+  Silver: { icon: Medal, className: 'border-border bg-muted/40' },
 };
 export default function SponsorsPage() {
   const { data, isLoading, error } = useQuery<{ data: Sponsor[] }>({
@@ -38,7 +39,7 @@ export default function SponsorsPage() {
   return (
     <div>
       {' '}
-      <section className="border-b bg-gradient-to-b from-background to-secondary/20 py-20 text-center">
+      <section className="border-b bg-surface-sunken/60 blueprint-grid py-20 text-center">
         {' '}
         <div className="container mx-auto px-4">
           {' '}
@@ -93,7 +94,7 @@ export default function SponsorsPage() {
                 {' '}
                 <div className="flex items-center gap-3 mb-6">
                   {' '}
-                  <Icon className="h-5 w-5 text-primary" />{' '}
+                  <Icon className="size-5 text-primary" />{' '}
                   <h2 className="text-2xl font-bold">{tier} Partners</h2>{' '}
                 </div>{' '}
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -108,15 +109,11 @@ export default function SponsorsPage() {
                         {' '}
                         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/50 font-bold text-sm">
                           {' '}
-                          {s.logoUrl ? (
-                            <img
-                              src={s.logoUrl}
-                              alt={s.name}
-                              className="h-10 w-10 object-contain"
-                            />
-                          ) : (
-                            s.name.slice(0, 2).toUpperCase()
-                          )}{' '}
+                          <img
+                            src={getImageSrc(s.logoUrl, 'sponsor')}
+                            alt={s.name}
+                            className="h-10 w-10 object-contain"
+                          />
                         </div>{' '}
                         {s.tier && (
                           <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
@@ -138,7 +135,7 @@ export default function SponsorsPage() {
                           className="inline-flex items-center gap-1 text-sm text-primary mt-3 hover:underline"
                         >
                           {' '}
-                          Visit website <ExternalLink className="h-3 w-3" />{' '}
+                          Visit website <ExternalLink className="size-3.5" />{' '}
                         </a>
                       )}{' '}
                     </div>

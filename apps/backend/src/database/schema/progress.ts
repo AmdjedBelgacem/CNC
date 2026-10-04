@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, integer, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, integer, timestamp, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { courses } from './courses';
 import { lessons } from './courses';
@@ -15,6 +15,25 @@ export const enrollments = pgTable('enrollments', {
   certificateId: uuid('certificate_id'),
 }, (table) => ({
   userCourseIdx: uniqueIndex('user_course_idx').on(table.userId, table.courseId),
+}));
+
+export const lessonQuizAttempts = pgTable('lesson_quiz_attempts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  lessonId: uuid('lesson_id').references(() => lessons.id, { onDelete: 'cascade' }).notNull(),
+  quizId: varchar('quiz_id', { length: 100 }).notNull(),
+  answers: jsonb('answers').$type<Record<string, string | string[]>>().notNull(),
+  score: integer('score').notNull(),
+  passed: boolean('passed').notNull(),
+  attemptNumber: integer('attempt_number').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  tenantUserLessonQuizAttemptIdx: uniqueIndex('lesson_quiz_attempts_tenant_user_lesson_quiz_attempt_idx').on(table.tenantId, table.userId, table.lessonId, table.quizId, table.attemptNumber),
+  tenantUserLessonIdx: index('lesson_quiz_attempts_tenant_user_lesson_idx').on(table.tenantId, table.userId, table.lessonId),
+  tenantLessonQuizIdx: index('lesson_quiz_attempts_tenant_lesson_quiz_idx').on(table.tenantId, table.lessonId, table.quizId),
+  createdAtIdx: index('lesson_quiz_attempts_created_at_idx').on(table.createdAt),
 }));
 
 export const lessonProgress = pgTable('lesson_progress', {

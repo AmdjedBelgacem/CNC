@@ -5,6 +5,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton, SkeletonCircle } from '@/components/ui/skeleton';
+import { Placeholder } from '@/components/ui/states';
 import {
   MapPin,
   Users,
@@ -13,11 +15,11 @@ import {
   MessageSquare,
   Grid,
   Activity,
-  Plus,
   ExternalLink,
   Loader2,
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { getImageSrc } from '@/lib/images';
 interface ProfileProject {
   id: string;
   title: string;
@@ -66,14 +68,9 @@ function getInitials(name: string): string {
 }
 function CoverImage({ coverUrl }: { coverUrl: string | null }) {
   return (
-    <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden bg-[#1e2128]">
-      {' '}
-      {coverUrl ? (
-        <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full bg-gradient-to-r from-[#1e2128] via-[#252a33] to-[#1e2128]" />
-      )}{' '}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#16181c] to-transparent" />{' '}
+    <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden bg-card">
+      <img src={getImageSrc(coverUrl, 'user')} alt="Cover" className="w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
     </div>
   );
 }
@@ -95,12 +92,12 @@ function StatsBar({ stats }: { stats: ProfileStats }) {
       {items.map((item) => (
         <div
           key={item.label}
-          className="flex items-center gap-2 rounded-lg bg-[#1e2128] px-4 py-2.5"
+          className="flex items-center gap-2 rounded-lg bg-card px-4 py-2.5"
         >
           {' '}
-          <item.icon className="h-4 w-4 text-amber-500" />{' '}
+          <item.icon className="size-4 text-warning" />{' '}
           <span className="text-sm font-semibold text-white">{item.value}</span>{' '}
-          <span className="text-xs text-gray-500">{item.label}</span>{' '}
+          <span className="text-xs text-muted-foreground">{item.label}</span>{' '}
         </div>
       ))}{' '}
     </div>
@@ -108,24 +105,16 @@ function StatsBar({ stats }: { stats: ProfileStats }) {
 }
 function ProjectCard({ project }: { project: ProfileProject }) {
   return (
-    <Card className="overflow-hidden border-gray-700/30 bg-[#1e2128] hover:border-amber-500/30 transition-colors">
+    <Card className="overflow-hidden border-border bg-card hover:border-warning/40 transition-colors">
       {' '}
-      <div className="aspect-video bg-[#252a33] relative overflow-hidden">
-        {' '}
-        {project.imageUrl ? (
-          <img src={project.imageUrl} alt={project.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            {' '}
-            <Plus className="h-8 w-8 text-gray-600" />{' '}
-          </div>
-        )}{' '}
+      <div className="aspect-video bg-muted relative overflow-hidden">
+        <img src={getImageSrc(project.imageUrl, 'product')} alt={project.title} className="w-full h-full object-cover" />
       </div>{' '}
       <CardContent className="p-4">
         {' '}
         <h3 className="font-semibold text-white text-sm mb-1 truncate"> {project.title} </h3>{' '}
         {project.description && (
-          <p className="text-xs text-gray-400 line-clamp-2 mb-3"> {project.description} </p>
+          <p className="text-xs text-muted-foreground line-clamp-2 mb-3"> {project.description} </p>
         )}{' '}
         {project.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
@@ -134,7 +123,7 @@ function ProjectCard({ project }: { project: ProfileProject }) {
               <Badge
                 key={tag}
                 variant="outline"
-                className="border-amber-500/20 text-amber-500/80 text-[10px]"
+                className="border-warning/25 text-warning/80 text-2xs"
               >
                 {' '}
                 {tag}{' '}
@@ -147,10 +136,10 @@ function ProjectCard({ project }: { project: ProfileProject }) {
             href={project.projectUrl || project.url!}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-amber-500 hover:text-amber-400"
+            className="inline-flex items-center gap-1 text-xs text-warning hover:text-warning"
           >
             {' '}
-            <ExternalLink className="h-3 w-3" /> View project{' '}
+            <ExternalLink className="size-3.5" /> View project{' '}
           </a>
         )}{' '}
       </CardContent>{' '}
@@ -162,8 +151,8 @@ function PortfolioGrid({ projects }: { projects: ProfileProject[] }) {
     return (
       <div className="text-center py-16">
         {' '}
-        <Grid className="mx-auto h-12 w-12 text-gray-600 mb-3" />{' '}
-        <p className="text-gray-400 text-sm">No portfolio items yet</p>{' '}
+        <Grid className="mx-auto h-12 w-12 text-muted-foreground mb-3" />{' '}
+        <p className="text-muted-foreground text-sm">No portfolio items yet</p>{' '}
       </div>
     );
   }
@@ -177,38 +166,40 @@ function PortfolioGrid({ projects }: { projects: ProfileProject[] }) {
   );
 }
 function ActivityTabPlaceholder() {
+  // `Placeholder` rather than `EmptyState`: nothing failed and nothing is
+  // missing — the tab just has no content yet. EmptyState's icon-and-copy
+  // pattern over-promises here.
   return (
-    <div className="text-center py-16">
-      {' '}
-      <Activity className="mx-auto h-12 w-12 text-gray-600 mb-3" />{' '}
-      <p className="text-gray-400 text-sm">Activity feed coming soon</p>{' '}
-    </div>
+    <Placeholder
+      className="flex-col gap-3 py-16"
+      label="Activity feed coming soon"
+    />
   );
 }
 function LoadingSkeleton() {
+  // Page-specific (hero + overlapping identity block + tab pills), but built
+  // from the shared kit so it shimmers and honours prefers-reduced-motion like
+  // every other placeholder. The previous version used raw `animate-pulse` on
+  // eight divs, which meant this one screen blinked while the rest of the app
+  // swept.
   return (
-    <div className="min-h-screen bg-[#16181c]">
-      {' '}
-      <div className="h-48 sm:h-56 md:h-64 bg-[#1e2128] animate-pulse" />{' '}
-      <div className="max-w-5xl mx-auto px-4 -mt-12 relative z-10">
-        {' '}
-        <div className="flex items-end gap-4 mb-6">
-          {' '}
-          <div className="w-24 h-24 rounded-full bg-[#252a33] animate-pulse border-4 border-[#1e2128]" />{' '}
+    <div className="min-h-screen bg-background">
+      <Skeleton className="h-48 w-full rounded-none sm:h-56 md:h-64" />
+      <div className="relative z-10 mx-auto -mt-12 max-w-5xl px-4">
+        <div className="mb-6 flex items-end gap-4">
+          <SkeletonCircle className="size-24 border-4 border-card" />
           <div className="flex-1 space-y-2 pb-1">
-            {' '}
-            <div className="h-6 w-48 bg-[#252a33] rounded animate-pulse" />{' '}
-            <div className="h-4 w-32 bg-[#252a33] rounded animate-pulse" />{' '}
-          </div>{' '}
-        </div>{' '}
-        <div className="h-4 w-full max-w-xl bg-[#252a33] rounded animate-pulse mb-6" />{' '}
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <Skeleton className="mb-6 h-4 w-full max-w-xl" />
         <div className="flex gap-2">
-          {' '}
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-10 w-28 bg-[#252a33] rounded-lg animate-pulse" />
-          ))}{' '}
-        </div>{' '}
-      </div>{' '}
+            <Skeleton key={i} className="h-10 w-28" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -287,33 +278,33 @@ export default function ProfilePage() {
   if (loading) return <LoadingSkeleton />;
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[#16181c] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         {' '}
         <div className="text-center">
           {' '}
           <h1 className="text-2xl font-bold text-white mb-2">Profile not found</h1>{' '}
-          <p className="text-gray-400">The user @{username} does not exist.</p>{' '}
+          <p className="text-muted-foreground">The user @{username} does not exist.</p>{' '}
         </div>{' '}
       </div>
     );
   }
   const initials = getInitials(profile.name || profile.username);
   return (
-    <div className="min-h-screen bg-[#16181c]">
+    <div className="min-h-screen bg-background">
       {' '}
       <CoverImage coverUrl={profile.coverImageUrl} />{' '}
       <div className="max-w-5xl mx-auto px-4 -mt-12 relative z-10">
         {' '}
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 mb-6">
           {' '}
-          <div className="w-24 h-24 rounded-full border-4 border-[#1e2128] overflow-hidden flex-shrink-0 bg-[#1e2128]">
+          <div className="w-24 h-24 rounded-full border-4 border-card overflow-hidden flex-shrink-0 bg-card">
             {' '}
             <Avatar className="w-full h-full">
               {' '}
               {profile.avatarUrl ? (
                 <AvatarImage src={profile.avatarUrl} alt={profile.name} className="object-cover" />
               ) : null}{' '}
-              <AvatarFallback className="bg-amber-500/10 text-amber-500 text-2xl font-bold">
+              <AvatarFallback className="bg-warning/10 text-warning text-2xl font-bold">
                 {' '}
                 {initials}{' '}
               </AvatarFallback>{' '}
@@ -322,12 +313,12 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0">
             {' '}
             <h1 className="text-2xl font-bold text-white truncate"> {profile.name} </h1>{' '}
-            {profile.headline && <p className="text-gray-400 mt-0.5">{profile.headline}</p>}{' '}
+            {profile.headline && <p className="text-muted-foreground mt-0.5">{profile.headline}</p>}{' '}
             <div className="flex flex-wrap items-center gap-3 mt-2">
               {' '}
-              <span className="text-sm text-gray-500">@{profile.username}</span>{' '}
+              <span className="text-sm text-muted-foreground">@{profile.username}</span>{' '}
               {profile.location && (
-                <span className="flex items-center gap-1 text-sm text-gray-400">
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
                   {' '}
                   <MapPin className="w-3.5 h-3.5" /> {profile.location}{' '}
                 </span>
@@ -344,44 +335,44 @@ export default function ProfilePage() {
                   variant={followStatus.isFollowing ? 'outline' : 'default'}
                   className={
                     followStatus.isFollowing
-                      ? 'border-amber-500/30 text-amber-500 hover:bg-amber-500/10'
-                      : 'bg-amber-500 hover:bg-amber-600 text-black font-medium'
+                      ? 'border-warning/40 text-warning hover:bg-warning/10'
+                      : 'bg-warning hover:bg-warning text-black font-medium'
                   }
                 >
                   {' '}
-                  {followLoading && <Loader2 className="w-4 h-4 animate-spin mr-1" />}{' '}
+                  {followLoading && <Loader2 className="size-4 animate-spin me-1" />}{' '}
                   {followStatus.isFollowing ? 'Following' : 'Follow'}{' '}
                 </Button>
               )}{' '}
               <Button
                 variant="outline"
-                className="border-gray-600 text-gray-300 hover:bg-gray-700/50"
+                className="border-border-strong text-muted-foreground hover:bg-muted"
               >
                 {' '}
-                <MessageSquare className="w-4 h-4 mr-1" /> Message{' '}
+                <MessageSquare className="size-4 me-1" /> Message{' '}
               </Button>{' '}
             </div>
           )}{' '}
         </div>{' '}
         {profile.bio && (
-          <p className="text-gray-300 max-w-2xl mb-6 leading-relaxed"> {profile.bio} </p>
+          <p className="text-muted-foreground max-w-2xl mb-6 leading-relaxed"> {profile.bio} </p>
         )}{' '}
         <StatsBar stats={profile.stats} />{' '}
-        <div className="flex border-b border-gray-700/50 mt-8 mb-6">
+        <div className="flex border-b border-border mt-8 mb-6">
           {' '}
           <button
             onClick={() => setActiveTab('portfolio')}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'portfolio' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'portfolio' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-muted-foreground'}`}
           >
             {' '}
-            <Grid className="w-4 h-4" /> Portfolio{' '}
+            <Grid className="size-4" /> Portfolio{' '}
           </button>{' '}
           <button
             onClick={() => setActiveTab('activity')}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity' ? 'border-amber-500 text-amber-500' : 'border-transparent text-gray-400 hover:text-gray-300'}`}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-muted-foreground'}`}
           >
             {' '}
-            <Activity className="w-4 h-4" /> Activity{' '}
+            <Activity className="size-4" /> Activity{' '}
           </button>{' '}
         </div>{' '}
         {activeTab === 'portfolio' ? (

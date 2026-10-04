@@ -1,177 +1,213 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useEffect, useMemo, useState, type ElementType } from 'react';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import {
+  Bell,
+  GraduationCap,
+  Mail,
+  MessageSquare,
+  Shield,
+  ShoppingBag,
+  Users,
+} from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
+import {
+  NOTIFICATION_CATEGORIES,
+  useNotificationPreferences,
+  type NotificationCategory,
+  type NotificationPreferences,
+} from '@/hooks/use-notification-preferences';
 import { Button } from '@/components/ui/button';
-import { Bell, Mail, MessageSquare, Check } from 'lucide-react';
-import { apiProxyFetch } from '@/hooks/use-api-proxy';
-const emailToggles = [
-  { key: 'marketing', label: 'Marketing emails', desc: 'Product updates and promotions' },
-  { key: 'security', label: 'Security alerts', desc: 'Sign-in and suspicious activity' },
-  { key: 'updates', label: 'Course updates', desc: 'New lessons and progress reminders' },
-  { key: 'newsletter', label: 'Newsletter', desc: 'Weekly digest and community highlights' },
-];
-const inAppToggles = [
-  { key: 'comments', label: 'Comments', desc: 'Replies to your posts' },
-  { key: 'mentions', label: 'Mentions', desc: 'When someone mentions you' },
-  { key: 'follows', label: 'New followers', desc: 'Someone follows you' },
-  { key: 'enrollments', label: 'Enrollments', desc: 'Course enrollment confirmations' },
-  { key: 'certificates', label: 'Certificates', desc: 'Issued certificates' },
-  { key: 'messages', label: 'Direct messages', desc: 'Private messages' },
-];
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors ${checked ? 'bg-primary' : 'bg-input'}`}
-    >
-      {' '}
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition ${checked ? 'translate-x-5' : 'translate-x-0.5'}`}
-      />{' '}
-    </button>
+import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState, ErrorState } from '@/components/ui/states';
+import { toast } from '@/components/ui/toast';
+
+const CATEGORY_META: Record<
+  NotificationCategory,
+  { icon: typeof Users; title: string; description: string }
+> = {
+  social: { icon: Users, title: 'social', description: 'socialDescription' },
+  learning: { icon: GraduationCap, title: 'learning', description: 'learningDescription' },
+  commerce: { icon: ShoppingBag, title: 'commerce', description: 'commerceDescription' },
+  security: { icon: Shield, title: 'security', description: 'securityDescription' },
+};
+
+function samePreferences(left: NotificationPreferences, right: NotificationPreferences): boolean {
+  return NOTIFICATION_CATEGORIES.every(
+    (category) =>
+      left.inAppNotifications[category] === right.inAppNotifications[category] &&
+      left.emailNotifications[category] === right.emailNotifications[category],
   );
 }
-export default function NotificationsPage() {
-  const [prefs, setPrefs] = useState<Record<string, boolean>>({});
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+
+export default function NotificationPreferencesPage() {
+  const t = useTranslations('notificationPreferences');
+  const tc = useTranslations('common');
+  const hydrated = useAuthStore((state) => state.hydrated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const enabled = hydrated && isAuthenticated;
+  const { preferences, isLoading, isError, error, refetch, savePreferences, isSaving, saveError } =
+    useNotificationPreferences(enabled);
+  const [draft, setDraft] = useState<NotificationPreferences | null>(null);
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await apiProxyFetch('/api/proxy/auth/me/preferences');
-        if (res.ok) {
-          const data = await res.json();
-          setPrefs(data?.notifications || {});
-        }
-      } catch {}
-    })();
-  }, []);
+    if (preferences) setDraft(preferences);
+  }, [preferences]);
+
+  const dirty = useMemo(
+    () => !!draft && !!preferences && !samePreferences(draft, preferences),
+    [draft, preferences],
+  );
+  const allOn = useMemo(
+    () =>
+      !!draft &&
+      NOTIFICATION_CATEGORIES.every(
+        (category) => draft.inAppNotifications[category] && draft.emailNotifications[category],
+      ),
+    [draft],
+  );
+
+  const updateChannel = (
+    channel: keyof NotificationPreferences,
+    category: NotificationCategory,
+    value: boolean,
+  ) => {
+    setDraft((current) =>
+      current
+        ? {
+            ...current,
+            [channel]: { ...current[channel], [category]: value },
+          }
+        : current,
+    );
+  };
+
+  const toggleAll = (value: boolean) => {
+    setDraft((current) => {
+      if (!current) return current;
+      const next = { ...current };
+      for (const channel of ['inAppNotifications', 'emailNotifications'] as const) {
+        next[channel] = { ...next[channel] };
+        for (const category of NOTIFICATION_CATEGORIES) next[channel][category] = value;
+      }
+      return next;
+    });
+  };
+
   const handleSave = async () => {
-    setSaving(true);
+    if (!draft) return;
     try {
-      const res = await apiProxyFetch('/api/proxy/auth/me/preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notifications: prefs }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      await savePreferences(draft);
+      toast({ type: 'ok', title: t('saved') });
     } catch {
-    } finally {
-      setSaving(false);
+      toast({ type: 'err', title: tc('error') });
     }
   };
-  const allOn = [...emailToggles, ...inAppToggles].every((t) => prefs[t.key]);
-  const toggleAll = (v: boolean) => {
-    const next: Record<string, boolean> = {};
-    [...emailToggles, ...inAppToggles].forEach((t) => (next[t.key] = v));
-    setPrefs(next);
+
+  if (!hydrated) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-20 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <EmptyState
+        icon={Bell}
+        title={t('signInTitle')}
+        description={t('signInHint')}
+        action={
+          <Button asChild>
+            <Link href="/login?returnUrl=%2Fsettings%2Fpreferences%2Fnotifications">{tc('signIn')}</Link>
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (isError) {
+    return <ErrorState title={t('loadFailed')} description={error instanceof Error ? error.message : undefined} onRetry={() => void refetch()} />;
+  }
+
+  if (isLoading || !draft) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-20 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  const renderChannel = (channel: keyof NotificationPreferences, title: string, icon: ElementType) => {
+    const ChannelIcon = icon;
+    return (
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+        <div className="flex items-center gap-2 border-b border-border/60 bg-muted/20 px-6 py-4">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+            <ChannelIcon className="size-3.5" />
+          </span>
+          <h2 className="text-sm font-semibold">{title}</h2>
+        </div>
+        <div className="divide-y divide-border/60">
+          {NOTIFICATION_CATEGORIES.map((category) => {
+            const meta = CATEGORY_META[category];
+            const Icon = meta.icon;
+            return (
+              <div key={category} className="flex items-center justify-between gap-4 px-6 py-4 transition hover:bg-muted/20">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Icon className="size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t(meta.title)}</p>
+                    <p className="text-xs text-muted-foreground">{t(meta.description)}</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={draft[channel][category]}
+                  onCheckedChange={(value) => updateChannel(channel, category, value)}
+                  aria-label={t(meta.title)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
   };
+
   return (
     <div className="space-y-6">
-      {' '}
-      <div className="flex gap-4">
-        {' '}
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          {' '}
-          <Bell className="h-5 w-5" />{' '}
-        </div>{' '}
-        <div className="flex-1">
-          {' '}
-          <h1 className="text-xl font-semibold tracking-tight">Notifications</h1>{' '}
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Choose how you want to be notified.
-          </p>{' '}
-        </div>{' '}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => toggleAll(!allOn)}
-          className="hidden h-8 rounded-full sm:flex"
-        >
-          {' '}
-          {allOn ? 'Disable all' : 'Enable all'}{' '}
-        </Button>{' '}
-      </div>{' '}
-      {saved && (
-        <div className="flex gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <Check className="h-4 w-4 shrink-0 mt-0.5" /> Preferences saved.
+      <div className="flex items-start gap-4">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Bell className="size-5" />
         </div>
-      )}{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <Mail className="h-3.5 w-3.5" />
-            </span>{' '}
-            Email Notifications
-          </h2>{' '}
-        </div>{' '}
-        <div className="divide-y divide-border/60">
-          {' '}
-          {emailToggles.map((t) => (
-            <label
-              key={t.key}
-              className="flex cursor-pointer items-center justify-between gap-4 px-6 py-4 transition hover:bg-muted/20"
-            >
-              {' '}
-              <div>
-                {' '}
-                <p className="text-sm font-medium">{t.label}</p>{' '}
-                <p className="text-xs text-muted-foreground">{t.desc}</p>{' '}
-              </div>{' '}
-              <Toggle
-                checked={!!prefs[t.key]}
-                onChange={(v) => setPrefs({ ...prefs, [t.key]: v })}
-              />{' '}
-            </label>
-          ))}{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <MessageSquare className="h-3.5 w-3.5" />
-            </span>{' '}
-            In-App Notifications
-          </h2>{' '}
-        </div>{' '}
-        <div className="divide-y divide-border/60">
-          {' '}
-          {inAppToggles.map((t) => (
-            <label
-              key={t.key}
-              className="flex cursor-pointer items-center justify-between gap-4 px-6 py-4 transition hover:bg-muted/20"
-            >
-              {' '}
-              <div>
-                {' '}
-                <p className="text-sm font-medium">{t.label}</p>{' '}
-                <p className="text-xs text-muted-foreground">{t.desc}</p>{' '}
-              </div>{' '}
-              <Toggle
-                checked={!!prefs[t.key]}
-                onChange={(v) => setPrefs({ ...prefs, [t.key]: v })}
-              />{' '}
-            </label>
-          ))}{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-white px-4 py-3 shadow-lg">
-        {' '}
-        <Button onClick={handleSave} disabled={saving} className="h-9 rounded-full px-6 shadow-md">
-          {' '}
-          {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Preferences'}{' '}
-        </Button>{' '}
-      </div>{' '}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t('description')}</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => toggleAll(!allOn)} className="hidden sm:inline-flex">
+          {allOn ? t('disableAll') : t('enableAll')}
+        </Button>
+      </div>
+
+      {saveError && <ErrorState compact title={t('saveFailed')} description={saveError instanceof Error ? saveError.message : undefined} />}
+
+      <div className="space-y-6">
+        {renderChannel('emailNotifications', t('emailTitle'), Mail)}
+        {renderChannel('inAppNotifications', t('inAppTitle'), MessageSquare)}
+      </div>
+
+      <div className="sticky bottom-4 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-lg">
+        <span className="text-xs text-muted-foreground">{dirty ? t('unsaved') : t('savedHint')}</span>
+        <Button onClick={() => void handleSave()} disabled={!dirty} loading={isSaving}>
+          {isSaving ? t('saving') : t('save')}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { ConfigService } from '../../config/config.service';
 import { DrizzleService } from '../../database/drizzle.service';
 import { orders, orderItems } from '../../database/schema/orders';
 import { productsBundle, productVariants } from '../../database/schema/products';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PaymentsService {
@@ -16,6 +17,7 @@ export class PaymentsService {
     @Inject(ConfigService) private config: ConfigService,
     private drizzle: DrizzleService,
     @Optional() @Inject('REDIS_CLIENT') private redisClient?: any,
+    @Optional() private notifications?: NotificationsService,
   ) {
     const key = this.config.get('STRIPE_SECRET_KEY');
     if (key) {
@@ -36,6 +38,31 @@ export class PaymentsService {
 
   private isLive(): boolean {
     return !!this.stripe;
+  }
+
+  private notifyOrder(order: typeof orders.$inferSelect, type: string, title: string, body: string) {
+    void this.notifications?.notifyUser({
+      tenantId: order.tenantId,
+      userId: order.userId,
+      type,
+      category: 'commerce',
+      title,
+      body,
+      href: `/checkout/success?orderId=${order.id}`,
+      entityType: 'order',
+      entityId: order.id,
+      idempotencyKey: `${type}:${order.tenantId}:${order.id}`,
+    }).catch(() => {});
+    void this.notifications?.notifyTenantAdmins(order.tenantId, {
+      type: `${type}_staff`,
+      category: 'commerce',
+      title,
+      body,
+      href: `/admin/finance?orderId=${order.id}`,
+      entityType: 'order',
+      entityId: order.id,
+      idempotencyKey: `${type}:${order.tenantId}:${order.id}:staff`,
+    }).catch(() => {});
   }
 
   private async checkIdempotency(eventId: string): Promise<boolean> {
@@ -71,6 +98,8 @@ export class PaymentsService {
       productId: string; variantId?: string; title?: string;
       variantTitle?: string; sku?: string; price?: number;
       quantity: number; thumbnailUrl?: string; isDigital?: boolean; isBackordered?: boolean;
+      /** Lowercase ISO code taken from the product row, never from the client. */
+      currency?: string;
     }[];
     successUrl: string; cancelUrl: string;
   }) {
@@ -106,6 +135,7 @@ export class PaymentsService {
         variantTitle: item.variantTitle,
         sku,
         price,
+        currency: (prodRow.currency || this.config.get('PAYMENTS_CURRENCY')).toLowerCase(),
         quantity: item.quantity,
         thumbnailUrl: item.thumbnailUrl ?? prodRow.thumbnailUrl ?? undefined,
         isDigital,
@@ -116,6 +146,14 @@ export class PaymentsService {
     const subtotal = validatedItems.reduce((s, i) => s + (i.price ?? 0) * i.quantity, 0);
     const shipping = subtotal >= 5000 ? 0 : 999;
     const total = subtotal + shipping;
+    // The charge must use the currency the stored prices are actually denominated
+    // in. Charging a SAR amount as USD would silently triple the invoice, so the
+    // order records the product currency and each Stripe line carries its own.
+    const currencies = [...new Set(validatedItems.map((i) => i.currency!))];
+    const settlementCurrency = currencies[0] ?? this.config.get('PAYMENTS_CURRENCY');
+    if (currencies.length > 1) {
+      this.logger.warn(`Mixed-currency order ${currencies.join(',')} — each line is charged in its own currency`);
+    }
 
     const [order] = await this.drizzle.db.insert(orders).values({
       tenantId: params.tenantId,
@@ -124,6 +162,7 @@ export class PaymentsService {
       subtotal,
       shipping,
       total,
+      currency: settlementCurrency.toUpperCase(),
     }).returning();
     if (!order) throw new Error('Failed to create order');
 
@@ -143,13 +182,15 @@ export class PaymentsService {
       } as any);
     }
 
+    this.notifyOrder(order, 'order_created', 'Order created', 'Your order has been created.');
+
     if (this.isLive()) {
       try {
         const session = await this.stripe.checkout.sessions.create({
           mode: 'payment',
           line_items: validatedItems.map((i) => ({
             price_data: {
-              currency: 'usd',
+              currency: i.currency ?? settlementCurrency,
               product_data: { name: i.variantTitle ? `${i.title} - ${i.variantTitle}` : i.title, metadata: { productId: i.productId } },
               unit_amount: i.price,
             },
@@ -245,6 +286,9 @@ export class PaymentsService {
             this.logger.warn(`Order ${orderId} not confirmed — status not pending or session mismatch for ${session.id}`);
           }
         }
+        if (updated[0]) {
+          this.notifyOrder(updated[0], 'order_confirmed', 'Payment confirmed', 'Your payment was confirmed and your order is being processed.');
+        }
         this.logger.log(`Order ${orderId} confirmed via ${session.id} tenant=${tenantIdFromMeta}`);
         break;
       }
@@ -254,7 +298,10 @@ export class PaymentsService {
         if (orderId) {
           const where = tenantIdFromMeta ? and(eq(orders.id, orderId), eq(orders.tenantId, tenantIdFromMeta), eq(orders.status, 'pending')) : and(eq(orders.id, orderId), eq(orders.status, 'pending'));
           const r = await this.drizzle.db.update(orders).set({ status: 'expired' }).where(where as any).returning();
-          if (r.length) this.logger.log(`Order ${orderId} expired`);
+          if (r.length) {
+            this.notifyOrder(r[0]!, 'order_expired', 'Order expired', 'Your checkout session expired before payment was completed.');
+            this.logger.log(`Order ${orderId} expired`);
+          }
         }
         break;
       }
@@ -263,7 +310,10 @@ export class PaymentsService {
         // Only mark pending orders as failed
         if (pi.id) {
           const r = await this.drizzle.db.update(orders).set({ status: 'failed' }).where(and(eq(orders.stripePaymentIntentId, pi.id), eq(orders.status, 'pending'))).returning();
-          if (r.length) this.logger.log(`Payment ${pi.id} failed`);
+          if (r.length) {
+            this.notifyOrder(r[0]!, 'payment_failed', 'Payment failed', 'Your payment could not be completed. Please try again.');
+            this.logger.log(`Payment ${pi.id} failed`);
+          }
         }
         break;
       }

@@ -1,52 +1,47 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { FONT_KEYS, FONT_LABELS, DEFAULT_THEME_TOKENS } from '@titan/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
+import { FONT_KEYS, FONT_LABELS, resolveFontKey } from '@titan/shared';
 import type { ColorSet, FontKey, ThemeTokens } from '@titan/shared';
-import { apiProxyFetch } from '@/hooks/use-api-proxy';
-import { themeTokensToInlineVars } from '@/lib/builder/theme-css';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Loader2,
-  Save,
-  Rocket,
-  RotateCcw,
-  History,
-  AlertCircle,
   Check,
-  Palette,
-  Type,
-  Sparkles,
-  Monitor,
-  Moon,
-  Sun,
-  X,
   Copy,
+  Save,
   Eye,
+  Moon,
+  Palette,
+  RotateCcw,
+  Rocket,
   Sliders,
-  Paintbrush,
+  Sun,
+  Type,
 } from 'lucide-react';
-interface ThemeRecord {
-  id: string;
-  name: string;
-  tokens: ThemeTokens;
-  status: 'draft' | 'published';
-  version: number;
-  publishedAt: string | null;
-}
-interface ThemeVersionRecord {
-  id: string;
-  version: number;
-  status: 'snapshot' | 'published';
-  changedByName: string | null;
-  createdAt: string;
-}
-const COLOR_GROUPS: { title: string; keys: (keyof ColorSet)[] }[] = [
-  { title: 'Surfaces', keys: ['background', 'card', 'muted'] },
-  { title: 'Text', keys: ['foreground', 'cardForeground', 'mutedForeground'] },
-  { title: 'Borders & Accents', keys: ['border', 'ring'] },
-  { title: 'Brand', keys: ['primary', 'secondary', 'accent'] },
+import { useTheme } from '@/components/providers/theme-provider';
+import { themeTokensToInlineVars, FONT_CSS_VARS, contrastForeground } from '@/lib/builder/theme-css';
+import {
+  AdminCommandBar,
+  AdminPageHeader,
+  BarButton,
+  BarPrimaryButton,
+} from '@/components/admin/admin-chrome';
+import {
+  FormSection,
+  FormSkeleton,
+  TextInput,
+  SelectInput,
+} from '@/components/admin/admin-form';
+import { PillTabs, SegmentedIconToggle, StatusPill } from '@/components/admin/admin-ui';
+import { toast } from '@/components/ui/toast';
+import { apiProxyFetch } from '@/hooks/use-api-proxy';
+
+const COLOR_GROUPS: { titleKey: string; keys: (keyof ColorSet)[] }[] = [
+  { titleKey: 'brand', keys: ['primary', 'secondary', 'accent'] },
+  { titleKey: 'surfaces', keys: ['background', 'card', 'muted'] },
+  { titleKey: 'text', keys: ['foreground', 'cardForeground', 'mutedForeground'] },
+  { titleKey: 'bordersAccents', keys: ['border', 'ring'] },
 ];
+
 const COLOR_LABELS: Record<keyof ColorSet, string> = {
   background: 'Background',
   foreground: 'Foreground',
@@ -60,6 +55,8 @@ const COLOR_LABELS: Record<keyof ColorSet, string> = {
   accent: 'Accent',
   ring: 'Ring',
 };
+
+/** One colour token: a picker, an editable hex field and a copy affordance. */
 function ColorSwatch({
   label,
   value,
@@ -70,1015 +67,825 @@ function ColorSwatch({
   onChange: (v: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const valid = /^#[0-9a-fA-F]{6}$/.test(value);
+
   const copy = async () => {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard unavailable */
+    }
   };
+
   return (
-    <div className="group relative flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 transition hover:border-border hover:bg-muted/30 hover:shadow-sm">
-      {' '}
-      <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm">
-        {' '}
-        <div className="absolute inset-0" style={{ backgroundColor: value }} />{' '}
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 transition hover:border-border-strong">
+      <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-border shadow-xs">
+        <span className="absolute inset-0" style={{ backgroundColor: valid ? value : '#888' }} />
         <input
           type="color"
-          value={value}
+          value={valid ? value : '#000000'}
           onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-          aria-label={`Pick ${label} color`}
-        />{' '}
-      </div>{' '}
+          className="absolute inset-0 size-full cursor-pointer opacity-0"
+          aria-label={`${label} colour picker`}
+        />
+      </label>
+
       <div className="min-w-0 flex-1">
-        {' '}
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <label
+          htmlFor={`token-${label}`}
+          className="block truncate text-2xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
           {label}
-        </p>{' '}
-        <p className="font-mono text-xs font-medium text-foreground">{value}</p>{' '}
-      </div>{' '}
-      <div className="flex items-center gap-1">
-        {' '}
-        <Input
+        </label>
+        {/* Hex codes are LTR-only tokens: without an explicit direction the bidi
+            algorithm reorders their neutrals and "#C2410C" paints as "#C2410C#". */}
+        <TextInput
+          id={`token-${label}`}
+          dir="ltr"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-8 w-[84px] rounded-lg border-border/60 bg-background px-2 font-mono text-[11px] focus:border-primary"
-        />{' '}
-        <button
-          type="button"
-          onClick={copy}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          title="Copy hex"
-        >
-          {' '}
-          {copied ? (
-            <Check className="h-3.5 w-3.5 text-green-600" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}{' '}
-        </button>{' '}
-      </div>{' '}
+          spellCheck={false}
+          invalid={!valid}
+          className="mt-0.5 h-7 border-0 bg-transparent p-0 font-mono text-xs shadow-none focus:ring-0"
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={copy}
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        title={`Copy ${label}`}
+        aria-label={`Copy ${label} hex value`}
+      >
+        {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+      </button>
     </div>
   );
 }
-function SectionCard({
-  icon: Icon,
-  title,
-  description,
-  children,
-  action,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) {
+
+/* ------------------------------------------------------------------ */
+/* Contrast checks                                                     */
+/* ------------------------------------------------------------------ */
+
+function channelLuminance(hex: string): number | null {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return null;
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm">
-      {' '}
-      <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
-        {' '}
-        <div className="flex items-center gap-3">
-          {' '}
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            {' '}
-            <Icon className="h-4 w-4" />{' '}
-          </div>{' '}
-          <div>
-            {' '}
-            <h3 className="text-sm font-semibold text-foreground">{title}</h3>{' '}
-            {description && <p className="text-xs text-muted-foreground">{description}</p>}{' '}
-          </div>{' '}
-        </div>{' '}
-        {action}{' '}
-      </div>{' '}
-      <div className="p-5">{children}</div>{' '}
-    </div>
+    0.2126 * ch((n >> 16) & 255) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255)
   );
 }
+
+function contrast(a: string, b: string): number | null {
+  const la = channelLuminance(a);
+  const lb = channelLuminance(b);
+  if (la === null || lb === null) return null;
+  const [hi, lo] = la > lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * A theme can be perfectly valid as data and completely unreadable in practice:
+ * a foreground close to its background, or a primary that swallows white text.
+ * These are the pairs the storefront actually relies on.
+ */
+function ContrastReport({ colors }: { colors: ColorSet }) {
+  const t = useTranslations('theme');
+  const checks = [
+    {
+      key: 'body',
+      label: t('contrastBody', { default: 'Body text on background' }),
+      ratio: contrast(colors.foreground, colors.background),
+    },
+    {
+      key: 'card',
+      label: t('contrastCard', { default: 'Card text on card' }),
+      ratio: contrast(colors.cardForeground, colors.card),
+    },
+    {
+      // The storefront paints `var(--primary-foreground)` on the primary colour,
+      // and that token is derived by `contrastForeground`, which already picks
+      // dark or light text for readability. Comparing primary against
+      // cardForeground instead reported a failure for a pair the product never
+      // renders, so the real resolved colour is measured here.
+      key: 'primary',
+      label: t('contrastPrimary', { default: 'Label on primary' }),
+      ratio: contrast(colors.primary, contrastForeground(colors.primary)),
+    },
+    {
+      key: 'muted',
+      label: t('contrastMuted', { default: 'Muted text on background' }),
+      ratio: contrast(colors.mutedForeground, colors.background),
+    },
+  ];
+
+  const failing = checks.filter((c) => c.ratio !== null && c.ratio < 4.5);
+  const unknown = checks.filter((c) => c.ratio === null);
+
+  return (
+    <FormSection
+      title={t('contrast', { default: 'Contrast' })}
+      icon={Check}
+      description={t('contrastDesc', {
+        default: 'WCAG ratio for the pairs the storefront depends on.',
+      })}
+    >
+      <ul className="space-y-2">
+        {checks.map((c) => {
+          const passing = c.ratio !== null && c.ratio >= 4.5;
+          return (
+            <li
+              key={c.key}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2"
+            >
+              <span className="min-w-0 truncate text-2xs font-semibold text-foreground">{c.label}</span>
+              {c.ratio === null ? (
+                <StatusPill label="—" tone="slate" dot={false} />
+              ) : (
+                <span
+                  className={cn(
+                    'shrink-0 font-mono text-2xs font-bold tabular-nums',
+                    passing ? 'text-success' : 'text-destructive',
+                  )}
+                >
+                  {c.ratio.toFixed(1)}:1 {passing ? 'AA' : 'low'}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {failing.length > 0 && (
+        <p className="mt-3 text-2xs leading-relaxed text-warning">
+          {t('contrastWarn', {
+            count: failing.length,
+            default:
+              '{count, plural, one {# pair falls below} other {# pairs fall below}} the 4.5:1 AA threshold. Text may be hard to read.',
+          })}
+        </p>
+      )}
+      {unknown.length > 0 && (
+        <p className="mt-2 text-2xs text-muted-foreground">
+          {t('contrastUnknown', {
+            default: 'Some tokens are not valid hex values yet, so they were not measured.',
+          })}
+        </p>
+      )}
+    </FormSection>
+  );
+}
+
 export function ThemeEditor() {
-  const [theme, setTheme] = useState<ThemeRecord | null>(null);
-  const [tokens, setTokens] = useState<ThemeTokens>(DEFAULT_THEME_TOKENS);
-  const [previewMode, setPreviewMode] = useState<'light' | 'dark'>('light');
-  const [activeColorMode, setActiveColorMode] = useState<'light' | 'dark'>('light');
+  const t = useTranslations('theme');
+  const { tokens: appliedTokens, previewTokens } = useTheme();
+  const originalTokens = useRef(appliedTokens);
+  const [persisted, setPersisted] = useState<ThemeTokens | null>(null);
+  const [draft, setDraft] = useState<ThemeTokens | null>(null);
+  const [status, setStatus] = useState<'draft' | 'published'>('draft');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
-  const [versions, setVersions] = useState<ThemeVersionRecord[]>([]);
-  const [showVersions, setShowVersions] = useState(false);
+  const [colorMode, setColorMode] = useState<'light' | 'dark'>('light');
+  const [previewMode, setPreviewMode] = useState<'light' | 'dark'>('light');
+
   useEffect(() => {
-    (async () => {
-      setLoading(true);
+    let cancelled = false;
+    void (async () => {
       try {
-        const res = await apiProxyFetch('/api/proxy/builder/themes');
-        if (!res.ok) throw new Error('Failed to load theme');
-        const body = (await res.json()) as ThemeRecord;
-        setTheme(body);
-        setTokens(body.tokens);
-      } catch (err) {
-        setMessage({
-          type: 'err',
-          text: err instanceof Error ? err.message : 'Failed to load theme',
-        });
+        const response = await apiProxyFetch('/api/proxy/builder/themes');
+        if (!response.ok) throw new Error('Failed to load the tenant theme');
+        const theme = (await response.json()) as {
+          tokens: ThemeTokens;
+          status: 'draft' | 'published';
+        };
+        if (cancelled) return;
+        setPersisted(theme.tokens);
+        setDraft(theme.tokens);
+        setStatus(theme.status);
+        previewTokens(theme.tokens);
+      } catch (error) {
+        if (!cancelled) {
+          setPersisted(originalTokens.current);
+          setDraft(originalTokens.current);
+          toast({
+            type: 'err',
+            title: t('loadFailed'),
+            description: error instanceof Error ? error.message : undefined,
+          });
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+      previewTokens(originalTokens.current);
+    };
+  }, [previewTokens, t]);
+
+  const current = draft ?? persisted ?? appliedTokens;
+  const activeColors = colorMode === 'light' ? current.light : current.dark;
   const dirty = useMemo(
-    () => !!theme && JSON.stringify(theme.tokens) !== JSON.stringify(tokens),
-    [theme, tokens],
+    () => persisted !== null && JSON.stringify(current) !== JSON.stringify(persisted),
+    [current, persisted],
   );
+
   const previewVars = useMemo(
-    () => themeTokensToInlineVars(tokens, previewMode),
-    [tokens, previewMode],
+    () => themeTokensToInlineVars(current, previewMode),
+    [current, previewMode],
   );
-  const activeColors = activeColorMode === 'light' ? tokens.light : tokens.dark;
-  const saveDraft = async () => {
+
+  // Preview the exact tenant tokens across the admin UI while editing. Drafts
+  // persist through the builder API; only Publish changes what customers see.
+  const patch = (fn: (t: ThemeTokens) => ThemeTokens) => {
+    const next = fn(current);
+    setDraft(next);
+    previewTokens(next);
+  };
+
+  const saveDraft = async (): Promise<boolean> => {
     setSaving(true);
-    setMessage(null);
     try {
-      const res = await apiProxyFetch('/api/proxy/builder/themes', {
+      const response = await apiProxyFetch('/api/proxy/builder/themes', {
         method: 'PUT',
-        body: JSON.stringify({ tokens, name: theme?.name }),
+        body: JSON.stringify({ tokens: current }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.message || 'Save failed');
-      }
-      setTheme((await res.json()) as ThemeRecord);
-      setMessage({ type: 'ok', text: 'Draft saved — your changes are live in preview' });
-      setTimeout(() => setMessage(null), 3000);
-    } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Save failed' });
-    } finally {
-      setSaving(false);
-    }
-  };
-  const publish = async () => {
-    setSaving(true);
-    setMessage(null);
-    try {
-      const res = await apiProxyFetch('/api/proxy/builder/themes/publish', { method: 'POST' });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.message || 'Publish failed');
-      }
-      setTheme((await res.json()) as ThemeRecord);
-      setMessage({ type: 'ok', text: 'Theme published — live for all visitors' });
-      setTimeout(() => setMessage(null), 3000);
-    } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Publish failed' });
-    } finally {
-      setSaving(false);
-    }
-  };
-  const reset = async () => {
-    if (!window.confirm('Reset the theme to defaults? Current draft will be replaced.')) return;
-    setSaving(true);
-    setMessage(null);
-    try {
-      const res = await apiProxyFetch('/api/proxy/builder/themes/reset', { method: 'POST' });
-      if (!res.ok) throw new Error('Reset failed');
-      const body = (await res.json()) as ThemeRecord;
-      setTheme(body);
-      setTokens(body.tokens);
-      setMessage({ type: 'ok', text: 'Theme reset to defaults' });
-    } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Reset failed' });
-    } finally {
-      setSaving(false);
-    }
-  };
-  const openVersions = async () => {
-    try {
-      const res = await apiProxyFetch('/api/proxy/builder/themes/versions');
-      if (!res.ok) throw new Error('Failed to load versions');
-      setVersions((await res.json()) as ThemeVersionRecord[]);
-      setShowVersions(true);
-    } catch (err) {
-      setMessage({
+      if (!response.ok) throw new Error('Failed to save the tenant theme');
+      const theme = (await response.json()) as { tokens: ThemeTokens; status: 'draft' };
+      setPersisted(theme.tokens);
+      setDraft(theme.tokens);
+      setStatus(theme.status);
+      toast({ type: 'ok', title: t('savedOk') });
+      return true;
+    } catch (error) {
+      toast({
         type: 'err',
-        text: err instanceof Error ? err.message : 'Failed to load versions',
+        title: t('saveFailed'),
+        description: error instanceof Error ? error.message : undefined,
       });
+      return false;
+    } finally {
+      setSaving(false);
     }
   };
-  const revert = async (version: number) => {
+
+  const onPublish = async () => {
     setSaving(true);
-    setMessage(null);
     try {
-      const res = await apiProxyFetch('/api/proxy/builder/themes/revert', {
-        method: 'POST',
-        body: JSON.stringify({ version }),
+      const saved = await apiProxyFetch('/api/proxy/builder/themes', {
+        method: 'PUT',
+        body: JSON.stringify({ tokens: current }),
       });
-      if (!res.ok) throw new Error('Revert failed');
-      const body = (await res.json()) as ThemeRecord;
-      setTheme(body);
-      setTokens(body.tokens);
-      setShowVersions(false);
-      setMessage({ type: 'ok', text: `Restored theme version ${version}` });
-    } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Revert failed' });
+      if (!saved.ok) throw new Error('Failed to save the tenant theme');
+      const response = await apiProxyFetch('/api/proxy/builder/themes/publish', {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Failed to publish the tenant theme');
+      const theme = (await response.json()) as { tokens: ThemeTokens; status: 'published' };
+      setPersisted(theme.tokens);
+      setDraft(theme.tokens);
+      setStatus(theme.status);
+      originalTokens.current = theme.tokens;
+      previewTokens(theme.tokens);
+      toast({ type: 'ok', title: t('publishOk') });
+    } catch (error) {
+      toast({
+        type: 'err',
+        title: t('publishFailed'),
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onReset = async () => {
+    if (!window.confirm(t('resetConfirm'))) return;
+    setSaving(true);
+    try {
+      const response = await apiProxyFetch('/api/proxy/builder/themes/reset', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to reset the tenant theme');
+      const theme = (await response.json()) as { tokens: ThemeTokens; status: 'draft' };
+      setPersisted(theme.tokens);
+      setDraft(theme.tokens);
+      setStatus(theme.status);
+      previewTokens(theme.tokens);
+      toast({ type: 'ok', title: t('resetOk') });
+    } catch (error) {
+      toast({
+        type: 'err',
+        title: t('saveFailed'),
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setSaving(false);
     }
   };
   if (loading) {
     return (
-      <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
-        {' '}
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-          {' '}
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />{' '}
-        </div>{' '}
-        <div className="text-center">
-          {' '}
-          <p className="text-sm font-medium text-foreground">Loading theme</p>{' '}
-          <p className="text-xs text-muted-foreground">Fetching your design tokens…</p>{' '}
-        </div>{' '}
+      <div className="mx-auto w-full max-w-[1500px] pt-6">
+        <FormSkeleton fields={6} />
       </div>
     );
   }
+
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#050a18]">
-      {' '}
-      {/* Header — Apple-style toolbar */}{' '}
-      <div className="sticky top-0 z-30 -mx-4 -mt-4 border-b border-border/80 bg-background/85 backdrop-blur-xl sm:-mx-6 sm:-mt-6 lg:-ml-20 lg:-mr-8 lg:-mt-8">
-        {' '}
-        <div className="mx-auto flex max-w-[1600px] items-center gap-4 px-4 py-3 sm:px-6">
-          {' '}
-          <div className="flex items-center gap-3">
-            {' '}
-            <div className="hidden h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-indigo-500 text-white shadow-lg shadow-primary/20 sm:flex">
-              {' '}
-              <Palette className="h-5 w-5" />{' '}
-            </div>{' '}
-            <div className="min-w-0">
-              {' '}
-              <div className="flex items-center gap-2">
-                {' '}
-                <h1 className="truncate text-[15px] font-semibold tracking-tight text-foreground">
-                  Theme Editor
-                </h1>{' '}
-                <span
-                  className={`hidden items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-widest sm:inline-flex ${dirty ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : theme?.status === 'published' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}
-                >
-                  {' '}
-                  <span className="relative flex h-1.5 w-1.5">
-                    {' '}
-                    <span
-                      className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${dirty || theme?.status !== 'published' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                    />{' '}
-                    <span
-                      className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dirty || theme?.status !== 'published' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                    />{' '}
-                  </span>{' '}
-                  {dirty
-                    ? 'Unsaved'
-                    : theme?.status === 'published'
-                      ? `Published v${theme?.version}`
-                      : 'Draft'}{' '}
-                </span>{' '}
-              </div>{' '}
-              <p className="hidden truncate text-xs text-muted-foreground sm:block">
-                {' '}
-                {theme?.name} · {dirty ? 'You have unsaved changes' : 'All changes saved'}{' '}
-                {theme && theme.version > 0 ? `· v${theme.version}` : ''}{' '}
-              </p>{' '}
-            </div>{' '}
-          </div>{' '}
-          <div className="ml-auto flex items-center gap-1.5">
-            {' '}
-            <div className="hidden items-center gap-1 lg:flex">
-              {' '}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void openVersions()}
-                className="h-8 gap-1.5 rounded-md px-3 text-xs font-medium"
-              >
-                {' '}
-                <History className="h-3.5 w-3.5" /> Versions{' '}
-              </Button>{' '}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void reset()}
-                disabled={saving}
-                className="h-8 gap-1.5 rounded-md px-3 text-xs font-medium"
-              >
-                {' '}
-                <RotateCcw className="h-3.5 w-3.5" /> Reset{' '}
-              </Button>{' '}
-              <div className="mx-1 h-5 w-px bg-border" />{' '}
-            </div>{' '}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void saveDraft()}
+    <div className="w-full">
+      <AdminCommandBar
+        trail={[{ label: 'Titans of CNC' }, { label: t('title') }]}
+        live={status === 'published' ? t('publishedBadge', { default: 'Published' }) : t('draftBadge', { default: 'Draft' })}
+        actions={
+          <>
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer noopener"
+              title={t('viewCustomerSite', { default: 'View customer site' })}
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98]"
+            >
+              <Eye className="size-4" />
+              <span className="hidden sm:inline">{t('viewCustomer', { default: 'Customer site' })}</span>
+            </a>
+            <BarButton icon={<RotateCcw className="size-4" />} disabled={saving} onClick={() => void onReset()}>
+              {t('reset', { default: 'Reset' })}
+            </BarButton>
+          </>
+        }
+        primary={
+          <>
+            <BarButton
+              icon={<Save className="size-4" />}
               disabled={saving || !dirty}
-              className="h-8 rounded-md border-border bg-card px-4 text-xs font-semibold shadow-sm hover:bg-muted disabled:opacity-40"
+              onClick={() => void saveDraft()}
             >
-              {' '}
-              {saving ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Save className="mr-1.5 h-3.5 w-3.5" />
-              )}{' '}
-              <span className="hidden sm:inline">Save Draft</span>{' '}
-              <span className="sm:hidden">Save</span>{' '}
-            </Button>{' '}
-            <Button
-              size="sm"
-              onClick={() => void publish()}
+              {t('saveDraft', { default: 'Save draft' })}
+            </BarButton>
+            <BarPrimaryButton
+              icon={<Rocket className="size-4" strokeWidth={2.5} />}
               disabled={saving}
-              className="h-8 rounded-md bg-primary px-4 text-xs font-semibold text-white shadow-md hover:bg-primary/90"
+              onClick={() => void onPublish()}
             >
-              {' '}
-              <Rocket className="mr-1.5 h-3.5 w-3.5" /> Publish{' '}
-            </Button>{' '}
-          </div>{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6">
-        {' '}
-        {/* Mobile secondary actions */}{' '}
-        <div className="mb-4 flex items-center gap-2 lg:hidden">
-          {' '}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void openVersions()}
-            className="h-8 flex-1 rounded-xl text-xs"
-          >
-            {' '}
-            <History className="mr-1.5 h-3.5 w-3.5" /> Versions{' '}
-          </Button>{' '}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void reset()}
-            disabled={saving}
-            className="h-8 flex-1 rounded-xl text-xs"
-          >
-            {' '}
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset{' '}
-          </Button>{' '}
-        </div>{' '}
-        {message && (
-          <div
-            className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm ${message.type === 'ok' ? 'border-emerald-500/20 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-red-500/20 bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300'}`}
-          >
-            {' '}
-            <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full ${message.type === 'ok' ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}
-            >
-              {' '}
-              {message.type === 'ok' ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
-              )}{' '}
-            </div>{' '}
-            <p className="flex-1 text-sm font-medium">{message.text}</p>{' '}
-            <button
-              onClick={() => setMessage(null)}
-              className="rounded-full p-1 hover:bg-muted/50"
-            >
-              {' '}
-              <X className="h-4 w-4" />{' '}
-            </button>{' '}
-          </div>
-        )}{' '}
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_1fr]">
-          {' '}
-          {/* Left: Controls */}{' '}
+              {t('publish', { default: 'Publish' })}
+            </BarPrimaryButton>
+          </>
+        }
+      />
+
+      <div className="mx-auto w-full max-w-[1600px] space-y-6 pt-6">
+        <AdminPageHeader
+          title={t('title')}
+          description={t('subtitle', {
+            default: 'Colors, typography and shape for the customer experience',
+          })}
+          badge={
+            dirty ? (
+              <span className="inline-flex items-center gap-2 self-start rounded-full border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning md:self-auto">
+                <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
+                {t('unsavedDraft', { default: 'Unsaved draft' })}
+              </span>
+            ) : undefined
+          }
+        />
+
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
+          {/* ------------------------------------------------------ controls */}
           <div className="space-y-5">
-            {' '}
-            {/* Typography */}{' '}
-            <SectionCard icon={Type} title="Typography" description="Fonts used across your site">
-              {' '}
+            <FormSection
+              title={t('typography')}
+              icon={Type}
+              description={t('typographyDesc', { default: 'Fonts used across the site' })}
+            >
               <div className="grid grid-cols-2 gap-3">
-                {' '}
                 {(
                   [
-                    ['sans', 'Body'],
-                    ['display', 'Display'],
+                    ['sans', t('bodyFont', { default: 'Body' })],
+                    ['display', t('displayFont', { default: 'Display' })],
                   ] as const
                 ).map(([field, label]) => (
-                  <div key={field} className="rounded-xl border border-border/60 bg-muted/20 p-3">
-                    {' '}
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  <div key={field} className="rounded-xl border border-border bg-muted/25 p-3">
+                    <label className="mb-1.5 block text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {label}
-                    </label>{' '}
-                    <select
-                      value={tokens.fonts[field]}
+                    </label>
+                    <SelectInput
+                      value={current.fonts[field]}
+                      dir="ltr"
                       onChange={(e) =>
-                        setTokens((t) => ({
-                          ...t,
-                          fonts: { ...t.fonts, [field]: e.target.value as FontKey },
+                        patch((tk) => ({
+                          ...tk,
+                          fonts: { ...tk.fonts, [field]: e.target.value as FontKey },
                         }))
                       }
-                      className="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                     >
-                      {' '}
                       {FONT_KEYS.map((key) => (
                         <option key={key} value={key}>
-                          {' '}
-                          {FONT_LABELS[key]}{' '}
+                          {FONT_LABELS[key]}
                         </option>
-                      ))}{' '}
-                    </select>{' '}
+                      ))}
+                    </SelectInput>
                     <p
-                      className="mt-2 truncate text-[11px] text-muted-foreground"
-                      style={{
-                        fontFamily: `var(--font-${field === 'sans' ? 'outfit' : 'garamond'})`,
-                      }}
+                      dir="ltr"
+                      className="mt-2 truncate text-start text-2xs text-muted-foreground"
+                      style={{ fontFamily: FONT_CSS_VARS[resolveFontKey(current.fonts[field])] }}
                     >
-                      {' '}
-                      Ag · The quick fox{' '}
-                    </p>{' '}
+                      Ag · The quick fox
+                    </p>
                   </div>
-                ))}{' '}
-              </div>{' '}
-            </SectionCard>{' '}
-            {/* Layout */}{' '}
-            <SectionCard icon={Sliders} title="Layout" description="Spacing and shape">
-              {' '}
+                ))}
+              </div>
+            </FormSection>
+
+            <FormSection
+              title={t('shape')}
+              icon={Sliders}
+              description={t('shapeDesc', { default: 'Corner radius and glass effect' })}
+            >
               <div className="grid grid-cols-3 gap-3">
-                {' '}
-                <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-                  {' '}
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Radius
-                  </label>{' '}
-                  <div className="flex items-center gap-2">
-                    {' '}
-                    <Input
+                <div className="rounded-xl border border-border bg-muted/25 p-3">
+                  <label
+                    htmlFor="theme-radius"
+                    className="mb-1.5 block text-2xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    {t('radius', { default: 'Radius' })}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <TextInput
+                      id="theme-radius"
                       type="number"
                       min={0}
                       max={32}
-                      value={tokens.radius}
-                      onChange={(e) => setTokens((t) => ({ ...t, radius: Number(e.target.value) }))}
-                      className="h-9 flex-1 rounded-lg border-border bg-card text-center font-mono text-sm"
-                    />{' '}
-                    <span className="text-xs text-muted-foreground">px</span>{' '}
-                  </div>{' '}
+                      value={String(current.radius)}
+                      onChange={(e) =>
+                        patch((tk) => ({ ...tk, radius: Number(e.target.value) }))
+                      }
+                      className="text-center font-mono text-sm"
+                    />
+                    <span className="text-2xs text-muted-foreground">px</span>
+                  </div>
                   <div className="mt-3 flex justify-center">
-                    {' '}
                     <div
-                      className="h-12 w-12 border-2 border-primary/30 bg-primary/10"
-                      style={{ borderRadius: tokens.radius }}
-                    />{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-                  {' '}
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Blur
-                  </label>{' '}
-                  <Input
+                      className="size-11 border-2 border-primary/30 bg-primary/10"
+                      style={{ borderRadius: current.radius }}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-muted/25 p-3">
+                  <label
+                    htmlFor="theme-blur"
+                    className="mb-1.5 block text-2xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    {t('blur', { default: 'Blur' })}
+                  </label>
+                  <TextInput
+                    id="theme-blur"
                     type="number"
                     min={0}
                     max={64}
-                    value={tokens.glass.blur}
+                    value={String(current.glass.blur)}
                     onChange={(e) =>
-                      setTokens((t) => ({
-                        ...t,
-                        glass: { ...t.glass, blur: Number(e.target.value) },
+                      patch((tk) => ({
+                        ...tk,
+                        glass: { ...tk.glass, blur: Number(e.target.value) },
                       }))
                     }
-                    className="h-9 rounded-lg border-border bg-card text-center font-mono text-sm"
-                  />{' '}
+                    className="text-center font-mono text-sm"
+                  />
                   <div className="mt-3 flex justify-center">
-                    {' '}
                     <div
-                      className="h-12 w-12 rounded-xl border border-border bg-white"
-                      style={{ backdropFilter: `blur(${tokens.glass.blur}px)` }}
-                    />{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-                  {' '}
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Opacity
-                  </label>{' '}
-                  <Input
+                      className="size-11 border border-border bg-primary/10"
+                      style={{ backdropFilter: `blur(${current.glass.blur}px)` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-muted/25 p-3">
+                  <label
+                    htmlFor="theme-opacity"
+                    className="mb-1.5 block text-2xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    {t('opacity', { default: 'Opacity' })}
+                  </label>
+                  <TextInput
+                    id="theme-opacity"
                     type="number"
                     min={0}
                     max={100}
-                    value={tokens.glass.opacity}
+                    value={String(current.glass.opacity)}
                     onChange={(e) =>
-                      setTokens((t) => ({
-                        ...t,
-                        glass: { ...t.glass, opacity: Number(e.target.value) },
+                      patch((tk) => ({
+                        ...tk,
+                        glass: { ...tk.glass, opacity: Number(e.target.value) },
                       }))
                     }
-                    className="h-9 rounded-lg border-border bg-card text-center font-mono text-sm"
-                  />{' '}
-                  <div className="mt-3 flex items-center gap-1">
-                    {' '}
+                    className="text-center font-mono text-sm"
+                  />
+                  <div className="mt-3 flex items-center gap-1.5">
                     <div className="h-1.5 flex-1 rounded-md bg-muted">
-                      {' '}
                       <div
                         className="h-1.5 rounded-md bg-primary transition-all"
-                        style={{ width: `${tokens.glass.opacity}%` }}
-                      />{' '}
-                    </div>{' '}
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                      {tokens.glass.opacity}%
-                    </span>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-            </SectionCard>{' '}
-            {/* Colors */}{' '}
-            <div className="rounded-xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="border-b border-border/60 px-5 py-4">
-                {' '}
-                <div className="flex items-center gap-3">
-                  {' '}
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    {' '}
-                    <Palette className="h-4 w-4" />{' '}
-                  </div>{' '}
-                  <div>
-                    {' '}
-                    <h3 className="text-sm font-semibold text-foreground">Colors</h3>{' '}
-                    <p className="text-xs text-muted-foreground">Light & dark palettes</p>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="mt-4 flex gap-1.5 rounded-md bg-muted p-1">
-                  {' '}
-                  <button
-                    onClick={() => setActiveColorMode('light')}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${activeColorMode === 'light' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    {' '}
-                    <Sun className="h-3.5 w-3.5" /> Light{' '}
-                  </button>{' '}
-                  <button
-                    onClick={() => setActiveColorMode('dark')}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${activeColorMode === 'dark' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    {' '}
-                    <Moon className="h-3.5 w-3.5" /> Dark{' '}
-                  </button>{' '}
-                </div>{' '}
-              </div>{' '}
-              {/* Palette overview */}{' '}
-              <div className="border-b border-border/60 bg-muted/20 px-5 py-4">
-                {' '}
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Palette
-                </p>{' '}
-                <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-11">
-                  {' '}
-                  {(Object.keys(activeColors) as (keyof ColorSet)[]).map((key) => (
-                    <div key={key} className="group relative">
-                      {' '}
-                      <div
-                        className="h-8 w-full rounded-lg border border-border shadow-sm transition group-hover:scale-105 group-hover:shadow-md sm:h-9"
-                        style={{ backgroundColor: activeColors[key] }}
-                        title={`${COLOR_LABELS[key]}: ${activeColors[key]}`}
-                      />{' '}
-                      <p className="mt-1 truncate text-center text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {key.slice(0, 4)}
-                      </p>{' '}
+                        style={{ width: `${current.glass.opacity}%` }}
+                      />
                     </div>
-                  ))}{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="space-y-6 p-5">
-                {' '}
+                    <span className="text-2xs font-medium tabular-nums text-muted-foreground">
+                      {current.glass.opacity}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection
+              title={t('colors')}
+              icon={Palette}
+              description={t('colorsDesc', { default: 'Light and dark palettes' })}
+              bodyClassName="p-0"
+            >
+              <PillTabs
+                value={colorMode}
+                onChange={(k: 'light' | 'dark') => setColorMode(k)}
+                options={[
+                  { key: 'light', label: t('lightPalette', { default: 'Light' }) },
+                  { key: 'dark', label: t('darkPalette', { default: 'Dark' }) },
+                ]}
+              />
+
+              {/* Palette at a glance. The previous version packed eleven swatches
+                  into one row per column, so every label was truncated to four
+                  characters and read as noise. */}
+              <div className="border-b border-border px-5 py-4">
+                <p className="mb-3 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('palette', { default: 'Palette' })}
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {(Object.keys(activeColors) as (keyof ColorSet)[]).map((key) => (
+                    <div
+                      key={key}
+                      title={`${COLOR_LABELS[key]}: ${activeColors[key]}`}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5"
+                    >
+                      <span
+                        className="size-5 shrink-0 rounded-md border border-border shadow-xs"
+                        style={{ backgroundColor: activeColors[key] }}
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-2xs font-semibold text-foreground">
+                          {COLOR_LABELS[key]}
+                        </span>
+                        <span
+                          dir="ltr"
+                          className="block truncate font-mono text-2xs text-muted-foreground"
+                        >
+                          {activeColors[key]}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-5 p-5">
                 {COLOR_GROUPS.map((group) => (
-                  <div key={group.title}>
-                    {' '}
-                    <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      {' '}
-                      <span className="h-px flex-1 bg-border/60" /> {group.title}{' '}
-                      <span className="h-px flex-1 bg-border/60" />{' '}
-                    </h4>{' '}
+                  <div key={group.titleKey}>
+                    <p className="mb-2 flex items-center gap-2 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                      {t(group.titleKey as 'brand')}
+                      <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                    </p>
                     <div className="space-y-2">
-                      {' '}
                       {group.keys.map((key) => (
                         <ColorSwatch
-                          key={`${activeColorMode}-${key}`}
+                          key={`${colorMode}-${key}`}
                           label={COLOR_LABELS[key]}
                           value={activeColors[key]}
                           onChange={(v) =>
-                            setTokens((t) => ({
-                              ...t,
-                              [activeColorMode]: { ...t[activeColorMode], [key]: v },
+                            patch((tk) => ({
+                              ...tk,
+                              [colorMode]: { ...tk[colorMode], [key]: v },
                             }))
                           }
                         />
-                      ))}{' '}
-                    </div>{' '}
+                      ))}
+                    </div>
                   </div>
-                ))}{' '}
-              </div>{' '}
-            </div>{' '}
-            {/* Quick tips */}{' '}
-            <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-4">
-              {' '}
-              <div className="flex gap-3">
-                {' '}
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  {' '}
-                  <Sparkles className="h-4 w-4" />{' '}
-                </div>{' '}
+                ))}
+              </div>
+            </FormSection>
+
+            <ContrastReport colors={activeColors} />
+          </div>
+
+          {/* ------------------------------------------------------- preview */}
+          {/* Sticky, so a colour changed at the bottom of a long list is still
+              visible while it is being changed. */}
+          <div className="xl:sticky xl:top-24">
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
                 <div>
-                  {' '}
-                  <p className="text-sm font-semibold text-foreground">Live preview</p>{' '}
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {' '}
-                    Colors update instantly in the preview on the right. Save as draft to keep
-                    changes without publishing, or publish to make them live.{' '}
-                  </p>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
-          </div>{' '}
-          {/* Right: Preview */}{' '}
-          <div className="min-w-0 xl:sticky xl:top-[76px] xl:self-start">
-            {' '}
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              {' '}
-              <div className="flex items-center justify-between border-b border-border bg-muted/20 px-4 py-3">
-                {' '}
-                <div className="flex items-center gap-2">
-                  {' '}
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-sm">
-                    {' '}
-                    <Eye className="h-3.5 w-3.5" />{' '}
-                  </div>{' '}
-                  <div>
-                    {' '}
-                    <h3 className="text-sm font-semibold leading-none text-foreground">
-                      Live Preview
-                    </h3>{' '}
-                    <p className="text-[11px] text-muted-foreground">Updates as you edit</p>{' '}
-                  </div>{' '}
-                </div>{' '}
-                <div className="flex items-center gap-2">
-                  {' '}
-                  <div className="flex rounded-md border border-border bg-card p-0.5 shadow-sm">
-                    {' '}
-                    {(['light', 'dark'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => setPreviewMode(mode)}
-                        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold capitalize transition ${previewMode === mode ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                      >
-                        {' '}
-                        {mode === 'light' ? (
-                          <Sun className="h-3 w-3" />
-                        ) : (
-                          <Moon className="h-3 w-3" />
-                        )}{' '}
-                        {mode}{' '}
-                      </button>
-                    ))}{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              {/* Stage — dotted like builder canvas */}{' '}
-              <div className="bg-[#f8f9fa] p-3 dark:bg-[#050a18] sm:p-6">
-                {' '}
+                  <h2 className="flex items-center gap-2 text-13 font-semibold text-foreground">
+                    <Eye className="size-4 text-primary" />
+                    {t('preview', { default: 'Live preview' })}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {t('previewHint', {
+                      default:
+                        'Colors update instantly here. Publish to apply them for customers.',
+                    })}
+                  </p>
+                </div>
+                <SegmentedIconToggle
+                  label={t('previewMode', { default: 'Preview mode' })}
+                  value={previewMode}
+                  onChange={(k: 'light' | 'dark') => setPreviewMode(k)}
+                  options={[
+                    { key: 'light', icon: Sun, label: t('lightPalette', { default: 'Light' }) },
+                    { key: 'dark', icon: Moon, label: t('darkPalette', { default: 'Dark' }) },
+                  ]}
+                />
+              </div>
+
+              <div className="p-5" style={previewVars}>
                 <div
-                  className="mx-auto overflow-hidden rounded-[20px] border border-border bg-card shadow-sm"
-                  style={{ maxWidth: 720 }}
+                  className="overflow-hidden border"
+                  style={{
+                    backgroundColor: 'var(--background)',
+                    borderColor: 'var(--border)',
+                    borderRadius: 'var(--border-radius)',
+                  }}
                 >
-                  {' '}
                   <div
-                    className="min-h-[520px] p-6 sm:p-8"
-                    style={previewVars as React.CSSProperties}
+                    className="flex items-center justify-between gap-3 px-5 py-3"
+                    style={{ borderBottom: '1px solid var(--border)' }}
                   >
-                    {' '}
-                    {/* Mock site */}{' '}
-                    <div className="space-y-8">
-                      {' '}
-                      {/* Nav */}{' '}
-                      <div className="flex items-center justify-between">
-                        {' '}
-                        <div className="flex items-center gap-2">
-                          {' '}
-                          <div
-                            className="h-8 w-8 rounded-lg"
-                            style={{ backgroundColor: 'var(--primary)' }}
-                          />{' '}
-                          <span
-                            className="text-sm font-bold tracking-tight"
-                            style={{ fontFamily: 'var(--font-family-display)' }}
-                          >
-                            {' '}
-                            Ahmad CNC{' '}
-                          </span>{' '}
-                        </div>{' '}
-                        <div className="hidden items-center gap-1.5 sm:flex">
-                          {' '}
-                          <span className="rounded-md bg-muted px-3 py-1 text-[11px] font-medium">
-                            Academy
-                          </span>{' '}
-                          <span className="rounded-md bg-muted px-3 py-1 text-[11px] font-medium">
-                            Workshops
-                          </span>{' '}
-                          <span
-                            className="rounded-md px-3 py-1 text-[11px] font-bold text-white"
-                            style={{ backgroundColor: 'var(--primary)' }}
-                          >
-                            {' '}
-                            Enroll{' '}
-                          </span>{' '}
-                        </div>{' '}
-                        <div className="h-6 w-6 rounded-md bg-muted sm:hidden" />{' '}
-                      </div>{' '}
-                      {/* Hero */}{' '}
-                      <div
-                        className="rounded-[var(--border-radius)] p-6 sm:p-8"
-                        style={{
-                          backgroundColor: 'var(--primary)',
-                          borderRadius: 'var(--border-radius)',
-                        }}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="flex size-7 items-center justify-center rounded-lg text-2xs font-bold text-white"
+                        style={{ backgroundColor: 'var(--primary)' }}
                       >
-                        {' '}
-                        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/60">
-                          Design · Build · Manufacture
-                        </p>{' '}
-                        <h2
-                          className="mt-2 max-w-[18ch] text-2xl font-semibold leading-tight text-white sm:text-3xl"
-                          style={{ fontFamily: 'var(--font-family-display)' }}
+                        T
+                      </span>
+                      <span
+                        className="text-sm font-bold"
+                        style={{ color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}
+                      >
+                        TITANS
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {['Academy', 'Products', 'Enroll'].map((item, i) => (
+                        <span
+                          key={item}
+                          className="rounded-md px-2.5 py-1 text-2xs font-semibold"
+                          style={
+                            i === 2
+                              ? { backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }
+                              : { border: '1px solid var(--border)', color: 'var(--foreground)' }
+                          }
                         >
-                          {' '}
-                          Engineering precision at every layer{' '}
-                        </h2>{' '}
-                        <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
-                          Tokens drive every surface — try switching light/dark or tweaking the
-                          primary color.
-                        </p>{' '}
-                        <div className="mt-5 flex flex-wrap gap-2.5">
-                          {' '}
-                          <span
-                            className="inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-xs font-bold shadow-sm"
-                            style={{
-                              color: 'var(--primary)',
-                              borderRadius: 'var(--border-radius)',
-                            }}
-                          >
-                            {' '}
-                            Primary action{' '}
-                          </span>{' '}
-                          <span className="inline-flex items-center justify-center rounded-md border border-border bg-white px-4 py-2 text-xs font-bold text-white">
-                            {' '}
-                            Secondary{' '}
-                          </span>{' '}
-                        </div>{' '}
-                      </div>{' '}
-                      {/* Feature grid */}{' '}
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        {' '}
-                        {[
-                          { title: 'Precision', desc: 'Tolerances you can trust, every time.' },
-                          { title: 'Speed', desc: 'From prototype to production in days.' },
-                          { title: 'Support', desc: 'Expert guidance at every step.' },
-                        ].map((f) => (
-                          <div
-                            key={f.title}
-                            className="rounded-xl border bg-card p-4 shadow-sm transition hover:shadow-md"
-                            style={{
-                              borderColor: 'var(--border)',
-                              borderRadius: 'var(--border-radius)',
-                            }}
-                          >
-                            {' '}
-                            <div
-                              className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl text-white"
-                              style={{ backgroundColor: 'var(--primary)' }}
-                            >
-                              {' '}
-                              <Sparkles className="h-4 w-4" />{' '}
-                            </div>{' '}
-                            <p
-                              className="text-sm font-semibold"
-                              style={{ fontFamily: 'var(--font-family-sans)' }}
-                            >
-                              {' '}
-                              {f.title}{' '}
-                            </p>{' '}
-                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                              {f.desc}
-                            </p>{' '}
-                          </div>
-                        ))}{' '}
-                      </div>{' '}
-                      {/* Tokens showcase */}{' '}
-                      <div className="grid grid-cols-2 gap-3">
-                        {' '}
-                        <div
-                          className="rounded-xl p-4"
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+                    <div
+                      className="px-5 py-8"
+                      style={{
+                        backgroundColor: 'var(--primary)',
+                        borderRadius: 'var(--border-radius)',
+                      }}
+                    >
+                      <p
+                        className="text-2xs font-semibold uppercase tracking-widest"
+                        style={{ color: 'var(--primary-foreground)', opacity: 0.85 }}
+                      >
+                        Design · Build · Manufacture
+                      </p>
+                      <h3
+                        className="mt-2 text-2xl font-bold leading-tight"
+                        style={{ color: 'var(--primary-foreground)', fontFamily: 'var(--font-display)' }}
+                      >
+                        Engineering precision
+                        <br />
+                        at every layer
+                      </h3>
+                      <p
+                        className="mt-2 max-w-md text-sm"
+                        style={{ color: 'var(--primary-foreground)', opacity: 0.9 }}
+                      >
+                        Tokens drive every surface — switch light or dark, or tweak
+                        the primary color.
+                      </p>
+                      <div className="mt-4 flex gap-2">
+                        <span
+                          className="rounded-lg px-3 py-1.5 text-xs font-semibold"
+                          style={{ backgroundColor: 'var(--primary-foreground)', color: 'var(--primary)' }}
+                        >
+                          Primary action
+                        </span>
+                        <span
+                          className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
                           style={{
-                            backgroundColor: 'var(--muted)',
-                            borderRadius: 'var(--border-radius)',
+                            borderColor: 'var(--primary-foreground)',
+                            color: 'var(--primary-foreground)',
                           }}
                         >
-                          {' '}
-                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                            Muted
-                          </p>{' '}
-                          <p className="mt-1 text-sm font-medium">Soft surfaces</p>{' '}
-                          <div className="mt-3 h-1.5 w-full rounded-md bg-border">
-                            {' '}
-                            <div
-                              className="h-1.5 rounded-full"
-                              style={{ width: '62%', backgroundColor: 'var(--primary)' }}
-                            />{' '}
-                          </div>{' '}
-                        </div>{' '}
+                          Secondary
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      {['Precision', 'Speed', 'Support'].map((f) => (
                         <div
-                          className="rounded-xl border p-4 shadow-sm"
+                          key={f}
+                          className="p-4"
                           style={{
                             backgroundColor: 'var(--card)',
-                            borderColor: 'var(--border)',
+                            color: 'var(--card-foreground)',
+                            border: '1px solid var(--border)',
                             borderRadius: 'var(--border-radius)',
                           }}
                         >
-                          {' '}
-                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                            Card
-                          </p>{' '}
-                          <p className="mt-1 flex items-center gap-2 text-sm font-medium">
-                            {' '}
-                            <span
-                              className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: 'var(--accent)' }}
-                            />{' '}
-                            Accent dot{' '}
-                          </p>{' '}
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Border and ring use your accent.
-                          </p>{' '}
-                        </div>{' '}
-                      </div>{' '}
-                      {/* Glass preview */}{' '}
+                          <div
+                            className="mb-3 flex size-8 items-center justify-center rounded-lg text-white"
+                            style={{ backgroundColor: 'var(--primary)' }}
+                          >
+                            <Palette className="size-4" />
+                          </div>
+                          <p className="text-sm font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
+                            {f}
+                          </p>
+                          <p className="mt-1 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                            Consistent, themeable surfaces.
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
                       <div
-                        className="relative overflow-hidden rounded-xl border p-4"
+                        className="p-4"
+                        style={{ backgroundColor: 'var(--muted)', borderRadius: 'var(--border-radius)' }}
+                      >
+                        <p
+                          className="text-2xs font-semibold uppercase tracking-widest"
+                          style={{ color: 'var(--muted-foreground)' }}
+                        >
+                          Muted
+                        </p>
+                        <p className="mt-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                          Soft surfaces
+                        </p>
+                        <div
+                          className="mt-3 h-1.5 w-full overflow-hidden rounded-full"
+                          style={{ backgroundColor: 'var(--border)' }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: '60%', backgroundColor: 'var(--primary)' }}
+                          />
+                        </div>
+                      </div>
+                      <div
+                        className="p-4"
                         style={{
-                          borderColor: 'var(--border)',
+                          backgroundColor: 'var(--card)',
+                          border: '1px solid var(--border)',
                           borderRadius: 'var(--border-radius)',
                         }}
                       >
-                        {' '}
-                        <div
-                          className="absolute inset-0 opacity-30"
-                          style={{
-                            background: `linear-gradient(135deg, var(--primary), var(--accent))`,
-                          }}
-                        />{' '}
-                        <div className="relative flex items-center gap-3">
-                          {' '}
-                          <div
-                            className="flex h-10 w-10 items-center justify-center rounded-xl border text-white shadow-sm"
-                            style={{
-                              background: `rgba(255,255,255,${tokens.glass.opacity / 100})`,
-                              backdropFilter: `blur(${tokens.glass.blur}px)`,
-                              WebkitBackdropFilter: `blur(${tokens.glass.blur}px)`,
-                              borderRadius: 'var(--border-radius)',
-                            }}
-                          >
-                            {' '}
-                            <Paintbrush
-                              className="h-5 w-5"
-                              style={{ color: 'var(--primary)' }}
-                            />{' '}
-                          </div>{' '}
-                          <div>
-                            {' '}
-                            <p className="text-sm font-semibold">
-                              Glass · {tokens.glass.blur}px / {tokens.glass.opacity}%
-                            </p>{' '}
-                            <p className="text-xs text-muted-foreground">
-                              Blur and opacity for translucent surfaces
-                            </p>{' '}
-                          </div>{' '}
-                        </div>{' '}
-                      </div>{' '}
-                      {/* Footer hint */}{' '}
-                      <div
-                        className="flex items-center justify-between rounded-md border bg-muted/40 px-4 py-2.5"
-                        style={{ borderColor: 'var(--border)' }}
-                      >
-                        {' '}
-                        <p className="text-xs font-medium text-muted-foreground">
-                          Footer · {tokens.fonts.sans} / {tokens.fonts.display}
-                        </p>{' '}
-                        <span className="hidden text-[11px] text-muted-foreground sm:block">
-                          Radius: {tokens.radius}px
-                        </span>{' '}
-                      </div>{' '}
-                    </div>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="flex items-center justify-center gap-1.5 border-t border-border bg-muted/20 px-4 py-2.5 text-[11px] text-muted-foreground">
-                {' '}
-                <Monitor className="h-3.5 w-3.5" /> Preview reflects your current {previewMode}{' '}
-                palette{' '}
-              </div>{' '}
-            </div>{' '}
-          </div>{' '}
-        </div>{' '}
-      </div>{' '}
-      {/* Version history — slide-over */}{' '}
-      {showVersions && (
-        <>
-          {' '}
-          <div
-            className="fixed inset-0 z-40 bg-gray-900"
-            onClick={() => setShowVersions(false)}
-          />{' '}
-          <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col border-l border-border bg-card shadow-sm">
-            {' '}
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              {' '}
-              <div className="flex items-center gap-2">
-                {' '}
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  {' '}
-                  <History className="h-4 w-4" />{' '}
-                </div>{' '}
-                <div>
-                  {' '}
-                  <h3 className="text-sm font-semibold">Version history</h3>{' '}
-                  <p className="text-xs text-muted-foreground">{versions.length} versions</p>{' '}
-                </div>{' '}
-              </div>{' '}
-              <button
-                onClick={() => setShowVersions(false)}
-                className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                {' '}
-                <X className="h-4 w-4" />{' '}
-              </button>{' '}
-            </div>{' '}
-            <div className="flex-1 overflow-auto p-3">
-              {' '}
-              {versions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                  {' '}
-                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
-                    {' '}
-                    <History className="h-5 w-5 text-muted-foreground" />{' '}
-                  </div>{' '}
-                  <p className="text-sm font-medium text-foreground">No versions yet</p>{' '}
-                  <p className="text-xs text-muted-foreground">
-                    Publish to create the first snapshot.
-                  </p>{' '}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {' '}
-                  {versions.map((v) => (
-                    <div
-                      key={v.id}
-                      className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3 transition hover:border-border hover:bg-muted/40"
-                    >
-                      {' '}
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted font-mono text-xs font-bold">
-                        v{v.version}
-                      </div>{' '}
-                      <div className="min-w-0 flex-1">
-                        {' '}
                         <p
-                          className={`text-[11px] font-bold uppercase tracking-widest ${v.status === 'published' ? 'text-emerald-600' : 'text-muted-foreground'}`}
+                          className="text-2xs font-semibold uppercase tracking-widest"
+                          style={{ color: 'var(--muted-foreground)' }}
                         >
-                          {' '}
-                          {v.status}{' '}
-                        </p>{' '}
-                        <p className="truncate text-xs text-muted-foreground">
-                          {v.changedByName || 'Unknown'} ·{' '}
-                          {new Date(v.createdAt).toLocaleDateString()}
-                        </p>{' '}
-                      </div>{' '}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 rounded-md px-3 text-xs"
-                        onClick={() => void revert(v.version)}
-                        disabled={saving}
-                      >
-                        {' '}
-                        Restore{' '}
-                      </Button>{' '}
+                          Card
+                        </p>
+                        <p className="mt-1 flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                          <span
+                            className="size-2 rounded-full"
+                            style={{ backgroundColor: 'var(--accent)' }}
+                          />
+                          Accent dot
+                        </p>
+                      </div>
                     </div>
-                  ))}{' '}
+                  </div>
                 </div>
-              )}{' '}
-            </div>{' '}
-          </div>{' '}
-        </>
-      )}{' '}
+              </div>
+
+              <div className="border-t border-border px-5 py-2.5 text-2xs text-muted-foreground">
+                {t('preview')} ·{' '}
+                {previewMode === 'light' ? t('lightPalette', { default: 'Light' }) : t('darkPalette', { default: 'Dark' })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

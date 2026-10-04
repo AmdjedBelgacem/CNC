@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -7,8 +7,12 @@ import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { BuilderService, Actor } from './builder.service';
+import { NavigationService } from './navigation.service';
 import {
   CreatePageDto,
+  UpdatePageDto,
+  DuplicatePageDto,
+  SaveNavigationDto,
   SavePageDto,
   PublishDto,
   RevertDto,
@@ -23,7 +27,10 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 @Roles('super_admin', 'admin')
 export class BuilderController {
-  constructor(private builder: BuilderService) {}
+  constructor(
+    private builder: BuilderService,
+    private navigation: NavigationService,
+  ) {}
 
   private ctx(req: any) {
     return {
@@ -51,10 +58,48 @@ export class BuilderController {
     return this.builder.createPage(this.builder.assertTenant(tenant), dto, user, this.ctx(req));
   }
 
+  @Patch('pages/:slug')
+  @ApiOperation({
+    summary: 'Update a page: title, slug, status (draft/published/disabled), nav visibility, SEO',
+  })
+  async updatePage(
+    @CurrentTenant() tenant: any,
+    @Param('slug') slug: string,
+    @Body() dto: UpdatePageDto,
+    @CurrentUser() user: Actor,
+    @Req() req: any,
+  ) {
+    return this.builder.updatePage(this.builder.assertTenant(tenant), slug, dto, user, this.ctx(req));
+  }
+
+  @Post('pages/:slug/duplicate')
+  @ApiOperation({ summary: 'Copy a page (layout, SEO, template) under a new slug as a draft' })
+  async duplicatePage(
+    @CurrentTenant() tenant: any,
+    @Param('slug') slug: string,
+    @Body() dto: DuplicatePageDto,
+    @CurrentUser() user: Actor,
+    @Req() req: any,
+  ) {
+    return this.builder.duplicatePage(this.builder.assertTenant(tenant), slug, dto, user, this.ctx(req));
+  }
+
+  @Delete('pages/:slug')
+  @ApiOperation({ summary: 'Delete a page. Built-in pages cannot be deleted, only disabled.' })
+  async deletePage(
+    @CurrentTenant() tenant: any,
+    @Param('slug') slug: string,
+    @CurrentUser() user: Actor,
+    @Req() req: any,
+  ) {
+    return this.builder.deletePage(this.builder.assertTenant(tenant), slug, user, this.ctx(req));
+  }
+
   @Get('pages/:slug')
-  @ApiOperation({ summary: 'Get a page (auto-provisions known slugs with the default layout)' })
-  async getPage(@CurrentTenant() tenant: any, @Param('slug') slug: string) {
-    return this.builder.getPage(this.builder.assertTenant(tenant), slug);
+  @ApiOperation({ summary: 'Get a page (auto-provisions the built-in slugs with the default layout)' })
+  async getPage(@CurrentTenant() tenant: any, @Param('slug') slug: string, @Req() req: any) {
+    // The locale resolver reads the cookie, then `?locale=`, then the header.
+    return this.builder.getPage(this.builder.assertTenant(tenant), slug, req);
   }
 
   @Put('pages/:slug')
@@ -70,7 +115,7 @@ export class BuilderController {
   }
 
   @Post('pages/:slug/publish')
-  @ApiOperation({ summary: 'Publish the current layout (validates before publishing)' })
+  @ApiOperation({ summary: 'Save and publish the current layout atomically' })
   async publishPage(
     @CurrentTenant() tenant: any,
     @Param('slug') slug: string,
@@ -78,7 +123,13 @@ export class BuilderController {
     @CurrentUser() user: Actor,
     @Req() req: any,
   ) {
-    return this.builder.publishPage(this.builder.assertTenant(tenant), slug, user, dto?.note, this.ctx(req));
+    return this.builder.publishPage(
+      this.builder.assertTenant(tenant),
+      slug,
+      dto,
+      user,
+      this.ctx(req),
+    );
   }
 
   @Post('pages/:slug/revert')
@@ -206,5 +257,29 @@ export class BuilderController {
   @ApiOperation({ summary: 'Version history for the theme' })
   async getThemeVersions(@CurrentTenant() tenant: any) {
     return this.builder.getThemeVersions(this.builder.assertTenant(tenant));
+  }
+
+  // ----------------------------------------------------------- navigation
+
+  @Get('navigation')
+  @ApiOperation({ summary: 'The tenant navigation tree, unfiltered, for the nav editor' })
+  async getNavigation(@CurrentTenant() tenant: any) {
+    return this.navigation.getTree(this.builder.assertTenant(tenant));
+  }
+
+  @Put('navigation')
+  @ApiOperation({ summary: 'Replace the tenant navigation tree in one transaction' })
+  async saveNavigation(
+    @CurrentTenant() tenant: any,
+    @Body() dto: SaveNavigationDto,
+    @CurrentUser() user: Actor,
+    @Req() req: any,
+  ) {
+    return this.navigation.saveTree(
+      this.builder.assertTenant(tenant),
+      dto.items as never,
+      user,
+      this.ctx(req),
+    );
   }
 }

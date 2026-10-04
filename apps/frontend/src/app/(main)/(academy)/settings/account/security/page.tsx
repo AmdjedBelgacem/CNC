@@ -113,10 +113,12 @@ export default function SecuritySettingsPage() {
     setReauthAction('email');
     setReauthOpen(true);
   };
-  const executeEmailChange = async () => {
+  const executeEmailChange = async (verifiedPassword: string) => {
     setEmailLoading(true);
     try {
-      await changeEmail(emailForm.newEmail, '');
+      // Must forward the password the reauth modal already verified. Sending ''
+      // made every email change fail with 400 "Password is incorrect".
+      await changeEmail(emailForm.newEmail, verifiedPassword);
       setEmailSuccess('Verification email sent. Check your inbox.');
       setEmailForm({ newEmail: '', password: '' });
     } catch (err) {
@@ -158,7 +160,7 @@ export default function SecuritySettingsPage() {
         {' '}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {' '}
-          <Shield className="h-5 w-5" />{' '}
+          <Shield className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -169,17 +171,17 @@ export default function SecuritySettingsPage() {
         </div>{' '}
       </div>{' '}
       {user?.twoFactorEnabled && (
-        <div className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/30 dark:bg-emerald-500/10">
+        <div className="flex gap-3 rounded-2xl border border-success bg-success px-4 py-3 dark:border-success/30 dark:bg-success/10">
           {' '}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-            <Check className="h-4 w-4" />
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success text-success-foreground">
+            <Check className="size-4" />
           </div>{' '}
           <div>
             {' '}
-            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+            <p className="text-sm font-semibold text-success dark:text-success">
               Two-factor authentication is active
             </p>{' '}
-            <p className="text-xs leading-relaxed text-emerald-600/80 dark:text-emerald-400">
+            <p className="text-xs leading-relaxed text-success/80 dark:text-success">
               You&apos;ll need a code from your authenticator app to sign in.
             </p>{' '}
           </div>{' '}
@@ -213,8 +215,8 @@ export default function SecuritySettingsPage() {
             <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
               {' '}
               <h2 className="flex items-center gap-2 text-sm font-semibold">
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-                  <KeyRound className="h-3.5 w-3.5" />
+                <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+                  <KeyRound className="size-3.5" />
                 </span>{' '}
                 Change Password
               </h2>{' '}
@@ -227,12 +229,12 @@ export default function SecuritySettingsPage() {
               <form onSubmit={handleChangePassword} className="space-y-4">
                 {' '}
                 {pwError && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-500/10 dark:text-red-300">
+                  <div className="rounded-xl border border-destructive bg-destructive/10 px-4 py-2.5 text-sm text-destructive dark:border-red-900/30 dark:bg-destructive/10 dark:text-red-300">
                     {pwError}
                   </div>
                 )}{' '}
                 {pwSuccess && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  <div className="rounded-xl border border-success bg-success/10 px-4 py-2.5 text-sm text-success dark:border-success/30 dark:bg-success/10 dark:text-success">
                     {pwSuccess}
                   </div>
                 )}{' '}
@@ -248,14 +250,14 @@ export default function SecuritySettingsPage() {
                       value={pwForm.currentPassword}
                       onChange={(e) => setPwForm({ ...pwForm, currentPassword: e.target.value })}
                       required
-                      className="h-10 rounded-xl bg-muted/20 pr-10"
+                      className="h-10 rounded-xl bg-muted/20 pe-10"
                     />{' '}
                     <button
                       type="button"
                       onClick={() => setShowPw(!showPw)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
+                      className="absolute end-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
                     >
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>{' '}
                   </div>{' '}
                 </div>{' '}
@@ -297,8 +299,8 @@ export default function SecuritySettingsPage() {
             <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
               {' '}
               <h2 className="flex items-center gap-2 text-sm font-semibold">
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-                  <Mail className="h-3.5 w-3.5" />
+                <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+                  <Mail className="size-3.5" />
                 </span>{' '}
                 Change Email
               </h2>{' '}
@@ -311,12 +313,12 @@ export default function SecuritySettingsPage() {
               <form onSubmit={handleChangeEmail} className="space-y-4">
                 {' '}
                 {emailError && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                  <div className="rounded-xl border border-destructive bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
                     {emailError}
                   </div>
                 )}{' '}
                 {emailSuccess && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+                  <div className="rounded-xl border border-success bg-success/10 px-4 py-2.5 text-sm text-success">
                     {emailSuccess}
                   </div>
                 )}{' '}
@@ -346,8 +348,8 @@ export default function SecuritySettingsPage() {
               <div>
                 {' '}
                 <h2 className="flex items-center gap-2 text-sm font-semibold">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-                    <Smartphone className="h-3.5 w-3.5" />
+                  <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+                    <Smartphone className="size-3.5" />
                   </span>{' '}
                   Two-Factor Authentication
                 </h2>{' '}
@@ -356,7 +358,7 @@ export default function SecuritySettingsPage() {
                 </p>{' '}
               </div>{' '}
               {user?.twoFactorEnabled && (
-                <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-600">
+                <span className="rounded-full bg-success/10 px-2.5 py-1 text-2xs font-bold uppercase tracking-wider text-success">
                   Enabled
                 </span>
               )}{' '}
@@ -379,7 +381,7 @@ export default function SecuritySettingsPage() {
                     setReauthAction('disable2fa');
                     setReauthOpen(true);
                   }}
-                  className="rounded-full border-red-200 text-red-600 hover:bg-red-50"
+                  className="rounded-full border-destructive text-destructive hover:bg-destructive/10"
                 >
                   Disable Two-Factor Authentication
                 </Button>
@@ -411,7 +413,7 @@ export default function SecuritySettingsPage() {
                     />{' '}
                   </div>{' '}
                   {twoFactorError && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                    <div className="rounded-xl border border-destructive bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
                       {twoFactorError}
                     </div>
                   )}{' '}
@@ -427,10 +429,10 @@ export default function SecuritySettingsPage() {
               {twoFactorStatus === 'verify' && (
                 <div className="space-y-4">
                   {' '}
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  <div className="rounded-xl border border-success bg-success/10 px-4 py-3 text-sm text-success">
                     Two-factor authentication is now enabled!
                   </div>{' '}
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="rounded-2xl border border-warning/30 bg-warning p-4">
                     {' '}
                     <p className="text-sm font-semibold">Save these recovery codes</p>{' '}
                     <p className="text-xs text-muted-foreground mb-3">
@@ -445,9 +447,9 @@ export default function SecuritySettingsPage() {
                           {code}
                           <button
                             onClick={() => navigator.clipboard.writeText(code)}
-                            className="ml-2 text-muted-foreground hover:text-foreground"
+                            className="ms-2 text-muted-foreground hover:text-foreground"
                           >
-                            <Copy className="h-3 w-3" />
+                            <Copy className="size-3.5" />
                           </button>
                         </code>
                       ))}
@@ -468,8 +470,8 @@ export default function SecuritySettingsPage() {
           <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
             {' '}
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-                <Monitor className="h-3.5 w-3.5" />
+              <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+                <Monitor className="size-3.5" />
               </span>{' '}
               Active Sessions
             </h2>{' '}
@@ -495,14 +497,14 @@ export default function SecuritySettingsPage() {
                       {' '}
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition">
                         {' '}
-                        <Laptop className="h-4 w-4" />{' '}
+                        <Laptop className="size-4" />{' '}
                       </div>{' '}
                       <div>
                         {' '}
                         <p className="text-sm font-medium flex items-center gap-2">
                           {session.deviceInfo || 'Unknown device'}
                           {session.isCurrent && (
-                            <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                            <span className="rounded-full bg-primary px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-primary-foreground">
                               Current
                             </span>
                           )}
@@ -530,7 +532,7 @@ export default function SecuritySettingsPage() {
                 ))}
               </div>
             )}{' '}
-            <div className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/30 dark:bg-amber-500/10">
+            <div className="flex items-center justify-between rounded-2xl border border-warning/30 bg-warning px-4 py-3 /30 dark:bg-warning/10">
               {' '}
               <div>
                 <p className="text-sm font-semibold">Logout everywhere</p>
@@ -556,8 +558,8 @@ export default function SecuritySettingsPage() {
           <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
             {' '}
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-                <History className="h-3.5 w-3.5" />
+              <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+                <History className="size-3.5" />
               </span>{' '}
               Login History
             </h2>{' '}
@@ -572,7 +574,7 @@ export default function SecuritySettingsPage() {
             ) : loginHistory.length === 0 ? (
               <p className="text-sm text-muted-foreground">No login history available.</p>
             ) : (
-              <div className="space-y-2 max-h-[520px] overflow-auto pr-2">
+              <div className="space-y-2 max-h-[520px] overflow-auto pe-2">
                 {loginHistory.slice(0, 15).map((entry: any) => {
                   const ua = entry.details?.userAgent || entry.userAgent || '';
                   const isMobile = /Mobile|Android|iPhone|iPad/i.test(ua);
@@ -590,17 +592,17 @@ export default function SecuritySettingsPage() {
                     >
                       {' '}
                       <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-xl ${isFailed ? 'bg-red-500/10 text-red-600' : 'bg-emerald-500/10 text-emerald-600'}`}
+                        className={`flex h-9 w-9 items-center justify-center rounded-xl ${isFailed ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}
                       >
                         {' '}
                         {isMobile ? (
-                          <Smartphone className="h-4 w-4" />
+                          <Smartphone className="size-4" />
                         ) : isMac ? (
-                          <Laptop className="h-4 w-4" />
+                          <Laptop className="size-4" />
                         ) : isWin ? (
-                          <Monitor className="h-4 w-4" />
+                          <Monitor className="size-4" />
                         ) : (
-                          <Monitor className="h-4 w-4" />
+                          <Monitor className="size-4" />
                         )}{' '}
                       </div>{' '}
                       <div className="min-w-0 flex-1">
@@ -609,7 +611,7 @@ export default function SecuritySettingsPage() {
                           {' '}
                           {isFailed ? 'Failed login attempt' : 'Successful login'}{' '}
                           {browser && (
-                            <span className="ml-1 text-xs text-muted-foreground">· {browser}</span>
+                            <span className="ms-1 text-xs text-muted-foreground">· {browser}</span>
                           )}{' '}
                         </p>{' '}
                         <p className="text-xs text-muted-foreground truncate">
@@ -619,7 +621,7 @@ export default function SecuritySettingsPage() {
                         </p>{' '}
                       </div>{' '}
                       <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${isFailed ? 'bg-red-500/10 text-red-600' : 'bg-emerald-500/10 text-emerald-600'}`}
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-2xs font-bold uppercase tracking-wider ${isFailed ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}
                       >
                         {' '}
                         {isFailed ? 'Failed' : 'Success'}{' '}
@@ -638,8 +640,8 @@ export default function SecuritySettingsPage() {
           setReauthOpen(open);
           if (!open) setReauthAction(null);
         }}
-        onVerified={() => {
-          if (reauthAction === 'email') executeEmailChange();
+        onVerified={(verifiedPassword) => {
+          if (reauthAction === 'email') executeEmailChange(verifiedPassword);
           else if (reauthAction === 'disable2fa') {
             const t = disableToken;
             if (t) {

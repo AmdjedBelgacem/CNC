@@ -21,7 +21,7 @@ const HEADING_SIZE: Record<string, string> = {
   lg: 'font-headline-md text-lg break-words',
   md: 'font-headline-md text-base break-words',
   sm: 'font-headline-md text-sm break-words',
-  label: 'font-label-sm text-[11px] uppercase tracking-[0.2em] font-bold break-words',
+  label: 'font-label-sm text-2xs uppercase tracking-[0.2em] font-bold break-words',
   logo: 'font-headline-lg text-xl md:text-2xl break-words',
 }; /** Letter-spacing + line-height overrides (literal classes so Tailwind picks them up). */
 const TRACKING_CLASS: Record<string, string> = {
@@ -39,7 +39,7 @@ const LEADING_CLASS: Record<string, string> = {
   loose: 'leading-loose',
 };
 export function HeadingBlock({ props }: BlockComponentProps<HeadingProps>) {
-  const { as = 'h2', text = '', align, color, size, tracking, leading, className } = props;
+  const { as = 'h2', text = '', align, color, size, tracking, leading, accentText, suffixText, className } = props;
   const Tag = as;
   const style: CSSProperties = { ...layoutStyle(props) };
   if (align) style.textAlign = align;
@@ -63,6 +63,13 @@ export function HeadingBlock({ props }: BlockComponentProps<HeadingProps>) {
           {i > 0 && <br />} {line} {isHero && i === 0 ? ' ' : ''}{' '}
         </span>
       ))}{' '}
+      {accentText ? (
+        <>
+          {' '}
+          <span className="italic text-primary font-normal">{accentText}</span>{' '}
+        </>
+      ) : null}
+      {suffixText ? ` ${suffixText}` : null}
     </Tag>
   );
 }

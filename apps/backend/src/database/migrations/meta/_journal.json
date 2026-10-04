@@ -12,36 +12,257 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1787576914429,
-      "tag": "0001_gigantic_thor_girl",
+      "when": 1787361655672,
+      "tag": "001_add_portfolio_columns",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1788000000000,
-      "tag": "0002_rbac_roles_permissions",
+      "when": 1787361656672,
+      "tag": "002_builder_system",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1788500000000,
-      "tag": "0003_course_commerce_seo",
+      "when": 1787361657672,
+      "tag": "003_saved_sections",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
-      "when": 1788600000000,
-      "tag": "0004_series_updated_at",
+      "when": 1787361658672,
+      "tag": "004_academies",
       "breakpoints": true
     },
     {
       "idx": 5,
       "version": "7",
-      "when": 1788044210117,
+      "when": 1787361659672,
+      "tag": "005_academy_seo_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787361660672,
+      "tag": "006_lesson_thumbnail",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787361661672,
+      "tag": "0006_cert_templates_active",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787361662672,
+      "tag": "0007_cert_templates_course_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787361663672,
+      "tag": "007_user_theme_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787361664672,
+      "tag": "0008_course_auto_issue",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787361665672,
+      "tag": "009_finance_budgets",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787361666672,
+      "tag": "0001_gigantic_thor_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787361667672,
+      "tag": "0002_rbac_roles_permissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787361668672,
       "tag": "0005_groovy_killer_shrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1787361669672,
+      "tag": "0003_course_commerce_seo",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787361670672,
+      "tag": "0004_series_updated_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787361671672,
+      "tag": "010_notifications_production",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787361672672,
+      "tag": "011_search_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787361673672,
+      "tag": "012_ai_assistant",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787361674672,
+      "tag": "013_ai_audience_free_preview",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787361675672,
+      "tag": "014_course_blocks_localization",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1787361676672,
+      "tag": "015_course_pricing_sar",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1787361677672,
+      "tag": "016_follows_unique_constraint",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "when": 1787361678672,
+      "tag": "020_moyasar_orders_google_integrations",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "when": 1787361679672,
+      "tag": "021_product_purchases",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "when": 1787361680672,
+      "tag": "022_content_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "when": 1787361681672,
+      "tag": "023_page_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1787361682672,
+      "tag": "017_ai_conversations",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "when": 1787361683672,
+      "tag": "018_ai_web_search_feedback_evals",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "when": 1787361684672,
+      "tag": "019_feed_votes_comments_tags",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "when": 1787361685672,
+      "tag": "024_page_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "when": 1787361686672,
+      "tag": "025_navigation",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "when": 1787361687672,
+      "tag": "026_demo_page_and_nav",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "tag": "027_cert_academy_scope",
+      "when": 1787361688672
+    },
+    {
+      "idx": 35,
+      "tag": "028_platform_alerts",
+      "when": 1787361689672
+    },
+    {
+      "idx": 36,
+      "tag": "029_machines_store_department",
+      "when": 1787361690672
+    },
+    {
+      "idx": 37,
+      "tag": "030_nav_flat_academy",
+      "when": 1787361691672
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1787361692672,
+      "tag": "031_products_schema_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1787361693672,
+      "tag": "032_supabase_auth_link",
       "breakpoints": true
     }
   ]

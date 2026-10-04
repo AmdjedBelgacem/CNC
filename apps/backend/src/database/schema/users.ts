@@ -28,6 +28,13 @@ export const users = pgTable('users', {
   failedLoginAttempts: integer('failed_login_attempts').default(0).notNull(),
   deletedAt: timestamp('deleted_at'),
   deletedByUserId: uuid('deleted_by_user_id'),
+  /**
+   * Supabase Auth (auth.users) identifier, added by migration 032_supabase_auth_link.
+   * Supabase is only the identity provider: this table stays the profile record, so
+   * the 48 `user_id` foreign keys across the schema keep pointing at `users.id`.
+   * NULL until the account is synced.
+   */
+  authUserId: uuid('auth_user_id'),
   lastLoginAt: timestamp('last_login_at'),
   lastLoginIp: varchar('last_login_ip', { length: 45 }),
   lastLoginUserAgent: text('last_login_user_agent'),
@@ -43,7 +50,13 @@ export const follows = pgTable('follows', {
   followerId: uuid('follower_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   followingId: uuid('following_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  // One edge per pair. The service relies on this for an idempotent follow
+  // (`onConflictDoNothing`) instead of a read-then-write race.
+  followerFollowingUnique: uniqueIndex('follows_follower_following_unique').on(table.followerId, table.followingId),
+  followerCreatedIdx: index('follows_follower_created_idx').on(table.followerId, table.createdAt),
+  followingCreatedIdx: index('follows_following_created_idx').on(table.followingId, table.createdAt),
+}));
 
 export const userPortfolioItems = pgTable('user_portfolio_items', {
   id: uuid('id').defaultRandom().primaryKey(),

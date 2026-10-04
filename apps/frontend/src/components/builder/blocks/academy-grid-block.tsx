@@ -9,8 +9,10 @@ export function AcademyGridBlock({ props, puck }: BlockComponentProps<AcademyGri
     cardsColumns = 'md:grid-cols-3',
     cardsGap = 'gap-8',
   } = props;
+  const id = (props as { id?: string }).id;
   return (
     <section
+      id={id}
       className={cn('px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto', className)}
       style={layoutStyle(props)}
     >

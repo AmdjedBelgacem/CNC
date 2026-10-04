@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import { isInternalHref } from '@/lib/builder/href';
 import type { BlockComponentProps } from './index'; /** Plain text anchor (footer links) or a circular icon anchor (social links). */
+import { Icon } from '@/components/ui/icon';
 export function LinkBlock({ props }: BlockComponentProps<LinkProps>) {
   const { label = '', href = '#', icon, className } = props;
   const iconOnly = !!icon && !label;
@@ -16,10 +17,7 @@ export function LinkBlock({ props }: BlockComponentProps<LinkProps>) {
   );
   const style = layoutStyle(props);
   const inner = iconOnly ? (
-    <span className="material-symbols-outlined text-lg" aria-hidden="true">
-      {' '}
-      {resolveIconName(icon)}{' '}
-    </span>
+    <Icon name={resolveIconName(icon)} className="text-lg" />
   ) : (
     label
   );

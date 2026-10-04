@@ -1,6 +1,22 @@
 'use client';
+
 import { useEffect, useState } from 'react';
-import { INPUT, LABEL } from './glass';
+import { useTranslations } from 'next-intl';
+import { BookOpen, Languages, Layers } from 'lucide-react';
+import type { ContentLocale } from '@titan/shared';
+import {
+  Field,
+  FormSection,
+  TextField,
+  TextAreaField,
+  TextInput,
+  SelectInput,
+} from '@/components/admin/admin-form';
+import {
+  DIFFICULTY_LEVELS,
+  difficultyKey,
+  difficultyFallback,
+} from '@/lib/difficulty';
 import { slugify } from './slugify';
 import type { CourseStudioData } from './types';
 
@@ -10,25 +26,35 @@ interface AcademyOption {
   title: string;
 }
 
+function translationValue(course: CourseStudioData, locale: ContentLocale, field: 'title' | 'subtitle' | 'description') {
+  if (locale === 'en') return course[field] ?? '';
+  return course.translations?.[locale]?.[field] ?? '';
+}
+
 export function StepBasics({
   course,
   update,
+  locale,
 }: {
   course: CourseStudioData;
   update: (patch: Partial<CourseStudioData>) => void;
+  locale: ContentLocale;
 }) {
-  const slug = course.slug || slugify(course.title || '');
   const [academies, setAcademies] = useState<AcademyOption[] | null>(null);
+  const t = useTranslations('courses');
+  const tDifficulty = useTranslations('admin');
+  const slug = course.slug || slugify(course.title || '');
+  const title = translationValue(course, locale, 'title');
+  const subtitle = translationValue(course, locale, 'subtitle');
+  const description = translationValue(course, locale, 'description');
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch('/api/proxy/admin/academies?limit=100', {
-          credentials: 'include',
-        });
-        if (!res.ok) throw new Error();
-        const data = await res.json();
+        const response = await fetch('/api/proxy/admin/academies?limit=100', { credentials: 'include' });
+        if (!response.ok) throw new Error('Academy request failed');
+        const data = await response.json();
         if (!cancelled) setAcademies(Array.isArray(data?.items) ? data.items : []);
       } catch {
         if (!cancelled) setAcademies([]);
@@ -39,105 +65,167 @@ export function StepBasics({
     };
   }, []);
 
+  const updateLocalized = (field: 'title' | 'subtitle' | 'description', value: string) => {
+    if (locale === 'en') {
+      update({ [field]: field === 'title' ? value : value || null });
+      return;
+    }
+    const current = course.translations?.[locale] ?? {};
+    update({
+      translations: {
+        ...(course.translations ?? {}),
+        [locale]: { ...current, [field]: field === 'title' ? value.trim() || undefined : value || null },
+      },
+    });
+  };
+
   return (
-    <div className="space-y-6">
-      {' '}
-      <div className="space-y-1.5">
-        {' '}
-        <label className={LABEL}>Title *</label>{' '}
-        <input
-          value={course.title}
-          onChange={(e) => update({ title: e.target.value })}
-          placeholder="e.g. CNC Milling Fundamentals"
-          className={INPUT}
-        />{' '}
-        <p className="font-sans text-xs text-muted-foreground">
-          Slug: <span className="font-mono">/{slug || 'auto-generated'}</span>
-        </p>{' '}
-      </div>{' '}
-      <div className="space-y-1.5">
-        {' '}
-        <label className={LABEL}>Academy</label>{' '}
-        <select
-          value={course.academyId ?? ''}
-          onChange={(e) =>
-            update({
-              academyId: e.target.value || null,
-              academy: null,
-            })
-          }
-          disabled={academies === null}
-          className={INPUT}
-        >
-          {' '}
-          <option value="">No academy — tenant course library only</option>{' '}
-          {(academies ?? []).map((a) => (
-            <option key={a.id} value={a.id}>
-              {' '}
-              {a.title}{' '}
-            </option>
-          ))}{' '}
-        </select>{' '}
-        <p className="font-sans text-xs text-muted-foreground">
-          The academy this course belongs to. Published courses appear on the academy page once
-          assigned.
-        </p>{' '}
-      </div>{' '}
-      <div className="space-y-1.5">
-        {' '}
-        <label className={LABEL}>Subtitle</label>{' '}
-        <input
-          value={course.subtitle ?? ''}
-          onChange={(e) => update({ subtitle: e.target.value || null })}
-          placeholder="Short marketing line shown under the title"
-          className={INPUT}
-        />{' '}
-      </div>{' '}
-      <div className="space-y-1.5">
-        {' '}
-        <label className={LABEL}>Description</label>{' '}
-        <textarea
-          value={course.description ?? ''}
-          onChange={(e) => update({ description: e.target.value || null })}
-          rows={5}
-          placeholder="What will learners walk away with?"
-          className={INPUT + ' resize-y'}
-        />{' '}
-      </div>{' '}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {' '}
-        <div className="space-y-1.5">
-          {' '}
-          <label className={LABEL}>Difficulty</label>{' '}
-          <select
-            value={course.difficulty}
-            onChange={(e) => update({ difficulty: Number(e.target.value) })}
-            className={INPUT}
+    <div className="space-y-6" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="flex flex-col gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Languages className="size-4" />
+          </span>
+          <div>
+            <p className="text-13 font-semibold text-foreground">
+              {t('studio.editingLanguage', { default: 'Editing language' })}
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              {locale === 'ar'
+                ? t('studio.arabicSourceHint', {
+                    default: 'English is the source content. Any Arabic field left blank falls back to English.',
+                  })
+                : t('studio.englishSourceHint', {
+                    default: 'English is the source content. Arabic fields can fall back to English until translated.',
+                  })}
+            </p>
+          </div>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg border border-primary/20 bg-background px-3 py-1.5 text-xs font-semibold text-primary sm:self-auto">
+          <Languages className="size-3.5" />
+          {locale === 'ar' ? 'العربية' : 'English'}
+        </span>
+      </div>
+
+      <FormSection
+        title={t('studio.basicsSection', { default: 'Identity' })}
+        icon={BookOpen}
+        description={t('studio.basicsSectionDesc', {
+          default: 'The name and summary learners see first.',
+        })}
+      >
+        <div className="space-y-4">
+          <TextField
+            label={t('studio.titleRequiredLabel', { default: 'Title' })}
+            required
+            dir="auto"
+            value={title}
+            onChange={(event) => updateLocalized('title', event.target.value)}
+            placeholder={t('studio.titlePlaceholder', { default: 'e.g. CNC Milling Fundamentals' })}
+          />
+          <Field
+            label={t('studio.slugLabel', { default: 'Slug' })}
+            hint={t('studio.slugHint', { default: 'The public address of this course.' })}
           >
-            {' '}
-            {[1, 2, 3, 4, 5].map((d) => (
-              <option key={d} value={d}>
-                {' '}
-                {d} — {['Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'][d - 1]}{' '}
-              </option>
-            ))}{' '}
-          </select>{' '}
-        </div>{' '}
-        <div className="space-y-1.5">
-          {' '}
-          <label className={LABEL}>Estimated hours</label>{' '}
-          <input
-            type="number"
-            min={0}
-            value={course.estimatedHours ?? ''}
-            onChange={(e) =>
-              update({ estimatedHours: e.target.value ? Number(e.target.value) : null })
-            }
-            placeholder="e.g. 12"
-            className={INPUT}
-          />{' '}
-        </div>{' '}
-      </div>{' '}
+            {(field) => (
+              <TextInput
+                {...field}
+                dir="ltr"
+                readOnly
+                value={slug || t('studio.autoGenerated', { default: 'auto-generated' })}
+                className="font-mono"
+              />
+            )}
+          </Field>
+          <TextField
+            label={t('studio.subtitleLabel', { default: 'Subtitle' })}
+            dir="auto"
+            value={subtitle}
+            onChange={(event) => updateLocalized('subtitle', event.target.value)}
+            placeholder={t('studio.subtitlePlaceholder', { default: 'Short marketing line shown under the title' })}
+          />
+          <TextAreaField
+            label={t('studio.description', { default: 'Description' })}
+            dir="auto"
+            rows={5}
+            value={description}
+            onChange={(event) => updateLocalized('description', event.target.value)}
+            placeholder={t('studio.descriptionPlaceholder', { default: 'What will learners walk away with?' })}
+          />
+        </div>
+      </FormSection>
+
+      {locale === 'ar' && !course.translations?.ar?.title && (
+        <p className="rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-xs leading-relaxed text-warning">
+          {t('studio.arabicTitleEmpty', {
+            default: 'Arabic title is empty; learners will see the English title until you add a translation.',
+          })}
+        </p>
+      )}
+
+      <FormSection
+        title={t('studio.placementSection', { default: 'Placement & level' })}
+        icon={Layers}
+        description={t('studio.placementSectionDesc', {
+          default: 'Where this course appears and how hard it is.',
+        })}
+      >
+        <div className="space-y-4">
+          <Field
+            label={t('academyLabel', { default: 'Academy' })}
+            hint={t('studio.academyHint', { default: 'Published courses appear in the academy catalog once assigned.' })}
+          >
+            {(field) => (
+              <SelectInput
+                {...field}
+                disabled={academies === null}
+                value={course.academyId ?? ''}
+                onChange={(event) => update({ academyId: event.target.value || null, academy: null })}
+              >
+                <option value="">
+                  {t('studio.noAcademy', { default: 'No academy — tenant course library only' })}
+                </option>
+                {(academies ?? []).map((academy) => (
+                  <option key={academy.id} value={academy.id}>
+                    {academy.title}
+                  </option>
+                ))}
+              </SelectInput>
+            )}
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label={t('studio.difficulty', { default: 'Difficulty' })}
+              hint={t('studio.difficultyHint', { default: 'Shown on the course card and catalog.' })}
+            >
+              {(field) => (
+                <SelectInput
+                  {...field}
+                  value={String(course.difficulty)}
+                  onChange={(event) => update({ difficulty: Number(event.target.value) })}
+                >
+                  {DIFFICULTY_LEVELS.map((difficulty) => (
+                    <option key={difficulty} value={difficulty}>
+                      {difficulty} —{' '}
+                      {tDifficulty(difficultyKey(difficulty), { default: difficultyFallback(difficulty) })}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            </Field>
+            <TextField
+              label={t('studio.estimatedHours', { default: 'Estimated hours' })}
+              type="number"
+              min={0}
+              value={course.estimatedHours ?? ''}
+              onChange={(event) =>
+                update({ estimatedHours: event.target.value ? Number(event.target.value) : null })
+              }
+              placeholder={t('studio.hoursPlaceholder', { default: 'e.g. 12' })}
+            />
+          </div>
+        </div>
+      </FormSection>
     </div>
   );
 }

@@ -12,6 +12,8 @@
  * proves same-origin execution in a way the proxy cannot fake on the caller's behalf.
  */
 
+import { getActiveLocale } from '@/lib/api-client';
+
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
 /** Read a cookie by name from `document.cookie` (client only). */
@@ -23,6 +25,11 @@ function readCookie(name: string): string | null {
     if (part.slice(0, eq).trim() === name) return decodeURIComponent(part.slice(eq + 1).trim());
   }
   return null;
+}
+
+function localeHeaders() {
+  const locale = getActiveLocale();
+  return { 'x-locale': locale, 'x-next-locale': locale, 'accept-language': `${locale},en;q=0.8` };
 }
 
 /** Build the CSRF header for a mutating request, fetching a token if the cookie is absent. */
@@ -47,7 +54,7 @@ export function useApiProxy() {
     if (init?.body != null) {
       headers['Content-Type'] = 'application/json';
     }
-    Object.assign(headers, await csrfHeaders(init?.method));
+    Object.assign(headers, localeHeaders(), await csrfHeaders(init?.method));
     return fetch(input, { ...init, headers, credentials: 'include' });
   }
   return { fetch: proxyFetch };

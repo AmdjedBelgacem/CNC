@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Play, Clock, Film, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getImageSrc } from '@/lib/images';
 interface Video {
   id: string;
   title: string;
@@ -37,29 +38,22 @@ function VideoCard({ video }: { video: Video }) {
       {' '}
       <div className="relative aspect-video rounded-xl overflow-hidden bg-secondary/50">
         {' '}
-        {video.thumbnailUrl ? (
-          <img
-            src={video.thumbnailUrl}
-            alt={video.title}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            {' '}
-            <Film className="h-8 w-8 text-muted-foreground/40" />{' '}
-          </div>
-        )}{' '}
-        <div className="absolute inset-0 flex items-center justify-center bg-transparent group-hover:bg-gray-900 transition-colors">
+        <img
+          src={getImageSrc(video.thumbnailUrl, 'video')}
+          alt={video.title}
+          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+        />{' '}
+        <div className="absolute inset-0 flex items-center justify-center bg-transparent group-hover:bg-overlay transition-colors">
           {' '}
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/90 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity">
             {' '}
-            <Play className="h-5 w-5 fill-current" />{' '}
+            <Play className="size-5 fill-current" />{' '}
           </div>{' '}
         </div>{' '}
         {video.duration && (
-          <span className="absolute bottom-2 right-2 rounded-md bg-gray-900 px-1.5 py-0.5 text-xs text-white flex items-center gap-1">
+          <span className="absolute bottom-2 end-2 rounded-md bg-overlay px-1.5 py-0.5 text-xs text-white flex items-center gap-1">
             {' '}
-            <Clock className="h-3 w-3" /> {formatDuration(video.duration)}{' '}
+            <Clock className="size-3.5" /> {formatDuration(video.duration)}{' '}
           </span>
         )}{' '}
       </div>{' '}
@@ -80,13 +74,13 @@ export default function TitanTvPage() {
   return (
     <div>
       {' '}
-      <section className="relative overflow-hidden border-b bg-gradient-to-b from-background to-secondary/20 py-20">
+      <section className="relative overflow-hidden border-b bg-surface-sunken/60 blueprint-grid py-20">
         {' '}
         <div className="container mx-auto px-4 text-center">
           {' '}
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-secondary/50 px-4 py-1.5 text-sm">
             {' '}
-            <Film className="h-4 w-4" /> TITAN TV{' '}
+            <Film className="size-4" /> TITAN TV{' '}
           </div>{' '}
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Video Library</h1>{' '}
           <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -151,7 +145,7 @@ export default function TitanTvPage() {
                       className="flex items-center gap-1 text-sm text-primary hover:underline"
                     >
                       {' '}
-                      View all <ChevronRight className="h-4 w-4" />{' '}
+                      View all <ChevronRight className="flip-rtl size-4" />{' '}
                     </a>{' '}
                   </div>{' '}
                   {series.description && (

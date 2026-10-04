@@ -1,15 +1,15 @@
 import { DEFAULT_THEME_TOKENS, getDefaultLayout } from '@titan/shared';
 import type { PageLayout, ThemeTokens } from '@titan/shared';
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-const REVALIDATE = 60;
-function tenantHeaders(tenantSlug: string): HeadersInit {
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+/** Every backend call is tenant-scoped by header, never by a path segment. */
+export function tenantHeaders(tenantSlug: string): HeadersInit {
   return { 'x-tenant-slug': tenantSlug };
 } /** Server-side fetch of the published theme tokens for a tenant. */
 export async function fetchPublishedTheme(tenantSlug: string): Promise<ThemeTokens | null> {
   try {
     const res = await fetch(`${API_BASE}/content/themes/current`, {
       headers: tenantHeaders(tenantSlug),
-      next: { revalidate: REVALIDATE },
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { tokens?: ThemeTokens };
@@ -26,7 +26,7 @@ export async function fetchPublishedLayout(
   try {
     const res = await fetch(`${API_BASE}/content/pages/${slug}`, {
       headers: tenantHeaders(tenantSlug),
-      next: { revalidate: REVALIDATE },
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { layout?: PageLayout };

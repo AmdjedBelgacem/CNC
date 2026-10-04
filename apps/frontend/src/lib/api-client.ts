@@ -1,7 +1,5 @@
-// Same-origin routing: in the browser every call goes through the Next.js
-// proxy (/api/proxy/* ) so httpOnly auth cookies are FIRST-PARTY on the app
-// origin — middleware, server layouts and CSRF all work without token mirrors.
-// On the server (SSR/RSC), call the backend directly.
+import { LOCALE_COOKIE, coerceLocale, type Locale } from '@/i18n/config';
+
 const isBrowser = typeof window !== 'undefined';
 const BROWSER_BASE = '/api/proxy';
 const API_BASE = isBrowser
@@ -9,6 +7,30 @@ const API_BASE = isBrowser
   : process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 let refreshPromise: Promise<boolean> | null = null;
 let csrfToken: string | null = null;
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  for (const part of document.cookie.split(';')) {
+    const [key, ...rest] = part.trim().split('=');
+    if (key === name) return decodeURIComponent(rest.join('='));
+  }
+  return null;
+}
+
+export function getActiveLocale(): Locale {
+  const cookieLocale = readCookie(LOCALE_COOKIE);
+  if (cookieLocale) return coerceLocale(cookieLocale);
+  if (typeof document !== 'undefined') return coerceLocale(document.documentElement.lang);
+  return coerceLocale(process.env.NEXT_LOCALE);
+}
+
+function applyLocaleHeaders(headers: Headers, locale: Locale) {
+  if (!headers.has('x-locale')) headers.set('x-locale', locale);
+  if (!headers.has('x-next-locale')) headers.set('x-next-locale', locale);
+  if (!headers.has('x-client-locale')) headers.set('x-client-locale', locale);
+  if (!headers.has('accept-language')) headers.set('accept-language', `${locale},en;q=0.8`);
+}
+
 export function setCsrfToken(token: string) {
   csrfToken = token;
 }
@@ -83,13 +105,21 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 interface FetchOptions extends RequestInit {
   tenantSlug?: string;
+  locale?: string;
   _retry?: boolean;
 }
 async function fetchApi<T>(path: string, options: FetchOptions = {}): Promise<T> {
-  const { tenantSlug, _retry, ...fetchOpts } = options;
+  const { tenantSlug, locale, _retry, ...fetchOpts } = options;
+  const resolvedLocale = coerceLocale(locale ?? getActiveLocale());
   const headers = new Headers(fetchOpts.headers);
-  headers.set('Content-Type', 'application/json');
+  // Only declare JSON when a payload actually exists: Nest's body parser rejects
+  // `content-type: application/json` on empty bodies, which broke every bodiless
+  // request (`api.delete(url)`, `api.post(url)`).
+  if (typeof fetchOpts.body === 'string' && fetchOpts.body.length > 0) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (tenantSlug) headers.set('x-tenant-slug', tenantSlug);
+  applyLocaleHeaders(headers, resolvedLocale);
   if (
     csrfToken &&
     !['GET', 'HEAD', 'OPTIONS'].includes((fetchOpts.method || 'GET').toUpperCase())
@@ -104,16 +134,7 @@ async function fetchApi<T>(path: string, options: FetchOptions = {}): Promise<T>
     const refreshed = await refreshPromise;
     refreshPromise = null;
     if (refreshed) {
-      // Retry original request; new access cookie will be sent automatically
-const retryHeaders = new Headers(fetchOpts.headers);
-      retryHeaders.set('Content-Type', 'application/json');
-      if (tenantSlug) retryHeaders.set('x-tenant-slug', tenantSlug);
-      if (
-        csrfToken &&
-        !['GET', 'HEAD', 'OPTIONS'].includes((fetchOpts.method || 'GET').toUpperCase())
-      ) {
-        retryHeaders.set('x-csrf-token', csrfToken);
-      }
+      const retryHeaders = new Headers(headers);
       res = await fetch(`${API_BASE}${path}`, {
         ...fetchOpts,
         headers: retryHeaders,
@@ -134,8 +155,16 @@ const retryHeaders = new Headers(fetchOpts.headers);
     // Carry the status so callers can distinguish a transient failure (network blip,
     // a refresh that lost a race) from a definitive one (403/404). Without this every
     // caller only sees an opaque message and cannot decide whether retrying is sane.
-    const err = new Error(error.message || 'API Error') as Error & { status?: number };
+    // The whole parsed body is attached too: backends return machine-readable detail
+    // (code, upstream status, provider message) that `message` alone throws away.
+    const err = new Error(error.message || 'API Error') as Error & {
+      status?: number;
+      body?: Record<string, unknown>;
+    };
     err.status = res.status;
+    if (error && typeof error === 'object') {
+      err.body = error as Record<string, unknown>;
+    }
     throw err;
   }
   // 204 No Content

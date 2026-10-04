@@ -6,15 +6,25 @@ import type { SeedResult } from '../src/blocks/registry';
 import {
   seedNav,
   seedHero,
+  seedHeroConsole,
   seedStats,
+  seedStatsDeck,
   seedPartnerLogos,
+  seedPartnerStrip,
   seedFeatureTiles,
   seedAcademyGrid,
+  seedProgramCards,
+  seedTwinSection,
+  seedTestimonials,
   seedCtaBanner,
+  seedCtaSignup,
   seedFaq,
   seedFooter,
   seedHomeLayout,
   seedAcademyLandingLayout,
+  seedProductsLayout,
+  seedFeedLayout,
+  seedEventsLayout,
   FAQ_ITEMS,
 } from '../src/blocks/seeds';
 
@@ -39,11 +49,18 @@ function collectIds(seed: SeedResult): string[] {
 const ALL_SEEDS = [
   seedNav(),
   seedHero(),
+  seedHeroConsole(),
   seedStats(),
+  seedStatsDeck(),
   seedPartnerLogos(),
+  seedPartnerStrip(),
   seedFeatureTiles(),
   seedAcademyGrid(),
+  seedProgramCards(),
+  seedTwinSection(),
+  seedTestimonials(),
   seedCtaBanner(),
+  seedCtaSignup(),
   seedFaq(),
   seedFooter(),
 ];
@@ -115,7 +132,7 @@ describe('seeds', () => {
     const seed = seedFeatureTiles();
     const content = slot(seed.node, 'content');
     expect(content.map((node) => node.type)).toEqual(['text', 'heading', 'feature-item', 'feature-item', 'feature-item']);
-    expect(content[0].props).toMatchObject({ text: 'The Machinist Advantage', color: 'text-primary', uppercase: true });
+    expect(content[0].props).toMatchObject({ text: 'The TITANS advantage', color: 'text-primary', uppercase: true });
     const itemContent = slot(content[2], 'content');
     expect(itemContent.map((node) => node.type)).toEqual(['icon', 'stack']);
     expect(itemContent[0].props).toMatchObject({ box: 'white' });
@@ -156,7 +173,7 @@ describe('seeds', () => {
     const seed = seedFaq();
     const header = slot(seed.node, 'header');
     expect(header.map((node) => node.type)).toEqual(['text', 'heading']);
-    expect(header[0].props).toMatchObject({ text: 'Support Center', color: 'text-primary' });
+    expect(header[0].props).toMatchObject({ text: 'Before you start', color: 'text-primary' });
     const items = slot(seed.node, 'items');
     expect(items).toHaveLength(4);
     const first = items[0];
@@ -189,24 +206,101 @@ describe('seeds', () => {
     }
   });
 
-  it('home layout contains all eight sections in mockup order (floating nav lives in the app shell, not the seed)', () => {
+  it('home layout contains all nine sections in mockup order (nav/footer live in the app shell, not the seed)', () => {
     const layout = seedHomeLayout();
     expect(layout.content.map((node) => node.type)).toEqual([
-      'hero',
+      'hero-console',
       'stats',
       'partner-logos',
-      'feature-tiles',
       'academy-grid',
-      'cta-banner',
+      'program-cards',
+      'twin-section',
+      'testimonials',
       'faq',
-      'footer',
+      'cta-signup',
     ]);
     expect(validatePageLayout(layout).ok).toBe(true);
   });
 
-  it('academy landing layout validates', () => {
+  it('academy landing reconstructs the redesign: catalog hero, live pathways, steps, spotlights, CTA', () => {
     const layout = seedAcademyLandingLayout();
-    expect(layout.content.map((node) => node.type)).toEqual(['hero', 'academy-grid']);
+    expect(layout.content.map((node) => node.type)).toEqual([
+      'catalog-hero',
+      'live-island',
+      'card-grid',
+      'spotlight-cards',
+      'closing-cta',
+    ]);
+    expect(layout.content[0]?.props?.titleAccent).toBe('syllabus.');
+    expect(layout.content[1]?.props?.variant).toBe('academy-pathways');
+    expect(layout.content[1]?.props?.id).toBe('pathways');
+    expect(layout.content[2]?.props?.id).toBe('how-it-works');
+    expect(layout.content[3]?.props?.id).toBe('spotlight-paths');
+    expect(layout.content[4]?.props?.id).toBe('enroll');
+    expect(validatePageLayout(layout).ok).toBe(true);
+  });
+
+  it('products layout reconstructs the redesign with three live islands', () => {
+    const layout = seedProductsLayout();
+    expect(layout.content.map((node) => node.type)).toEqual([
+      'catalog-hero',
+      'live-island',
+      'live-island',
+      'live-island',
+      'card-grid',
+      'closing-cta',
+    ]);
+    const variants = layout.content
+      .filter((node) => node.type === 'live-island')
+      .map((node) => node.props?.variant);
+    expect(variants).toEqual(['products-featured', 'products-inventory', 'products-departments']);
+    expect(layout.content[5]?.props?.id).toBe('shop-cta');
+    expect(validatePageLayout(layout).ok).toBe(true);
+  });
+
+  it('feed layout reconstructs the redesign with ticker, topics and wire islands', () => {
+    const layout = seedFeedLayout();
+    expect(layout.content.map((node) => node.type)).toEqual([
+      'catalog-hero',
+      'live-island',
+      'live-island',
+      'live-island',
+      'card-grid',
+      'closing-cta',
+    ]);
+    const variants = layout.content
+      .filter((node) => node.type === 'live-island')
+      .map((node) => node.props?.variant);
+    expect(variants).toEqual(['feed-ticker', 'feed-topics', 'feed-wire']);
+    expect(layout.content[4]?.props?.id).toBe('house-rules');
+    expect(layout.content[5]?.props?.id).toBe('feed-cta');
+    expect(validatePageLayout(layout).ok).toBe(true);
+  });
+
+  it('events layout reconstructs the redesign with four live islands', () => {
+    const layout = seedEventsLayout();
+    expect(layout.content.map((node) => node.type)).toEqual([
+      'catalog-hero',
+      'live-island',
+      'live-island',
+      'live-island',
+      'live-island',
+      'card-grid',
+      'card-grid',
+      'closing-cta',
+    ]);
+    const variants = layout.content
+      .filter((node) => node.type === 'live-island')
+      .map((node) => node.props?.variant);
+    expect(variants).toEqual([
+      'events-ticker',
+      'events-next-up',
+      'events-schedule',
+      'events-browse',
+    ]);
+    expect(layout.content[5]?.props?.id).toBe('formats');
+    expect(layout.content[6]?.props?.id).toBe('how-to-attend');
+    expect(layout.content[7]?.props?.id).toBe('events-cta');
     expect(validatePageLayout(layout).ok).toBe(true);
   });
 });

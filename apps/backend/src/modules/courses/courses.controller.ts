@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query,
-  UseGuards, HttpCode, HttpStatus,
+  UseGuards, HttpCode, HttpStatus, Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
@@ -15,8 +15,8 @@ import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
-  CreateCourseDto, CreateSeriesDto, CreateLessonDto,
-  CourseFilterDto, UpdateProgressDto, EnrollDto,
+  CreateCourseDto, UpdateCourseDto, CreateSeriesDto, UpdateSeriesDto, CreateLessonDto, UpdateLessonDto,
+  CourseFilterDto, UpdateProgressDto, EnrollDto, QuizAttemptDto,
 } from './dto/courses.dto';
 
 @ApiTags('courses')
@@ -29,10 +29,11 @@ export class CoursesController {
   @Get()
   @ApiOperation({ summary: 'List courses with filters' })
   findAll(
+    @Req() req: any,
     @CurrentTenant() tenant: { id: string },
     @Query() filters?: CourseFilterDto,
   ) {
-    return this.courses.findByTenant(tenant.id, filters);
+    return this.courses.findByTenant(tenant.id, filters, req);
   }
 
   @Public()
@@ -40,15 +41,31 @@ export class CoursesController {
   @Get(':slug')
   @ApiOperation({ summary: 'Get course detail with series and lessons' })
   findBySlug(
+    @Req() req: any,
     @CurrentTenant() tenant: { id: string },
     @Param('slug') slug: string,
   ) {
-    return this.courses.findBySlug(tenant.id, slug);
+    return this.courses.findBySlug(tenant.id, slug, req);
+  }
+
+  @Post(':courseSlug/lessons/:lessonSlug/quizzes/:quizId/attempts')
+  @UseGuards(JwtAuthGuard, TenantGuard, TenantScopeGuard)
+  @ApiOperation({ summary: 'Submit and server-grade a lesson quiz attempt' })
+  submitQuizAttempt(
+    @CurrentTenant() tenant: { id: string },
+    @CurrentUser() user: { id: string; role: string; tenantId: string },
+    @Param('courseSlug') courseSlug: string,
+    @Param('lessonSlug') lessonSlug: string,
+    @Param('quizId') quizId: string,
+    @Body() dto: QuizAttemptDto,
+    @Req() request: any,
+  ) {
+    return this.courses.gradeQuizAttempt(tenant.id, user, courseSlug, lessonSlug, quizId, dto.answers, request);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Create a course' })
   create(
     @CurrentTenant() tenant: { id: string },
@@ -59,19 +76,19 @@ export class CoursesController {
 
   @Patch(':slug')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Update a course' })
   update(
     @CurrentTenant() tenant: { id: string },
     @Param('slug') slug: string,
-    @Body() dto: Partial<CreateCourseDto>,
+    @Body() dto: UpdateCourseDto,
   ) {
     return this.courses.updateCourse(tenant.id, slug, dto);
   }
 
   @Delete(':slug')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Delete a course' })
   delete(
     @CurrentTenant() tenant: { id: string },
@@ -82,7 +99,7 @@ export class CoursesController {
 
   @Post(':slug/publish')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Publish a course' })
   publish(
     @CurrentTenant() tenant: { id: string },
@@ -93,7 +110,7 @@ export class CoursesController {
 
   @Post(':slug/unpublish')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Unpublish a course' })
   unpublish(
     @CurrentTenant() tenant: { id: string },
@@ -104,7 +121,7 @@ export class CoursesController {
 
   @Post(':slug/archive')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Archive a course' })
   archive(
     @CurrentTenant() tenant: { id: string },
@@ -115,7 +132,7 @@ export class CoursesController {
 
   @Post(':slug/restore')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Restore an archived course' })
   restore(
     @CurrentTenant() tenant: { id: string },
@@ -127,7 +144,7 @@ export class CoursesController {
   // --- Curriculum ---
   @Post(':slug/curriculum/reorder')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Reorder curriculum (series and lessons)' })
   reorderCurriculum(
     @CurrentTenant() tenant: { id: string },
@@ -140,7 +157,7 @@ export class CoursesController {
   // --- Series ---
   @Post('series')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Create a series' })
   createSeries(
     @CurrentTenant() tenant: { id: string },
@@ -154,21 +171,22 @@ export class CoursesController {
   @Get(':courseSlug/series/:seriesSlug')
   @ApiOperation({ summary: 'Get series detail within course' })
   findSeries(
+    @Req() req: any,
     @CurrentTenant() tenant: { id: string },
     @Param('courseSlug') courseSlug: string,
     @Param('seriesSlug') seriesSlug: string,
   ) {
-    return this.courses.findSeries(tenant.id, courseSlug, seriesSlug);
+    return this.courses.findSeries(tenant.id, courseSlug, seriesSlug, req);
   }
 
   @Patch('series/:id')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Update a series' })
   updateSeries(
     @CurrentTenant() tenant: { id: string },
     @Param('id') id: string,
-    @Body() dto: Partial<CreateSeriesDto>,
+    @Body() dto: UpdateSeriesDto,
   ) {
     return this.courses.updateSeries(tenant.id, id, dto);
   }
@@ -176,7 +194,7 @@ export class CoursesController {
   // --- Lessons ---
   @Post('lessons')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Create a lesson' })
   createLesson(
     @CurrentTenant() tenant: { id: string },
@@ -187,26 +205,32 @@ export class CoursesController {
 
   @Public()
   @TenantScoped()
+  @UseGuards(OptionalAuthGuard, TenantGuard, TenantScopeGuard)
   @Get('lessons/:slug')
   @ApiOperation({ summary: 'Get lesson with series + course context (video redacted unless freePreview)' })
   findLesson(
-    @CurrentTenant() tenant: { id: string },
-    @Param('slug') slug: string,
-  ) {
-    return this.courses.findLessonFull(tenant.id, slug);
-  }
+     @Req() req: any,
+     @CurrentTenant() tenant: { id: string },
+     @CurrentUser() user: { id: string; role: string; tenantId: string } | null,
+     @Param('slug') slug: string,
+   ) {
+     return this.courses.findLessonFull(tenant.id, slug, user, req);
+   }
 
   @Public()
   @TenantScoped()
+  @UseGuards(OptionalAuthGuard, TenantGuard, TenantScopeGuard)
   @Get(':courseSlug/lessons/:lessonSlug')
   @ApiOperation({ summary: 'Get lesson by course and lesson slug (video redacted unless freePreview)' })
-  findLessonInCourse(
-    @CurrentTenant() tenant: { id: string },
-    @Param('courseSlug') courseSlug: string,
-    @Param('lessonSlug') lessonSlug: string,
-  ) {
-    return this.courses.findLessonInCourse(tenant.id, courseSlug, lessonSlug);
-  }
+   findLessonInCourse(
+     @Req() req: any,
+     @CurrentTenant() tenant: { id: string },
+     @CurrentUser() user: { id: string; role: string; tenantId: string } | null,
+     @Param('courseSlug') courseSlug: string,
+     @Param('lessonSlug') lessonSlug: string,
+   ) {
+     return this.courses.findLessonInCourse(tenant.id, courseSlug, lessonSlug, user, req);
+   }
 
   // Public (optional auth): freePreview lessons play without login.
   // Non-preview lessons still require admin/enrollment inside the service.
@@ -239,12 +263,12 @@ export class CoursesController {
 
   @Patch('lessons/:id')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
-  @Roles('super_admin', 'admin')
+  @Roles('super_admin', 'admin', 'instructor')
   @ApiOperation({ summary: 'Update a lesson' })
   updateLesson(
     @CurrentTenant() tenant: { id: string },
     @Param('id') id: string,
-    @Body() dto: Partial<CreateLessonDto>,
+    @Body() dto: UpdateLessonDto,
   ) {
     return this.courses.updateLesson(tenant.id, id, dto);
   }
@@ -273,10 +297,11 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard, TenantGuard, TenantScopeGuard)
   @ApiOperation({ summary: 'Get course progress for current user' })
   courseProgress(
+    @CurrentTenant() tenant: { id: string },
     @CurrentUser() user: { id: string },
     @Param('courseId') courseId: string,
   ) {
-    return this.courses.getCourseProgress(user.id, courseId);
+    return this.courses.getCourseProgress(user.id, courseId, tenant.id);
   }
 
   @Post('progress')

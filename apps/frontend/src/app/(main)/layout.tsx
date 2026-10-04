@@ -1,14 +1,20 @@
 import { AnnouncementBar } from '@/components/layout/announcement-bar';
 import { NavMain } from '@/components/layout/nav-main';
 import { Footer } from '@/components/layout/footer';
-import { ChatWidget } from '@/components/chat/chat-widget';
-import { PWARegister } from '@/components/pwa/pwa-register';
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+import { fetchNavigation, getNavContext } from '@/lib/builder/navigation';
+
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
+  const { tenantSlug, locale } = await getNavContext();
+  const items = await fetchNavigation(tenantSlug, locale);
   return (
     <div className="flex min-h-screen flex-col">
-      {' '}
-      <AnnouncementBar /> <NavMain /> <main className="flex-1 pt-[116px]">{children}</main>{' '}
-      <Footer /> <ChatWidget /> <PWARegister />{' '}
+      {/* The announcement bar scrolls away; NavMain is itself `sticky top-0`.
+          Pages no longer need the magic `pt-[116px]` that had to be kept in
+          sync with the header's height. */}
+      <AnnouncementBar />
+      <NavMain items={items} />
+      <main className="flex-1">{children}</main>
+      <Footer />
     </div>
   );
 }

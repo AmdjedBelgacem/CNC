@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Body, UseGuards, Req, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body, UseGuards, Req, Res, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength, IsUUID } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -133,5 +133,59 @@ export class AdminCertificationsController {
     const ip = req.ip;
     const ua = req.headers?.['user-agent'];
     return this.certification.reissue(tid, id, actorId, ip, ua);
+  }
+
+  /**
+   * Admin download of any certificate in the effective tenant.
+   *
+   * Tenant-scoped: the lookup is constrained to the tenant the guard resolved,
+   * so a super_admin cannot pull another tenant's file by id alone.
+   */
+  @Get(':id/download')
+  @Roles('super_admin', 'admin')
+  @ApiOperation({ summary: 'Download a certificate PDF (admin)' })
+  async download(
+    @Param('id') id: string,
+    @Query('tenantId') queryTenantId: string | undefined,
+    @Req() req: any,
+    @Res() res: any,
+  ) {
+    const tenantId = this.effectiveTenant(req, queryTenantId);
+    const cert = await this.certification.getForDownload(id, {
+      id: (req.user as any)?.id,
+      tenantId,
+      role: 'admin',
+    });
+    const body = await this.certification.loadDocument(cert as never);
+    if (!body) throw new BadRequestException('No stored PDF for this certificate yet');
+    res.header('content-type', 'application/pdf');
+    res.header('content-disposition', `attachment; filename="certificate-${cert.certificateNumber}.pdf"`);
+    res.header('content-length', String(body.length));
+    return res.send(body);
+  }
+
+  /**
+   * Rebuild a PDF from the immutable payload snapshot.
+   *
+   * Needed because certificates issued before the renderer existed have no
+   * stored file; their snapshot still carries the resolved values, so they can
+   * be brought forward without re-issuing (which would mint a new number).
+   */
+  @Post(':id/regenerate-pdf')
+  @Roles('super_admin', 'admin')
+  @ApiOperation({ summary: 'Regenerate a certificate PDF from its payload snapshot' })
+  async regenerate(
+    @Param('id') id: string,
+    @Query('tenantId') queryTenantId: string | undefined,
+    @Req() req: any,
+  ) {
+    const tenantId = this.effectiveTenant(req, queryTenantId);
+    const result = await this.certification.regeneratePdf(id, tenantId);
+    return {
+      regenerated: true,
+      bytes: result.bytes,
+      pdfUrl: result.url,
+      pdfStorageKey: result.key,
+    };
   }
 }

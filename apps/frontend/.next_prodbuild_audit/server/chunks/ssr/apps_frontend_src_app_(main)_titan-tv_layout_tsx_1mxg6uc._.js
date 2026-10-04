@@ -1,3 +1,0 @@
-module.exports=[43352,a=>{"use strict";var b=a.i(70613);a.s(["default",0,function({children:a}){return(0,b.jsx)(b.Fragment,{children:a})},"metadata",0,{title:"TITAN TV — Video Library | TITANS of Manufacturing",description:"Watch machine builds, tooling demos, and educational series."}])},28555,a=>{a.n(a.i(43352))}];
-
-//# sourceMappingURL=apps_frontend_src_app_%28main%29_titan-tv_layout_tsx_1mxg6uc._.js.map

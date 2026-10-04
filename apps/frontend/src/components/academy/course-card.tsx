@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { DifficultyBar } from './difficulty-bar';
-import { cn } from '@/lib/utils';
+import { getImageSrc } from '@/lib/images';
+import { LanguageAvailability } from '@/components/academy/language-availability';
+import type { ContentLocale } from '@titan/shared';
+
 interface CourseCardProps {
   slug: string;
   title: string;
@@ -10,7 +14,11 @@ interface CourseCardProps {
   difficulty: number;
   estimatedHours?: number | null;
   progress?: number;
+  availableLocales?: ContentLocale[];
+  resolvedLocale?: ContentLocale;
+  fallbackFields?: string[];
 }
+
 export function CourseCard({
   slug,
   title,
@@ -19,63 +27,45 @@ export function CourseCard({
   difficulty,
   estimatedHours,
   progress,
+  availableLocales,
+  resolvedLocale,
+  fallbackFields,
 }: CourseCardProps) {
   return (
-    <Link href={`/courses/${slug}`}>
-      {' '}
-      <Card
-        className={cn(
-          'group overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5',
-          'h-full flex flex-col',
-        )}
-      >
-        {' '}
-        <div className="aspect-video bg-muted overflow-hidden">
-          {' '}
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt={title}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              {' '}
-              <span className="text-4xl font-bold opacity-20">{title[0]}</span>{' '}
-            </div>
-          )}{' '}
-        </div>{' '}
-        <CardHeader className="flex-1">
-          {' '}
-          <CardTitle className="text-lg">{title}</CardTitle>{' '}
-          {subtitle && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{subtitle}</p>
-          )}{' '}
-        </CardHeader>{' '}
-        <CardFooter className="flex-col items-start gap-2">
-          {' '}
-          <DifficultyBar level={difficulty} size="sm" />{' '}
+    <Link href={`/courses/${slug}`} className="group block h-full">
+      <Card className="card-hover flex h-full flex-col overflow-hidden transition-colors duration-200 group-hover:border-border-strong group-hover:shadow-sm">
+        <div className="aspect-video overflow-hidden border-b border-border bg-surface-sunken">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={getImageSrc(thumbnailUrl, 'course')}
+            alt={title}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
+          />
+        </div>
+        <CardHeader className="flex-1 gap-1 p-5">
+          <CardTitle className="font-display text-lg">{title}</CardTitle>
+          {subtitle && <p className="line-clamp-2 text-sm text-muted-foreground">{subtitle}</p>}
+          {availableLocales && availableLocales.length > 0 && <div className="pt-2"><LanguageAvailability availableLocales={availableLocales} resolvedLocale={resolvedLocale} fallbackFields={fallbackFields} /></div>}
+        </CardHeader>
+        <CardFooter className="flex-col items-stretch gap-2 p-5 pt-0">
+          <DifficultyBar level={difficulty} size="sm" />
           {estimatedHours && (
-            <span className="text-xs text-muted-foreground">{estimatedHours}h estimated</span>
-          )}{' '}
+            <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+              {estimatedHours}h estimated
+            </span>
+          )}
           {progress !== undefined && (
-            <div className="w-full">
-              {' '}
-              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                {' '}
-                <span>Progress</span> <span>{progress}%</span>{' '}
-              </div>{' '}
-              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                {' '}
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${progress}%` }}
-                />{' '}
-              </div>{' '}
+            <div className="w-full space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Progress</span>
+                <span className="tabular-nums">{progress}%</span>
+              </div>
+              <Progress value={progress} label="Progress" className="h-1.5" />
             </div>
-          )}{' '}
-        </CardFooter>{' '}
-      </Card>{' '}
+          )}
+        </CardFooter>
+      </Card>
     </Link>
   );
 }

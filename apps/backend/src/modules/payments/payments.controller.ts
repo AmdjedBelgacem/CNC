@@ -43,15 +43,9 @@ export class PaymentsController {
     return this.payments.getOrderBySession(sessionId, user.tenantId, user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('orders/:id')
-  @ApiOperation({ summary: 'Get order by id (tenant + user scoped)' })
-  getOrder(
-    @CurrentUser() user: { id: string; tenantId: string },
-    @Param('id') id: string,
-  ) {
-    return this.payments.getOrder(user.tenantId, user.id, id);
-  }
+  // `GET payments/orders/:id` now lives on MoyasarController: it is the same
+  // tenant+user scoped lookup but returns line items and fulfillment state, which
+  // the gateway-neutral order model needs. Declaring it twice is a boot failure.
 
   @Public()
   @SkipCsrf() // Stripe cannot present a CSRF token; authenticity comes from the signature.

@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
-const SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de'] as const;
-const DEFAULT_LOCALE = 'en';
-const LOCALE_COOKIE = 'NEXT_LOCALE';
+import { DEFAULT_LOCALE, LOCALE_COOKIE, coerceLocale, localeFromAcceptLanguage } from '@/i18n/config';
 
 /**
  * Tenant resolution.
@@ -76,15 +74,9 @@ function resolveTenantSlug(hostHeader: string): string {
   return DEFAULT_TENANT_SLUG;
 }
 
-function pickLocaleFromHeader(accept: string | null): string {
-  if (!accept) return DEFAULT_LOCALE;
-  const primary = accept.split(',')[0]?.split(';')[0]?.trim().toLowerCase() ?? '';
-  if (primary.startsWith('fr')) return 'fr';
-  if (primary.startsWith('es')) return 'es';
-  if (primary.startsWith('de')) return 'de';
-  return DEFAULT_LOCALE;
-}
-const PROTECTED_ROUTES = ['/account', '/checkout', '/cart', '/admin'];
+// `/cart` is deliberately public: the cart lives in local storage, so guests browse
+// and review it freely and only authenticate at `/checkout`.
+const PROTECTED_ROUTES = ['/account', '/checkout', '/notifications', '/admin'];
 export async function middleware(request: NextRequest) {
   const tenantSlug = resolveTenantSlug(request.headers.get('host') || '');
   const { pathname } = request.nextUrl;
@@ -96,16 +88,16 @@ export async function middleware(request: NextRequest) {
     maxAge: 60 * 60 * 24 * 365,
   });
   response.headers.set('x-tenant-slug', tenantSlug);
-  // Cookie-based locale resolution — no URL prefix, no redirect
-  let locale = request.cookies.get(LOCALE_COOKIE)?.value;
-  if (!locale || !SUPPORTED_LOCALES.includes(locale as typeof SUPPORTED_LOCALES[number])) {
-    const picked = pickLocaleFromHeader(request.headers.get('accept-language'));
-    locale = SUPPORTED_LOCALES.includes(picked as typeof SUPPORTED_LOCALES[number]) ? picked : DEFAULT_LOCALE;
-    response.cookies.set(LOCALE_COOKIE, locale, { sameSite: 'lax', maxAge: 60 * 60 * 24 * 365, path: '/' });
-  } else {
-    // Ensure cookie is refreshed with proper attributes if already present
-    response.cookies.set(LOCALE_COOKIE, locale, { sameSite: 'lax', maxAge: 60 * 60 * 24 * 365, path: '/' });
-  }
+  // Cookie-based locale resolution — no URL prefix, no redirect.
+  const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
+  const locale = cookieLocale
+    ? coerceLocale(cookieLocale)
+    : (localeFromAcceptLanguage(request.headers.get('accept-language')) ?? DEFAULT_LOCALE);
+  response.cookies.set(LOCALE_COOKIE, locale, {
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
+  });
   response.headers.set('x-locale', locale);
   // The access cookie is the WRONG signal on its own: it lives 15 minutes, and the
   // browser deletes it on expiry while the refresh cookie is still good for 7 days.

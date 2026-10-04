@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2, Search, AlertTriangle } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
-import { RightSheet, RightSheetHeader } from '@/components/ui/right-sheet';
+import { Modal, ModalHeader } from '@/components/ui/modal';
 import { INPUT, LABEL } from '../courses/studio/glass';
 interface IssueSheetProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface CourseOption {
 interface TemplateOption {
   id: string;
   name: string;
+  courseId?: string | null;
 }
 interface UserOption {
   id: string;
@@ -23,6 +25,8 @@ interface UserOption {
   email: string;
 }
 export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetProps) {
+  const t = useTranslations('admin.certificateIssue');
+  const tCommon = useTranslations('common');
   const [userQuery, setUserQuery] = useState('');
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [userSearching, setUserSearching] = useState(false);
@@ -42,9 +46,19 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
       .catch(() => {});
     fetch('/api/proxy/admin/cert-templates?limit=100', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((d) => setTemplates((d?.items ?? []).map((t: any) => ({ id: t.id, name: t.name }))))
+      .then((d) =>
+        setTemplates(
+          (d?.items ?? []).map((t: any) => ({ id: t.id, name: t.name, courseId: t.courseId })),
+        ),
+      )
       .catch(() => {});
   }, [open]);
+  const visibleTemplates = templates.filter(
+    (t) => !courseId || !t.courseId || t.courseId === courseId,
+  );
+  useEffect(() => {
+    setTemplateId('');
+  }, [courseId]);
   useEffect(() => {
     if (!userQuery.trim()) {
       setUserOptions([]);
@@ -76,7 +90,10 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
   };
   const handleSubmit = async () => {
     if (!selectedUserId || !courseId) {
-      toast({ type: 'err', title: 'Select learner and course' });
+      toast({
+        type: 'err',
+        title: t('selectLearnerAndCourse', { default: 'Select learner and course' }),
+      });
       return;
     }
     setSubmitting(true);
@@ -96,8 +113,10 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
       if (!res.ok) throw new Error(data?.message || `Request failed (${res.status})`);
       toast({
         type: 'ok',
-        title: 'Certificate issued',
-        description: data?.certificateNumber ? `Number: ${data.certificateNumber}` : undefined,
+        title: t('issued', { default: 'Certificate issued' }),
+        description: data?.certificateNumber
+          ? t('numberLabel', { number: data.certificateNumber, default: 'Number: {number}' })
+          : undefined,
       });
       onIssued();
       onClose();
@@ -107,22 +126,23 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
       setTemplateId('');
       setExpiresAt('');
     } catch (e: any) {
-      toast({ type: 'err', title: 'Issue failed', description: e?.message });
+      toast({ type: 'err', title: t('issueFailed', { default: 'Issue failed' }), description: e?.message });
     } finally {
       setSubmitting(false);
     }
   };
   if (!open) return null;
   return (
-    <RightSheet
+    <Modal
       onClose={onClose}
+      title={t('title', { default: 'Issue certificate' })}
       header={
-        <RightSheetHeader
+        <ModalHeader
           loading={false}
           initials="IC"
           gradient="bg-foreground text-background"
-          title="Issue certificate"
-          subtitle="Manually award a certificate"
+          title={t('title', { default: 'Issue certificate' })}
+          subtitle={t('subtitle', { default: 'Manually award a certificate' })}
           onClose={onClose}
         />
       }
@@ -130,21 +150,25 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
       {' '}
       <div className="space-y-5 p-6">
         {' '}
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5 flex gap-2">
+        <div className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5 flex gap-2">
           {' '}
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />{' '}
+          <AlertTriangle className="size-4 shrink-0 text-warning dark:text-warning mt-0.5" />{' '}
           <p className="text-xs leading-relaxed text-muted-foreground">
             {' '}
-            Manual issue works{' '}
+            {t('manualIssueHintPrefix', { default: 'Manual issue works' })}{' '}
             <span className="font-medium text-foreground">
-              even if the learner hasn&apos;t completed the course
+              {t('manualIssueHintStrong', {
+                default: 'even if the learner hasn&apos;t completed the course',
+              })}
             </span>
-            . The enrollment will be marked completed.{' '}
+            . {t('manualIssueHintSuffix', {
+              default: 'The enrollment will be marked completed.',
+            })}{' '}
           </p>{' '}
         </div>{' '}
         <div className="space-y-1.5">
           {' '}
-          <label className={LABEL}>Learner *</label>{' '}
+          <label className={LABEL}>{t('learner', { default: 'Learner *' })}</label>{' '}
           {selectedUserId ? (
             <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2">
               {' '}
@@ -158,24 +182,24 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
                 className="text-xs font-medium text-primary hover:underline"
               >
                 {' '}
-                Change{' '}
+                {t('change', { default: 'Change' })}{' '}
               </button>{' '}
             </div>
           ) : (
             <div className="relative">
               {' '}
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />{' '}
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />{' '}
               <input
                 value={userQuery}
                 onChange={(e) => setUserQuery(e.target.value)}
-                placeholder="Search by name or email…"
-                className={INPUT + ' pl-9'}
+                placeholder={t('searchPlaceholder', { default: 'Search by name or email…' })}
+                className={INPUT + ' ps-9'}
               />{' '}
               {userSearching && (
-                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                <Loader2 className="absolute end-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
               )}{' '}
               {userOptions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-xl border border-border bg-popover shadow-lg">
+                <div className="absolute start-0 end-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-xl border border-border bg-popover shadow-lg">
                   {' '}
                   {userOptions.map((u) => (
                     <button
@@ -198,10 +222,10 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
         </div>{' '}
         <div className="space-y-1.5">
           {' '}
-          <label className={LABEL}>Course *</label>{' '}
+          <label className={LABEL}>{t('course', { default: 'Course *' })}</label>{' '}
           <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={INPUT}>
             {' '}
-            <option value="">Select a course…</option>{' '}
+            <option value="">{t('selectCourse', { default: 'Select a course…' })}</option>{' '}
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
                 {' '}
@@ -213,8 +237,10 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
         <div className="space-y-1.5">
           {' '}
           <label className={LABEL}>
-            Template{' '}
-            <span className="font-normal normal-case text-muted-foreground">(optional)</span>
+            {t('template', { default: 'Template' })}{' '}
+            <span className="font-normal normal-case text-muted-foreground">
+              {t('optional', { default: '(optional)' })}
+            </span>
           </label>{' '}
           <select
             value={templateId}
@@ -222,11 +248,12 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
             className={INPUT}
           >
             {' '}
-            <option value="">Default</option>{' '}
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>
+            <option value="">{t('default', { default: 'Default' })}</option>{' '}
+            {visibleTemplates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
                 {' '}
-                {t.name}{' '}
+                {tpl.name}
+                {tpl.courseId ? '' : ` · ${t('tenantDefault', { default: 'tenant default' })}`}{' '}
               </option>
             ))}{' '}
           </select>{' '}
@@ -234,8 +261,10 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
         <div className="space-y-1.5">
           {' '}
           <label className={LABEL}>
-            Expires at{' '}
-            <span className="font-normal normal-case text-muted-foreground">(optional)</span>
+            {t('expiresAt', { default: 'Expires at' })}{' '}
+            <span className="font-normal normal-case text-muted-foreground">
+              {t('optional', { default: '(optional)' })}
+            </span>
           </label>{' '}
           <input
             type="date"
@@ -252,7 +281,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
             className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted"
           >
             {' '}
-            Cancel{' '}
+            {tCommon('cancel', { default: 'Cancel' })}{' '}
           </button>{' '}
           <button
             type="button"
@@ -261,10 +290,11 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
             {' '}
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Issue certificate{' '}
+            {submitting && <Loader2 className="size-4 animate-spin" />}{' '}
+            {t('title', { default: 'Issue certificate' })}{' '}
           </button>{' '}
         </div>{' '}
       </div>{' '}
-    </RightSheet>
+    </Modal>
   );
 }

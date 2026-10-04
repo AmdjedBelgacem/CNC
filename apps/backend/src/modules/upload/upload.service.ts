@@ -14,8 +14,8 @@ export class UploadService {
       region: config.get('S3_REGION'),
       endpoint: config.get('S3_ENDPOINT'),
       credentials: {
-        accessKeyId: config.get('S3_ACCESS_KEY'),
-        secretAccessKey: config.get('S3_SECRET_KEY'),
+        accessKeyId: config.get('S3_ACCESS_KEY') ?? '',
+        secretAccessKey: config.get('S3_SECRET_KEY') ?? '',
       },
       forcePathStyle: true,
     });

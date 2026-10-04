@@ -1,18 +1,40 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+
+/**
+ * Builder chrome.
+ *
+ * The previous toolbar put fifteen controls in one 48px row: exit, page picker,
+ * undo, redo, add block, layers, inspector, saved sections, preview, viewport,
+ * status, history, reset, save, publish. All the same weight, no grouping, and
+ * the viewport switcher and publish status sat inside `hidden xl:flex` — so on
+ * any laptop below 1280px the two controls you most need while designing simply
+ * were not there.
+ *
+ * The replacement is two tiers with a real hierarchy:
+ *
+ *   identity + lifecycle   exit · page (with live status) ······ save · publish
+ *   working tools          history │ insert │ view │ panels ······ page meta · more
+ *
+ * Tier one answers "what am I editing, and is it live". Tier two is the toolbox.
+ * Nothing is hidden behind a breakpoint any more, and the rare destructive
+ * actions moved into an overflow menu so the bar stays calm.
+ */
+
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BUILDER_PAGE_DEFS } from '@titan/shared';
+import { useTranslations } from 'next-intl';
+import { PageManager } from '@/components/builder/page-manager';
+import { PublishChecklist } from '@/components/builder/publish-checklist';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import {
   ArrowLeft,
-  Check,
-  ChevronDown,
+  CircleAlert,
   Eye,
-  FileText,
   History,
+  Keyboard,
   Loader2,
-  Menu,
   Monitor,
+  MoreHorizontal,
   PanelLeft,
   PanelRight,
   Redo2,
@@ -22,7 +44,6 @@ import {
   Smartphone,
   Tablet,
   Undo2,
-  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMediaQuery, IS_DESKTOP_QUERY } from '@/lib/use-media-query';
@@ -31,241 +52,261 @@ import { builderActions } from './builder-actions';
 import { useBuilderUI } from './builder-ui-store';
 import { AddBlockMenu } from './add-block-menu';
 import { SavedSectionsActions } from './saved-sections-actions';
+import { BlockProductivity } from './block-productivity';
+
 export const VIEWPORTS = [
-  { label: 'Desktop', width: 1280, icon: Monitor },
-  { label: 'Tablet', width: 768, icon: Tablet },
-  { label: 'Mobile', width: 390, icon: Smartphone },
+  { label: 'Desktop', labelKey: 'viewportDesktop', width: 1280, icon: Monitor },
+  { label: 'Tablet', labelKey: 'viewportTablet', width: 768, icon: Tablet },
+  { label: 'Mobile', labelKey: 'viewportMobile', width: 390, icon: Smartphone },
 ];
-function ToolbarDivider() {
-  return <div className="mx-1 h-5 w-px shrink-0 bg-border" />;
+
+/* -------------------------------------------------------------------------- */
+/* Primitives                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function Divider() {
+  return <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-border" />;
 }
-function ToolbarIconButton({
+
+/** A labelled group of tools. The label is the affordance, not decoration. */
+function Group({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn('flex shrink-0 items-center gap-0.5', className)}
+    >
+      {children}
+    </div>
+  );
+}
+
+function IconButton({
   title,
   disabled,
   active,
   onClick,
   children,
+  className,
+  haspopup,
+  expanded,
 }: {
   title: string;
   disabled?: boolean;
   active?: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
+  className?: string;
+  /** Declares what this button opens, e.g. "menu" for the overflow menu. */
+  haspopup?: 'menu' | 'dialog' | 'listbox' | 'true';
+  expanded?: boolean;
 }) {
   return (
     <button
       type="button"
       title={title}
+      aria-label={title}
+      aria-haspopup={haspopup}
+      aria-expanded={expanded}
+      aria-pressed={active}
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition',
-        active ? 'bg-primary/10 text-primary' : 'hover:bg-muted hover:text-foreground',
-        disabled &&
-          'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
+        'flex size-8 shrink-0 items-center justify-center rounded-md transition',
+        active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
+        className,
       )}
     >
-      {' '}
-      {children}{' '}
+      {children}
     </button>
   );
-} /**
- * Page switcher — replaces the old tab strip. One compact menu for all * builder pages, with the active page shown on the trigger. On mobile it * opens as a full-width sheet under the toolbar. */
-function PageSwitcher() {
-  const slug = useBuilderUI((s) => s.slug);
-  const setSlug = useBuilderUI((s) => s.setSlug);
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, []);
-  const current = BUILDER_PAGE_DEFS.find((d) => d.slug === slug) ?? BUILDER_PAGE_DEFS[0]!;
-  const go = (s: string) => {
-    setOpen(false);
-    builderActions.current?.load(s);
-    setSlug(s);
-  };
-  return (
-    <div ref={rootRef} className="relative min-w-0">
-      {' '}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-8 max-w-full items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-[13px] font-medium text-foreground transition hover:bg-muted"
-        title="Switch page"
-      >
-        {' '}
-        <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />{' '}
-        <span className="truncate">{current.title}</span>{' '}
-        <ChevronDown
-          className={cn(
-            'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
-            open && 'rotate-180',
-          )}
-        />{' '}
-      </button>{' '}
-      {open && (
-        <div
-          className={cn(
-            'fixed left-3 right-3 top-[48px] z-50 w-auto overflow-hidden rounded-xl border border-border bg-popover shadow-sm ',
-            'lg:absolute lg:left-0 lg:right-auto lg:top-full lg:mt-1.5 lg:w-72',
-          )}
-        >
-          {' '}
-          <p className="border-b border-border px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground/70">
-            {' '}
-            Pages{' '}
-          </p>{' '}
-          <div className="scrollbar-thin max-h-[55vh] overflow-y-auto p-1.5">
-            {' '}
-            {BUILDER_PAGE_DEFS.map((def) => {
-              const active = def.slug === slug;
-              return (
-                <button
-                  key={def.slug}
-                  type="button"
-                  onClick={() => go(def.slug)}
-                  className={cn(
-                    'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition',
-                    active ? 'bg-primary/10' : 'hover:bg-muted',
-                  )}
-                >
-                  {' '}
-                  <span className="min-w-0 flex-1">
-                    {' '}
-                    <span
-                      className={cn(
-                        'block truncate text-[13px] font-medium',
-                        active ? 'text-primary' : 'text-foreground',
-                      )}
-                    >
-                      {' '}
-                      {def.title}{' '}
-                    </span>{' '}
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {def.description}
-                    </span>{' '}
-                  </span>{' '}
-                  {active && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}{' '}
-                </button>
-              );
-            })}{' '}
-          </div>{' '}
-        </div>
-      )}{' '}
-    </div>
-  );
 }
-function StatusPill({
-  status,
-  dirty,
+
+function MenuItem({
+  icon: Icon,
+  label,
+  hint,
+  danger,
+  onSelect,
 }: {
-  status: { status: string; version: number } | null;
-  dirty: boolean;
+  icon: typeof History;
+  label: string;
+  hint?: string;
+  danger?: boolean;
+  onSelect: () => void;
 }) {
-  if (!status) return null;
   return (
-    <span
-      title={dirty ? `Last ${status.status} as v${status.version}` : undefined}
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onSelect}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide',
-        dirty
-          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-          : status.status === 'published'
-            ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        'flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-start transition',
+        danger ? 'hover:bg-destructive/10' : 'hover:bg-muted',
       )}
     >
-      {' '}
-      <span className="relative flex h-1.5 w-1.5">
-        {' '}
-        <span
-          className={cn(
-            'absolute inline-flex h-full w-full animate-ping rounded-full opacity-60',
-            dirty || status.status !== 'published' ? 'bg-amber-500' : 'bg-green-500',
-          )}
-        />{' '}
-        <span
-          className={cn(
-            'relative inline-flex h-1.5 w-1.5 rounded-full',
-            dirty || status.status !== 'published' ? 'bg-amber-500' : 'bg-green-500',
-          )}
-        />{' '}
-      </span>{' '}
-      {dirty
-        ? 'Unsaved changes'
-        : status.status === 'published'
-          ? `Published v${status.version}`
-          : 'Draft'}{' '}
-    </span>
+      <Icon
+        className={cn('mt-0.5 size-4 shrink-0', danger ? 'text-destructive' : 'text-muted-foreground')}
+        aria-hidden="true"
+      />
+      <span className="min-w-0 flex-1">
+        <span className={cn('block text-13 font-medium', danger ? 'text-destructive' : 'text-foreground')}>
+          {label}
+        </span>
+        {hint && <span className="mt-0.5 block text-2xs text-muted-foreground">{hint}</span>}
+      </span>
+    </button>
   );
 }
+
+/** A menu that closes on outside click, Escape, or selection. */
+function useDismissableMenu(open: boolean, close: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) close();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, close]);
+  return ref;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page switcher                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The page being edited, with its publish state, and the list to switch to.
+ *
+ * The state chip is on the trigger rather than buried in a corner, because
+ * "is this page live or is it still my draft" is the first question when you open
+ * the builder — and the old bar hid that answer below 1280px.
+ */
 function ViewportSwitcher({
   currentWidth,
   setViewport,
 }: {
   currentWidth: number | undefined;
-  setViewport: (w: number) => void;
+  setViewport: (width: number) => void;
 }) {
+  const tb = useTranslations('builder');
   return (
-    <div className="flex shrink-0 items-center rounded-lg border border-border bg-background p-0.5">
-      {' '}
-      {VIEWPORTS.map((vp) => {
-        const Icon = vp.icon;
-        const active = currentWidth === vp.width;
+    <div className="flex shrink-0 items-center rounded-md border border-border bg-background p-0.5">
+      {VIEWPORTS.map((viewport) => {
+        const active = currentWidth === viewport.width;
+        const label = tb(`canvas.${viewport.labelKey}`, { default: viewport.label });
         return (
           <button
-            key={vp.label}
+            key={viewport.label}
             type="button"
-            title={`${vp.label} (${vp.width}px)`}
-            onClick={() => setViewport(vp.width)}
+            onClick={() => setViewport(viewport.width)}
+            aria-pressed={active}
+            title={tb('canvas.viewportTitle', { label, width: viewport.width })}
             className={cn(
-              'flex h-7 w-8 items-center justify-center rounded-md transition',
+              'flex size-7 items-center justify-center rounded-[4px] transition',
               active
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
           >
-            {' '}
-            <Icon className="h-3.5 w-3.5" />{' '}
+            <viewport.icon className="size-3.5" aria-hidden="true" />
           </button>
         );
-      })}{' '}
+      })}
     </div>
   );
 }
-function MobileExitLink() {
+
+/* -------------------------------------------------------------------------- */
+/* Overflow                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** The shortcut sheet, referenced from the overflow menu. */
+export function ShortcutSheet({ onClose }: { onClose: () => void }) {
+  const tb = useTranslations('builder');
+  const rows: Array<[string, string]> = [
+    ['⌘S', tb('shortcut.save')],
+    ['⌘Z', tb('shortcut.undo')],
+    ['⇧⌘Z', tb('shortcut.redo')],
+    ['⌘I', tb('shortcut.preview')],
+    ['⌘K', tb('shortcut.search', { default: tb('shortcut.layers') })],
+  ];
   return (
-    <Link
-      href="/"
-      title="Exit builder — back to the website"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
-    >
-      {' '}
-      <ArrowLeft className="h-4 w-4" />{' '}
-    </Link>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label={tb('shortcut.close')}
+        onClick={onClose}
+        className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={tb('more.shortcuts')}
+        className="relative w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+      >
+        <header className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-13 font-semibold text-foreground">{tb('more.shortcuts')}</h2>
+          <IconButton title={tb('shortcut.close')} onClick={onClose}>
+            <span aria-hidden="true">✕</span>
+          </IconButton>
+        </header>
+        <dl className="divide-y divide-border">
+          {rows.map(([keys, label]) => (
+            <div key={keys} className="flex items-center justify-between gap-4 px-4 py-2.5">
+              <dt className="text-2xs text-muted-foreground">{label}</dt>
+              <dd>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-2xs font-medium text-foreground">
+                  {keys}
+                </kbd>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
   );
-} /**
- * Unified Apple-style toolbar. Rendered via the puck override, so it replaces * Puck's default header entirely. Desktop: a single row with everything. * Mobile/tablet: a primary row (exit, page, save, publish) plus a scrollable * tools row. Only one layout is in the DOM at a time. */
+}
+
+/* -------------------------------------------------------------------------- */
+/* Header                                                                     */
+/* -------------------------------------------------------------------------- */
+
 export function BuilderHeader() {
-  const dispatch = useBuilderPuck((s) => s.dispatch);
-  const previewMode = useBuilderPuck((s) => s.appState.ui.previewMode);
-  const currentWidth = useBuilderPuck((s) => s.appState.ui.viewports?.current?.width);
-  const history = useBuilderPuck((s) => s.history);
+  const tb = useTranslations('builder');
+  const dispatch = useBuilderPuck((state) => state.dispatch);
+  const previewMode = useBuilderPuck((state) => state.appState.ui.previewMode);
+  const currentWidth = useBuilderPuck((state) => state.appState.ui.viewports?.current?.width);
+  const history = useBuilderPuck((state) => state.history);
   const isDesktop = useMediaQuery(IS_DESKTOP_QUERY);
-  const status = useBuilderUI((s) => s.status);
-  const dirty = useBuilderUI((s) => s.dirty);
-  const saving = useBuilderUI((s) => s.saving);
-  const structureOpen = useBuilderUI((s) => s.structureOpen);
-  const toggleStructure = useBuilderUI((s) => s.toggleStructure);
-  const inspectorOpen = useBuilderUI((s) => s.inspectorOpen);
-  const setInspectorOpen = useBuilderUI((s) => s.setInspectorOpen);
-  const setResetOpen = useBuilderUI((s) => s.setResetOpen);
-  const setPublishOpen = useBuilderUI((s) => s.setPublishOpen);
+  const dirty = useBuilderUI((state) => state.dirty);
+  const saving = useBuilderUI((state) => state.saving);
+  const structureOpen = useBuilderUI((state) => state.structureOpen);
+  const toggleStructure = useBuilderUI((state) => state.toggleStructure);
+  const inspectorOpen = useBuilderUI((state) => state.inspectorOpen);
+  const setInspectorOpen = useBuilderUI((state) => state.setInspectorOpen);
+  const setPublishOpen = useBuilderUI((state) => state.setPublishOpen);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const pageStatus = useBuilderUI((state) => state.status);
+
   const setViewport = (width: number) =>
     dispatch({
       type: 'setUi',
@@ -278,357 +319,210 @@ export function BuilderHeader() {
         previewMode: ui.previewMode === 'edit' ? 'interactive' : 'edit',
       }),
     } as never);
-  const savePublish = (
-    <>
-      {' '}
-      <Button
-        size="sm"
-        className="h-8 shrink-0 gap-1.5 px-3"
-        disabled={saving || !dirty}
-        onClick={() => void builderActions.current?.saveDraft()}
-        title="Save draft (⌘S)"
-      >
-        {' '}
-        {saving ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Save className="h-3.5 w-3.5" />
-        )}{' '}
-        Save{' '}
-      </Button>{' '}
-      <Button
-        size="sm"
-        className="h-8 shrink-0 gap-1.5 px-3"
-        disabled={saving}
-        onClick={() => setPublishOpen(true)}
-      >
-        {' '}
-        {saving ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Rocket className="h-3.5 w-3.5" />
-        )}{' '}
-        Publish{' '}
-      </Button>{' '}
-    </>
-  );
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Close mobile menu when switching to desktop
-  useEffect(() => {
-    if (isDesktop) setMobileMenuOpen(false);
-  }, [isDesktop]); // Close mobile menu on outside click (when open)
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
-        // Check if click was on the hamburger button itself
-        const target = e.target as HTMLElement;
-        if (target.closest('[data-builder-hamburger]')) return;
-        setMobileMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [mobileMenuOpen]);
-  if (!isDesktop) {
-    return (
-      <header className="relative shrink-0 border-b border-border bg-card">
-        {' '}
-        <div className="flex h-12 items-center gap-1.5 px-2">
-          {' '}
-          <MobileExitLink />{' '}
-          <div className="min-w-0 flex-1">
-            {' '}
-            <PageSwitcher />{' '}
-          </div>{' '}
-          <div className="flex shrink-0 items-center gap-1">
-            {' '}
-            <Button
-              size="sm"
-              className="h-8 gap-1 px-2.5"
-              disabled={saving || !dirty}
-              onClick={() => void builderActions.current?.saveDraft()}
-              title="Save draft (⌘S)"
-            >
-              {' '}
-              {saving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
-              )}{' '}
-              <span className="hidden min-[420px]:inline">Save</span>{' '}
-            </Button>{' '}
-            <Button
-              size="sm"
-              className="h-8 gap-1 px-2.5"
-              disabled={saving}
-              onClick={() => setPublishOpen(true)}
-            >
-              {' '}
-              <Rocket className="h-3.5 w-3.5" />{' '}
-              <span className="hidden min-[420px]:inline">Publish</span>{' '}
-            </Button>{' '}
-            <button
-              type="button"
-              data-builder-hamburger
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={mobileMenuOpen}
-              onClick={() => setMobileMenuOpen((v) => !v)}
-              className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition',
-                mobileMenuOpen
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              {' '}
-              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}{' '}
-            </button>{' '}
-          </div>{' '}
-        </div>{' '}
-        {mobileMenuOpen && (
-          <>
-            {' '}
-            <div
-              className="fixed inset-0 z-30 bg-gray-900/70 lg:hidden"
-              onClick={() => setMobileMenuOpen(false)}
-            />{' '}
-            <div
-              ref={mobileMenuRef}
-              className="absolute left-2 right-2 top-[52px] z-40 max-h-[calc(100dvh_-_4rem)] overflow-y-auto rounded-2xl border border-border bg-card shadow-sm shadow-black/15"
-            >
-              {' '}
-              <div className="p-3">
-                {' '}
-                <div className="mb-3 flex items-center justify-between">
-                  {' '}
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                    View
-                  </span>{' '}
-                  <StatusPill status={status} dirty={dirty} />{' '}
-                </div>{' '}
-                <div className="mb-3 flex items-center gap-2">
-                  {' '}
-                  <ViewportSwitcher currentWidth={currentWidth} setViewport={setViewport} />{' '}
-                  <ToolbarIconButton
-                    title={previewMode === 'interactive' ? 'Back to edit' : 'Preview mode'}
-                    active={previewMode === 'interactive'}
-                    onClick={togglePreview}
-                  >
-                    {' '}
-                    <Eye className="h-4 w-4" />{' '}
-                  </ToolbarIconButton>{' '}
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    {previewMode === 'interactive' ? 'Preview' : 'Edit'}
-                  </span>{' '}
-                </div>{' '}
-                <div className="my-3 h-px bg-border" />{' '}
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                  Edit
-                </p>{' '}
-                <div className="grid grid-cols-4 gap-2">
-                  {' '}
-                  <button
-                    type="button"
-                    disabled={!history.hasPast}
-                    onClick={() => history.back()}
-                    className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 text-xs font-medium transition',
-                      !history.hasPast
-                        ? 'cursor-not-allowed opacity-40'
-                        : 'hover:bg-muted hover:text-foreground active:scale-95',
-                    )}
-                  >
-                    {' '}
-                    <Undo2 className="h-5 w-5" /> Undo{' '}
-                  </button>{' '}
-                  <button
-                    type="button"
-                    disabled={!history.hasFuture}
-                    onClick={() => history.forward()}
-                    className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 text-xs font-medium transition',
-                      !history.hasFuture
-                        ? 'cursor-not-allowed opacity-40'
-                        : 'hover:bg-muted hover:text-foreground active:scale-95',
-                    )}
-                  >
-                    {' '}
-                    <Redo2 className="h-5 w-5" /> Redo{' '}
-                  </button>{' '}
-                  <AddBlockMenu asCard />{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toggleStructure();
-                      setMobileMenuOpen(false);
-                    }}
-                    className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border border-border p-3 text-xs font-medium transition active:scale-95',
-                      structureOpen
-                        ? 'bg-primary/10 text-primary border-primary/20'
-                        : 'bg-background hover:bg-muted',
-                    )}
-                  >
-                    {' '}
-                    <PanelLeft className="h-5 w-5" /> Layers{' '}
-                  </button>{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInspectorOpen(!inspectorOpen);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border border-border p-3 text-xs font-medium transition active:scale-95',
-                      inspectorOpen
-                        ? 'bg-primary/10 text-primary border-primary/20'
-                        : 'bg-background hover:bg-muted',
-                    )}
-                  >
-                    {' '}
-                    <PanelRight className="h-5 w-5" /> Inspector{' '}
-                  </button>{' '}
-                  <div className="col-span-2">
-                    {' '}
-                    <SavedSectionsActions />{' '}
-                  </div>{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void builderActions.current?.openVersions();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 text-xs font-medium transition hover:bg-muted active:scale-95"
-                  >
-                    {' '}
-                    <History className="h-5 w-5" /> History{' '}
-                  </button>{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResetOpen(true);
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 text-xs font-medium transition hover:bg-muted active:scale-95"
-                  >
-                    {' '}
-                    <RotateCcw className="h-5 w-5" /> Reset{' '}
-                  </button>{' '}
-                </div>{' '}
-                <div className="my-3 h-px bg-border" />{' '}
-                <div className="flex gap-2">
-                  {' '}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    disabled={saving || !dirty}
-                    onClick={() => {
-                      void builderActions.current?.saveDraft();
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    {' '}
-                    <Save className="mr-1.5 h-3.5 w-3.5" /> Save Draft{' '}
-                  </Button>{' '}
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    disabled={saving}
-                    onClick={() => setPublishOpen(true)}
-                  >
-                    {' '}
-                    <Rocket className="mr-1.5 h-3.5 w-3.5" /> Publish{' '}
-                  </Button>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
-          </>
-        )}{' '}
-      </header>
-    );
-  }
+
+  const saveLabel = tb('shortcut.save');
+
   return (
-    <header className="flex h-12 shrink-0 items-center gap-1.5 overflow-visible border-b border-border bg-card px-3">
-      {' '}
-      <Link
-        href="/"
-        title="Exit builder — back to the website"
-        className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-      >
-        {' '}
-        <ArrowLeft className="h-3.5 w-3.5" />{' '}
-        <span className="hidden whitespace-nowrap xl:inline">Exit builder</span>{' '}
-      </Link>{' '}
-      <ToolbarDivider />{' '}
-      <div className="min-w-0 max-w-44 shrink sm:max-w-56 xl:max-w-none">
-        <PageSwitcher />
-      </div>{' '}
-      <ToolbarDivider />{' '}
-      <ToolbarIconButton
-        title="Undo (⌘Z)"
-        disabled={!history.hasPast}
-        onClick={() => history.back()}
-      >
-        {' '}
-        <Undo2 className="h-4 w-4" />{' '}
-      </ToolbarIconButton>{' '}
-      <ToolbarIconButton
-        title="Redo (⇧⌘Z)"
-        disabled={!history.hasFuture}
-        onClick={() => history.forward()}
-      >
-        {' '}
-        <Redo2 className="h-4 w-4" />{' '}
-      </ToolbarIconButton>{' '}
-      <ToolbarDivider /> <AddBlockMenu />{' '}
-      <ToolbarIconButton
-        title={structureOpen ? 'Hide Layers' : 'Show Layers'}
-        active={structureOpen}
-        onClick={toggleStructure}
-      >
-        {' '}
-        <PanelLeft className="h-4 w-4" />{' '}
-      </ToolbarIconButton>{' '}
-      <ToolbarIconButton
-        title={inspectorOpen ? 'Hide Inspector' : 'Show Inspector'}
-        active={inspectorOpen}
-        onClick={() => setInspectorOpen(!inspectorOpen)}
-      >
-        {' '}
-        <PanelRight className="h-4 w-4" />{' '}
-      </ToolbarIconButton>{' '}
-      <SavedSectionsActions />{' '}
-      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5">
-        {' '}
-        <ToolbarIconButton
-          title="Preview mode — click links and interact with the page (⌘I)"
-          active={previewMode === 'interactive'}
-          onClick={togglePreview}
+    <header className="shrink-0 border-b border-border bg-card">
+      {/* Tier one — what am I editing, and is it live. */}
+      <div className="flex h-12 items-center gap-1.5 px-2 sm:px-3">
+        <Link
+          href="/"
+          title={tb('editor.exitBuilderTitle', { default: tb('more.exit') })}
+          aria-label={tb('more.exit')}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
-          {' '}
-          <Eye className="h-4 w-4" />{' '}
-        </ToolbarIconButton>{' '}
-        <div className="hidden shrink-0 items-center gap-1.5 xl:flex">
+          <ArrowLeft className="flip-rtl size-4" aria-hidden="true" />
+        </Link>
+
+        <div className="min-w-0 flex-1 sm:flex-none">
+          <PageManager />
+        </div>
+
+        <div className="ms-auto flex shrink-0 items-center gap-1.5">
+          {isDesktop && dirty && (
+            <span className="hidden items-center gap-1.5 text-2xs text-warning lg:flex">
+              <CircleAlert className="size-3" aria-hidden="true" />
+              {tb('editor.unsavedChanges', { default: tb('page.editing') })}
+            </span>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 shrink-0 gap-1.5 px-2.5 sm:px-3"
+            disabled={saving || !dirty}
+            onClick={() => void builderActions.current?.saveDraft()}
+            title={`${saveLabel} (⌘S)`}
+          >
+            {saving ? (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Save className="size-3.5" aria-hidden="true" />
+            )}
+            <span className="hidden min-[420px]:inline">
+              {tb('editor.save', { default: saveLabel })}
+            </span>
+          </Button>
+          <Button
+            size="sm"
+            className="h-8 shrink-0 gap-1.5 px-2.5 sm:px-3"
+            disabled={saving}
+            onClick={() => setPublishOpen(true)}
+          >
+            <Rocket className="size-3.5" aria-hidden="true" />
+            <span className="hidden min-[420px]:inline">
+              {tb('editor.publish', { default: tb('page.statusPublished') })}
+            </span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Tier two — the toolbox. Always mounted, never behind a breakpoint. */}
+      <div className="scrollbar-thin flex h-11 items-center gap-1.5 overflow-x-auto border-t border-border px-2 sm:px-3">
+        <Group label={tb('group.tools')}>
+          <IconButton
+            title={`${tb('shortcut.undo')} (⌘Z)`}
+            disabled={!history.hasPast}
+            onClick={() => history.back()}
+          >
+            <Undo2 className="size-4" aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            title={`${tb('shortcut.redo')} (⇧⌘Z)`}
+            disabled={!history.hasFuture}
+            onClick={() => history.forward()}
+          >
+            <Redo2 className="size-4" aria-hidden="true" />
+          </IconButton>
+        </Group>
+
+        <Divider />
+
+        <Group label={tb('group.insert')}>
+          <AddBlockMenu />
+          <SavedSectionsActions />
+        </Group>
+
+        <Divider />
+
+        {/* `relative` anchors the find-results popover. */}
+        <div className="relative flex min-w-0 items-center">
+          <BlockProductivity />
+        </div>
+
+        <Divider />
+
+        <Group label={tb('group.view')}>
+          <IconButton
+            title={`${tb('shortcut.preview')} (⌘I)`}
+            active={previewMode === 'interactive'}
+            onClick={togglePreview}
+          >
+            <Eye className="size-4" aria-hidden="true" />
+          </IconButton>
+          {/* Always visible. The old bar hid this below xl, which is every
+              laptop short of 1280px — the width you are designing at. */}
           <ViewportSwitcher currentWidth={currentWidth} setViewport={setViewport} />
-          <ToolbarDivider />
-          <StatusPill status={status} dirty={dirty} />
-          <ToolbarDivider />
-        </div>{' '}
-        <ToolbarIconButton
-          title="Version history"
-          onClick={() => void builderActions.current?.openVersions()}
-        >
-          {' '}
-          <History className="h-4 w-4" />{' '}
-        </ToolbarIconButton>{' '}
-        <ToolbarIconButton title="Reset page to default" onClick={() => setResetOpen(true)}>
-          {' '}
-          <RotateCcw className="h-4 w-4" />{' '}
-        </ToolbarIconButton>{' '}
-        {savePublish}{' '}
-      </div>{' '}
+        </Group>
+
+        <Divider />
+
+        <Group label={tb('group.panels')}>
+          <IconButton
+            title={
+              structureOpen
+                ? tb('editor.hideLayers', { default: tb('shortcut.layers') })
+                : tb('editor.showLayers', { default: tb('shortcut.layers') })
+            }
+            active={structureOpen}
+            onClick={toggleStructure}
+          >
+            <PanelLeft className="size-4" aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            title={
+              inspectorOpen
+                ? tb('editor.hideInspector', { default: tb('shortcut.inspector') })
+                : tb('editor.showInspector', { default: tb('shortcut.inspector') })
+            }
+            active={inspectorOpen}
+            onClick={() => setInspectorOpen(!inspectorOpen)}
+          >
+            <PanelRight className="size-4" aria-hidden="true" />
+          </IconButton>
+        </Group>
+
+        <div className="ms-auto flex shrink-0 items-center gap-2.5 ps-2">
+          {/* The page's version and publish state already sit on the switcher in
+              tier one, so this row carries only what is not shown elsewhere. */}
+          <PublishChecklist page={pageStatus} />
+          <OverflowMenu onOpenShortcuts={() => setShortcutsOpen(true)} />
+        </div>
+      </div>
+
+      {shortcutsOpen && <ShortcutSheet onClose={() => setShortcutsOpen(false)} />}
     </header>
+  );
+}
+
+function OverflowMenu({ onOpenShortcuts }: { onOpenShortcuts: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismissableMenu(open, () => setOpen(false));
+  const tb = useTranslations('builder');
+  const setResetOpen = useBuilderUI((state) => state.setResetOpen);
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <IconButton
+        title={tb('more.menu')}
+        active={open}
+        haspopup="menu"
+        expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <MoreHorizontal className="size-4" aria-hidden="true" />
+      </IconButton>
+      {open && (
+        <div
+          role="menu"
+          className="absolute end-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-border bg-popover p-1.5 shadow-lg"
+        >
+          <MenuItem
+            icon={History}
+            label={tb('more.history')}
+            onSelect={() => {
+              setOpen(false);
+              void builderActions.current?.openVersions();
+            }}
+          />
+          <MenuItem
+            icon={RotateCcw}
+            label={tb('more.reset')}
+            hint={tb('more.resetHint')}
+            danger
+            onSelect={() => {
+              setOpen(false);
+              setResetOpen(true);
+            }}
+          />
+          <div className="my-1 h-px bg-border" />
+          <MenuItem
+            icon={Keyboard}
+            label={tb('more.shortcuts')}
+            onSelect={() => {
+              setOpen(false);
+              onOpenShortcuts();
+            }}
+          />
+          <div className="my-1 h-px bg-border" />
+          <MenuItem
+            icon={ArrowLeft}
+            label={tb('more.exit')}
+            onSelect={() => {
+              window.location.href = '/';
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 }

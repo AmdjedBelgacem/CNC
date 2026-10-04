@@ -27,6 +27,30 @@ export class ChatService {
     return msg;
   }
 
+  /**
+   * Load a conversation, but only for someone entitled to it.
+   *
+   * `getMessages` used to take a bare conversationId straight from the socket and
+   * return every message. The gateway passed a client-supplied value straight
+   * through, so any connected socket — including an anonymous support widget —
+   * could read any support conversation it could name. Returns null when the
+   * caller is neither the conversation's owner nor staff of its tenant.
+   */
+  async getConversationForViewer(conversationId: string, viewer: { userId?: string; tenantId?: string; role?: string }) {
+    if (typeof conversationId !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(conversationId)) return null;
+    const conv = await this.drizzle.db.query.chatConversations.findFirst({
+      where: eq(chatConversations.id, conversationId),
+    });
+    if (!conv) return null;
+    if (viewer.userId && conv.userId && String(conv.userId) === String(viewer.userId)) return conv;
+    // Staff of the owning tenant may read any of its conversations. A tenant
+    // mismatch is checked before the role so a role from one tenant cannot read
+    // another tenant's chats.
+    const isStaff = ['super_admin', 'admin', 'instructor', 'moderator', 'support'].includes(String(viewer.role));
+    if (isStaff && viewer.tenantId && String(conv.tenantId) === String(viewer.tenantId)) return conv;
+    return null;
+  }
+
   async getMessages(conversationId: string) {
     return this.drizzle.db.select().from(chatMessages)
       .where(eq(chatMessages.conversationId, conversationId))

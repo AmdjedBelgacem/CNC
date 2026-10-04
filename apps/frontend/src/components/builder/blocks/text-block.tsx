@@ -4,9 +4,9 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Mockup label/body treatments: 2xs = 10px, xs = 11px, sm = 12px, md = 16px, lg = 18px. */
 const TEXT_SIZE: Record<string, string> = {
-  '2xs': 'font-label-sm text-[10px]',
-  xs: 'font-label-sm text-[11px]',
-  sm: 'font-label-sm text-[12px]',
+  '2xs': 'font-label-sm text-2xs',
+  xs: 'font-label-sm text-2xs',
+  sm: 'font-label-sm text-xs',
   md: 'font-body-md text-body-md',
   lg: 'font-body-lg text-body-lg',
 };

@@ -49,8 +49,8 @@ export function FeatureTilesBlock({ props, puck }: BlockComponentProps<FeatureTi
           {decorativeCircles && (
             <>
               {' '}
-              <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-primary/5 rounded-full blur-3xl"></div>{' '}
-              <div className="absolute -top-8 -left-8 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>{' '}
+              <div className="absolute -bottom-8 -end-8 w-48 h-48 bg-primary/5 rounded-full blur-3xl"></div>{' '}
+              <div className="absolute -top-8 -start-8 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>{' '}
             </>
           )}{' '}
         </div>{' '}

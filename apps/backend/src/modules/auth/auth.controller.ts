@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Put, Body, HttpCode, HttpStatus, UseGuards, Req, Res, Query, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Put, Body, HttpCode, HttpStatus, UseGuards, Req, Res, Query, Inject, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { DrizzleService } from '../../database/drizzle.service';
@@ -7,6 +7,7 @@ import { users } from '../../database/schema/users';
 import { oauthStates } from '../../database/schema/oauth-states';
 import { eq } from 'drizzle-orm';
 import { AuthService } from './services/auth.service';
+import { PlatformAlertsService } from '../notifications/platform-alerts.service';
 import { TotpService } from './services/totp.service';
 import { CsrfService } from './services/csrf.service';
 import { UserPreferencesService } from './services/user-preferences.service';
@@ -20,6 +21,12 @@ import { SkipCsrf } from './guards/csrf.guard';
 import { UploadService } from './services/upload.service';
 import { CookieService } from './services/cookie.service';
 import { createHmac, randomBytes } from 'node:crypto';
+import { LoginDto } from './dto/login.dto';
+import { ConfigService } from '../../config/config.service';
+import { providerAuthorizeUrl } from './strategies/provider-authorize-url';
+import { callbackOrigin } from './strategies/oauth-callback-url';
+import { SupabaseAuthClient, SupabaseAuthError } from './supabase-auth.client';
+import { AuditService } from './services/audit.service';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -32,7 +39,11 @@ export class AuthController {
     private userPreferences: UserPreferencesService,
     private upload: UploadService,
     private drizzle: DrizzleService,
+    private platformAlerts: PlatformAlertsService,
     private cookieService: CookieService,
+    private config: ConfigService,
+    @Inject(SupabaseAuthClient) private readonly supabaseAuth: SupabaseAuthClient,
+    @Inject(AuditService) private readonly auditService: AuditService,
   ) {}
 
   private async saveOauthState(state: string, tenantId: string | null | undefined, redirectTo?: string) {
@@ -128,11 +139,68 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with email and password' })
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   async login(
-    @Body() body: { email: string; password: string; rememberDevice?: boolean },
+    @Body() body: LoginDto,
     @Req() req: any,
     @Res({ passthrough: true }) reply: any,
   ) {
     const tenant = await this.resolveTenant(req);
+
+    /**
+     * Supabase-exclusive mode: Supabase verifies the password and issues the tokens.
+     * This application never hashes or checks a credential itself. The local user
+     * record is still resolved from `users` by email, so tenancy and RBAC are
+     * untouched.
+     */
+    if (this.supabaseAuth.enabled) {
+      let session;
+      try {
+        session = await this.supabaseAuth.signInWithPassword(body.email, body.password);
+      } catch (error) {
+        const message =
+          error instanceof SupabaseAuthError && error.status === 400
+            ? 'Invalid email or password'
+            : 'Authentication is unavailable';
+        void error;
+        await this.auditService
+          .log({
+            action: 'user.login.failed',
+            details: { reason: 'invalid_password', provider: 'supabase' },
+            ip: req.ip,
+          })
+          .catch(() => undefined);
+        throw new UnauthorizedException(message);
+      }
+
+      const linked = await this.drizzle.db.query.users.findFirst({
+        where: eq(users.email, body.email),
+      });
+      if (!linked?.authUserId || linked.authUserId !== session.userId) {
+        throw new UnauthorizedException('No application account is linked to this identity');
+      }
+
+      // Record the session against our own audit trail, and keep the local user_sessions
+      // row so session listing/revocation in Settings still works.
+      await this.auditService
+        .log({
+          userId: linked.id,
+          action: 'user.login',
+          entityType: 'user',
+          entityId: linked.id,
+          tenantId: tenant.id || undefined,
+          ip: req.ip,
+          userAgent: req.headers['user-agent'],
+        })
+        .catch(() => undefined);
+
+      this.cookieService.setAuthCookies(
+        reply,
+        session.accessToken,
+        session.refreshToken,
+        !!body.rememberDevice,
+      );
+      return { user: linked, twoFactorRequired: false, provider: 'supabase' };
+    }
+
     const result: any = await this.auth.login({
       email: body.email,
       password: body.password,
@@ -179,6 +247,16 @@ export class AuthController {
       req.cookies?.['__refresh-fallback'];
     const rawToken = cookieToken || body?.refreshToken;
     if (!rawToken) throw new (await import('@nestjs/common')).UnauthorizedException('Missing refresh token');
+
+    if (this.supabaseAuth.enabled) {
+      const session = await this.supabaseAuth.refreshSession(rawToken);
+      this.cookieService.setAuthCookies(reply, session.accessToken, session.refreshToken, false);
+      const linked = await this.drizzle.db.query.users.findFirst({
+        where: eq(users.authUserId, session.userId),
+      });
+      return { user: linked ?? null, provider: 'supabase' };
+    }
+
     const result: any = await this.auth.refreshAccessToken(
       rawToken,
       req.ip,
@@ -350,8 +428,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete my account' })
   @ApiBearerAuth()
-  async deleteAccount(@CurrentUser() user: any) {
-    await this.auth.deleteMyAccount(user.id);
+  async deleteAccount(
+    @CurrentUser() user: any,
+    @Body() body: { confirmation?: string; password?: string },
+  ) {
+    await this.auth.deleteMyAccount(user.id, body ?? {});
     return { message: 'Account deleted successfully' };
   }
 
@@ -422,7 +503,16 @@ export class AuthController {
     if (!valid) throw new UnauthorizedException('Invalid verification code');
     const backupCodes = this.auth.token.generateBackupCodes();
     await this.totp.enable2fa(user.id, body.secret, backupCodes);
-    this.auth.email.send2faEnabledNotification(user.email);
+    this.auth.notifySecurityEvent({
+      userId: user.id,
+      tenantId: user.tenantId,
+      type: 'two_factor_enabled',
+      title: 'Two-factor authentication enabled',
+      body: 'Two-factor authentication was enabled on your account.',
+      entityType: 'user',
+      entityId: user.id,
+      idempotencyKey: `two-factor-enabled:${user.id}:${Date.now()}`,
+    });
     return { message: '2FA enabled', backupCodes };
   }
 
@@ -438,6 +528,36 @@ export class AuthController {
     const valid = this.totp.verifyToken(body.token, secret);
     if (!valid) throw new UnauthorizedException('Invalid verification code');
     await this.totp.disable2fa(user.id);
+    this.auth.notifySecurityEvent({
+      userId: user.id,
+      tenantId: user.tenantId,
+      type: 'two_factor_disabled',
+      title: 'Two-factor authentication disabled',
+      body: 'Two-factor authentication was disabled on your account.',
+      entityType: 'user',
+      entityId: user.id,
+      idempotencyKey: `two-factor-disabled:${user.id}:${Date.now()}`,
+    });
+    // Disabling 2FA on a privileged account removes the second factor on the
+    // most valuable credentials on the platform, so it is also raised to the
+    // platform feed regardless of which tenant it happened in.
+    if (['super_admin', 'admin', 'instructor', 'moderator'].includes(String(user.role ?? ''))) {
+      void this.platformAlerts
+        .emit({
+          group: 'security',
+          type: 'admin_two_factor_disabled',
+          title: `Two-factor authentication disabled on a privileged account`,
+          body:
+            `${user.email ?? user.id} (role: ${user.role}) disabled two-factor authentication. ` +
+            `Treat any recent sign-in from this account as suspect.`,
+          tenantId: user.tenantId,
+          entityType: 'user',
+          entityId: user.id,
+          href: '/admin/users',
+          data: { targetEmail: user.email ?? null, targetRole: user.role ?? null },
+        })
+        .catch(() => undefined);
+    }
     return { message: '2FA disabled' };
   }
 
@@ -527,8 +647,10 @@ export class AuthController {
     @CurrentUser() user: any,
     @Body() body: { password: string },
   ) {
-    const valid = await this.auth.verifyPassword(user.id, body.password);
-    if (!valid) return { valid: false, message: 'Current password is incorrect' };
+    const valid = body?.password ? await this.auth.verifyPassword(user.id, body.password) : false;
+    // Must be a 401, not 200 with {valid:false}: the reauth modal gates on res.ok,
+    // so a 200 here lets ANY password through and defeats the whole reauth step.
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
     return { valid: true };
   }
 
@@ -563,8 +685,10 @@ export class AuthController {
   @Public()
   @Get('oauth/google')
   @ApiOperation({ summary: 'Google OAuth login' })
-  @UseGuards(AuthGuard('google'))
-  async googleAuth() {}
+  async googleAuth(@Query('state') state: string | undefined, @Res() reply: any) {
+    // Fastify-native redirect; see providerAuthorizeUrl for why passport cannot be used.
+    return reply.redirect(providerAuthorizeUrl(this.config, 'google', state, callbackOrigin(this.config)), 302);
+  }
 
   @Public()
   @Get('oauth/google/callback')
@@ -581,8 +705,9 @@ export class AuthController {
   @Public()
   @Get('oauth/github')
   @ApiOperation({ summary: 'GitHub OAuth login' })
-  @UseGuards(AuthGuard('github'))
-  async githubAuth() {}
+  async githubAuth(@Query('state') state: string | undefined, @Res() reply: any) {
+    return reply.redirect(providerAuthorizeUrl(this.config, 'github', state, callbackOrigin(this.config)), 302);
+  }
 
   @Public()
   @Get('oauth/github/callback')

@@ -146,7 +146,7 @@ export default function SecuritySettingsPage() {
         </p>{' '}
       </div>{' '}
       {user?.twoFactorEnabled && (
-        <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-4 text-sm">
+        <div className="rounded-md bg-warning/10 border border-warning/25 p-4 text-sm">
           {' '}
           <strong>Two-factor authentication is enabled.</strong> You&apos;ll need a code from your
           authenticator app to sign in.{' '}
@@ -171,7 +171,7 @@ export default function SecuritySettingsPage() {
               </div>
             )}{' '}
             {pwSuccess && (
-              <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
+              <div className="rounded-md bg-success/10 p-3 text-sm text-green-600">
                 {pwSuccess}
               </div>
             )}{' '}
@@ -233,7 +233,7 @@ export default function SecuritySettingsPage() {
               </div>
             )}{' '}
             {emailSuccess && (
-              <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600">
+              <div className="rounded-md bg-success/10 p-3 text-sm text-green-600">
                 {emailSuccess}
               </div>
             )}{' '}
@@ -331,13 +331,13 @@ export default function SecuritySettingsPage() {
           {twoFactorStatus === 'verify' && (
             <div className="space-y-4">
               {' '}
-              <div className="rounded-md bg-green-500/10 p-4 text-sm">
+              <div className="rounded-md bg-success/10 p-4 text-sm">
                 {' '}
                 <strong className="text-green-600">
                   Two-factor authentication is now enabled!
                 </strong>{' '}
               </div>{' '}
-              <div className="rounded-md bg-amber-500/10 p-4 border border-amber-500/20">
+              <div className="rounded-md bg-warning/10 p-4 border border-warning/25">
                 {' '}
                 <p className="text-sm font-medium mb-2">Save these recovery codes</p>{' '}
                 <p className="text-xs text-muted-foreground mb-3">
@@ -386,7 +386,7 @@ export default function SecuritySettingsPage() {
                       {' '}
                       {session.deviceInfo || 'Unknown device'}{' '}
                       {session.isCurrent && (
-                        <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                        <span className="ms-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                           {' '}
                           Current{' '}
                         </span>

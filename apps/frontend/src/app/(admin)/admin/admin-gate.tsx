@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api-client';
 
-const ADMIN_ROLES = ['super_admin', 'admin'];
+const ADMIN_ROLES = ['super_admin', 'admin', 'instructor'];
 type Status = 'checking' | 'ok' | 'denied' | 'anon';
 
 export function AdminGate({ children }: { children: React.ReactNode }) {
@@ -47,7 +47,7 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
   if (status !== 'ok') {
     return (
       <div className="flex min-h-screen items-center justify-center gap-3 text-sm text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" /> Checking admin access…
+        <Loader2 className="size-5 animate-spin" /> Checking admin access…
       </div>
     );
   }

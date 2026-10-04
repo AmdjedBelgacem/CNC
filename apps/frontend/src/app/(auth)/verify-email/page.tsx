@@ -34,9 +34,9 @@ function VerifyEmailContent() {
       {status === 'verifying' && (
         <>
           {' '}
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#f59e0b]/30 bg-[#f59e0b]/10">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
             {' '}
-            <svg className="h-7 w-7 animate-spin text-[#f59e0b]" fill="none" viewBox="0 0 24 24">
+            <svg className="h-7 w-7 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
               {' '}
               <circle
                 className="opacity-25"
@@ -53,11 +53,11 @@ function VerifyEmailContent() {
               />{' '}
             </svg>{' '}
           </div>{' '}
-          <h1 className="font-display text-[24px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#e8e8e8]">
+          <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
             {' '}
             Verifying...{' '}
           </h1>{' '}
-          <p className="mt-3 text-sm leading-relaxed text-[#8b8f96]">
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {' '}
             Please wait while we verify your email{' '}
           </p>{' '}
@@ -66,10 +66,10 @@ function VerifyEmailContent() {
       {status === 'success' && (
         <>
           {' '}
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-900/60 bg-emerald-950/40">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-success/60 bg-success/40">
             {' '}
             <svg
-              className="h-7 w-7 text-emerald-400"
+              className="h-7 w-7 text-success"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -79,17 +79,17 @@ function VerifyEmailContent() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />{' '}
             </svg>{' '}
           </div>{' '}
-          <h1 className="font-display text-[24px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#e8e8e8]">
+          <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
             {' '}
             Email Verified!{' '}
           </h1>{' '}
-          <p className="mb-6 mt-3 text-sm leading-relaxed text-[#8b8f96]">
+          <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">
             {' '}
             Your email has been verified. Redirecting to sign in...{' '}
           </p>{' '}
           <button
             onClick={() => router.push('/login')}
-            className="h-12 w-full rounded-xl bg-[#f59e0b] text-[13px] font-bold text-[#16181c] transition-all duration-200 hover:scale-[1.01] hover:bg-[#d97706]"
+            className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
           >
             {' '}
             Go to Sign In{' '}
@@ -102,7 +102,7 @@ function VerifyEmailContent() {
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-red-900/60 bg-red-950/40">
             {' '}
             <svg
-              className="h-7 w-7 text-red-400"
+              className="h-7 w-7 text-destructive"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -112,23 +112,23 @@ function VerifyEmailContent() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />{' '}
             </svg>{' '}
           </div>{' '}
-          <h1 className="font-display text-[24px] font-semibold leading-[1.2] tracking-[-0.02em] text-[#e8e8e8]">
+          <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
             {' '}
             Verification Failed{' '}
           </h1>{' '}
-          <p className="mb-6 mt-3 text-sm leading-relaxed text-[#8b8f96]">{message}</p>{' '}
+          <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">{message}</p>{' '}
           <div className="w-full space-y-2.5">
             {' '}
             <button
               onClick={() => router.push('/login')}
-              className="h-12 w-full rounded-xl bg-[#f59e0b] text-[13px] font-bold text-[#16181c] transition-all duration-200 hover:scale-[1.01] hover:bg-[#d97706]"
+              className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
             >
               {' '}
               Go to Sign In{' '}
             </button>{' '}
             <button
               onClick={() => router.push('/resend-verification')}
-              className="h-[44px] w-full rounded-xl border border-[#2a2e36] bg-transparent text-[13px] font-semibold text-[#8b8f96] transition-all duration-200 hover:border-[#f59e0b]/40 hover:text-[#f59e0b]"
+              className="h-[44px] w-full rounded-xl border border-border bg-transparent text-13 font-semibold text-muted-foreground transition-all duration-200 hover:border-primary/40 hover:text-primary"
             >
               {' '}
               Resend Verification{' '}
@@ -145,7 +145,7 @@ export default function VerifyEmailPage() {
       fallback={
         <div className="flex h-full flex-col items-center justify-center">
           {' '}
-          <p className="text-sm text-[#5c6068]">Loading...</p>{' '}
+          <p className="text-sm text-muted-foreground">Loading...</p>{' '}
         </div>
       }
     >

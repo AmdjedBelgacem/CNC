@@ -32,19 +32,51 @@ export default function ConnectedAccountsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider }),
       });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        throw new Error(
+          typeof detail?.message === 'string' ? detail.message : 'Failed to unlink account',
+        );
+      }
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }
   };
+
+/**
+ * OAuth needs a CSRF state that the backend has already persisted, otherwise
+ * finishOauth rejects the callback with "Invalid or missing OAuth state".
+ *
+ * The authorize hop must be a real browser navigation straight to the API origin,
+ * NOT through /api/proxy: the proxy's fetch() follows the 302 server-side and would
+ * return Google's HTML as a 200 body instead of redirecting the browser.
+ */
+const apiOrigin =
+  typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:4000`
+    : '';
+
+const handleConnect = async (provider: string) => {
+  setError('');
+  try {
+    const res = await apiProxyFetch('/api/proxy/auth/oauth/state');
+    if (!res.ok) throw new Error('Could not start the connection. Please try again.');
+    const { state } = (await res.json()) as { state?: string };
+    if (!state) throw new Error('Could not start the connection. Please try again.');
+    const origin = process.env.NEXT_PUBLIC_API_URL || apiOrigin;
+    window.location.href = `${origin}/auth/oauth/${provider}?state=${encodeURIComponent(state)}`;
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Could not start the connection.');
+  }
+};
   const providers = [
-    { id: 'google', name: 'Google', desc: 'Sign in with Google', bg: 'bg-white', icon: 'G' },
+    { id: 'google', name: 'Google', desc: 'Sign in with Google', bg: 'bg-card', icon: 'G' },
     {
       id: 'github',
       name: 'GitHub',
       desc: 'Sign in with GitHub',
-      bg: 'bg-zinc-900 text-white',
+      bg: 'bg-overlay text-white',
       icon: 'GH',
     },
   ];
@@ -55,7 +87,7 @@ export default function ConnectedAccountsPage() {
         {' '}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           {' '}
-          <Link2 className="h-5 w-5" />{' '}
+          <Link2 className="size-5" />{' '}
         </div>{' '}
         <div>
           {' '}
@@ -66,8 +98,8 @@ export default function ConnectedAccountsPage() {
         </div>{' '}
       </div>{' '}
       {error && (
-        <div className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-500/10 dark:text-red-300">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {error}
+        <div className="flex gap-3 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive dark:border-red-900/30 dark:bg-destructive/10 dark:text-red-300">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" /> {error}
         </div>
       )}{' '}
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -75,8 +107,8 @@ export default function ConnectedAccountsPage() {
         <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <Shield className="h-3.5 w-3.5" />
+            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+              <Shield className="size-3.5" />
             </span>{' '}
             OAuth Connections
           </h2>{' '}
@@ -100,7 +132,7 @@ export default function ConnectedAccountsPage() {
                   <div className="flex items-center gap-3">
                     {' '}
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold shadow-sm ${p.id === 'google' ? 'bg-white border-border text-zinc-700' : 'bg-zinc-900 border-zinc-800 text-white'}`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold shadow-sm ${p.id === 'google' ? 'bg-card border-border text-secondary' : 'bg-overlay border-border text-white'}`}
                     >
                       {' '}
                       {p.icon}{' '}
@@ -111,11 +143,11 @@ export default function ConnectedAccountsPage() {
                         {' '}
                         {p.name}{' '}
                         {linked ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
-                            <Check className="h-3 w-3" /> Linked
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-success">
+                            <Check className="size-3.5" /> Linked
                           </span>
                         ) : (
-                          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          <span className="rounded-full bg-muted px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
                             Not linked
                           </span>
                         )}{' '}
@@ -130,15 +162,15 @@ export default function ConnectedAccountsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleUnlink(p.id)}
-                      className="h-8 rounded-full gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/30"
+                      className="h-8 rounded-full gap-1.5 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive dark:border-red-900/30"
                     >
                       {' '}
-                      <X className="h-3.5 w-3.5" /> Unlink{' '}
+                      <X className="size-3.5" /> Unlink{' '}
                     </Button>
                   ) : (
                     <Button
                       size="sm"
-                      onClick={() => (window.location.href = `/api/auth/oauth/${p.id}?redirect=1`)}
+                      onClick={() => void handleConnect(p.id)}
                       className="h-8 rounded-full px-4"
                     >
                       {' '}

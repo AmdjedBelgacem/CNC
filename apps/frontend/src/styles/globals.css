@@ -2,30 +2,125 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Design tokens
+   --------------------------------------------------------------------------
+   Two parallel families are emitted for every colour:
+
+     --color-*   hex, for plain CSS (gradients, native widgets, rgba math)
+     --c-*       "R G B" channels, consumed by Tailwind as
+                 rgb(var(--c-x) / <alpha-value>) so opacity modifiers work
+
+   Plain aliases (--primary, --foreground, --border, …) are defined too. They
+   previously did not exist, so any rule referencing them silently fell back to
+   an invalid colour and rendered invisible.
+   ========================================================================== */
+
 :root {
-  --color-primary: #004ac6;
-  --color-secondary: #006d30;
-  --color-accent: #2563eb;
-  --color-background: #f8f9fa;
-  --color-foreground: #111827;
-  --color-card: #ffffff;
-  --color-card-foreground: #111827;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #111827;
-  --color-muted: #f3f4f5;
-  --color-muted-foreground: #6b7280;
-  --color-border: #e1e3e4;
-  --color-ring: #004ac6;
-  --color-text-primary: #111827;
-  --color-text-secondary: #374151;
-  --color-text-muted: #6b7280;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f3f4f5;
-  --color-surface-container-high: #e7e8e9;
-  --color-glass-border: rgba(0, 0, 0, 0.08);
-  --color-accent-glow: rgba(37, 99, 235, 0.1);
-  --color-secondary-container: #92f5a4;
-  --color-secondary-fixed: #95f8a7;
+  /* ---- Radii. Every rounded-* utility scales from this single value, so the
+     theme editor's radius control reshapes the whole product at once. ---- */
+  --radius: 0.625rem;
+  --glass-blur: 14px;
+
+  /* ---- Brand (Precision Forge: safety orange / steel / kiln teal) ---- */
+  --color-primary: #C2410C;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #333F4C;
+  --color-secondary-foreground: #FFFFFF;
+  --color-accent: #0F766E;
+  --color-accent-foreground: #FFFFFF;
+
+  /* ---- Surfaces (warm paper) ---- */
+  --color-background: #F4F3EF;
+  --color-foreground: #191B1F;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #191B1F;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #191B1F;
+  --color-muted: #E9E7E1;
+  --color-muted-foreground: #595E66;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-sunken: #E5E2DB;
+  --color-overlay: #191B1F;
+
+  /* ---- Lines ---- */
+  --color-border: #DCD9D2;
+  --color-border-strong: #C5C1B8;
+  --color-input: #DCD9D2;
+  --color-ring: #C2410C;
+
+  /* ---- Feedback ---- */
+  --color-success: #067647;
+  --color-success-foreground: #FFFFFF;
+  --color-warning: #B54708;
+  --color-warning-foreground: #FFFFFF;
+  --color-info: #175CD3;
+  --color-info-foreground: #FFFFFF;
+  --color-destructive: #B42318;
+  --color-destructive-foreground: #FFFFFF;
+
+  /* ---- Builder text/surface tokens ---- */
+  --color-text-primary: #191B1F;
+  --color-text-secondary: #3F454D;
+  --color-text-muted: #595E66;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #E9E7E1;
+  --color-surface-container-high: #DCD9D2;
+  --color-secondary-container: #F9E7DC;
+  --color-secondary-fixed: #F3D4BF;
+
+  /* ---- Decorative ---- */
+  --color-glass-border: rgba(25, 27, 31, 0.08);
+  --color-accent-glow: rgba(194, 65, 12, 0.12);
+
+  /* ---- Channels ---- */
+  --c-primary: 194 65 12;
+  --c-primary-foreground: 255 255 255;
+  --c-secondary: 51 63 76;
+  --c-secondary-foreground: 255 255 255;
+  --c-accent: 15 118 110;
+  --c-accent-foreground: 255 255 255;
+  --c-background: 244 243 239;
+  --c-foreground: 25 27 31;
+  --c-card: 255 255 255;
+  --c-card-foreground: 25 27 31;
+  --c-popover: 255 255 255;
+  --c-popover-foreground: 25 27 31;
+  --c-muted: 233 231 225;
+  --c-muted-foreground: 89 94 102;
+  --c-surface-raised: 255 255 255;
+  --c-surface-sunken: 229 226 219;
+  --c-overlay: 25 27 31;
+  --c-border: 220 217 210;
+  --c-border-strong: 197 193 184;
+  --c-input: 220 217 210;
+  --c-ring: 194 65 12;
+  --c-success: 6 118 71;
+  --c-success-foreground: 255 255 255;
+  --c-warning: 181 71 8;
+  --c-warning-foreground: 255 255 255;
+  --c-info: 23 92 211;
+  --c-info-foreground: 255 255 255;
+  --c-destructive: 180 35 24;
+  --c-destructive-foreground: 255 255 255;
+  --c-text-primary: 25 27 31;
+  --c-text-secondary: 63 69 77;
+  --c-text-muted: 89 94 102;
+  --c-surface-container-lowest: 255 255 255;
+  --c-surface-container-low: 233 231 225;
+  --c-surface-container-high: 220 217 210;
+  --c-secondary-container: 249 231 220;
+  --c-secondary-fixed: 243 212 191;
+
+  /* ---- Glass + glow ---- */
+  --glass-bg: 255 255 255;
+  --glass-alpha: 0.78;
+  --glass-border-color: rgba(25, 27, 31, 0.08);
+  --glow-color: 247 244 238;
+  --slider-thumb-bg: #ffffff;
+  --slider-thumb-border: rgba(25, 27, 31, 0.16);
+
+  /* ---- Spacing scale kept for the builder ---- */
   --spacing-margin-mobile: 1rem;
   --spacing-margin-desktop: 2.5rem;
   --spacing-gutter: 1.5rem;
@@ -33,129 +128,215 @@
   --spacing-stack-sm: 0.5rem;
   --spacing-stack-lg: 4rem;
   --spacing-container-max: 1440px;
-  --font-family-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
-  --radius: var(--border-radius, 0.5rem);
-  /* RGB channels backing the Tailwind tokens above (hex twins stay for plain CSS use) */
-  --c-primary: 0 74 198;
-  --c-primary-foreground: 255 255 255;
-  --c-secondary: 0 109 48;
-  --c-secondary-foreground: 255 255 255;
-  --c-accent: 37 99 235;
-  --c-accent-foreground: 255 255 255;
-  --c-background: 248 249 250;
-  --c-foreground: 17 24 39;
-  --c-card: 255 255 255;
-  --c-card-foreground: 17 24 39;
-  --c-popover: 255 255 255;
-  --c-popover-foreground: 17 24 39;
-  --c-muted: 243 244 245;
-  --c-muted-foreground: 107 114 128;
-  --c-border: 225 227 228;
-  --c-input: 225 227 228;
-  --c-ring: 0 74 198;
-  --c-text-primary: 17 24 39;
-  --c-text-secondary: 55 65 81;
-  --c-text-muted: 107 114 128;
-  --c-surface-container-lowest: 255 255 255;
-  --c-surface-container-low: 243 244 245;
-  --c-surface-container-high: 231 232 233;
-  --c-secondary-container: 146 245 164;
-  --c-secondary-fixed: 149 248 167;
-  --c-destructive: 220 38 38;
-  --c-destructive-foreground: 255 255 255;
-  /* Glass + decorative surfaces. These flip with the theme so translucent panels
-     never render a light wash on top of dark content (or vice versa). */
-  --glass-bg: 255 255 255;
-  --glass-alpha: 0.7;
-  --glass-border-color: rgba(0, 0, 0, 0.08);
-  --glow-color: 248 249 250;
-  --link-pill-border: #dbe3ee;
-  --link-pill-hover-bg: #eff6ff;
-  --link-pill-hover-border: #93c5fd;
-  --slider-thumb-bg: #ffffff;
-  --slider-thumb-border: rgba(0, 0, 0, 0.14);
+
+  /* ---- Typography (grotesque display, neutral sans body) ---- */
+  --font-family-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-family-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-family-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* ---- Shadows: tight, machined, low-spread ---- */
+  --shadow-xs: 0 1px 2px 0 rgb(25 27 31 / 0.05);
+  --shadow-sm: 0 1px 2px 0 rgb(25 27 31 / 0.07), 0 1px 3px -1px rgb(25 27 31 / 0.05);
+  --shadow-md: 0 2px 8px -2px rgb(25 27 31 / 0.09), 0 2px 4px -2px rgb(25 27 31 / 0.05);
+  --shadow-lg: 0 8px 24px -8px rgb(25 27 31 / 0.12), 0 2px 6px -3px rgb(25 27 31 / 0.06);
+  --shadow-xl: 0 16px 40px -12px rgb(25 27 31 / 0.18), 0 4px 12px -6px rgb(25 27 31 / 0.08);
+
   color-scheme: light;
 }
 
 .dark {
-  --color-primary: #b4c5ff;
-  --color-secondary: #79db8d;
-  --color-accent: #93c5fd;
-  --color-background: #0b1120;
-  --color-foreground: #e5e7eb;
-  --color-card: #111827;
-  --color-card-foreground: #e5e7eb;
-  --color-popover: #161f30;
-  --color-popover-foreground: #e5e7eb;
-  --color-muted: #1f2937;
-  --color-muted-foreground: #9ca3af;
-  --color-border: #273244;
-  --color-ring: #b4c5ff;
-  --color-text-primary: #e5e7eb;
-  --color-text-secondary: #d1d5db;
-  --color-text-muted: #9ca3af;
-  --color-surface-container-lowest: #111827;
-  --color-surface-container-low: #1f2937;
-  --color-surface-container-high: #374151;
-  --color-glass-border: rgba(255, 255, 255, 0.08);
-  --color-accent-glow: rgba(99, 102, 241, 0.1);
-  --color-secondary-container: #1a5c2e;
-  --color-secondary-fixed: #14532d;
-  --c-primary: 180 197 255;
-  --c-primary-foreground: 11 17 32;
-  --c-secondary: 121 219 141;
-  --c-secondary-foreground: 11 17 32;
-  --c-accent: 147 197 253;
-  --c-accent-foreground: 11 17 32;
-  --c-background: 11 17 32;
-  --c-foreground: 229 231 235;
-  --c-card: 17 24 39;
-  --c-card-foreground: 229 231 235;
-  --c-popover: 22 31 48;
-  --c-popover-foreground: 229 231 235;
-  --c-muted: 31 41 55;
-  --c-muted-foreground: 156 163 175;
-  --c-border: 39 50 68;
-  --c-input: 39 50 68;
-  --c-ring: 180 197 255;
-  --c-text-primary: 229 231 235;
-  --c-text-secondary: 209 213 219;
-  --c-text-muted: 156 163 175;
-  --c-surface-container-lowest: 17 24 39;
-  --c-surface-container-low: 31 41 55;
-  --c-surface-container-high: 55 65 81;
-  --c-secondary-container: 26 92 46;
-  --c-secondary-fixed: 20 83 45;
-  --c-destructive: 248 113 113;
-  --c-destructive-foreground: 17 24 39;
-  --glass-bg: 17 24 39;
-  --glass-alpha: 0.72;
-  --glass-border-color: rgba(255, 255, 255, 0.1);
-  --glow-color: 11 17 32;
-  --link-pill-border: #273244;
-  --link-pill-hover-bg: rgba(37, 99, 235, 0.14);
-  --link-pill-hover-border: #3b82f6;
-  --slider-thumb-bg: #e5e7eb;
+  /* Machined-ink dark. Primary stays #C2410C so white text keeps AA (5.1:1);
+     the brighter #E86A1C ring keeps focus visible against near-black. */
+  --color-primary: #C2410C;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #A8B3C0;
+  --color-secondary-foreground: #14181D;
+  --color-accent: #3BC9B7;
+  --color-accent-foreground: #06231F;
+
+  --color-background: #0F1113;
+  --color-foreground: #EBECEE;
+  --color-card: #17191D;
+  --color-card-foreground: #EBECEE;
+  --color-popover: #1B1E23;
+  --color-popover-foreground: #EBECEE;
+  --color-muted: #20242A;
+  --color-muted-foreground: #9CA3AD;
+  --color-surface-raised: #1B1E23;
+  --color-surface-sunken: #0A0C0E;
+  --color-overlay: #050607;
+
+  --color-border: #272B32;
+  --color-border-strong: #363C45;
+  --color-input: #272B32;
+  --color-ring: #E86A1C;
+
+  --color-success: #5AD6A0;
+  --color-success-foreground: #04231A;
+  --color-warning: #FDB022;
+  --color-warning-foreground: #2A1A02;
+  --color-info: #8EC5FF;
+  --color-info-foreground: #061431;
+  --color-destructive: #F97066;
+  --color-destructive-foreground: #2A0C08;
+
+  --color-text-primary: #EBECEE;
+  --color-text-secondary: #C7CBD2;
+  --color-text-muted: #9CA3AD;
+  --color-surface-container-lowest: #14171B;
+  --color-surface-container-low: #20242A;
+  --color-surface-container-high: #272B32;
+  --color-secondary-container: #2E1F10;
+  --color-secondary-fixed: #3D2A15;
+
+  --color-glass-border: rgba(235, 236, 238, 0.1);
+  --color-accent-glow: rgba(232, 106, 28, 0.16);
+
+  --c-primary: 194 65 12;
+  --c-primary-foreground: 255 255 255;
+  --c-secondary: 168 179 192;
+  --c-secondary-foreground: 20 24 29;
+  --c-accent: 59 201 183;
+  --c-accent-foreground: 6 35 31;
+  --c-background: 15 17 19;
+  --c-foreground: 235 236 238;
+  --c-card: 23 25 29;
+  --c-card-foreground: 235 236 238;
+  --c-popover: 27 30 35;
+  --c-popover-foreground: 235 236 238;
+  --c-muted: 32 36 42;
+  --c-muted-foreground: 156 163 173;
+  --c-surface-raised: 27 30 35;
+  --c-surface-sunken: 10 12 14;
+  --c-overlay: 5 6 7;
+  --c-border: 39 43 50;
+  --c-border-strong: 54 60 69;
+  --c-input: 39 43 50;
+  --c-ring: 232 106 28;
+  --c-success: 90 214 160;
+  --c-success-foreground: 4 35 26;
+  --c-warning: 253 176 34;
+  --c-warning-foreground: 42 26 2;
+  --c-info: 142 197 255;
+  --c-info-foreground: 6 20 49;
+  --c-destructive: 249 112 102;
+  --c-destructive-foreground: 42 12 8;
+  --c-text-primary: 235 236 238;
+  --c-text-secondary: 199 203 210;
+  --c-text-muted: 156 163 173;
+  --c-surface-container-lowest: 20 23 27;
+  --c-surface-container-low: 32 36 42;
+  --c-surface-container-high: 39 43 50;
+  --c-secondary-container: 46 31 16;
+  --c-secondary-fixed: 61 42 21;
+
+  --glass-bg: 20 22 26;
+  --glass-alpha: 0.78;
+  --glass-border-color: rgba(235, 236, 238, 0.1);
+  --glow-color: 12 14 16;
+  --slider-thumb-bg: #ebecee;
   --slider-thumb-border: rgba(0, 0, 0, 0.5);
-  /* Native widgets (date pickers, scrollbars, form controls) follow the app toggle,
-     not the OS, because dark mode is class-driven. */
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.45), 0 1px 3px -1px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 8px 24px -8px rgb(0 0 0 / 0.6), 0 2px 6px -3px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 4px 12px -6px rgb(0 0 0 / 0.5);
+
+  /* Native widgets follow the in-app toggle, not the OS: dark mode here is
+     class-driven, so an OS-light user must still get dark form controls. */
   color-scheme: dark;
 }
 
+/* Plain aliases. Historical rules (`var(--primary)`, `var(--foreground)`) were
+   written against names that were never defined; aliasing them to the channel
+   vars makes those rules resolve instead of falling back to nothing. */
+:root,
+.dark {
+  --primary: rgb(var(--c-primary));
+  --primary-foreground: rgb(var(--c-primary-foreground));
+  --secondary: rgb(var(--c-secondary));
+  --secondary-foreground: rgb(var(--c-secondary-foreground));
+  --accent: rgb(var(--c-accent));
+  --accent-foreground: rgb(var(--c-accent-foreground));
+  --background: rgb(var(--c-background));
+  --foreground: rgb(var(--c-foreground));
+  --card: rgb(var(--c-card));
+  --card-foreground: rgb(var(--c-card-foreground));
+  --popover: rgb(var(--c-popover));
+  --popover-foreground: rgb(var(--c-popover-foreground));
+  --muted: rgb(var(--c-muted));
+  --muted-foreground: rgb(var(--c-muted-foreground));
+  --border: rgb(var(--c-border));
+  --border-strong: rgb(var(--c-border-strong));
+  --input: rgb(var(--c-input));
+  --ring: rgb(var(--c-ring));
+  --destructive: rgb(var(--c-destructive));
+  --success: rgb(var(--c-success));
+  --warning: rgb(var(--c-warning));
+  --info: rgb(var(--c-info));
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
 @layer base {
   * {
-    border-color: var(--color-border);
+    border-color: rgb(var(--c-border));
   }
 
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: rgb(var(--c-background));
+    color: rgb(var(--c-foreground));
+    font-family: var(--font-family-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    text-rendering: optimizeLegibility;
   }
 
   ::selection {
-    background: #ddd6fe;
-    color: #4c1d95;
+    background: rgb(var(--c-primary) / 0.22);
+    color: rgb(var(--c-foreground));
+  }
+
+  /* A single consistent focus treatment across the product. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-ring));
+    outline-offset: 2px;
+  }
+
+  /* Scrollbars follow the theme instead of rendering a light gutter in dark. */
+  * {
+    scrollbar-color: rgb(var(--c-border-strong)) transparent;
+    scrollbar-width: thin;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--c-border-strong));
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--c-muted-foreground) / 0.6);
+    background-clip: content-box;
   }
 }
+
+/* ==========================================================================
+   Components
+   ========================================================================== */
 
 @layer components {
   .marketing-container {
@@ -173,23 +354,18 @@
     display: none;
   }
 
-  @keyframes drawer-in-left {
-    from {
-      transform: translateX(-100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
+  /* ─────────────────────────────────────────────────────────────────────
+     Animation layer
 
-  @keyframes drawer-in-right {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
+     Enter and exit are declared as *pairs*. A dialog overlay that fades in on
+     open and fades in again on close is a real bug that shipped here: both
+     states mapped to `.animate-fade-in`, so the backdrop brightened while the
+     dialog left. Every exit has its own keyframe for that reason.
+
+     The house curve is cubic-bezier(0.32, 0.72, 0, 1) — front-loaded
+     deceleration, which is what makes something feel like it has weight rather
+     than like it's being played back. Mirrors `ease.emerge` in lib/motion.ts.
+     ───────────────────────────────────────────────────────────────────── */
 
   @keyframes fade-in {
     from {
@@ -199,33 +375,236 @@
       opacity: 1;
     }
   }
-
-  .animate-drawer-in-left {
-    animation: drawer-in-left 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-out-down {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes fade-out-up {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes scale-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes slide-in-from-top {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-out-to-top {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+  @keyframes slide-in-from-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-out-to-bottom {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  /* Popover/menu origins. `--popover-origin` is set per-trigger by the menu
+     component, so a dropdown can grow out of the button that opened it rather
+     than out of the viewport centre. */
+  @keyframes popover-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  @keyframes popover-out {
+    from {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.97) translateY(-2px);
+    }
+  }
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
   }
 
-  .animate-drawer-in-right {
-    animation: drawer-in-right 200ms cubic-bezier(0.32, 0.72, 0, 1);
-  }
+  /* ── Enter ─────────────────────────────────────────────────────────── */
 
   .animate-fade-in {
     animation: fade-in 150ms ease-out;
   }
+  .animate-fade-in-up {
+    animation: fade-in-up 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .animate-scale-in {
+    animation: scale-in 160ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .animate-slide-in-from-top {
+    animation: slide-in-from-top 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .animate-slide-in-from-bottom {
+    animation: slide-in-from-bottom 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .animate-popover-in {
+    animation: popover-in 140ms cubic-bezier(0.32, 0.72, 0, 1);
+    transform-origin: var(--popover-origin, top);
+  }
 
-  .material-symbols-outlined {
-    font-family: 'Material Symbols Outlined';
-    font-weight: normal;
-    font-style: normal;
-    display: inline-block;
-    line-height: 1;
-    letter-spacing: normal;
-    text-transform: none;
-    white-space: nowrap;
-    word-wrap: normal;
-    direction: ltr;
-    -webkit-font-feature-settings: 'liga';
-    -webkit-font-smoothing: antialiased;
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  /* ── Exit ──────────────────────────────────────────────────────────── */
+
+  .animate-fade-out {
+    animation: fade-out 150ms cubic-bezier(0.4, 0, 1, 1);
+  }
+  .animate-fade-out-down {
+    animation: fade-out-down 160ms cubic-bezier(0.4, 0, 1, 1);
+  }
+  .animate-fade-out-up {
+    animation: fade-out-up 160ms cubic-bezier(0.4, 0, 1, 1);
+  }
+  .animate-scale-out {
+    animation: scale-out 140ms cubic-bezier(0.4, 0, 1, 1);
+  }
+  .animate-slide-out-to-top {
+    animation: slide-out-to-top 160ms cubic-bezier(0.4, 0, 1, 1);
+  }
+  .animate-slide-out-to-bottom {
+    animation: slide-out-to-bottom 160ms cubic-bezier(0.4, 0, 1, 1);
+  }
+  /* Drawer slide, for the builder's responsive structure/inspector rails.
+     Named `start`/`end` rather than left/right so they mirror correctly when
+     the document is `dir="rtl"` — a left-anchored drawer should slide in from
+     the right in Arabic, and a physical `left` keyframe would get this wrong. */
+  @keyframes drawer-in-start {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes drawer-in-end {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  [dir='rtl'] .animate-drawer-in-start {
+    animation-name: drawer-in-end;
+  }
+  [dir='rtl'] .animate-drawer-in-end {
+    animation-name: drawer-in-start;
+  }
+  .animate-drawer-in-start {
+    animation: drawer-in-start 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .animate-drawer-in-end {
+    animation: drawer-in-end 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .animate-popover-out {
+    animation: popover-out 120ms cubic-bezier(0.4, 0, 1, 1);
+    transform-origin: var(--popover-origin, top);
+  }
+
+  /* ── Disclosure ────────────────────────────────────────────────────── */
+
+  .animate-accordion-down {
+    animation: accordion-down 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .animate-accordion-up {
+    animation: accordion-up 200ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .soft-blend {
@@ -233,21 +612,146 @@
   }
 
   .font-display {
-    font-family: var(--font-family-display, var(--font-garamond)), Georgia, 'Times New Roman', serif;
+    font-family: var(--font-family-display);
   }
 
   .liquid-glass {
-    background: rgb(var(--glass-bg) / var(--glass-alpha, 0.7));
+    background: rgb(var(--glass-bg) / var(--glass-alpha, 0.72));
     backdrop-filter: blur(var(--glass-blur, 16px));
     -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
     border: 1px solid var(--glass-border-color);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+    box-shadow: var(--shadow-sm);
   }
 
+  /* Interactive card treatment.
+     Previously this declared a :hover transform with no `transition`, so the
+     card teleported 3px and the shadow snapped — the lift looked like a glitch
+     rather than a response. Transitioning transform and shadow (but not
+     border-color, which is cheap and doesn't need a 200ms ramp) is what makes
+     it read as a physical card being picked up. */
+  .card-hover {
+    transition:
+      transform 200ms cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 200ms cubic-bezier(0.32, 0.72, 0, 1),
+      border-color 150ms ease-out;
+    will-change: transform;
+  }
   .card-hover:hover {
-    transform: translateY(-4px);
-    border-color: rgb(var(--c-primary) / 0.2);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    transform: translateY(-3px);
+    border-color: rgb(var(--c-primary) / 0.28);
+    box-shadow: var(--shadow-lg);
+  }
+  /* Settling back is faster than lifting: the user has already decided to leave. */
+  .card-hover:active {
+    transform: translateY(-1px);
+    transition-duration: 90ms;
+  }
+
+  /* ── Press feedback for anything the finger touches ────────────────────
+     Implemented in CSS rather than framer-motion on purpose: Button is rendered
+     inside server components on nearly every page, and making it a client
+     component to gain a spring would ship JS to pages that are otherwise
+     static. A CSS `active:` transform costs nothing and is equally immediate. */
+  .pressable {
+    transition:
+      transform 120ms cubic-bezier(0.32, 0.72, 0, 1),
+      background-color 120ms ease-out,
+      border-color 120ms ease-out;
+  }
+  .pressable:active {
+    transform: scale(0.975);
+  }
+  .pressable:disabled {
+    transform: none;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     Image load-in.
+
+     Paired with providers/media-load-provider.tsx, which sets `data-media` on
+     every image as it loads. Gated on `scripting: enabled` so that with
+     JavaScript off the images are simply visible — see the note in that file
+     for why the failure mode matters.
+
+     The zoom is tiny (1.02 → 1) and the fade is short. Anything more reads as
+     a slideshow rather than as an image settling into place.
+     ───────────────────────────────────────────────────────────────────── */
+  @media (scripting: enabled) {
+    img[data-media='pending'] {
+      opacity: 0;
+      transform: scale(1.02);
+      transition:
+        opacity 380ms ease-out,
+        transform 520ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    img[data-media='loaded'],
+    img[data-media='error'] {
+      opacity: 1;
+      transform: scale(1);
+      transition:
+        opacity 380ms ease-out,
+        transform 520ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+  }
+
+  /* Centred dialog/sheet pop.
+     The centring `-translate-x-1/2 -translate-y-1/2` has to be part of the
+     transform chain, not a separate utility: a Tailwind `-translate-*` utility
+     and a keyframe animating `transform: scale()` both write the `transform`
+     property, so whichever is applied last wins. Animating `translate` and
+     `scale` as independent properties lets the keyframes own `scale` while the
+     centring stays put, and it is exactly the fix for a dialog that flies into
+     the corner as it opens. */
+  /* Tab panel entry. `--tab-shift` is set inline by ui/tabs.tsx so the panel
+     slides in from the side the user came from. */
+  @keyframes tab-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(var(--tab-shift, 8px));
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  .tab-panel {
+    animation: tab-panel-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .dialog-pop {
+    translate: -50% -50%;
+    transform-origin: center;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     No-JavaScript guard for scroll reveals.
+
+     `<Reveal>` and `<StaggerItem>` are client components, so React still emits
+     their `initial` variant as `style="opacity:0;transform:…"` in the static
+     HTML. With JS disabled the IntersectionObserver never runs, nothing ever
+     flips them to visible, and the page is permanently blank.
+
+     `!important` is necessary and correct here: it has to beat the inline style
+     Framer Motion wrote. `@media (scripting: none)` matches only when
+     scripting is unavailable, so it costs nothing for everyone else.
+     ───────────────────────────────────────────────────────────────────── */
+  @media (scripting: none) {
+    /* Reserve the box so a fading image doesn't collapse its layout first. */
+  img[data-media='pending'] {
+    background-color: rgb(var(--c-muted) / 0.6);
+  }
+
+  .motion-reveal {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
+  /* Staggered reveal. `--stagger-index` is set inline by <StaggerItem>, and the
+     delay is a raw custom property so a 200-item list can still be capped in
+     one place. Compose with any enter animation. */
+  .stagger-item {
+    animation-delay: calc(var(--stagger-index, 0) * var(--stagger-step, 45ms));
   }
 
   .inspector-slider::-webkit-slider-thumb {
@@ -260,7 +764,9 @@
     border: 1px solid var(--slider-thumb-border);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
     cursor: grab;
-    transition: transform 150ms ease, box-shadow 150ms ease;
+    transition:
+      transform 150ms ease,
+      box-shadow 150ms ease;
   }
   .inspector-slider::-webkit-slider-thumb:hover {
     transform: scale(1.15);
@@ -283,7 +789,7 @@
   .hero-glow {
     background: radial-gradient(
       circle at 50% 50%,
-      rgb(var(--c-accent) / 0.05) 0%,
+      rgb(var(--c-accent) / 0.06) 0%,
       rgb(var(--glow-color) / 0) 70%
     );
   }
@@ -291,49 +797,56 @@
   .logo-row > * {
     opacity: 0.5;
     filter: grayscale(1);
-    transition: opacity 300ms ease, filter 300ms ease, transform 300ms ease;
+    transition:
+      opacity 300ms ease,
+      filter 300ms ease,
+      transform 300ms ease;
   }
-
   .logo-row > *:hover {
     opacity: 1;
     filter: grayscale(0);
     transform: scale(1.1);
   }
-
-  /* Logo wall gap: 48px mobile, 96px desktop (mockup gap-12 md:gap-24). */
-  .logo-row { --stack-gap: 48px; }
+  .logo-row {
+    --stack-gap: 48px;
+  }
   @media (min-width: 768px) {
-    .logo-row { --stack-gap: 96px; }
-  }
-
-  /* CTA pairs: stacked on mobile, side-by-side from sm (mockup flex-col sm:flex-row). */
-  @media (min-width: 640px) {
-    .cta-row { --stack-direction: row; }
-  }
-  @media (max-width: 639.98px) {
-    .cta-row { --stack-direction: column; }
+    .logo-row {
+      --stack-gap: 96px;
+    }
   }
 
   .marketing-section {
     padding-block: 5rem;
   }
 
+  /* Technical eyebrow: mono caps with a leading tick — the Forge signature. */
   .eyebrow {
-    font-size: 0.625rem;
-    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-family-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
     line-height: 1rem;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--primary);
+    color: rgb(var(--c-primary));
+  }
+  .eyebrow::before {
+    content: '';
+    width: 1.25rem;
+    height: 1px;
+    background: rgb(var(--c-primary));
   }
 
   .section-title {
-    font-family: var(--font-family-display, var(--font-garamond)), Georgia, 'Times New Roman', serif;
-    font-size: clamp(2rem, 4vw, 3rem);
-    font-weight: 700;
-    line-height: 1.08;
-    letter-spacing: -0.035em;
-    color: var(--foreground);
+    font-family: var(--font-family-display);
+    font-size: clamp(1.875rem, 4vw, 2.875rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: rgb(var(--c-foreground));
   }
 
   .link-pill {
@@ -342,45 +855,149 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    border: 1px solid #dbe3ee;
-    border-radius: 9999px;
+    border: 1px solid rgb(var(--c-border));
+    border-radius: var(--radius);
     padding-inline: 1rem;
-    font-size: 0.625rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--primary);
-    transition: 180ms ease;
+    color: rgb(var(--c-primary));
+    transition: 150ms ease;
+  }
+  .link-pill:hover {
+    border-color: rgb(var(--c-primary) / 0.5);
+    background: rgb(var(--c-primary) / 0.08);
   }
 
-  .link-pill:hover {
-    border-color: #93c5fd;
-    background: #eff6ff;
+  /* Blueprint grid — faint engineering-grid backdrop for heroes/sections. */
+  .blueprint-grid {
+    background-image:
+      linear-gradient(to right, rgb(0 0 0 / 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(0 0 0 / 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Black grid lines vanish on the dark hero bands — this is the light-line
+     counterpart for inverse surfaces. */
+  .blueprint-grid-invert {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Machined panel: hairline border, squared-ish corners, no glow. */
+  .panel {
+    background: rgb(var(--c-card));
+    border: 1px solid rgb(var(--c-border));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* Corner-tick frame used on hero/feature panels. */
+  .corner-ticks {
+    position: relative;
+  }
+  .corner-ticks::before,
+  .corner-ticks::after {
+    content: '';
+    position: absolute;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-color: rgb(var(--c-primary));
+    border-style: solid;
+    pointer-events: none;
+  }
+  .corner-ticks::before {
+    inset-block-start: -1px;
+    inset-inline-start: -1px;
+    border-width: 2px 0 0 2px;
+  }
+  .corner-ticks::after {
+    inset-block-end: -1px;
+    inset-inline-end: -1px;
+    border-width: 0 2px 2px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Kill looping motion outright. A 0.01ms-duration infinite animation still
+     runs, so `animate-shimmer`, `animate-ping` and `animate-spin` would keep
+     spinning at machine speed — genuinely painful, not just unpleasant. */
+  .animate-shimmer,
+  .animate-ping,
+  .animate-spin,
+  .animate-marquee,
+  .animate-bounce,
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  /* A skeleton with no shimmer is just a flat block, which is exactly right:
+     the placeholder still communicates "something is here". */
+  .animate-shimmer::after,
+  .animate-shimmer::before {
+    display: none !important;
+  }
+
+  /* The image load-in keeps its opacity fade (fading is safe for motion
+     sensitivity) but loses the scale, which is the part that reads as motion. */
+  @media (scripting: enabled) {
+    img[data-media='pending'],
+    img[data-media='loaded'],
+    img[data-media='error'] {
+      transform: none !important;
+      transition: opacity 1ms linear !important;
+    }
+  }
+
+  /* Hover lifts would otherwise jump between states with no transition. */
+  .card-hover:hover,
+  .card-hover:active {
+    transform: none !important;
   }
 }
 
 @media (min-width: 640px) {
   @layer components {
-    .marketing-container { padding-inline: 2.5rem; }
-    .marketing-section { padding-block: 6rem; }
+    .marketing-container {
+      padding-inline: 2.5rem;
+    }
+    .marketing-section {
+      padding-block: 6rem;
+    }
   }
 }
 
-@keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
-}
-
-@keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
-}
-
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
-
 .animate-marquee {
   animation: marquee 30s linear infinite;
 }
@@ -388,14 +1005,15 @@
 .scrollbar-thin::-webkit-scrollbar {
   height: 6px;
 }
-
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  /* `--border` was never defined (the channel token is `--c-border`), so the thumb
-     rendered with an invalid colour and disappeared. */
-  background: rgb(var(--c-border));
+  background: rgb(var(--c-border-strong));
   border-radius: 3px;
+}
+
+/* RTL: flip direction-specific decorations that cannot use logical properties. */
+[dir='rtl'] .flip-rtl {
+  transform: scaleX(-1);
 }

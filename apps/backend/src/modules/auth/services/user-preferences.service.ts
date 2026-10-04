@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DrizzleService } from '../../../database/drizzle.service';
 import { userPreferences } from '../../../database/schema/user-preferences';
 import { eq } from 'drizzle-orm';
+import type { ThemeTokens } from '@titan/shared';
 
 @Injectable()
 export class UserPreferencesService {
@@ -22,6 +23,7 @@ export class UserPreferencesService {
     theme: string; density: string; profileVisibility: string;
     whoCanMessage: string; whoCanFollow: string;
     emailNotifications: Record<string, boolean>; inAppNotifications: Record<string, boolean>;
+    themeTokens: ThemeTokens | null;
   }>) {
     const existing = await this.drizzle.db.query.userPreferences.findFirst({
       where: eq(userPreferences.userId, userId),

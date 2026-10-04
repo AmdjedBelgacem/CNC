@@ -8,13 +8,15 @@ const SECTION_BGS: Record<string, string> = {
   muted: 'bg-surface-container-low',
   secondary: 'bg-secondary/10',
   primary: 'bg-primary',
-  'gradient-primary': 'bg-gradient-to-b from-primary to-accent',
-  'gradient-muted': 'bg-gradient-to-b from-surface-container-low to-surface-container-lowest',
+  'gradient-primary': 'bg-primary text-primary-foreground',
+  'gradient-muted': 'bg-surface-container-low',
 }; /** A full-width `<section>` wrapper with one content zone. */
 export function SectionBlock({ props, puck }: BlockComponentProps<LayoutProps>) {
   const { className, bg, hidden } = props as LayoutProps & { bg?: string; hidden?: boolean };
+  const id = (props as LayoutProps & { id?: string }).id;
   return (
     <section
+      id={id}
       className={cn(SECTION_BGS[bg ?? 'transparent'], hidden && 'hidden', className)}
       style={layoutStyle(props)}
     >

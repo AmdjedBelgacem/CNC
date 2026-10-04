@@ -1,0 +1,16 @@
+{
+  "//": "The app tsconfig uses jsx: preserve (Next compiles it). tsx needs the automatic runtime to execute components directly.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "baseUrl": "..",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["**/*.tsx", "**/*.ts", "../src/components/ai/**/*.tsx"]
+}

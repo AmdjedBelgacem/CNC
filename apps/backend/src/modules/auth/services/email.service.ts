@@ -14,6 +14,10 @@ export class EmailService {
   private resendClient: any = null;
   private readonly isDev: boolean;
 
+  get isConfigured(): boolean {
+    return !!this.resendClient;
+  }
+
   constructor(private config: ConfigService) {
     this.isDev = config.get('NODE_ENV') === 'development';
     const apiKey = config.get('RESEND_API_KEY');

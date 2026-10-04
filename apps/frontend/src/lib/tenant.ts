@@ -11,7 +11,7 @@ export function getTenantTheme(tenant: {
   fontFamily?: string | null;
 }): Record<string, string> {
   return {
-    '--color-primary': tenant.primaryColor || '#7c3aed',
+    '--color-primary': tenant.primaryColor || '#0E7490',
     '--color-secondary': tenant.secondaryColor || '#0a1628',
     '--color-accent': tenant.accentColor || '#ff6b35',
     '--font-family': tenant.fontFamily || 'Inter, ui-sans-serif, system-ui, sans-serif',

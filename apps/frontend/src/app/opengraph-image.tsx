@@ -21,7 +21,7 @@ export default function OpenGraphImage() {
         height="80"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#7c3aed"
+        stroke="#C2410C"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -49,7 +49,7 @@ export default function OpenGraphImage() {
         style={{
           fontSize: 32,
           fontWeight: 600,
-          color: '#7c3aed',
+          color: '#C2410C',
           margin: '16px 0 0',
           textAlign: 'center',
           letterSpacing: '0.01em',

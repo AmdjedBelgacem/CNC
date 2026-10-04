@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DrizzleService } from '../../../database/drizzle.service';
 import { auditLogs } from '../../../database/schema/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class AuditService {
@@ -36,6 +36,10 @@ export class AuditService {
   async getLogs(options: {
     userId?: string;
     action?: string;
+    /** Match any of these actions. Needed because related events are logged under
+     *  distinct names (e.g. user.login vs user.login.failed) and an exact-equality
+     *  filter on one of them silently hides the others. */
+    actions?: string[];
     tenantId?: string;
     limit?: number;
     offset?: number;
@@ -43,6 +47,9 @@ export class AuditService {
     const conditions: any[] = [];
     if (options.userId) conditions.push(eq(auditLogs.userId, options.userId));
     if (options.action) conditions.push(eq(auditLogs.action, options.action));
+    if (options.actions && options.actions.length > 0) {
+      conditions.push(inArray(auditLogs.action, options.actions));
+    }
     if (options.tenantId) conditions.push(eq(auditLogs.tenantId, options.tenantId));
 
     return this.drizzle.db.query.auditLogs.findMany({

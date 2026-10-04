@@ -1,128 +1,80 @@
 import Link from 'next/link';
+import { Check } from 'lucide-react';
+import { BrandMark } from '@/components/layout/brand';
+
+const HIGHLIGHTS: [string, string][] = [
+  ['Academic', 'Structured CNC curriculum from fundamentals to advanced'],
+  ['Hands-on', 'Real-world projects with toolpath simulations'],
+  ['Certified', 'Industry-recognized CNC certifications'],
+  ['Community', 'Connect with machinists and instructors worldwide'],
+];
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#16181c]">
-      {' '}
-      <div className="pointer-events-none fixed inset-0">
-        {' '}
-        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-[#f59e0b]/[0.025] blur-[120px]" />{' '}
-        <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[#f59e0b]/[0.015] blur-[120px]" />{' '}
-      </div>{' '}
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div className="pointer-events-none fixed inset-0 blueprint-grid opacity-60" aria-hidden />
       <div className="relative mx-auto flex min-h-screen max-w-[1400px] flex-col px-6 py-6">
-        {' '}
         <div className="flex items-center justify-between">
-          {' '}
           <Link
             href="/"
-            className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#5c6068] transition-all duration-200 hover:text-[#f59e0b]"
+            className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors hover:text-primary"
           >
-            {' '}
-            ← Back{' '}
-          </Link>{' '}
-          <Link
-            href="/"
-            className="text-lg font-bold tracking-tight text-[#8b8f96] transition-all duration-200 hover:text-[#e8e8e8]"
-          >
-            {' '}
-            TITANS{' '}
-          </Link>{' '}
-        </div>{' '}
+            &larr; Back
+          </Link>
+          <BrandMark compact />
+        </div>
+
         <div className="flex flex-1 items-center justify-center py-8">
-          {' '}
-          <div className="relative w-full overflow-hidden rounded-2xl border border-[#2a2e36] bg-[#1e2128]">
-            {' '}
-            <div className="pointer-events-none absolute -left-px -top-px z-10 h-8 w-8 rounded-tl-2xl border-l-2 border-t-2 border-[#f59e0b]/40" />{' '}
-            <div className="pointer-events-none absolute -right-px -top-px z-10 h-8 w-8 rounded-tr-2xl border-r-2 border-t-2 border-[#f59e0b]/40" />{' '}
-            <div className="pointer-events-none absolute -bottom-px -left-px z-10 h-8 w-8 rounded-bl-2xl border-b-2 border-l-2 border-[#f59e0b]/40" />{' '}
-            <div className="pointer-events-none absolute -bottom-px -right-px z-10 h-8 w-8 rounded-br-2xl border-b-2 border-r-2 border-[#f59e0b]/40" />{' '}
+          <div className="corner-ticks relative w-full overflow-hidden rounded-lg border border-border bg-card shadow-md">
             <div className="flex">
-              {' '}
-              <div className="min-h-[520px] flex-1 p-8 sm:p-10"> {children} </div>{' '}
-              <div className="hidden w-px shrink-0 bg-[#2a2e36] lg:block" />{' '}
+              <div className="min-h-[520px] flex-1 p-8 sm:p-10">{children}</div>
+
+              <div className="hidden w-px shrink-0 bg-border lg:block" />
+
               <div className="hidden w-[420px] shrink-0 lg:flex lg:flex-col">
-                {' '}
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-[0.04]"
-                  style={{
-                    backgroundImage:
-                      'radial-gradient(circle at 1px 1px, #f59e0b 1px, transparent 0)',
-                    backgroundSize: '20px 20px',
-                  }}
-                />{' '}
                 <div className="relative flex flex-1 flex-col items-center justify-center px-10 py-14">
-                  {' '}
-                  <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#f59e0b] text-sm font-bold text-[#16181c]">
-                    {' '}
-                    T{' '}
-                  </div>{' '}
-                  <h2 className="font-display mt-6 text-[36px] font-bold leading-[1.08] tracking-[-0.035em] text-[#e8e8e8]">
-                    {' '}
-                    TITANS of <br /> Manufacturing{' '}
-                  </h2>{' '}
-                  <div className="mt-5 h-[3px] w-14 rounded-full bg-[#f59e0b]" />{' '}
-                  <p className="mt-5 text-sm leading-relaxed text-[#8b8f96]">
-                    {' '}
+                  <BrandMark />
+                  <h2 className="mt-6 text-center font-display text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-foreground">
+                    Baroot <br /> CNC Solutions
+                  </h2>
+                  <div className="mt-5 h-0.5 w-14 bg-primary" aria-hidden />
+                  <p className="mt-5 text-center text-sm leading-relaxed text-muted-foreground">
                     Expert-led CNC manufacturing education, professional certifications, and a
-                    community of modern machinists.{' '}
-                  </p>{' '}
-                </div>{' '}
-                <div className="relative mx-10 border-t border-[#2a2e36]" />{' '}
+                    community of modern machinists.
+                  </p>
+                </div>
+
+                <div className="relative mx-10 border-t border-border" />
+
                 <div className="relative flex flex-1 flex-col items-center justify-center px-10 py-14">
-                  {' '}
                   <div className="space-y-4">
-                    {' '}
-                    <p className="text-center text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]">
-                      {' '}
-                      Platform Highlights{' '}
-                    </p>{' '}
+                    <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
+                      Platform Highlights
+                    </p>
                     <div className="space-y-3">
-                      {' '}
-                      {[
-                        ['Academic', 'Structured CNC curriculum from fundamentals to advanced'],
-                        ['Hands-on', 'Real-world projects with toolpath simulations'],
-                        ['Certified', 'Industry-recognized CNC certifications'],
-                        ['Community', 'Connect with machinists and instructors worldwide'],
-                      ].map(([title, desc]) => (
+                      {HIGHLIGHTS.map(([title, desc]) => (
                         <div key={title} className="group flex gap-3">
-                          {' '}
-                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#f59e0b]/10 text-[#f59e0b] transition-all duration-200 group-hover:bg-[#f59e0b]/20">
-                            {' '}
-                            <svg
-                              className="h-2.5 w-2.5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={3}
-                            >
-                              {' '}
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M4.5 12.75l6 6 9-13.5"
-                              />{' '}
-                            </svg>{' '}
-                          </span>{' '}
+                          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                            <Check className="size-3" strokeWidth={3} />
+                          </span>
                           <div>
-                            {' '}
-                            <p className="text-[13px] font-semibold text-[#e8e8e8]">{title}</p>{' '}
-                            <p className="text-[12px] leading-relaxed text-[#6b6f76]">
-                              {desc}
-                            </p>{' '}
-                          </div>{' '}
+                            <p className="text-13 font-semibold text-foreground">{title}</p>
+                            <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
+                          </div>
                         </div>
-                      ))}{' '}
-                    </div>{' '}
-                  </div>{' '}
-                </div>{' '}
-              </div>{' '}
-            </div>{' '}
-          </div>{' '}
-        </div>{' '}
-        <div className="text-center text-[10px] font-semibold uppercase tracking-[0.15em] text-[#3d4148]">
-          {' '}
-          &copy; {new Date().getFullYear()} TITANS of Manufacturing{' '}
-        </div>{' '}
-      </div>{' '}
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          &copy; {new Date().getFullYear()} Baroot CNC Solutions
+        </div>
+      </div>
     </div>
   );
 }

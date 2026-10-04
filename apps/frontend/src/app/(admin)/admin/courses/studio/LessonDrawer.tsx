@@ -1,5 +1,7 @@
 'use client';
+import type { ContentLocale, LessonContentDocument } from '@titan/shared';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   X,
   Trash2,
@@ -12,17 +14,18 @@ import {
   FileText,
   Image as ImageIcon,
 } from 'lucide-react';
-import { RightSheet, RightSheetHeader } from '@/components/ui/right-sheet';
+import { Modal, ModalHeader } from '@/components/ui/modal';
 import { INPUT, LABEL } from './glass';
 import { toast } from '@/components/ui/toast';
 import type { Attachment, Lesson, LessonVideoMeta, Section } from './types';
 import { slugify } from './slugify';
+import { LessonBlockEditor } from './LessonBlockEditor';
 import * as api from './api';
-function readFileAsDataUrl(file: File): Promise<string> {
+function readFileAsDataUrl(file: File, errorMessage = 'Could not read file'): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result as string);
-    r.onerror = () => reject(new Error('Could not read file'));
+    r.onerror = () => reject(new Error(errorMessage));
     r.readAsDataURL(file);
   });
 }
@@ -38,16 +41,17 @@ function formatBytes(n: number): string {
   return `${x.toFixed(1)} ${units[i]}`;
 }
 function FileGlyph({ type }: { type: string }) {
-  if (type.startsWith('video')) return <Film className="h-4 w-4 text-sky-600 dark:text-sky-400" />;
+  if (type.startsWith('video')) return <Film className="size-4 text-info" />;
   if (type.startsWith('audio'))
-    return <Music className="h-4 w-4 text-purple-600 dark:text-purple-400" />;
+    return <Music className="size-4 text-info" />;
   if (type.startsWith('image'))
-    return <ImageIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
+    return <ImageIcon className="size-4 text-success dark:text-success" />;
   if (type === 'application/pdf')
-    return <FileText className="h-4 w-4 text-rose-600 dark:text-rose-400" />;
-  return <Paperclip className="h-4 w-4 text-muted-foreground" />;
+    return <FileText className="size-4 text-destructive" />;
+  return <Paperclip className="size-4 text-muted-foreground" />;
 }
 function isVideoUrl(u: string): boolean {
+  if (/^\/uploads\//i.test(u)) return /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(u);
   if (!/^https?:\/\//i.test(u)) return false;
   return /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(u) || u.toLowerCase().includes('/video/');
 }
@@ -55,20 +59,24 @@ export function LessonDrawer({
   open,
   lesson,
   sections,
+  locale,
   onClose,
   onSave,
   onMoveSection,
   onDelete,
   onDuplicate,
+  onContentBlocksChange,
 }: {
   open: boolean;
   lesson: Lesson | null;
   sections: Section[];
+  locale: ContentLocale;
   onClose: () => void;
   onSave: (patch: Partial<Lesson>) => void;
   onMoveSection: (sectionId: string) => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onContentBlocksChange: (document: LessonContentDocument) => void;
 }) {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -92,9 +100,13 @@ export function LessonDrawer({
   const thumbInputRef = useRef<HTMLInputElement>(null);
   const attInputRef = useRef<HTMLInputElement>(null);
   const [resolvingVideo, setResolvingVideo] = useState(false);
+  const t = useTranslations('courses');
+  const tMedia = useTranslations('media');
+  const tCommon = useTranslations('common');
   useEffect(() => {
     if (!open || !lesson) return;
-    setTitle(lesson.title);
+    const translation = lesson.translations?.[locale] ?? {};
+    setTitle(locale === 'en' ? lesson.title : translation.title ?? '');
     setSlug(lesson.slug);
     setSlugTouched(true);
     // Keep the storage key (not the resolved/expiring playback URL) so saving preserves it.
@@ -110,12 +122,12 @@ export function LessonDrawer({
     if (thumbPreview) URL.revokeObjectURL(thumbPreview);
     setThumbPreview(null);
     setThumbDrag(false);
-    setDescription(lesson.description ?? '');
+    setDescription(locale === 'en' ? lesson.description ?? '' : translation.description ?? '');
     setFreePreview(lesson.freePreview);
     setAttachments(lesson.attachments ?? []);
     setSectionId(lesson.seriesId);
     setUploading({});
-  }, [open, lesson]);
+  }, [open, lesson?.id, locale]);
 
   // Resolve S3 storage keys (tenants/...) to a playable signed URL for the admin preview.
   // Admins always pass the paywall, so this also verifies the upload actually persisted.
@@ -127,6 +139,7 @@ export function LessonDrawer({
     setResolvingVideo(true);
     fetch(`/api/proxy/courses/lessons/${encodeURIComponent(lesson.slug)}/playback`, {
       credentials: 'include',
+      headers: { 'x-locale': locale, 'x-next-locale': locale, 'accept-language': `${locale},en;q=0.8` },
     })
       .then((r) => {
         if (!r.ok) throw new Error(`Playback failed (${r.status})`);
@@ -144,7 +157,7 @@ export function LessonDrawer({
     return () => {
       cancelled = true;
     };
-  }, [open, lesson?.id]);
+  }, [open, lesson?.id, locale]);
   if (!open || !lesson) return null;
   const uploadingCount = Object.values(uploading).filter(Boolean).length;
   const patchAttachment = (id: string, patch: Partial<Attachment>) =>
@@ -153,7 +166,7 @@ export function LessonDrawer({
   const handleVideoFile = async (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith('video/')) {
-      toast({ type: 'err', title: 'Not a video', description: 'Please choose a video file.' });
+      toast({ type: 'err', title: tMedia('notAVideo', { default: 'Not a video' }), description: tMedia('chooseVideoFile', { default: 'Please choose a video file.' }) });
       return;
     } // Immediate local preview regardless of storage backend.
     if (videoPreview) URL.revokeObjectURL(videoPreview);
@@ -180,9 +193,9 @@ export function LessonDrawer({
           };
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) resolve();
-            else reject(new Error(`Upload failed (${xhr.status})`));
+            else reject(new Error(tMedia('uploadFailedWithStatus', { status: xhr.status, default: 'Upload failed ({status})' })));
           };
-          xhr.onerror = () => reject(new Error('Network error during upload'));
+          xhr.onerror = () => reject(new Error(tMedia('networkErrorDuringUpload', { default: 'Network error during upload' })));
           xhr.send(file);
         });
         setVideoProgress(100);
@@ -193,7 +206,7 @@ export function LessonDrawer({
         // it just selects the fallback path below. Fallback 1: server stores to S3;
         // Fallback 2: local disk (works when MinIO is down).
         setVideoProgress(null);
-        const dataUrl = await readFileAsDataUrl(file);
+        const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
         try {
           const res = await api.uploadLessonVideoServer(lesson.id, {
             file: dataUrl,
@@ -210,11 +223,11 @@ export function LessonDrawer({
       setVideoUrl(key);
       setVideoMeta(meta);
       setVideoDisplayUrl(null);
-      toast({ type: 'ok', title: 'Video uploaded' });
+      toast({ type: 'ok', title: tMedia('videoUploaded', { default: 'Video uploaded' }) });
     } catch (e: any) {
       URL.revokeObjectURL(localPreview);
       setVideoPreview(null);
-      toast({ type: 'err', title: 'Upload failed', description: e?.message });
+      toast({ type: 'err', title: tMedia('uploadFailed', { default: 'Upload failed' }), description: e?.message });
     } finally {
       setUploading((u) => ({ ...u, video: false }));
       setTimeout(() => setVideoProgress(null), 1200);
@@ -231,11 +244,11 @@ export function LessonDrawer({
   const handleThumbFile = async (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast({ type: 'err', title: 'Not an image', description: 'Please choose an image file.' });
+      toast({ type: 'err', title: tMedia('notAnImage', { default: 'Not an image' }), description: tMedia('chooseImageFile', { default: 'Please choose an image file.' }) });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast({ type: 'err', title: 'File too large', description: 'Max 5 MB per thumbnail.' });
+      toast({ type: 'err', title: tMedia('fileTooLarge', { default: 'File too large' }), description: tMedia('thumbnailSizeLimit', { default: 'Max 5 MB per thumbnail.' }) });
       return;
     }
     if (thumbPreview) URL.revokeObjectURL(thumbPreview);
@@ -243,14 +256,14 @@ export function LessonDrawer({
     setThumbPreview(localPreview);
     setUploading((u) => ({ ...u, thumb: true }));
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
       const res = await api.uploadFile(dataUrl, 'covers', file.name);
       setThumbUrl(res.url);
-      toast({ type: 'ok', title: 'Thumbnail uploaded' });
+      toast({ type: 'ok', title: tMedia('thumbnailUploaded', { default: 'Thumbnail uploaded' }) });
     } catch (e: any) {
       URL.revokeObjectURL(localPreview);
       setThumbPreview(null);
-      toast({ type: 'err', title: 'Thumbnail upload failed', description: e?.message });
+      toast({ type: 'err', title: tMedia('thumbnailUploadFailed', { default: 'Thumbnail upload failed' }), description: e?.message });
     } finally {
       setUploading((u) => {
         const next = { ...u };
@@ -278,7 +291,7 @@ export function LessonDrawer({
       setAttachments((a) => [...a, temp]);
       setUploading((u) => ({ ...u, [id]: true }));
       try {
-        const dataUrl = await readFileAsDataUrl(file);
+        const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
         const res = await api.uploadFile(dataUrl, 'attachments', file.name);
         setAttachments((a) =>
           a.map((x) =>
@@ -289,7 +302,7 @@ export function LessonDrawer({
         );
       } catch (e: any) {
         setAttachments((a) => a.filter((x) => x.id !== id));
-        toast({ type: 'err', title: 'Upload failed', description: e?.message });
+        toast({ type: 'err', title: tMedia('uploadFailed', { default: 'Upload failed' }), description: e?.message });
       } finally {
         setUploading((u) => {
           const next = { ...u };
@@ -300,39 +313,54 @@ export function LessonDrawer({
     }
   };
   const save = () => {
-    if (!title.trim()) {
-      toast({ type: 'err', title: 'Lesson title is required' });
+    if (locale === 'en' && !title.trim()) {
+      toast({ type: 'err', title: t('studio.titleRequired', { default: 'Lesson title is required' }) });
       return;
     }
     if (uploadingCount > 0) {
-      toast({ type: 'err', title: 'Still uploading', description: 'Wait for uploads to finish' });
+      toast({ type: 'err', title: t('studio.stillUploading', { default: 'Still uploading' }), description: t('studio.stillUploadingHint', { default: 'Wait for uploads to finish' }) });
       return;
     }
     const clean = attachments.filter((a) => a.url && a.url.trim());
     const isStorageKey = !!videoUrl && videoUrl.startsWith('tenants/');
-    onSave({
-      title: title.trim(),
-      slug: slug.trim() || slugify(title),
+    const commonPatch = {
+      slug: slug.trim() || (locale === 'en' ? slugify(title) : lesson.slug),
       videoUrl: videoUrl.trim() || null,
       thumbnailUrl: thumbUrl.trim() || null,
       videoMeta: isStorageKey ? (videoMeta ?? null) : null,
-      description: description.trim() || null,
       freePreview,
       attachments: clean.length ? clean : null,
-    });
+    };
+    if (locale === 'en') {
+      onSave({ ...commonPatch, title: title.trim(), description: description.trim() || null });
+    } else {
+      onSave({
+        ...commonPatch,
+        translations: {
+          ...(lesson.translations ?? {}),
+          [locale]: {
+            ...(lesson.translations?.[locale] ?? {}),
+            title: title.trim() || undefined,
+            description: description.trim() || null,
+          },
+        },
+      });
+    }
     onClose();
   };
   const displaySrc =
     videoPreview || videoDisplayUrl || (videoUrl && isVideoUrl(videoUrl) ? videoUrl : null);
   return (
-    <RightSheet
+    <Modal
+      width="max-w-5xl"
       onClose={onClose}
+      title={title || t('studio.newLesson', { default: 'New lesson' })}
       header={
-        <RightSheetHeader
+        <ModalHeader
           loading={false}
           initials={(title || 'L').charAt(0).toUpperCase()}
-          gradient="from-sky-500/30 to-indigo-500/30 text-sky-700 dark:text-sky-300"
-          title={title || 'New lesson'}
+          gradient="bg-info/10 text-info"
+          title={title || t('studio.newLesson', { default: 'New lesson' })}
           subtitle={'/' + (slug || 'slug')}
           onClose={onClose}
         />
@@ -343,7 +371,7 @@ export function LessonDrawer({
         {' '}
         <div className="space-y-1.5">
           {' '}
-          <label className={LABEL}>Title *</label>{' '}
+           <label className={LABEL}>{t('studio.title', { default: 'Title' })} {locale === 'en' ? '*' : t('studio.arabicTranslation', { default: '(Arabic translation)' })}</label>{' '}
           <input
             value={title}
             onChange={(e) => {
@@ -351,11 +379,12 @@ export function LessonDrawer({
               if (!slugTouched) setSlug(slugify(e.target.value));
             }}
             className={INPUT}
+            dir={locale === 'ar' ? 'rtl' : 'ltr'}
           />{' '}
         </div>{' '}
         <div className="space-y-1.5">
           {' '}
-          <label className={LABEL}>Slug</label>{' '}
+          <label className={LABEL}>{t('studio.slug', { default: 'Slug' })}</label>{' '}
           <input
             value={slug}
             onChange={(e) => {
@@ -367,7 +396,7 @@ export function LessonDrawer({
         </div>{' '}
         <div className="space-y-1.5">
           {' '}
-          <label className={LABEL}>Section</label>{' '}
+          <label className={LABEL}>{t('studio.section', { default: 'Section' })}</label>{' '}
           <select
             value={sectionId}
             onChange={(e) => setSectionId(e.target.value)}
@@ -385,28 +414,27 @@ export function LessonDrawer({
             <button
               type="button"
               onClick={() => onMoveSection(sectionId)}
-              className="mt-1 rounded-lg bg-accent px-3 py-1.5 font-sans text-sm font-medium text-white transition hover:bg-blue-700"
+              className="mt-1 rounded-lg bg-accent px-3 py-1.5 font-sans text-sm font-medium text-accent-foreground transition hover:bg-primary"
             >
               {' '}
-              Move to “{sections.find((s) => s.id === sectionId)?.title}”{' '}
+              {t('studio.moveToSection', { title: sections.find((s) => s.id === sectionId)?.title ?? '', default: 'Move to “{title}”' })}{' '}
             </button>
           )}{' '}
         </div>{' '}
         <div className="space-y-2">
           {' '}
-          <label className={LABEL}>Lesson video</label>{' '}
+          <label className={LABEL}>{t('studio.lessonVideo', { default: 'Lesson video' })}</label>{' '}
           {resolvingVideo && !displaySrc ? (
             <div className="flex items-center gap-2 rounded-xl border border-dashed px-4 py-6 font-sans text-xs text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Resolving stored video for preview…
+              <Loader2 className="size-4 animate-spin" /> {t('studio.resolvingVideo', { default: 'Resolving stored video for preview…' })}
             </div>
           ) : null}
           {videoUrl.startsWith('tenants/') &&
           !resolvingVideo &&
           !videoDisplayUrl &&
           !videoPreview ? (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 font-sans text-xs text-amber-700 dark:text-amber-300">
-              Video key saved ({videoUrl.slice(0, 60)}…) but no playable URL resolved — the file may
-              be missing in storage. Re-upload below.
+            <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 font-sans text-xs text-warning ">
+              {t('studio.videoKeyUnresolved', { key: videoUrl.slice(0, 60), default: 'Video key saved ({key}…) but no playable URL resolved — the file may be missing in storage. Re-upload below.' })}
             </div>
           ) : null}
           {displaySrc ? (
@@ -423,15 +451,15 @@ export function LessonDrawer({
                   {' '}
                   {videoMeta
                     ? `${videoMeta.filename} · ${formatBytes(videoMeta.size)}`
-                    : 'Video uploaded'}{' '}
+                    : tMedia('videoUploaded', { default: 'Video uploaded' })}{' '}
                 </p>{' '}
                 <button
                   type="button"
                   onClick={removeVideo}
-                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
                 >
                   {' '}
-                  Remove{' '}
+                  {tMedia('remove', { default: 'Remove' })}{' '}
                 </button>{' '}
               </div>{' '}
             </div>
@@ -456,13 +484,13 @@ export function LessonDrawer({
             }
           >
             {' '}
-            <Upload className="h-5 w-5 text-muted-foreground/70" />{' '}
+            <Upload className="size-5 text-muted-foreground/70" />{' '}
             <p className="font-sans text-sm text-muted-foreground">
               {' '}
-              {dragOver ? 'Drop to upload' : 'Drag & drop a video, or click to browse'}{' '}
+              {dragOver ? tMedia('dropToUpload', { default: 'Drop to upload' }) : tMedia('dropVideoBrowse', { default: 'Drag & drop a video, or click to browse' })}{' '}
             </p>{' '}
             <p className="font-sans text-xs text-muted-foreground/60">
-              MP4, WebM, MOV · up to 500MB
+              {tMedia('videoFormatsHint', { default: 'MP4, WebM, MOV · up to 500MB' })}
             </p>{' '}
           </div>{' '}
           <input
@@ -478,7 +506,7 @@ export function LessonDrawer({
           {uploading.video && videoProgress !== null ? (
             <div className="flex items-center gap-2">
               {' '}
-              <div className="h-2 flex-1 overflow-hidden rounded-md bg-white dark:bg-white">
+              <div className="h-2 flex-1 overflow-hidden rounded-md bg-card dark:bg-card">
                 {' '}
                 <div
                   className="h-full bg-accent transition-all duration-200"
@@ -492,12 +520,12 @@ export function LessonDrawer({
           ) : uploading.video ? (
             <div className="flex items-center gap-1.5 font-sans text-xs text-muted-foreground">
               {' '}
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…{' '}
+              <Loader2 className="size-3.5 animate-spin" /> {tMedia('uploading', { default: 'Uploading…' })}{' '}
             </div>
           ) : null}{' '}
         </div>{' '}
         <div className="space-y-2">
-          <label className={LABEL}>Lesson thumbnail</label>
+          <label className={LABEL}>{t('studio.lessonThumbnail', { default: 'Lesson thumbnail' })}</label>
           {(thumbPreview || thumbUrl) && (
             <div className="space-y-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -508,14 +536,14 @@ export function LessonDrawer({
               />
               <div className="flex items-center justify-between">
                 <p className="font-sans text-xs text-muted-foreground">
-                  {thumbPreview ? 'New thumbnail — saves with lesson' : 'Thumbnail saved'}
+                  {thumbPreview ? t('studio.newThumbnail', { default: 'New thumbnail — saves with lesson' }) : t('studio.thumbnailSaved', { default: 'Thumbnail saved' })}
                 </p>
                 <button
                   type="button"
                   onClick={removeThumb}
-                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-red-600 transition hover:bg-red-500/10 dark:text-red-400"
+                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
                 >
-                  Remove
+                  {tMedia('remove', { default: 'Remove' })}
                 </button>
               </div>
             </div>
@@ -539,12 +567,12 @@ export function LessonDrawer({
                 : 'border-border bg-card hover:border-accent/60')
             }
           >
-            <ImageIcon className="h-5 w-5 text-muted-foreground/70" />
+            <ImageIcon className="size-5 text-muted-foreground/70" />
             <p className="font-sans text-sm text-muted-foreground">
-              {thumbDrag ? 'Drop to upload' : 'Drag & drop a thumbnail, or click to browse'}
+              {thumbDrag ? tMedia('dropToUpload', { default: 'Drop to upload' }) : tMedia('dropThumbBrowse', { default: 'Drag & drop a thumbnail, or click to browse' })}
             </p>
             <p className="font-sans text-xs text-muted-foreground/60">
-              JPG, PNG, WebP · 16:9 recommended · up to 5MB
+              {tMedia('thumbFormatsHint', { default: 'JPG, PNG, WebP · 16:9 recommended · up to 5MB' })}
             </p>
           </div>
           <input
@@ -559,27 +587,38 @@ export function LessonDrawer({
           />
           {uploading.thumb ? (
             <div className="flex items-center gap-1.5 font-sans text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading thumbnail…
+              <Loader2 className="size-3.5 animate-spin" /> {tMedia('uploadingThumbnail', { default: 'Uploading thumbnail…' })}
             </div>
           ) : null}
         </div>{' '}
         <div className="space-y-1.5">
           {' '}
-          <label className={LABEL}>Description</label>{' '}
+          <label className={LABEL}>{t('studio.description', { default: 'Description' })}</label>{' '}
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             className={INPUT + ' resize-y'}
+            dir={locale === 'ar' ? 'rtl' : 'ltr'}
           />{' '}
         </div>{' '}
+        <div className="border-t border-border pt-5">
+          <LessonBlockEditor
+            key={lesson.id}
+            lessonId={lesson.id}
+            initialDocument={lesson.contentBlocks}
+            locale={locale}
+            videoUrl={displaySrc}
+            onDocumentChange={onContentBlocksChange}
+          />
+        </div>
         <label className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
           {' '}
           <span>
             {' '}
-            <span className="font-sans text-sm font-medium text-foreground">Free preview</span>{' '}
+            <span className="font-sans text-sm font-medium text-foreground">{t('studio.freePreview', { default: 'Free preview' })}</span>{' '}
             <span className="block font-sans text-xs text-muted-foreground">
-              Let unenrolled learners watch this lesson
+              {t('studio.freePreviewHint', { default: 'Let unenrolled learners watch this lesson' })}
             </span>{' '}
           </span>{' '}
           <button
@@ -594,15 +633,15 @@ export function LessonDrawer({
             {' '}
             <span
               className={
-                'absolute top-0.5 h-5 w-5 rounded-md bg-white shadow transition-all ' +
-                (freePreview ? 'left-[22px]' : 'left-0.5')
+                'absolute top-0.5 size-5 rounded-md bg-card shadow transition-all ' +
+                (freePreview ? 'start-[22px]' : 'start-0.5')
               }
             />{' '}
           </button>{' '}
         </label>{' '}
         <div className="space-y-2">
           {' '}
-          <label className={LABEL}>Attachments</label>{' '}
+          <label className={LABEL}>{t('studio.attachments', { default: 'Attachments' })}</label>{' '}
           <div
             onClick={() => attInputRef.current?.click()}
             onDragOver={(e) => {
@@ -623,13 +662,13 @@ export function LessonDrawer({
             }
           >
             {' '}
-            <Upload className="h-5 w-5 text-muted-foreground/70" />{' '}
+            <Upload className="size-5 text-muted-foreground/70" />{' '}
             <p className="font-sans text-sm text-muted-foreground">
               {' '}
-              {attDragOver ? 'Drop to attach' : 'Drag & drop files, or click to browse'}{' '}
+              {attDragOver ? tMedia('dropToAttach', { default: 'Drop to attach' }) : tMedia('dropFilesBrowse', { default: 'Drag & drop files, or click to browse' })}{' '}
             </p>{' '}
             <p className="font-sans text-xs text-muted-foreground/60">
-              PDF, slides, images, video · multiple allowed
+              {tMedia('attachmentFormatsHint', { default: 'PDF, slides, images, video · multiple allowed' })}
             </p>{' '}
           </div>{' '}
           <input
@@ -653,7 +692,7 @@ export function LessonDrawer({
                 >
                   {' '}
                   {busy ? (
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                    <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
                   ) : (
                     <FileGlyph type={a.type} />
                   )}{' '}
@@ -661,17 +700,17 @@ export function LessonDrawer({
                     value={a.name}
                     disabled={busy}
                     onChange={(e) => patchAttachment(a.id, { name: e.target.value })}
-                    placeholder="Label"
+                    placeholder={tMedia('label', { default: 'Label' })}
                     className="w-36 rounded-md border border-border bg-transparent px-2 py-1 font-sans text-sm outline-none focus:ring-2 focus:ring-accent/30 disabled:opacity-60"
                   />{' '}
                   {busy ? (
-                    <span className="font-sans text-xs text-muted-foreground">Uploading…</span>
+                    <span className="font-sans text-xs text-muted-foreground">{tMedia('uploading', { default: 'Uploading…' })}</span>
                   ) : a.url ? (
                     <a
                       href={a.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex-1 truncate font-sans text-xs text-sky-700 hover:underline dark:text-sky-300"
+                      className="flex-1 truncate font-sans text-xs text-info hover:underline"
                     >
                       {' '}
                       {a.url}{' '}
@@ -687,11 +726,11 @@ export function LessonDrawer({
                   <button
                     type="button"
                     onClick={() => removeAttachment(a.id)}
-                    aria-label="Remove attachment"
-                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600"
+                    aria-label={tMedia('removeAttachment', { default: 'Remove attachment' })}
+                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                   >
                     {' '}
-                    <X className="h-4 w-4" />{' '}
+                    <X className="size-4" />{' '}
                   </button>{' '}
                 </div>
               );
@@ -708,28 +747,28 @@ export function LessonDrawer({
               className="flex items-center gap-1.5 rounded-lg border border-border bg-transparent px-3 py-2 font-sans text-sm text-muted-foreground transition hover:text-foreground"
             >
               {' '}
-              <Copy className="h-4 w-4" /> Duplicate{' '}
+              <Copy className="size-4" /> {t('studio.duplicate', { default: 'Duplicate' })}{' '}
             </button>{' '}
             <button
               type="button"
               onClick={onDelete}
-              className="flex items-center gap-1.5 rounded-lg border border-red-300/60 px-3 py-2 font-sans text-sm text-red-600 transition hover:bg-red-500/10 dark:border-red-900/40 dark:text-red-400"
+              className="flex items-center gap-1.5 rounded-lg border border-red-300/60 px-3 py-2 font-sans text-sm text-destructive transition hover:bg-destructive/10 dark:border-red-900/40 dark:text-destructive"
             >
               {' '}
-              <Trash2 className="h-4 w-4" /> Delete{' '}
+              <Trash2 className="size-4" /> {tCommon('delete', { default: 'Delete' })}{' '}
             </button>{' '}
           </div>{' '}
           <button
             type="button"
             onClick={save}
             disabled={uploadingCount > 0}
-            className="rounded-lg bg-accent px-4 py-2 font-sans text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg bg-accent px-4 py-2 font-sans text-sm font-medium text-accent-foreground transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-40"
           >
             {' '}
-            {uploadingCount > 0 ? 'Uploading…' : 'Save lesson'}{' '}
+            {uploadingCount > 0 ? tMedia('uploading', { default: 'Uploading…' }) : t('studio.saveLesson', { default: 'Save lesson' })}{' '}
           </button>{' '}
         </div>{' '}
       </div>{' '}
-    </RightSheet>
+    </Modal>
   );
 }

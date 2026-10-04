@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { SearchController } from './search.controller';
+import { AdminSearchController, SearchController } from './search.controller';
 import { SearchService } from './search.service';
+import { AiCoreModule } from '../ai/ai-core.module';
 
 @Module({
-  controllers: [SearchController],
+  imports: [AiCoreModule],
+  controllers: [SearchController, AdminSearchController],
   providers: [SearchService],
   exports: [SearchService],
 })

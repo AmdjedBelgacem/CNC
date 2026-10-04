@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, HttpException, HttpStatus, Optional } from '@nestjs/common';
 import { DrizzleService } from '../../../database/drizzle.service';
 import { users } from '../../../database/schema/users';
 import { userTenantRoles, verificationTokens as vt, refreshTokens as rt, userSessions as us, impersonationSessions } from '../../../database/schema/auth';
@@ -12,8 +12,26 @@ import { LockoutService } from './lockout.service';
 import { EmailService } from './email.service';
 import { KeyManagementService } from './key-management.service';
 import { RbacService } from '../../rbac/rbac.service';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { PlatformAlertsService } from '../../notifications/platform-alerts.service';
+import { SearchService } from '../../search/search.service';
 import { eq, and, isNull, gte, lte, or, ilike, sql, gt, desc } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
+
+/**
+ * Roles whose compromise is a platform problem rather than one tenant's
+ * problem. Used to decide when a personal security notification is also
+ * escalated to the platform feed.
+ */
+const PRIVILEGED_ROLES = new Set(['super_admin', 'admin', 'instructor', 'moderator']);
+
+/** Every login-related audit action, so the history shows failures and 2FA steps too. */
+const LOGIN_HISTORY_ACTIONS = [
+  'user.login',
+  'user.login.failed',
+  'user.login.2fa_pending',
+  'user.login.2fa_verified',
+];
 
 @Injectable()
 export class AuthService {
@@ -29,6 +47,9 @@ export class AuthService {
     private emailService: EmailService,
     private keyManagement: KeyManagementService,
     private rbac: RbacService,
+    @Optional() private notifications?: NotificationsService,
+    @Optional() private search?: SearchService,
+    @Optional() private platformAlerts?: PlatformAlertsService,
   ) {}
 
   get password() { return this.passwordService; }
@@ -39,6 +60,34 @@ export class AuthService {
   get emailVerification() { return this.emailVerificationService; }
   get lockout() { return this.lockoutService; }
   get email() { return this.emailService; }
+
+  notifySecurityEvent(params: {
+    userId: string;
+    tenantId: string;
+    type: string;
+    title: string;
+    body?: string;
+    actorId?: string;
+    entityType?: string;
+    entityId?: string;
+    idempotencyKey?: string;
+  }) {
+    if (!this.notifications) return;
+    void this.notifications.notifyUser({
+      tenantId: params.tenantId,
+      userId: params.userId,
+      type: params.type,
+      category: 'security',
+      title: params.title,
+      body: params.body,
+      actorId: params.actorId,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      idempotencyKey: params.idempotencyKey,
+      inApp: true,
+      email: true,
+    }).catch(() => {});
+  }
 
   /**
    * Public profile routes resolve users by `username` (`GET /profile/:username`).
@@ -131,6 +180,17 @@ export class AuthService {
       entityType: 'user', entityId: user.id,
       details: { email: user.email, tenantId: params.tenantId },
     });
+    void this.notifications?.notifyTenantAdmins(params.tenantId, {
+      type: 'new_user_signup',
+      category: 'system',
+      title: 'New user signup',
+      body: `${user.name || user.email} joined the workspace.`,
+      href: `/admin/users?focus=${user.id}`,
+      actorId: user.id,
+      entityType: 'user',
+      entityId: user.id,
+      idempotencyKey: `new-user:${params.tenantId}:${user.id}`,
+    }).catch(() => {});
 
     return { user, verificationToken };
   }
@@ -184,6 +244,16 @@ export class AuthService {
       });
 
       if (result.locked) {
+        this.notifySecurityEvent({
+          userId: user.id,
+          tenantId: user.tenantId,
+          type: 'account_locked',
+          title: 'Your account was temporarily locked',
+          body: 'Several unsuccessful sign-in attempts were detected. Wait before trying again.',
+          entityType: 'user',
+          entityId: user.id,
+          idempotencyKey: `account-locked:${user.id}:${new Date().toISOString().slice(0, 13)}`,
+        });
         throw new HttpException('Account locked due to too many failed attempts. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
       }
       throw new UnauthorizedException('Invalid email or password');
@@ -316,9 +386,17 @@ export class AuthService {
     await this.drizzle.db.update(users).set({ passwordHash: newHash, passwordChangedAt: new Date() }).where(eq(users.id, userId));
     await this.tokenService.revokeAllUserTokens(userId);
 
-    this.emailService.sendPasswordChangedNotification(user.email);
-
-    await this.auditService.log({ userId, action: 'user.password.change', entityType: 'user', entityId: userId });
+    await this.auditService.log({ userId, action: 'user.password.change', entityType: 'user', entityId: userId, tenantId: user.tenantId });
+    this.notifySecurityEvent({
+      userId,
+      tenantId: user.tenantId,
+      type: 'password_changed',
+      title: 'Your password was changed',
+      body: 'Your password was updated. If this was not you, contact support immediately.',
+      entityType: 'user',
+      entityId: userId,
+      idempotencyKey: `password-changed:${userId}:${Date.now()}`,
+    });
   }
 
   async requestEmailChange(userId: string, newEmail: string, password: string, tenantId: string): Promise<{ message: string }> {
@@ -341,7 +419,17 @@ export class AuthService {
 
     this.emailService.sendEmailChangeVerification(newEmail, rawToken, tenantId);
 
-    await this.auditService.log({ userId, action: 'user.email.change.request', entityType: 'user', entityId: userId, details: { newEmail } });
+    await this.auditService.log({ userId, action: 'user.email.change.request', entityType: 'user', entityId: userId, details: { newEmail }, tenantId });
+    this.notifySecurityEvent({
+      userId,
+      tenantId,
+      type: 'email_change_requested',
+      title: 'Email change requested',
+      body: 'A request was made to change the email address on your account.',
+      entityType: 'user',
+      entityId: userId,
+      idempotencyKey: `email-change-requested:${userId}:${Date.now()}`,
+    });
     return { message: 'Verification email sent to new address' };
   }
 
@@ -365,7 +453,17 @@ export class AuthService {
 
     this.emailService.sendEmailChangedNotification(oldEmail, pendingEmail);
 
-    await this.auditService.log({ userId: record.userId, action: 'user.email.change.confirm', entityType: 'user', entityId: record.userId, details: { oldEmail, newEmail: pendingEmail } });
+    await this.auditService.log({ userId: record.userId, action: 'user.email.change.confirm', entityType: 'user', entityId: record.userId, details: { oldEmail, newEmail: pendingEmail }, tenantId: record.user.tenantId });
+    this.notifySecurityEvent({
+      userId: record.userId,
+      tenantId: record.user.tenantId,
+      type: 'email_changed',
+      title: 'Your email address was changed',
+      body: 'The email address on your account was updated successfully.',
+      entityType: 'user',
+      entityId: record.userId,
+      idempotencyKey: `email-changed:${record.userId}:${Date.now()}`,
+    });
   }
 
   async getProfile(userId: string) {
@@ -458,7 +556,18 @@ export class AuthService {
     await this.drizzle.db.update(users).set({ accountStatus: 'suspended' }).where(eq(users.id, targetUserId));
     await this.tokenService.revokeAllUserTokens(targetUserId);
     await this.auditService.log({
-      userId: adminUserId, action: 'user.suspend', entityType: 'user', entityId: targetUserId, details: { reason },
+      userId: adminUserId, action: 'user.suspend', entityType: 'user', entityId: targetUserId, details: { reason }, tenantId: user.tenantId,
+    });
+    this.notifySecurityEvent({
+      userId: targetUserId,
+      tenantId: user.tenantId,
+      type: 'account_suspended',
+      title: 'Your account was suspended',
+      body: reason || 'Contact support for more information.',
+      actorId: adminUserId,
+      entityType: 'user',
+      entityId: targetUserId,
+      idempotencyKey: `account-suspended:${targetUserId}:${Date.now()}`,
     });
   }
 
@@ -469,7 +578,18 @@ export class AuthService {
       accountStatus: 'active', failedLoginAttempts: 0, lockedUntil: null,
     }).where(eq(users.id, targetUserId));
     await this.auditService.log({
-      userId: adminUserId, action: 'user.unsuspend', entityType: 'user', entityId: targetUserId,
+      userId: adminUserId, action: 'user.unsuspend', entityType: 'user', entityId: targetUserId, tenantId: user.tenantId,
+    });
+    this.notifySecurityEvent({
+      userId: targetUserId,
+      tenantId: user.tenantId,
+      type: 'account_unsuspended',
+      title: 'Your account was restored',
+      body: 'Your account is active again.',
+      actorId: adminUserId,
+      entityType: 'user',
+      entityId: targetUserId,
+      idempotencyKey: `account-unsuspended:${targetUserId}:${Date.now()}`,
     });
   }
 
@@ -480,8 +600,38 @@ export class AuthService {
     await this.drizzle.db.update(users).set({ passwordHash: null }).where(eq(users.id, targetUserId));
     const resetToken = await this.emailVerificationService.createPasswordResetToken(user.email, user.tenantId, tenantSlug);
     await this.auditService.log({
-      userId: adminUserId, action: 'admin.password.reset', entityType: 'user', entityId: targetUserId, details: { forceReset: true },
+      userId: adminUserId, action: 'admin.password.reset', entityType: 'user', entityId: targetUserId, details: { forceReset: true }, tenantId: user.tenantId,
     });
+    this.notifySecurityEvent({
+      userId: targetUserId,
+      tenantId: user.tenantId,
+      type: 'password_reset_required',
+      title: 'A password reset was required',
+      body: 'An administrator initiated a password reset for your account.',
+      actorId: adminUserId,
+      entityType: 'user',
+      entityId: targetUserId,
+      idempotencyKey: `password-reset-required:${targetUserId}:${Date.now()}`,
+    });
+    // Resetting a privileged account is the step immediately before a takeover,
+    // so a super admin hears about it even if it happened in another tenant.
+    if (PRIVILEGED_ROLES.has(String(user.role ?? ''))) {
+      void this.platformAlerts
+        ?.emit({
+          group: 'security',
+          type: 'admin_password_reset_forced',
+          title: `Password reset forced for a privileged account`,
+          body:
+            `An administrator forced a password reset for ${user.email} ` +
+            `(role: ${user.role}). All sessions were revoked.`,
+          tenantId: user.tenantId,
+          entityType: 'user',
+          entityId: targetUserId,
+          href: '/admin/users',
+          data: { targetEmail: user.email, targetRole: user.role, forcedBy: adminUserId },
+        })
+        .catch(() => undefined);
+    }
     return { resetToken };
   }
 
@@ -605,6 +755,8 @@ export class AuthService {
       accountStatus: 'deleted', deletedAt: new Date(), deletedByUserId,
     }).where(eq(users.id, userId));
     await this.tokenService.revokeAllUserTokens(userId);
+    const deletedUser = await this.drizzle.db.query.users.findFirst({ where: eq(users.id, userId), columns: { tenantId: true } });
+    if (deletedUser) void this.search?.removeEntity(deletedUser.tenantId, 'user', userId);
     await this.auditService.log({ userId: deletedByUserId, action: 'user.delete', entityType: 'user', entityId: userId });
   }
 
@@ -630,19 +782,48 @@ export class AuthService {
     if (Object.keys(updateData).length === 0) throw new BadRequestException('No fields to update');
     updateData.updatedAt = new Date();
     await this.drizzle.db.update(users).set(updateData).where(eq(users.id, userId));
+    const updatedUser = await this.drizzle.db.query.users.findFirst({ where: eq(users.id, userId), columns: { tenantId: true } });
+    if (updatedUser) void this.search?.indexEntity(updatedUser.tenantId, 'user', userId);
     await this.auditService.log({ userId, action: 'user.profile.update', entityType: 'user', entityId: userId, details: updateData });
     return this.getProfile(userId);
   }
 
   async getLoginHistory(userId: string, limit = 20) {
+    // Was `action: 'user.login'` with exact equality, which excluded every failed
+    // attempt ('user.login.failed') and the 2FA steps — the security panel rendered
+    // an empty or success-only list and its "Failed" branch was unreachable.
     return this.auditService.getLogs({
       userId,
-      action: 'user.login',
+      actions: [...LOGIN_HISTORY_ACTIONS],
       limit,
     });
   }
 
-  async deleteMyAccount(userId: string): Promise<void> {
+  /**
+   * Soft-deletes the account. Requires an explicit typed confirmation, and the
+   * current password whenever the account actually has one — the settings page
+   * previously only checked "DELETE" in the browser, so a single authenticated POST
+   * (or any XSS/CSRF-with-token) destroyed the account.
+   */
+  async deleteMyAccount(userId: string, input: { confirmation?: string; password?: string } = {}): Promise<void> {
+    if (String(input?.confirmation ?? '').trim().toUpperCase() !== 'DELETE') {
+      throw new BadRequestException('Type DELETE to confirm account deletion');
+    }
+
+    const user = await this.drizzle.db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { passwordHash: true },
+    });
+    if (!user) throw new BadRequestException('User not found');
+
+    // OAuth-only accounts have no password, so there is nothing to verify for them.
+    if (user.passwordHash) {
+      const valid = input?.password ? await this.passwordService.verify(user.passwordHash, input.password) : false;
+      if (!valid) {
+        throw new UnauthorizedException('Password is incorrect');
+      }
+    }
+
     await this.drizzle.db.update(users).set({
       accountStatus: 'deleted', deletedAt: new Date(), deletedByUserId: userId,
     }).where(eq(users.id, userId));
