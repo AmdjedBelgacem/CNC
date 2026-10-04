@@ -30,7 +30,10 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm --filter @titan/frontend build
+      # Same reason as the backend job: 103 frontend files import @titan/shared, whose
+      # `main`/`types` point at `dist/`. Building it directly bypassed turbo's
+      # `dependsOn: ["^build"]`, so the fresh checkout had no dist and the build failed.
+      - run: pnpm turbo build --filter=@titan/frontend
 
   backend-build:
     runs-on: ubuntu-24.04
@@ -51,7 +54,11 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm --filter @titan/backend build
+      # `pnpm --filter @titan/backend build` runs `nest build` directly, which bypasses
+      # turbo's `dependsOn: ["^build"]`, so @titan/shared was never built and its
+      # `dist/` (the package's `main`/`types`) did not exist -> 55 TS2307 errors.
+      # Building through turbo builds workspace dependencies first.
+      - run: pnpm turbo build --filter=@titan/backend
         env:
           DATABASE_URL: postgresql://titans:titans@localhost:5432/titans_cnc
           REDIS_URL: redis://localhost:6379

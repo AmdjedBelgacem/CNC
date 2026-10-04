@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
@@ -5,7 +6,11 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
   turbopack: {
-    root: '/Users/mac/programming/projects/cnc',
+    // Monorepo root, resolved from this file rather than hardcoded. An absolute
+    // machine-specific path (`/Users/mac/...`) made Turbopack fail on CI with
+    // "Invalid distDirRoot: \".next\". distDirRoot should not navigate out of the
+    // projectPath", because the configured root did not exist on the runner.
+    root: path.join(__dirname, '../..'),
   },
   images: {
     remotePatterns: [
