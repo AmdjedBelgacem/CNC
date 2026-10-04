@@ -117,6 +117,16 @@ production. It needs a real upload or should be unpublished.
 
 ---
 
+## Deployment
+
+Vercel (frontend + backend services, backend internal behind a binding) is documented in
+`docs/ops/VERCEL_DEPLOYMENT.md`. That includes the env vars the backend refuses to boot
+without, the OAuth rewrite, and three gaps this deployment does **not** solve: the
+unverified Nest-on-Fastify runtime path, the Socket.IO gateway at `/ws`, and the need for
+hosted Redis and Meilisearch.
+
+---
+
 ## Verified state
 
 ```
