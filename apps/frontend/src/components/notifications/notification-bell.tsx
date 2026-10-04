@@ -59,10 +59,12 @@ export function NotificationBell({ className }: { className?: string }) {
   const unreadQuery = useUnreadCount(enabled, 20_000);
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const { connected, reconnecting } = useNotificationSocket();
+  const { connected, reconnecting, pollingOnly } = useNotificationSocket();
   const unreadCount = unreadQuery.data ?? notifications.filter((item) => !item.isRead).length;
   const formattedUnreadCount = formatNumber(unreadCount, locale);
-  const liveLabel = connected ? t('liveOn') : reconnecting ? t('reconnecting') : t('polling');
+  // `pollingOnly` means the socket gave up and REST polling is now authoritative — say
+  // so, rather than leaving the header on "reconnecting" forever.
+  const liveLabel = connected ? t('liveOn') : pollingOnly ? t('polling') : reconnecting ? t('reconnecting') : t('polling');
 
   useLayoutEffect(() => {
     if (!open) {

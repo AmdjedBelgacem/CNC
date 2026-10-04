@@ -5,6 +5,7 @@ import { io, type Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
+import { skipSocket, socketOptions } from '@/lib/realtime';
 import {
   normalizeNotification,
   notificationKeys,
@@ -16,12 +17,19 @@ interface NotificationSocketContextValue {
   socket: Socket | null;
   connected: boolean;
   reconnecting: boolean;
+  /**
+   * True when realtime is unavailable and the REST poller is the only source of truth.
+   * Consumers should say "polling" rather than "reconnecting" — the socket is not coming
+   * back, so a reconnecting label would be a lie that never resolves.
+   */
+  pollingOnly: boolean;
 }
 
 const NotificationSocketContext = createContext<NotificationSocketContextValue>({
   socket: null,
   connected: false,
   reconnecting: false,
+  pollingOnly: false,
 });
 
 function websocketUrl(): string {
@@ -70,6 +78,7 @@ export function NotificationSocketProvider({ children }: { children: React.React
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [pollingOnly, setPollingOnly] = useState(skipSocket());
 
   useEffect(() => {
     if (!hydrated || !isAuthenticated) {
@@ -82,9 +91,19 @@ export function NotificationSocketProvider({ children }: { children: React.React
       return;
     }
 
+    // Realtime explicitly disabled (NEXT_PUBLIC_REALTIME_MODE=polling). The REST poller in
+    // use-notifications.ts keeps the unread badge and list fresh, so there is nothing to
+    // do here — and no socket to reconnect to.
+    if (skipSocket()) {
+      setSocket(null);
+      setConnected(false);
+      setReconnecting(false);
+      setPollingOnly(true);
+      return;
+    }
+
     const nextSocket = io(websocketUrl(), {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
+      ...socketOptions(),
       autoConnect: true,
       query: { tenant: process.env.NEXT_PUBLIC_DEFAULT_TENANT_SLUG || DEFAULT_TENANT_SLUG },
     });
@@ -94,6 +113,7 @@ export function NotificationSocketProvider({ children }: { children: React.React
     const onConnect = () => {
       setConnected(true);
       setReconnecting(false);
+      setPollingOnly(false);
       void queryClient.invalidateQueries({ queryKey: notificationKeys.unread() });
       void queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
     };
@@ -104,6 +124,14 @@ export function NotificationSocketProvider({ children }: { children: React.React
     const onConnectError = () => {
       setConnected(false);
       setReconnecting(true);
+    };
+    // Socket.IO gives up after `reconnectionAttempts`. When it does, realtime is not
+    // coming back on this host — switch the UI to the polling label so the bell stops
+    // promising a connection that will never arrive.
+    const onGiveUp = () => {
+      setConnected(false);
+      setReconnecting(false);
+      setPollingOnly(true);
     };
     const onUnreadCount = (payload: unknown) => {
       const count = countFromPayload(payload);
@@ -143,6 +171,7 @@ export function NotificationSocketProvider({ children }: { children: React.React
     nextSocket.on('connect', onConnect);
     nextSocket.on('disconnect', onDisconnect);
     nextSocket.on('connect_error', onConnectError);
+    nextSocket.io.on('reconnect_failed', onGiveUp);
     nextSocket.on('notification:new', onNotification);
     nextSocket.on('notification:unread-count', onUnreadCount);
     nextSocket.on('notifications:unread-count', onUnreadCount);
@@ -155,6 +184,7 @@ export function NotificationSocketProvider({ children }: { children: React.React
       nextSocket.off('connect', onConnect);
       nextSocket.off('disconnect', onDisconnect);
       nextSocket.off('connect_error', onConnectError);
+      nextSocket.io.off('reconnect_failed', onGiveUp);
       nextSocket.off('notification:new', onNotification);
       nextSocket.off('notification:unread-count', onUnreadCount);
       nextSocket.off('notifications:unread-count', onUnreadCount);
@@ -171,7 +201,7 @@ export function NotificationSocketProvider({ children }: { children: React.React
   }, [hydrated, isAuthenticated, queryClient]);
 
   return (
-    <NotificationSocketContext.Provider value={{ socket, connected, reconnecting }}>
+    <NotificationSocketContext.Provider value={{ socket, connected, reconnecting, pollingOnly }}>
       {children}
     </NotificationSocketContext.Provider>
   );

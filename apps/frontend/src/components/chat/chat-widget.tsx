@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, X, Send, Loader2, User, Bot } from 'lucide-react';
+import { skipSocket, socketOptions } from '@/lib/realtime';
 
 interface ChatMessage {
   id: string;
@@ -18,6 +19,7 @@ export function ChatWidget() {
   const [input, setInput] = useState('');
   const [convId, setConvId] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [unavailable, setUnavailable] = useState(skipSocket());
   const [showWelcome, setShowWelcome] = useState(true);
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -41,11 +43,20 @@ export function ChatWidget() {
 
   const connectSocket = useCallback(() => {
     if (socketRef.current?.connected) return;
+    // Realtime disabled (NEXT_PUBLIC_REALTIME_MODE=polling). There is no REST fallback
+    // for chat, so this stays unavailable rather than opening a socket we were told
+    // not to open.
+    if (skipSocket()) {
+      setUnavailable(true);
+      setConnecting(false);
+      return;
+    }
+    setUnavailable(false);
     setConnecting(true);
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
     const s = io(`${wsUrl}/chat`, {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
+      ...socketOptions(),
+      autoConnect: true,
     });
     s.on('connect', () => {
       setConnecting(false);
@@ -60,6 +71,13 @@ export function ChatWidget() {
       setMessages((prev) => [...prev, msg]);
     });
     s.on('disconnect', () => setConnecting(false));
+    // Chat has no REST fallback: `chat:start`, `chat:history` and `chat:message` are
+    // socket-only, and the backend exposes no HTTP equivalent. So when the socket gives
+    // up we surface "unavailable" instead of retrying forever and pretending.
+    s.io.on('reconnect_failed', () => {
+      setConnecting(false);
+      setUnavailable(true);
+    });
     socketRef.current = s;
   }, []);
 
@@ -108,7 +126,20 @@ export function ChatWidget() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {showWelcome && messages.length === 0 && (
+            {unavailable && (
+              // No REST fallback exists for chat, so say it plainly instead of leaving a
+              // composer that silently swallows messages.
+              <div role="status" className="rounded-xl border border-border bg-muted/30 p-3.5 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">Live chat is unavailable</p>
+                <p className="mt-1 text-xs leading-relaxed">
+                  {skipSocket()
+                    ? 'Realtime is disabled for this deployment (NEXT_PUBLIC_REALTIME_MODE=polling).'
+                    : 'The realtime connection could not be established.'}{' '}
+                  Use the AI assistant or email us instead.
+                </p>
+              </div>
+            )}
+            {!unavailable && showWelcome && messages.length === 0 && (
               <div className="flex items-start gap-2.5">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <Bot className="size-3.5 text-primary" />
@@ -129,6 +160,7 @@ export function ChatWidget() {
             ))}
             <div ref={bottomRef} />
           </div>
+          {!unavailable && (
           <div className="border-t p-3">
             <div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-1.5">
               <input
@@ -149,6 +181,7 @@ export function ChatWidget() {
               </button>
             </div>
           </div>
+          )}
         </div>
       )}
       <button
