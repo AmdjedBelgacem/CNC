@@ -7,7 +7,10 @@
 - Redis `:6379` (`cnc-redis-1` or any local redis)
 - MinIO `:9002` API / `:9001` console (`minioadmin/minioadmin`), bucket `titans-local`
   (created by `docker-compose minio-create-bucket`, public read).
-- Meilisearch `:7700` (optional for local lesson/academy flows).
+- Meilisearch `:7700`, started with `docker compose up -d meilisearch`. Container name is
+  `cnc-meilisearch`; data is a bind mount at `.runtime/meili/data` (gitignored, ~1.4 MB).
+  That path is deliberate — a named Docker volume is not interchangeable with it, and using
+  one starts a second, empty index that the app silently falls back to Postgres search for.
 
 ## Backend (`:4000`)
 

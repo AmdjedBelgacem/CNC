@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -21,12 +19,35 @@ services:
 
   meilisearch:
     image: getmeili/meilisearch:v1.12
+    container_name: cnc-meilisearch
     ports:
       - '7700:7700'
     environment:
       MEILI_MASTER_KEY: masterKey
+      # Telemetry phoning home on every local boot is noise, and the index holds
+      # local development data only.
+      MEILI_NO_ANALYTICS: 'true'
     volumes:
-      - meilidata:/meili_data
+      # Bind mount into .runtime/, NOT a named Docker volume.
+      #
+      # These two are not interchangeable and the difference caused real confusion. The
+      # live container was started ad-hoc as `cnc-meilisearch` with
+      # `.runtime/meili/data -> /meili_data`, and holds the working 150-document
+      # `titan_search` index. Compose declared a *named* volume `meilidata`, so
+      # `docker compose up meilisearch` would have produced a second container named
+      # `cnc-meilisearch-1` against a different, empty volume — the app would have
+      # connected to a blank index and silently fallen back to Postgres search.
+      #
+      # A bind mount keeps the index beside the repo (gitignored), so it is visible,
+      # backup-able and wiped with an obvious `rm -rf .runtime`.
+      - ./.runtime/meili/data:/meili_data
+    healthcheck:
+      # `depends_on: condition: service_healthy` elsewhere needs this to be meaningful.
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:7700/health']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   minio:
     image: minio/minio:latest
@@ -55,5 +76,4 @@ services:
 volumes:
   pgdata:
   redisdata:
-  meilidata:
   miniodata:
