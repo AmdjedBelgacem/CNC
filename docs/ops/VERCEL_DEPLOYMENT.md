@@ -4,20 +4,34 @@ One Vercel project, two services, one domain. The frontend owns all public traff
 backend is **internal** and reached over a service binding.
 
 ```
-                      ┌───────────────────────── your-domain.com ─────────────────────────┐
-  /auth/oauth/*  ───► │  backend (internal service, @vercel/node)                          │
-                      │      ▲                                                          │
-                      │      │ private link — binding API_INTERNAL_URL                    │
-  /*  (catch-all) ──► │  frontend (Next.js) ──► /api/proxy/*  ────────────────────────────┘
-                      └──────────────────────────────────────────────────────────────────────┘
+                      ┌──────────────────── your-domain.com ─────────────────────┐
+  /auth/oauth/*  ───► │                                                        │
+  /socket.io/*   ───► │  backend — CONTAINER service (long-running Node)        │
+                      │      ▲                                                 │
+                      │      │ private link — binding API_INTERNAL_URL           │
+  /*  (catch-all) ──► │  frontend (Next.js) ──► /api/proxy/* ────────────────────┘
+                      └────────────────────────────────────────────────────────┘
 ```
 
 ## Topology
 
-| Service | Root | Public? | Reached by |
-| --- | --- | --- | --- |
-| `frontend` | `apps/frontend` | Yes — catch-all `/(.*)` | Browser |
-| `backend` | `apps/backend` | Only `/auth/oauth/*` | Binding from `frontend` |
+| Service | Root | Runtime | Public? | Reached by |
+| --- | --- | --- | --- | --- |
+| `frontend` | `apps/frontend` | Next.js function | Yes — catch-all `/(.*)` | Browser |
+| `backend` | `.` (repo root) | **container** | `/auth/oauth/*`, `/socket.io/*` | Binding from `frontend` |
+
+### Why the backend is a container
+
+It was first deployed as a Node function, which failed at the launcher with
+`Invalid export found in module "/var/task/main.js"` across several correctly-delivered
+attempts (`.cts` + `export =`, and CommonJS emit). A container runs the same long-running
+`node dist/main.js` that serves `/health` locally, so local and production behaviour are
+identical by construction — and it also allows the Socket.IO connections at `/ws` to be
+held, which a function cannot do.
+
+The Dockerfile lives at the **repository root** because Vercel uses the service root as
+the container build context, and the image needs the whole pnpm workspace. Hence
+`"root": "."` for the backend service.
 
 `apps/admin` (Payload CMS) is **not** part of this project — it deploys separately.
 
@@ -28,7 +42,13 @@ All browser API traffic already goes to the frontend's own proxy: `api-client.ts
 uses `API_INTERNAL_URL` — the binding. So no `/api/*` public rewrite is needed, and the
 backend is never exposed to the internet.
 
-The single exception is the OAuth handshake. `connected-accounts/page.tsx` does
+Two paths are exposed publicly, because both are browser-initiated and cannot pass through
+the frontend proxy:
+- `/auth/oauth/*` — `connected-accounts/page.tsx` does `window.location.href = ...`, a
+  full-page browser navigation.
+- `/socket.io/*` — the Socket.IO transport endpoint. The namespace (`/ws`, `/chat`) is
+  carried in the handshake, so one rewrite covers them all. Without it the upgrade request
+  falls through to the catch-all and Next.js answers `308`. `connected-accounts/page.tsx` does
 `window.location.href = ${NEXT_PUBLIC_API_URL}/auth/oauth/google` — a full-page browser
 navigation that cannot go through a proxy. Hence the one narrow rewrite.
 
@@ -144,22 +164,56 @@ curl -s -o /dev/null -w '%{http_code}\n' $DOMAIN/courses   # frontend page, 200
 Then confirm in the app: sign in, upload an avatar, open a course video, run a search, and
 start an OAuth connection.
 
+
+## Required in production (boot refuses without these)
+
+`config.service.ts` calls `process.exit(1)` on invalid environment, so the container will
+not start unless all of these are set. Discovered by booting the image, not from docs:
+
+- `NODE_ENV=production`
+- `DATABASE_URL`, `AUTH_SECRET`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
+- `S3_BUCKET`, `S3_MEDIA_BUCKET`, `S3_PUBLIC_URL`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`
+- `REDIS_URL` — **required**, despite degrading gracefully when unreachable
+- `AI_PROVIDER_ALLOWED_HOSTS` — **required** (e.g. `api.openai.com`)
+- `AI_ASSISTANT_ENCRYPTION_KEY` (or `AI_SECRET_ENCRYPTION_KEY`)
+
+## Realtime
+
+The container supports WebSockets. `NEXT_PUBLIC_REALTIME_MODE` defaults the frontend to
+`polling`, which skips the socket entirely — set it to `auto` or `socket` to enable
+realtime on the container.
+
+## Verifying after deploy
+
+```bash
+D=https://your-domain.com
+curl -s -o /dev/null -w '%{http_code}\n' $D/                                  # frontend
+curl -s -o /dev/null -w '%{http_code}\n' $D/auth/oauth/state                  # backend
+curl -s $D/api/proxy/health                                                    # binding path
+curl -s "$D/socket.io/?EIO=4&transport=polling"                                # realtime
+```
+
 ## Known gaps
 
 These are **not** solved by this configuration:
 
-1. **Nest-on-Fastify behind the Vercel Node runtime is unverified.** Vercel documents
-   Express, Hono, h3, Bun and Python — not Nest/Fastify. `src/vercel-entry.ts` delegates
-   to Fastify's `request` listener so local and deployed behaviour match, but confirm with
-   `vercel dev` and a real deploy. The fallback is switching Nest to the Express adapter.
-2. **Socket.IO at `/ws` will not work.** Vercel Functions do support WebSockets (public
-   beta, requires Fluid Compute), but socket.io is not a supported framework, and a
-   connection is pinned to a single instance. `notification-socket-provider.tsx` and
-   `chat-widget.tsx` need either an external WebSocket host or a polling fallback.
-3. **`/health` is not publicly reachable.** It matches the catch-all, so it is handled by
-   the frontend and returns 404, not by the backend. For uptime checks either add a
-   rewrite (`{"source": "/health", "destination": {"service": "backend"}}` before the
-   catch-all) or probe the internal service URL.
+**Resolved by the container migration:** the Nest-on-Fastify function-runtime export
+problem, and the Socket.IO limitation (a function pins connections to one instance and
+socket.io was not a supported framework there). Both are now moot.
+
+Still open:
+
+1. **Redis is unreachable in production.** `REDIS_URL` must be a hosted instance; until
+   then `/health` reports `redis: degraded` and rate limiting falls back to the database.
+2. **Meilisearch is not configured.** Search falls back to Postgres full-text and
+   `/health` reports `search: degraded`. Omit the variables rather than pointing them at
+   `localhost`.
+3. **`/health` has no public rewrite.** It matches the catch-all, so the frontend answers
+   404. Use `$D/api/proxy/health` (which the binding reaches) or add a rewrite before the
+   catch-all.
+4. **Email is unconfigured** — no verified Resend domain and no Supabase Auth SMTP, so
+   password-recovery and verification mail cannot be delivered. See
+   `docs/ops/EMAIL_SETUP.md`.
 
 ## Rollback
 
