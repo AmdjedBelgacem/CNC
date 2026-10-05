@@ -4,3 +4,13 @@ packages:
 
 patchedDependencies:
   '@measured/puck@0.20.2': patches/@measured__puck@0.20.2.patch
+
+# pnpm's default isolated layout stores every package in the virtual store and links to it
+# with symlinks (apps/backend/node_modules/reflect-metadata -> ../../../node_modules/.pnpm/...).
+# Vercel's function tracer follows those links but emits only the `.pnpm/...` paths, and a
+# serverless lambda materialises no symlinks — so `require('reflect-metadata')` resolves
+# nothing and the backend function dies with:
+#   Cannot find module 'reflect-metadata' Require stack: - /var/task/main.js
+# Hoisting produces a flat, npm-style node_modules of real directories, which the tracer
+# emits as top-level paths Node can actually resolve.
+nodeLinker: hoisted
