@@ -19,13 +19,23 @@
  * Runs as `postbuild`, so it only affects the deployed bundle. Everything here is a
  * build artifact inside node_modules and is gitignored.
  */
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const backendRoot = resolve(here, '..');
 const repoRoot = resolve(backendRoot, '../..');
+
+/** existsSync follows symlinks and is false for a broken link; lstat does not. */
+const lstatExists = (p) => {
+  try {
+    lstatSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const source = join(repoRoot, 'packages/shared');
 const sourceDist = join(source, 'dist');
@@ -38,26 +48,30 @@ if (!existsSync(sourceDist)) {
 }
 
 /**
- * Write the copy to BOTH plausible locations.
+ * Write the copy to the hoisted repo-root node_modules, then delete pnpm's per-package
+ * link.
  *
- * Vercel emits traced file paths asymmetrically, which was observed directly in the
- * function's filePathMap:
- *   - service-root files        -> `database/schema/themes.js`      (prefix stripped)
- *   - hoisted root deps         -> `node_modules/reflect-metadata/…` (outside the root)
- *   - the workspace link        -> `apps/backend/node_modules/@titan/shared/…` (kept)
- * Only the first two land where Node's resolver looks. Writing both means one of them is
- * on the correct path regardless of which rule Vercel applies, instead of guessing.
+ * Both halves are required, and this was established from the function's filePathMap
+ * rather than guessed:
+ *
+ *  - Vercel emits a registry dep that lives at the repo root as `node_modules/<pkg>/…`,
+ *    which is exactly where Node's resolver looks. That is why hoisting fixed
+ *    reflect-metadata (0 -> 2584 top-level entries).
+ *  - pnpm links a workspace package at `apps/backend/node_modules/@titan/shared`. The
+ *    tracer follows that link and emits `apps/backend/node_modules/@titan/shared/…`, which
+ *    no Node resolver will ever find from /var/task. While the link exists the tracer
+ *    never even traces the root copy.
+ *
+ * So: materialise at the root, then remove the link so the tracer is forced to resolve
+ * `@titan/shared` to the root copy like any other dependency.
  */
-const targets = [join(backendRoot, 'node_modules/@titan/shared'), join(repoRoot, 'node_modules/@titan/shared')];
-const target = targets[0];
+const target = join(repoRoot, 'node_modules/@titan/shared');
 
-for (const dir of targets) {
-  // Replace rather than merge: a stale copy from a previous build would shadow the new one.
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
-  cpSync(join(source, 'package.json'), join(dir, 'package.json'));
-  cpSync(sourceDist, join(dir, 'dist'), { recursive: true });
-}
+// Replace rather than merge: a stale copy from a previous build would shadow the new one.
+rmSync(target, { recursive: true, force: true });
+mkdirSync(target, { recursive: true });
+cpSync(join(source, 'package.json'), join(target, 'package.json'));
+cpSync(sourceDist, join(target, 'dist'), { recursive: true });
 
 // Sanity check: the package's declared entry must actually exist in the copy, otherwise
 // the lambda fails at require time with exactly the error this script exists to prevent.
@@ -70,4 +84,11 @@ if (!existsSync(entry)) {
   process.exit(1);
 }
 
-console.log(`[shared] materialised @titan/shared (entry ${pkg.main}) ->\n  ${targets.join('\n  ')}`);
+// Remove pnpm's workspace link so the tracer is forced to the root copy above.
+const perPackageLink = join(backendRoot, 'node_modules/@titan/shared');
+if (existsSync(perPackageLink) || lstatExists(perPackageLink)) {
+  rmSync(perPackageLink, { recursive: true, force: true });
+  console.log('[shared] removed per-package workspace link so resolution uses the root copy');
+}
+
+console.log(`[shared] materialised @titan/shared (entry ${pkg.main}) -> ${target}`);
