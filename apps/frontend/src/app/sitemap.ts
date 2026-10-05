@@ -6,6 +6,20 @@ import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { SITE_URL as BASE_URL } from '@/lib/brand';
 
 /**
+ * Force per-request rendering.
+ *
+ * Next prerenders this route at build time by default, and `API_INTERNAL_URL` is a Vercel
+ * *service binding* that only exists at runtime. Every fetch therefore failed during the
+ * build, the empty result was baked in, and the served sitemap listed only the static
+ * routes — no courses, academies or products, which are the pages that matter. Verified
+ * against production: 9 URLs with and without this line.
+ *
+ * Dynamic rendering costs one invocation per sitemap request; crawlers fetch it rarely, and
+ * a correct sitemap is worth more than the invocations.
+ */
+export const dynamic = 'force-dynamic';
+
+/**
  * Sitemap for the public surface.
  *
  * Two defects made the previous version nearly useless. It emitted eight static URLs and
