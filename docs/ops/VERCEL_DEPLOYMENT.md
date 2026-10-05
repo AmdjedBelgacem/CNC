@@ -200,6 +200,89 @@ curl -s $D/api/proxy/health                                                    #
 curl -s "$D/socket.io/?EIO=4&transport=polling"                                # realtime
 ```
 
+## Container resources
+
+Measured on the deployed container (Docker, same image and command):
+
+| Metric | Value |
+| --- | --- |
+| Steady-state RSS | ~178 MB |
+| Peak RSS under a 150-request burst | ~192 MB |
+| Idle CPU | 0.00% |
+| cgroup limit | 2 GB |
+
+The app is already lean. Note that `docker stats` can report ~1.8 GB during a burst,
+but that is **page cache**, not application memory — `VmHWM` for PID 1 never exceeded
+192 MB. Do not read the cgroup figure as a leak.
+
+**The container's memory/CPU cannot be changed from `vercel.json`.** The `services`
+schema has no `memory` field (only `functions.<name>.memory` exists, which applies to
+serverless functions, not containers), and Vercel documents that memory must be set in
+the dashboard's Functions section when Fluid compute is enabled — `vercel.json` values
+are ignored with a build-time warning. On Hobby the size is fixed at 2 GB / 1 vCPU and
+cannot be configured at all.
+
+What *is* controlled from the repo, and is set in the `Dockerfile` runner stage:
+
+```
+ENV NODE_OPTIONS="--max-old-space-size=512"
+```
+
+Without it, Node sizes the V8 heap against the full 2 GB cgroup limit and grows toward
+it under load before collecting. 512 MB is ~2.7x the measured working set, so GC runs
+earlier instead of the heap expanding. Verified in-container:
+`v8.getHeapStatistics().heap_size_limit` reports 536 MB.
+
+To actually reduce the billed instance size, change it in the Vercel dashboard
+(Pro/Enterprise only).
+
+## Why every HTML response is `x-vercel-cache: MISS`
+
+Verified on production: `/`, `/courses` and `/login` all return
+`cache-control: private, no-cache, no-store, max-age=0, must-revalidate` with
+`x-vercel-cache: MISS`. Static assets, by contrast, are already
+`max-age=31536000, immutable` + `x-vercel-cache: HIT`, so they cost nothing.
+
+This is **not** a misconfiguration, and it is **not** fixable by adding cache
+headers. Two things each independently force it:
+
+1. **The root layout reads cookies.** `apps/frontend/src/app/layout.tsx` calls
+   `cookies()` for the tenant slug (`x-tenant-slug`) and the color mode
+   (`titans:color-mode`), and next-intl's `getLocale()` reads the locale cookie.
+   Any `cookies()` read opts the whole route into dynamic rendering. A production
+   build confirms it — only `/sitemap.xml` is `○ (Static)`; everything else is
+   `ƒ (Dynamic)`, server-rendered on demand.
+
+2. **The CSP uses a per-request nonce.** `src/middleware.ts` mints a fresh nonce
+   for every request and passes it to Next via the `x-nonce` request header, which
+   Next stamps onto the inline hydration scripts it emits. A *cached* HTML body
+   therefore has one nonce baked into its `<script>` tags while the middleware
+   would present a *different* nonce in the `Content-Security-Policy` header. The
+   browser applies the stricter interpretation and blocks every inline script —
+   which is exactly the bug that left the whole site frozen on loading skeletons
+   before the nonce was introduced.
+
+So the two optimizations are mutually exclusive as things stand: static, CDN-cached
+HTML cannot coexist with a per-response nonce. The options are:
+
+| Approach | Cacheable | Cost |
+| --- | --- | --- |
+| Nonce CSP + dynamic render (**current**) | No | One render per pageview |
+| Hash-based CSP from the build (`experimental.sri.algorithm`) | Yes | Build-time hashes; no per-request work |
+| `script-src 'unsafe-inline'` | Yes | **Rejected** — reinstates the XSS exposure |
+
+Middle ground if the render cost ever needs to come down without touching the CSP
+scheme: move the per-user inputs (tenant, color mode) out of the root layout —
+color mode is already applied client-side by `ThemeProvider` behind its `hydrated`
+flag, so the server-side cookie read mainly buys avoiding a dark-mode flash.
+
+What **was** fixed, and was a real waste: the middleware used to re-assert
+`x-tenant-slug` and `NEXT_LOCALE` on every single request. Any `Set-Cookie` makes a
+response unshareable, so that guaranteed the site could never be cached and paid a
+cookie write per pageview for values the browser had already sent. Both are now
+written only when the value actually changes, so repeat visitors get a response with
+no `Set-Cookie` at all.
+
 ## Known gaps
 
 These are **not** solved by this configuration:

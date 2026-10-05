@@ -65,6 +65,16 @@ COPY --from=base /repo/apps/backend/scripts ./apps/backend/scripts
 
 EXPOSE 4000
 
+# Cap V8's old-space so the heap is bounded by something we choose rather than by
+# whatever the container happens to be given.
+#
+# Measured on this app: steady-state RSS is ~178 MB and idle CPU is ~0%, but under a
+# request burst Node sized its heap against the full 2 GB cgroup limit and grew toward it
+# before collecting. On a container billed by provisioned memory that headroom is pure
+# risk, and on a smaller instance it is an OOM kill. 512 MB leaves ~3x headroom over the
+# measured working set, so GC runs earlier under load instead of the heap expanding.
+ENV NODE_OPTIONS="--max-old-space-size=512"
+
 # Containers are long-running processes, so this is a real server rather than a
 # per-invocation handler. `node dist/main.js` is the same command used locally.
 CMD ["node", "apps/backend/dist/main.js"]
