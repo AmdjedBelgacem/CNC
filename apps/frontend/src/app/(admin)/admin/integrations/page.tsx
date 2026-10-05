@@ -5,7 +5,7 @@ import { IntegrationsPanel } from './integrations-panel';
 import { SkeletonCard } from '@/components/ui/skeleton';
 
 export const metadata: Metadata = {
-  title: 'Google Integrations | TITANS of Manufacturing',
+  title: 'Google Integrations | Baroot CNC Solutions',
   description: 'Connect Google Ads, Merchant Center, Tag Manager and Search Console.',
 };
 

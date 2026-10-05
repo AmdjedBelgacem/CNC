@@ -13,7 +13,7 @@ import { Reveal } from '@/components/ui/motion'; /** * Public renderer. * * Rend
  * Builder layouts are authored in Puck and can legitimately contain `nav` and
  * `footer` blocks, but every public route already renders `<NavMain />` +
  * `<Footer />` from its layout. Rendering both produced TWO headers and TWO
- * footers on the landing page (a fixed "Ahmad CNC" marketing bar stacked on the
+ * footers on the landing page (a fixed "Baroot CNC Solutions" marketing bar stacked on the
  * real app navbar), with the duplicate lacking auth state, theme toggle, search
  * and notifications. The public renderer therefore never emits them; the Puck
  * editor still can, because it renders through its own component map.

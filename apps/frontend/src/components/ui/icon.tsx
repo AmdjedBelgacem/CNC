@@ -99,7 +99,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   star: Star,
   bolt: Zap,
   menu: Menu,
-  // Machinist Pro landing glyphs
+  // Baroot CNC Solutions landing glyphs
   view_in_ar: Box,
   tune: SlidersHorizontal,
   speed: Gauge,

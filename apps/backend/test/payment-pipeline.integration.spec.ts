@@ -185,6 +185,61 @@ describe('payment pipeline (integration)', () => {
     return created;
   };
 
+  it('ignores any amount or price the client puts in the request', async () => {
+    // The controller accepts only `lines` (what to buy). Even if a caller smuggles a
+    // price onto a line, the amount must still come from the catalogue row, so the
+    // order total is the DB price (50_000) and not the attacker's number.
+    const order = await moyasar.createOrder({
+      tenantId,
+      userId,
+      lines: [
+        {
+          itemType: 'product',
+          refId: productId,
+          quantity: 1,
+          // Everything below is attacker-controlled and must be ignored.
+          amount: 1,
+          priceCents: 1,
+          unitAmount: 1,
+          total: 1,
+          price: 1,
+        } as never,
+      ],
+      idempotencyKey: `itest-${Math.random().toString(36).slice(2)}`,
+    });
+    orderIds.push(order.orderId);
+    // Catalogue price for one unit is 25_000 (two units is the 50_000 the other tests
+    // assert). The injected `amount: 1` must not appear anywhere in the result.
+    expect(order.amount).toBe(25_000);
+    expect(order.amount).not.toBe(1);
+    expect(JSON.stringify(order)).not.toContain('"unitAmount"');
+  });
+
+  it('refuses a webhook that carries no valid shared secret', async () => {
+    const order = await createOrder([{ itemType: 'product', refId: productId, quantity: 1 }]);
+    const paymentId = `pay_nosecret_${order.orderId.slice(0, 6)}`;
+    payments[paymentId] = {
+      id: paymentId,
+      status: 'paid',
+      amount: order.amount,
+      currency: order.currency,
+      metadata: { order_ref: `${order.orderRef.orderId}.${order.orderRef.sig}` },
+    };
+    gateway(paymentId);
+    const body = JSON.stringify({ type: 'payment_paid', data: { id: paymentId } });
+
+    // No secret at all, and then a wrong one. Neither may move the order.
+    for (const badSecret of [null, '', 'whsec_wrong', 'whsec_itest_suffix']) {
+      const result = await moyasar.handleWebhook(tenantId, body, badSecret);
+      expect(result).toMatchObject({ handled: false });
+    }
+    const [row] = await drizzle.db.select().from(orders).where(eq(orders.id, order.orderId));
+    expect(row!.status).toBe('pending');
+    expect(
+      await drizzle.db.select().from(productPurchases).where(eq(productPurchases.orderId, order.orderId)),
+    ).toHaveLength(0);
+  });
+
   it('issues a signed reference the webhook can resolve before any callback', async () => {
     const order = await createOrder([{ itemType: 'product', refId: productId, quantity: 2 }]);
     expect(order.orderRef.orderId).toBe(order.orderId);

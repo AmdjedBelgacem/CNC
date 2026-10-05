@@ -4,7 +4,7 @@ import { BlockRenderer } from '@/components/builder/block-renderer';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 export const metadata: Metadata = {
-  title: 'Privacy Policy | TITANS of Manufacturing',
+  title: 'Privacy Policy | Baroot CNC Solutions',
   description:
     'Read our privacy policy to understand how we collect, use, and protect your personal information.',
   alternates: { canonical: '/privacy' },

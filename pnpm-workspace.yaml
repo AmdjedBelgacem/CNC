@@ -14,3 +14,29 @@ patchedDependencies:
 # Hoisting produces a flat, npm-style node_modules of real directories, which the tracer
 # emits as top-level paths Node can actually resolve.
 nodeLinker: hoisted
+
+# Dependency overrides live here, not in package.json: pnpm >=11 ignores the
+# `pnpm` field in package.json, which would silently drop these pins.
+# Each entry forces a patched version for a transitive advisory:
+#   next >= 16.3.6  unauthenticated RCE in image optimization / next-og (critical)
+#   fast-uri, undici, fastify, engine.io, socket.io-parser, ws, @fastify/busboy,
+#   @nestjs/platform-fastify, find-my-way, image-size, dompurify, qs, esbuild,
+#   uuid, baseline-browser-mapping  — high/moderate advisories, all same-major bumps.
+overrides:
+  "next": "16.3.8"
+  "fast-uri": "3.1.8"
+  "undici": "7.29.1"
+  "fastify": "5.12.5"
+  "engine.io": "6.6.10"
+  "socket.io-parser": "4.2.7"
+  "js-yaml": "4.3.2"
+  "ws": "8.21.0"
+  "find-my-way": "9.7.0"
+  "@fastify/busboy": "3.2.1"
+  "@nestjs/platform-fastify": "11.2.4"
+  "image-size": "2.0.3"
+  "dompurify": "3.4.13"
+  "qs": "6.16.0"
+  "esbuild": "0.25.0"
+  "uuid": "13.0.2"
+  "baseline-browser-mapping": "2.11.0"

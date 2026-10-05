@@ -51,7 +51,16 @@ const envSchema = z
      */
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
     DATABASE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
-    REDIS_URL: z.string().min(1),
+    REDIS_URL: z
+      .string()
+      .min(1)
+      // Only shape-checked. The value is validated for "did anyone fill this in" at boot
+      // (see warnOnPlaceholderSecrets) rather than here, because refusing to start over a
+      // missing cache would take the whole API down for a rate-limit dependency.
+      .refine((value) => !/YOUR[-_A-Z0-9]*|CHANGEME|<[^>]+>/i.test(value), {
+        message:
+          'REDIS_URL still contains a template placeholder. Set a real Redis URL, or unset it to run without Redis.',
+      }),
     AUTH_SECRET: z.string().min(1),
     JWT_ACCESS_SECRET: z.string().min(1).default('access-secret-change-me'),
     JWT_REFRESH_SECRET: z.string().min(1).default('refresh-secret-change-me'),

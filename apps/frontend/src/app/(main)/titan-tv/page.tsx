@@ -85,7 +85,7 @@ export default function TitanTvPage() {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Video Library</h1>{' '}
           <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
             {' '}
-            Machine builds, tooling demos, shop tours, and educational series from the TITANS
+            Machine builds, tooling demos, shop tours, and educational series from Baroot CNC Solutions
             team.{' '}
           </p>{' '}
         </div>{' '}

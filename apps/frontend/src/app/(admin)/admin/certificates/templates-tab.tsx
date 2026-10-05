@@ -120,7 +120,7 @@ const VARIABLE_OPTIONS = [
     sample: 'Aerospace Academy',
     hint: 'Awarding academy',
   },
-  { key: 'tenantName', label: 'Organisation', sample: 'TITANS Academy', hint: 'Your organisation' },
+  { key: 'tenantName', label: 'Organisation', sample: 'Baroot CNC Solutions', hint: 'Your organisation' },
   { key: 'score', label: 'Score', sample: '94%', hint: 'Final score, when recorded' },
   { key: 'hours', label: 'Course hours', sample: '20h', hint: 'Estimated hours, when set' },
 ] as const;

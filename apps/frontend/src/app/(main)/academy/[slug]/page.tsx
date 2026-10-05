@@ -29,12 +29,13 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { serializeJsonLd } from '@/lib/json-ld';
+import { SITE_URL } from '@/lib/brand';
 
 export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string }> };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://titansofmanufacturing.com';
+
 
 function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
@@ -277,7 +278,7 @@ export default async function AcademyDetailPage(props: Props) {
     url: absoluteUrl(`/academy/${academy.slug}`),
     provider: {
       '@type': 'Organization',
-      name: 'TITANS of Manufacturing',
+      name: 'Baroot CNC Solutions',
       url: SITE_URL,
     },
     hasCourseInstance: courses.map((course) => ({

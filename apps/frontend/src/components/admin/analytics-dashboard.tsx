@@ -441,7 +441,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: title }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: title }]}
         live={
           lastUpdated
             ? t('updatedAt', { time: lastUpdated, default: 'Updated {time}' })

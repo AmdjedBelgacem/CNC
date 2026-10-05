@@ -7,7 +7,7 @@ thumbnails from the parent course art and ensures one active cert template.
 ## Prerequisites
 
 - PostgreSQL running with `cncm` database (homebrew default in this repo):
-  `postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm`
+  `postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/cncm`
 - Migrations applied (`lessons.thumbnail_url`, `academies.seo_image_url`):
   ```sql
   ALTER TABLE "academies" ADD COLUMN IF NOT EXISTS "seo_image_url" varchar(500);
@@ -21,11 +21,11 @@ thumbnails from the parent course art and ensures one active cert template.
 
 ```bash
 cd apps/backend
-DATABASE_URL="postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm" \
+DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/cncm" \
 REDIS_URL="redis://localhost:6379" \
-AUTH_SECRET="local-auth-secret-change-in-prod" \
-JWT_ACCESS_SECRET="local-access-secret-change-in-prod" \
-JWT_REFRESH_SECRET="local-refresh-secret-change-in-prod" \
+AUTH_SECRET="dev-only-AUTH_SECRET-not-a-real-secret" \
+JWT_ACCESS_SECRET="dev-only-JWT_ACCESS-not-a-real-secret" \
+JWT_REFRESH_SECRET="dev-only-JWT_REFRESH-not-a-real-secret" \
 MEILISEARCH_HOST="http://localhost:7700" \
 MEILISEARCH_API_KEY="masterKey" \
 node ./node_modules/tsx/dist/cli.mjs src/database/seed.ts

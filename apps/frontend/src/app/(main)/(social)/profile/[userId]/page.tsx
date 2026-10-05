@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const description =
     profile.headline ||
     profile.bio?.slice(0, 160) ||
-    `${name} on TITANS of Manufacturing — courses, certificates and shop projects.`;
+    `${name} on Baroot CNC Solutions — courses, certificates and shop projects.`;
   const handle = profile.username ? `@${profile.username}` : name;
 
   return {

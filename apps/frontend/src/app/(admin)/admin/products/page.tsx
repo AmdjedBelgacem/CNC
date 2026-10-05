@@ -451,7 +451,7 @@ export default function AdminProductsPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: t('title', { default: 'Products' }) }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: t('title', { default: 'Products' }) }]}
         count={loading ? null : total}
         live={t('live', { default: 'Live' })}
         search={{

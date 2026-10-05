@@ -485,7 +485,7 @@ export default function AdminStaffPage() {
     <div className="w-full">
       <AdminCommandBar
         trail={[
-          { label: 'Titans of CNC' },
+          { label: 'Baroot CNC Solutions' },
           { label: tAdmin('access.breadcrumb', { default: 'Staff & Access' }) },
         ]}
         count={loading ? null : total}

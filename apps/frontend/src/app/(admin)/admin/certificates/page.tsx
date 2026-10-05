@@ -476,7 +476,7 @@ export default function AdminCertificatesPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('certificates') }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('certificates') }]}
         count={tab === 'issued' && !loading ? total : null}
         live={t('live', { default: 'Live' })}
         search={

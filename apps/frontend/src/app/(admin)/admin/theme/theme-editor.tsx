@@ -396,7 +396,7 @@ export function ThemeEditor() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: t('title') }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: t('title') }]}
         live={status === 'published' ? t('publishedBadge', { default: 'Published' }) : t('draftBadge', { default: 'Draft' })}
         actions={
           <>

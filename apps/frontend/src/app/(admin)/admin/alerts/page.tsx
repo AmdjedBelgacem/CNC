@@ -140,7 +140,7 @@ export default function PlatformAlertsPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('alerts') }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('alerts') }]}
         live={
           overview && overview.unread > 0
             ? t('unreadCount', { count: overview.unread, default: '{count} unread' })

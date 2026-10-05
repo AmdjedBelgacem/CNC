@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     'Hands-on workshops, expert webinars, community meetups, and industry conferences for machinists who learn best shoulder-to-shoulder.',
   alternates: { canonical: '/events' },
   openGraph: {
-    title: 'Events | TITANS of Manufacturing',
+    title: 'Events | Baroot CNC Solutions',
     description: 'Workshops, webinars, competitions, and summits — virtual and in-person.',
     type: 'website',
     url: '/events',

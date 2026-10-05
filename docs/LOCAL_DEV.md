@@ -3,7 +3,7 @@
 ## Services
 
 - PostgreSQL (homebrew, authoritative for `DATABASE_URL` below):
-  `postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm`
+  `postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/cncm`
 - Redis `:6379` (`cnc-redis-1` or any local redis)
 - MinIO `:9002` API / `:9001` console (`minioadmin/minioadmin`), bucket `titans-local`
   (created by `docker-compose minio-create-bucket`, public read).
@@ -14,11 +14,11 @@
 ```bash
 cd apps/backend
 pnpm build   # nest build — never hand-edit dist/
-DATABASE_URL="postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm" \
+DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/cncm" \
 REDIS_URL="redis://localhost:6379" \
-AUTH_SECRET="local-auth-secret-change-in-prod" \
-JWT_ACCESS_SECRET="local-access-secret-change-in-prod" \
-JWT_REFRESH_SECRET="local-refresh-secret-change-in-prod" \
+AUTH_SECRET="dev-only-AUTH_SECRET-not-a-real-secret" \
+JWT_ACCESS_SECRET="dev-only-JWT_ACCESS-not-a-real-secret" \
+JWT_REFRESH_SECRET="dev-only-JWT_REFRESH-not-a-real-secret" \
 MEILISEARCH_HOST="http://localhost:7700" MEILISEARCH_API_KEY="masterKey" \
 FRONTEND_URL="http://localhost:3000" PORT=4000 \
 node dist/main.js

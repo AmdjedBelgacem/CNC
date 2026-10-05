@@ -1,18 +1,43 @@
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { CourseGrid } from './course-grid';
 import { CategoryFilter } from '@/components/academy/category-filter';
 import { Skeleton, SkeletonCourseCard } from '@/components/ui/skeleton';
+import { fetchPublishedCourses } from '@/lib/courses';
+import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
+import { BRAND_NAME, OG_IMAGE, absoluteUrl } from '@/lib/brand';
+import { breadcrumbJsonLd } from '@/lib/schema';
+import { serializeJsonLd } from '@/lib/json-ld';
+import type { ContentLocale } from '@titan/shared';
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('courses');
+  const title = `${t('title')} | CNC Machining Courses`;
+  const description = t('subtitle');
   return {
-    title: `${t('title')} — TITANS of Manufacturing`,
-    description: t('subtitle'),
+    title,
+    description,
+    alternates: { canonical: absoluteUrl('/courses') },
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      url: absoluteUrl('/courses'),
+      siteName: BRAND_NAME,
+      images: [OG_IMAGE],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [OG_IMAGE.url] },
   };
 }
 
-export default function CoursesPage() {
+/**
+ * Server component: the listing is fetched here so the first HTML response contains real
+ * course cards instead of a skeleton grid.
+ */
+export default async function CoursesPage() {
+  const locale = (await getLocale()) as ContentLocale;
+  const courses = await fetchPublishedCourses(DEFAULT_TENANT_SLUG, 60, locale).catch(() => []);
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 border-b border-border pb-8">
@@ -34,8 +59,19 @@ export default function CoursesPage() {
       </Suspense>
 
       <Suspense fallback={<CourseGridSkeleton />}>
-        <CourseGrid />
+        <CourseGrid initialCourses={{ data: courses as never[] }} />
       </Suspense>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            breadcrumbJsonLd([
+              { name: 'Home', path: '/' },
+              { name: 'Courses', path: '/courses' },
+            ]),
+          ),
+        }}
+      />
     </div>
   );
 }

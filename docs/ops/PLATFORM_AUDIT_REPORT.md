@@ -24,7 +24,7 @@ Next.js 16.2.9** (image optimization) is unpatched, and signing secrets remain i
 2. Client-only course content: 88 crawlable words + "Loading" on the money pages.
 3. Title/description collision across indexable pages; canonical targets a foreign domain.
 4. Sitemap omits all course/academy pages and advertises `/notifications`.
-5. `local-*-change-in-prod` signing secrets still in tracked public files.
+5. development placeholder signing secrets signing secrets still in tracked public files.
 
 **Top 5 wins**
 1. Course pages carry no `Course`/`FAQPage` JSON-LD — one schema block per page unlocks rich results.
@@ -80,7 +80,7 @@ conservatively pending evidence; see Residual risks. Do not read this as a pass.
 
 ### Secrets & env exposure — 5/10
 - **Clean:** no secrets in `apps/frontend/.next/static`. Only non-sensitive vars reach the bundle: `NEXT_PUBLIC_{ADMIN_SEARCH_PATH,DEFAULT_TENANT_SLUG,PUBLIC_SEARCH_PATH,REALTIME_MODE,SEARCH_ADMIN_PATH,SEARCH_PUBLIC_PATH}`.
-- **Finding:** `local-*-change-in-prod` signing secrets remain in tracked files — `docs/LOCAL_DEV.md`, `docs/SEEDING.md`, `scripts/qa-critical-path.sh`.
+- **Finding:** development placeholder signing secrets signing secrets remain in tracked files — `docs/LOCAL_DEV.md`, `docs/SEEDING.md`, `scripts/qa-critical-path.sh`.
 
 ### Rate limiting & lockout — 4/10
 - **Evidence:** `/api/proxy/health` → `{"redis":{"state":"degraded","detail":"ping did not return PONG; rate limits fall back to the database"}}`. `REDIS_URL` is still the `redis://YOUR-HOSTED-REDIS:6379` placeholder.
@@ -182,7 +182,7 @@ conservatively pending evidence; see Residual risks. Do not read this as a pass.
 |---|---|---|---|
 | 1 | Upgrade `next` to `>=16.3.6` | S | Unauthenticated RCE. `pnpm audit`: 3 critical. |
 | 2 | Server-render course content (or prerender + ISR) | **L** | 88 crawlable words is the root cause of the SEO/AEO/GEO collapse. |
-| 3 | Purge `local-*-change-in-prod` from `docs/LOCAL_DEV.md`, `docs/SEEDING.md`, `scripts/qa-critical-path.sh`; **rotate those keys** | S | Live signing secrets in a public repo. |
+| 3 | Purge development placeholder signing secrets from `docs/LOCAL_DEV.md`, `docs/SEEDING.md`, `scripts/qa-critical-path.sh`; **rotate those keys** | S | Live signing secrets in a public repo. |
 | 4 | Fix homepage canonical → real domain; add canonical to all indexable pages | S | Currently signals a foreign host as canonical. |
 | 5 | `noindex` on `/login`, `/register`; disallow them in robots.txt | S | Wastes crawl budget on thin pages. |
 

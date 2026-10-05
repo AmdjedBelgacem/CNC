@@ -29,12 +29,23 @@ export function useCourses(params?: { search?: string; level?: string; academy?:
   return { ...query, courses: query.data ?? [] };
 }
 
-export function useCourse(slug: string, requestedLocale?: ContentLocale) {
+/**
+ * `initialData` seeds the cache with the server's own fetch. Without it the detail page
+ * had to render a skeleton and fetch on the client, so the first HTML response carried no
+ * course content. Seeding means the server render and the client cache agree on the query
+ * key, so React Query does not immediately refetch and the page never flashes.
+ */
+export function useCourse(
+  slug: string,
+  requestedLocale?: ContentLocale,
+  initialData?: Course | null,
+) {
   const locale = coerceLocale(requestedLocale ?? useLocale());
   const query = useQuery({
     queryKey: courseKeys.detail(slug, locale),
     queryFn: () => api.get<Course>(`/courses/${encodeURIComponent(slug)}`, { locale }),
     enabled: !!slug,
+    ...(initialData ? { initialData } : {}),
   });
   return { ...query, course: query.data ?? null };
 }

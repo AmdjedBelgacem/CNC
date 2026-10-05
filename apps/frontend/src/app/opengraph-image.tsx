@@ -43,7 +43,7 @@ export default function OpenGraphImage() {
         }}
       >
         {' '}
-        TITANS of Manufacturing{' '}
+        Baroot CNC Solutions{' '}
       </h1>{' '}
       <p
         style={{

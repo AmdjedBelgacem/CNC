@@ -15,7 +15,7 @@ for arg in "$@"; do
 done
 
 if [ -z "${DATABASE_URL:-}" ]; then
-  echo "scan-dev-hashes: DATABASE_URL must be set (e.g. postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm)" >&2
+  echo "scan-dev-hashes: DATABASE_URL must be set (e.g. postgresql://USER:PASSWORD@localhost:5432/cncm)" >&2
   exit 2
 fi
 

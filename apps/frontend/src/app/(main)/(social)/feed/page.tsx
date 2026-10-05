@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     'Post setups, ask questions, and learn from machinists worldwide — the community feed where shop knowledge gets shared.',
   alternates: { canonical: '/feed' },
   openGraph: {
-    title: 'Community Feed | TITANS of Manufacturing',
+    title: 'Community Feed | Baroot CNC Solutions',
     description: 'Real machinists posting real setups — join the conversation.',
     type: 'website',
     url: '/feed',

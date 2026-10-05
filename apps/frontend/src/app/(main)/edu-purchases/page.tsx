@@ -4,7 +4,7 @@ import { BlockRenderer } from '@/components/builder/block-renderer';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 export const metadata: Metadata = {
-  title: 'Educational & Institutional Purchases | TITANS of Manufacturing',
+  title: 'Educational & Institutional Purchases | Baroot CNC Solutions',
   description:
     'Discounted academic pricing and institutional licensing for schools, colleges, and training centers.',
   alternates: { canonical: '/edu-purchases' },

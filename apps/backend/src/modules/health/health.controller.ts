@@ -26,6 +26,11 @@ interface Check {
   detail?: string;
 }
 
+/** Detect an unmodified `.env.example`/template value that was never filled in. */
+function isPlaceholderUrl(value: string): boolean {
+  return /YOUR[-_A-Z0-9]*|example\.com|CHANGEME|<[^>]+>|\.\.\./i.test(value);
+}
+
 const TIMEOUT_MS = 2_000;
 
 /** Never let a hung dependency hang the health endpoint. */
@@ -102,6 +107,17 @@ export class HealthController {
     const redisUrl = this.config.get('REDIS_URL');
     if (!redisUrl) {
       checks.redis = { state: 'disabled', detail: 'REDIS_URL unset' };
+    } else if (isPlaceholderUrl(redisUrl)) {
+      // The schema only enforces min(1), so an untouched template value
+      // ("redis://YOUR-HOSTED-REDIS:6379") boots cleanly and then fails every rate-limit
+      // operation at runtime. Naming it here turns a silent degradation into an
+      // actionable ops signal.
+      checks.redis = {
+        state: 'degraded',
+        detail:
+          'REDIS_URL is still the template placeholder — rate limiting falls back to the database. ' +
+          'Set REDIS_URL to a real Redis connection string (e.g. redis://user:pass@host:6379).',
+      };
     } else {
       checks.redis = await this.checkRedis(redisUrl);
     }

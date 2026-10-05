@@ -13,6 +13,7 @@ import { QueryProvider } from '@/components/providers/query-provider';
 import { MotionProvider } from '@/components/providers/motion-provider';
 import { MediaLoadProvider } from '@/components/providers/media-load-provider';
 import { NotificationSocketProvider } from '@/components/providers/notification-socket-provider';
+import { BRAND_NAME, OG_IMAGE, SITE_URL } from '@/lib/brand';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { AnalyticsProvider } from '@/components/analytics/analytics-provider';
 import { AuthHydration } from '@/components/auth/auth-hydration';
@@ -39,22 +40,37 @@ const jetBrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 export const metadata: Metadata = {
-  metadataBase: new URL('https://titansofmanufacturing.com'),
-  title: { default: 'Machinist Pro | Master CNC Machining', template: '%s — Machinist Pro' },
-  description: 'Professional manufacturing education platform for modern machinists and engineers.',
+  // One origin for the whole public surface. This was hardcoded to
+  // https://titansofmanufacturing.com while the site served from a Vercel host, so the
+  // homepage canonicalised to an origin that was not the one answering — every signal
+  // about which URL is authoritative pointed somewhere else.
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${BRAND_NAME} | CNC Machining Courses & Certification`,
+    // A single trailing brand segment. The old template appended "— Baroot CNC Solutions" to
+    // titles that already contained it, producing
+    // "Baroot CNC Solutions | Master CNC Machining — Baroot CNC Solutions".
+    template: `%s | ${BRAND_NAME}`,
+  },
+  description:
+    'Baroot CNC Solutions delivers CNC machining courses, simulation-first training and industry-recognised certification for machinists, engineers and manufacturing teams.',
+  applicationName: BRAND_NAME,
   openGraph: {
-    title: 'Machinist Pro | Master CNC Machining',
+    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
     description:
-      'Professional manufacturing education platform for modern machinists and engineers.',
+      'CNC machining courses, simulation-first training and industry-recognised certification for machinists, engineers and manufacturing teams.',
     type: 'website',
     locale: 'en_US',
-    images: [{ url: '/og.png', width: 1200, height: 630 }],
+    siteName: BRAND_NAME,
+    url: SITE_URL,
+    images: [OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Machinist Pro | Master CNC Machining',
+    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
     description:
-      'Professional manufacturing education platform for modern machinists and engineers.',
+      'CNC machining courses, simulation-first training and industry-recognised certification for machinists, engineers and manufacturing teams.',
+    images: [OG_IMAGE.url],
   },
   icons: { icon: '/favicon.ico' },
 };
@@ -94,7 +110,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        <link rel="icon" href="https://titansofmanufacturing.com/favicon.ico" />
+        <link rel="icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content={tokens.light.primary} />
         <meta name="robots" content="index, follow, max-image-preview:large" />

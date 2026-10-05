@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     'Shop precision tooling, workholding, and shop essentials curated for aerospace, medical, and production machining.',
   alternates: { canonical: '/products' },
   openGraph: {
-    title: 'Products | TITANS of Manufacturing',
+    title: 'Products | Baroot CNC Solutions',
     description: 'Precision tooling and shop essentials with free shipping on orders over $99.',
     type: 'website',
     url: '/products',

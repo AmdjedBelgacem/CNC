@@ -85,7 +85,7 @@ else
 fi
 
 echo "== seed idempotency =="
-SEED_OUT="$(cd "$ROOT/apps/backend" || exit 1; DATABASE_URL="${DATABASE_URL:-postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm}" REDIS_URL="${REDIS_URL:-redis://localhost:6379}" AUTH_SECRET="${AUTH_SECRET:-local-auth-secret-change-in-prod}" JWT_ACCESS_SECRET="${JWT_ACCESS_SECRET:-local-access-secret-change-in-prod}" JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET:-local-refresh-secret-change-in-prod}" MEILISEARCH_HOST="${MEILISEARCH_HOST:-http://localhost:7700}" MEILISEARCH_API_KEY="${MEILISEARCH_API_KEY:-masterKey}" "$NODE_BIN" ./node_modules/tsx/dist/cli.mjs src/database/seed.ts 2>&1)"
+SEED_OUT="$(cd "$ROOT/apps/backend" || exit 1; DATABASE_URL="${DATABASE_URL:?set DATABASE_URL in the environment}" REDIS_URL="${REDIS_URL:-redis://localhost:6379}" AUTH_SECRET="${AUTH_SECRET:?set AUTH_SECRET in the environment}" JWT_ACCESS_SECRET="${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in the environment}" JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in the environment}" MEILISEARCH_HOST="${MEILISEARCH_HOST:-http://localhost:7700}" MEILISEARCH_API_KEY="${MEILISEARCH_API_KEY:-masterKey}" "$NODE_BIN" ./node_modules/tsx/dist/cli.mjs src/database/seed.ts 2>&1)"
 if echo "$SEED_OUT" | grep -q "Seed complete!"; then pass "seed rerun exits 0 + complete"; else fail "seed rerun" "$(echo "$SEED_OUT" | tail -n5)"; fi
 if echo "$SEED_OUT" | grep -q "Created user:\|Created course:\|Created lesson:"; then fail "seed not idempotent" "rerun created rows it should have reused"; else pass "seed idempotent (no dup creates)"; fi
 

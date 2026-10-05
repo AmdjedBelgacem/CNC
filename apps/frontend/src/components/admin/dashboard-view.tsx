@@ -565,7 +565,7 @@ export function DashboardView() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('dashboard') }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('dashboard') }]}
         live={t('live')}
         actions={
           <>

@@ -42,11 +42,26 @@ interface AcademyHeader {
   courseCount: number;
 }
 
-export function CourseGrid() {
+export interface CourseGridProps {
+  /**
+   * Courses fetched on the server for the unfiltered listing.
+   *
+   * The grid used to fetch only on the client, so `/courses` shipped a skeleton to every
+   * crawler. When an academy filter is present the URL differs from what the server
+   * rendered, so the server value is ignored and the client fetch takes over — the seeded
+   * query key is keyed on the same 'all' bucket so there is no duplicate request for the
+   * default case.
+   */
+  initialCourses?: { data: Course[] } | null;
+}
+
+export function CourseGrid({ initialCourses }: CourseGridProps) {
   const searchParams = useSearchParams();
   const locale = coerceLocale(useLocale());
   const academySlug = searchParams.get('academy')?.trim() || '';
   const localeHeaders = { 'x-locale': locale, 'x-next-locale': locale, 'accept-language': `${locale},en;q=0.8` };
+  // Only seed when showing the unfiltered listing; a filtered URL must fetch its own set.
+  const seeded = academySlug ? null : initialCourses ?? null;
 
   const coursesQuery = useQuery<{ data: Course[] }>({
     queryKey: ['courses', locale, { academy: academySlug || 'all' }],
@@ -58,6 +73,7 @@ export function CourseGrid() {
       });
     },
     retry: 2,
+    ...(seeded ? { initialData: seeded, staleTime: 60_000 } : {}),
   });
 
   const academyQuery = useQuery<AcademyHeader | null>({

@@ -312,7 +312,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('settings', { default: 'Settings' })}]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('settings', { default: 'Settings' })}]}
         live={
           dirty
             ? t('unsaved', { default: 'Unsaved changes' })

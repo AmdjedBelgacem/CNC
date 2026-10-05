@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 export const metadata: Metadata = {
-  title: 'Study Groups | TITANS of Manufacturing',
+  title: 'Study Groups | Baroot CNC Solutions',
   description:
     'Learn together. Connect with CNC machinists in your area for hands-on study sessions.',
 };

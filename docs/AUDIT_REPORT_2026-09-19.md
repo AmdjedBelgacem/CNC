@@ -731,7 +731,7 @@ After each work package, prove the fix with the stated evidence command.
 STACK FACTS (verified 2026-09-19):
 - Monorepo: apps/backend (NestJS 11 + Fastify + Drizzle + Postgres), apps/frontend
   (Next.js 16 App Router), packages/shared, apps/admin (Payload — DEAD CODE, ignore).
-- Postgres: postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm (db `cncm`).
+- Postgres: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/cncm (db `cncm`).
 - MinIO listens on 127.0.0.1:9000, bucket `titans-local` (private).
 - Redis :6379. Meilisearch :7700 is DOWN. pnpm is NOT installed.
 - Boot: cd apps/backend && node dist/main.js   (rebuild with nest build first)

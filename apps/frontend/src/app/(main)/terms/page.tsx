@@ -4,9 +4,9 @@ import { BlockRenderer } from '@/components/builder/block-renderer';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 export const metadata: Metadata = {
-  title: 'Terms of Service | TITANS of Manufacturing',
+  title: 'Terms of Service | Baroot CNC Solutions',
   description:
-    'Review the terms and conditions governing your use of the TITANS of Manufacturing platform.',
+    'Review the terms and conditions governing your use of the Baroot CNC Solutions platform.',
   alternates: { canonical: '/terms' },
 };
 export default async function TermsPage() {

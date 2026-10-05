@@ -1,7 +1,7 @@
 // Quick DB inspection helper for the Forge redesign verification.
 import postgres from 'postgres';
 
-const sql = postgres('postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm', {
+const sql = postgres((process.env.DATABASE_URL || 'postgresql://localhost:5432/cncm'), {
   prepare: false,
 });
 

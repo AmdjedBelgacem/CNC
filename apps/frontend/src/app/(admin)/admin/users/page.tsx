@@ -188,7 +188,7 @@ export default function AdminUsersPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('learners') }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('learners') }]}
         count={loading ? null : total}
         live={tAdmin('live', { default: 'Live' })}
         search={{

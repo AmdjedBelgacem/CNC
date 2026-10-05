@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { TagView } from '@/components/feed/tag-views';
 
 export const metadata: Metadata = {
-  title: 'Tag | TITANS of Manufacturing',
+  title: 'Tag | Baroot CNC Solutions',
   description: 'Community posts filed under this tag.',
 };
 

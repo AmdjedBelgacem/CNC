@@ -10,10 +10,13 @@ import { applyLiveHomeMetrics, buildLiveHomeMetrics } from '@/lib/home-metrics';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
+import { BRAND_NAME, OG_IMAGE, SITE_URL, absoluteUrl, organizationJsonLd, webSiteJsonLd } from '@/lib/brand';
+import { faqJsonLd, breadcrumbJsonLd } from '@/lib/schema';
+import { HOMEPAGE_FAQ } from '@/lib/faq-content';
 export const metadata: Metadata = {
-  title: 'Machinist Pro | Master CNC Machining',
+  title: 'CNC Machining Courses & Certification',
   description:
-    'Master CNC machining through expert-led, simulation-first courses, technical resources, and industry-recognized manufacturing certifications.',
+    'Baroot CNC Solutions delivers simulation-first CNC machining courses, technical resources and industry-recognised certification for machinists, engineers and manufacturing teams.',
   keywords: [
     'CNC training',
     'CNC certification',
@@ -22,12 +25,24 @@ export const metadata: Metadata = {
     'CNC courses',
     'G-code training',
   ],
-  alternates: { canonical: '/' },
+  alternates: { canonical: absoluteUrl('/') },
   openGraph: {
-    title: 'Engineering Precision | TITANS CNC Academy',
-    description: 'Expert-led CNC education built for modern manufacturing professionals.',
+    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
+    description:
+      'Simulation-first CNC machining courses, technical resources and industry-recognised certification for manufacturing professionals.',
     type: 'website',
-    url: '/',
+    url: absoluteUrl('/'),
+    siteName: BRAND_NAME,
+    // The homepage previously shipped no og:image at all, so every share of the most
+    // important URL rendered without a preview card.
+    images: [OG_IMAGE],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
+    description:
+      'Simulation-first CNC machining courses and industry-recognised certification for manufacturing professionals.',
+    images: [OG_IMAGE.url],
   },
 };
 export default async function HomePage() {
@@ -53,13 +68,9 @@ export default async function HomePage() {
     }),
   );
   // JSON-LD reflects live catalog data, never hardcoded course names.
-  const organizationJsonLd = {
+  const organizationNode = {
     '@context': 'https://schema.org',
-    '@type': 'EducationalOrganization',
-    name: 'Ahmad CNC',
-    description: 'Expert-led CNC manufacturing education and professional certification.',
-    url: 'https://titansofmanufacturing.com',
-    sameAs: [],
+    ...organizationJsonLd(),
     ...(academies.length > 0
       ? {
           hasOfferCatalog: {
@@ -69,19 +80,30 @@ export default async function HomePage() {
               '@type': 'Course',
               name: a.title,
               description: a.description || a.subtitle || undefined,
-              url: `/academy/${a.slug}`,
+              url: absoluteUrl(`/academy/${a.slug}`),
+              provider: { '@id': `${SITE_URL}/#organization` },
             })),
           },
         }
       : {}),
   };
+  const websiteNode = { '@context': 'https://schema.org', ...webSiteJsonLd() };
+  // Question/answer pairs, so answer engines can lift a clean Q->A instead of scraping prose.
+  const faqNode = { '@context': 'https://schema.org', ...faqJsonLd(HOMEPAGE_FAQ) };
+  const breadcrumbNode = {
+    '@context': 'https://schema.org',
+    ...breadcrumbJsonLd([{ name: 'Home', path: '/' }]),
+  };
   return (
     <div>
       {' '}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationJsonLd) }}
-      />{' '}
+      {[organizationNode, websiteNode, faqNode, breadcrumbNode].map((node, index) => (
+        <script
+          key={index}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(node) }}
+        />
+      ))}{' '}
       <HomeBuilder
         layout={layout}
         academies={academies}
@@ -89,6 +111,30 @@ export default async function HomePage() {
         courses={courses}
         sponsors={sponsors}
       />{' '}
+      {/* Server-rendered Q&A. This is the only part of the page that ships literal
+          question-and-answer text, and it is what the FAQPage schema above describes.
+          Hiding it behind client state meant answer engines had nothing to quote. */}
+      <section
+        aria-labelledby="faq-heading"
+        className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8"
+      >
+        <h2
+          id="faq-heading"
+          className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+        >
+          Frequently asked questions about CNC machining training
+        </h2>
+        <dl className="mt-8 space-y-8">
+          {HOMEPAGE_FAQ.map((item) => (
+            <div key={item.question} className="border-b border-border pb-6 last:border-b-0">
+              <dt className="font-display text-lg font-semibold text-foreground">
+                {item.question}
+              </dt>
+              <dd className="mt-2 text-base leading-7 text-muted-foreground">{item.answer}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>{' '}
     </div>
   );
 }

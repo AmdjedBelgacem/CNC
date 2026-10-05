@@ -453,7 +453,7 @@ export default function AdminCoursesPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('courses', { default: 'Courses' })}]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('courses', { default: 'Courses' })}]}
         count={loading ? null : total}
         live={tAdmin('live', { default: 'Live' })}
         search={{

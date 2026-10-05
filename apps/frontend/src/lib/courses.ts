@@ -41,3 +41,39 @@ export async function fetchPublishedCourses(
 }
 
 export type { Course };
+
+/**
+ * Server-side: one course by slug, for SSR/ISR of the detail page.
+ *
+ * The detail page used to be a client component that fetched through React Query, so the
+ * first HTML response contained no course content at all — search crawlers and answer
+ * engines received a skeleton and a literal "Loading". Fetching here lets the server
+ * render real title, description and curriculum outline, which is the whole point of the
+ * page existing. Returns null on any failure so the caller can fall back to the
+ * client-fetch path rather than 500-ing a public URL.
+ */
+export async function fetchCourseDetail(
+  tenantSlug: string,
+  slug: string,
+  locale?: ContentLocale,
+): Promise<Course | null> {
+  if (!slug) return null;
+  try {
+    const resolved = coerceLocale(locale);
+    const res = await fetch(
+      `${API_BASE}/courses/${encodeURIComponent(slug)}?locale=${resolved}`,
+      {
+        headers: tenantHeaders(tenantSlug, locale),
+        // Short window: prices, enrolment state and publish flags all move, and a stale
+        // price is worse than a slightly slower page.
+        next: { revalidate: REVALIDATE },
+      },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as Course | { data?: Course };
+    if (body && typeof body === 'object' && 'data' in body && body.data) return body.data;
+    return body as Course;
+  } catch {
+    return null;
+  }
+}

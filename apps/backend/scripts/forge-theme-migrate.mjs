@@ -3,7 +3,7 @@
 import postgres from 'postgres';
 import { DEFAULT_THEME_TOKENS, DEFAULT_THEME_NAME } from '@titan/shared';
 
-const sql = postgres('postgresql://cncm_admin:cncm_2026_db@localhost:5432/cncm', {
+const sql = postgres((process.env.DATABASE_URL || 'postgresql://localhost:5432/cncm'), {
   prepare: false,
 });
 

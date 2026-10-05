@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     'Browse branded academies — each with its own courses, hero art, and SEO-optimized landing page.',
   alternates: { canonical: '/academy' },
   openGraph: {
-    title: 'Academies | TITANS of Manufacturing',
+    title: 'Academies | Baroot CNC Solutions',
     description: 'Branded academy destinations with courses, hero art, and learning paths.',
     type: 'website',
     url: '/academy',

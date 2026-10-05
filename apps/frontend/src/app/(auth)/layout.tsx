@@ -1,6 +1,27 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { BrandMark } from '@/components/layout/brand';
+
+/**
+ * Every route in this group is an authentication or credential-verification screen:
+ * /login, /register, /forgot-password, /reset-password, /2fa, /verify-email.
+ *
+ * None of them should be indexed. They shipped `index, follow` and a generic
+ * "Professional manufacturing education platform…" description, which meant search
+ * engines could rank a login form as a page describing the business — and the login page
+ * ended up with the *same* `<title>` as a course detail page, making the two compete.
+ *
+ * Set here rather than per page because every screen in the group is a client component,
+ * and only a server layout can export `metadata`.
+ */
+export const metadata: Metadata = {
+  title: {
+    default: 'Sign in',
+    template: '%s | Sign in',
+  },
+  robots: { index: false, follow: false, nocache: true },
+};
 
 const HIGHLIGHTS: [string, string][] = [
   ['Academic', 'Structured CNC curriculum from fundamentals to advanced'],

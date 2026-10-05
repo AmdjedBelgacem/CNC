@@ -181,7 +181,7 @@ export default function AdminFinancePage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Titans of CNC' }, { label: tAdmin('finance', { default: 'Finance' }) }]}
+        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('finance', { default: 'Finance' }) }]}
         count={loading ? null : filtered.length}
         live={tAdmin('live', { default: 'Live' })}
         actions={
