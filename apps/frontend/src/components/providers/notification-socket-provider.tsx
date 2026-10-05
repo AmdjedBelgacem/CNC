@@ -33,8 +33,21 @@ const NotificationSocketContext = createContext<NotificationSocketContextValue>(
 });
 
 function websocketUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_WS_URL?.trim() || 'http://localhost:4000';
-  const base = configured.replace(/\/+$/, '').replace(/\/ws$/, '');
+  const configured = process.env.NEXT_PUBLIC_WS_URL?.trim();
+  // No configured host: go same-origin in production. `/socket.io/*` is rewritten to the
+  // backend service, so the socket needs no public API hostname and automatically follows
+  // whichever domain is deployed.
+  //
+  // This used to fall back to a hardcoded 'http://localhost:4000', which in the browser
+  // meant every production client dialled its own machine. It could never connect — it just
+  // burned three retries (and logged a CSP violation each time, since the policy allows
+  // `wss:` but not `ws://localhost`) before quietly falling back to REST polling. Reading as
+  // a real bug only once realtime left `polling` mode, where no socket is attempted at all.
+  const base = (configured ?? (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000'))
+    .replace(/\/+$/, '')
+    .replace(/\/ws$/, '');
+  // `/ws` is the Socket.IO *namespace* (see WsGateway), not the HTTP path — the transport
+  // still upgrades on the default /socket.io path.
   return `${base}/ws`;
 }
 
