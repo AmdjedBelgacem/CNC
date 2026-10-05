@@ -6,7 +6,9 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { BuilderService, Actor } from './builder.service';
+// `Actor` is an interface, so it must be a type-only import. Importing it as a value
+// made esbuild emit [MISSING_EXPORT] "Actor" is not exported by builder.service.
+import { BuilderService, type Actor } from './builder.service';
 import { NavigationService } from './navigation.service';
 import {
   CreatePageDto,

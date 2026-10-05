@@ -127,5 +127,14 @@ export async function middleware(request: NextRequest) {
 if (isProtected && !mayHaveSession) { const loginUrl = new URL('/login', request.url); loginUrl.searchParams.set('returnUrl', pathname); return NextResponse.redirect(loginUrl); } return response;
 }
 export const config = {
+  /**
+   * Run on the Node.js runtime, not Edge.
+   *
+   * Middleware defaults to the Edge runtime, which made this build emit an Edge Function
+   * (`_middleware`) — and a Vercel *services* project rejects Edge output outright:
+   * "Edge Runtime is not supported in services." Nothing here needs an edge isolate; it
+   * only uses web APIs plus `process.env`, both of which Node supports.
+   */
+  runtime: 'nodejs',
   matcher: ['/((?!_next/static|_next/image|favicon.ico|opengraph-image|robots|sitemap).*)'],
 };
