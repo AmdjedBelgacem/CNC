@@ -39,10 +39,20 @@ export class DrizzleService implements OnModuleInit {
        * honour `sslmode=no-verify`; `ssl: 'no-verify'` alone is not enough either,
        * hence the explicit rejectUnauthorized flag.
        */
+      /**
+       * A runaway query must not hold a pool slot forever: under load an unbounded
+       * statement starves every other waiter and the whole API degrades together, which is
+       * harder to diagnose than a query that fails fast. postgres.js takes startup
+       * parameters through `connection`, and Supabase's pooler also needs `search_path`
+       * forced back to public, so both are set in one place.
+       */
+      connection: {
+        ...(isSupabase ? { search_path: 'public' } : {}),
+        statement_timeout: this.config.get('DATABASE_STATEMENT_TIMEOUT_MS'),
+      },
       ...(isSupabase
         ? {
             ssl: { rejectUnauthorized: false },
-            connection: { search_path: 'public' },
           }
         : {}),
       onnotice: (notice) => {

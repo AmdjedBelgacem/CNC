@@ -49,7 +49,18 @@ const envSchema = z
      * IPv6-only unless the IPv4 add-on is enabled. Keep `max` comfortably under the
      * project's limit so the pooler never rejects new connections under load.
      */
-    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    /**
+     * Pool size for a SINGLE backend process.
+     *
+     * Load testing showed 10 was the binding constraint: at 200 virtual users the pool was
+     * the queue, so even `/health` — one indexed lookup — reported an 836 ms p95 behind
+     * catalogue queries. 20 roughly doubles read concurrency while staying far inside
+     * Postgres' default max_connections of 100. Raise further only together with a
+     * connection budget: every extra connection here is one fewer available elsewhere.
+     */
+    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(20),
+    /** Fail a query that outlives its budget instead of holding a pool slot indefinitely. */
+    DATABASE_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(15_000),
     DATABASE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
     // Only shape-checked. Deliberately NOT refined to reject template placeholders:
     // refusing to boot over a missing cache takes the entire API down, and rate limiting
@@ -57,6 +68,19 @@ const envSchema = z
     // placeholder is instead reported at boot (see assertNoPlaceholderSecrets) and through
     // /health, so it is impossible to miss without also being fatal.
     REDIS_URL: z.string().min(1),
+
+    // Global abuse ceiling. Defaults reproduce the previously hardcoded 100 req/min.
+    // Raise THROTTLE_LIMIT for load testing or for clients behind shared NAT.
+    THROTTLE_LIMIT: z.coerce.number().int().min(1).max(100_000_000).default(100),
+    THROTTLE_TTL_MS: z.coerce.number().int().min(1000).max(3_600_000).default(60_000),
+
+    // Short-TTL cache for public catalogue reads. 60s is short enough that an edit is
+    // effectively immediate and long enough to absorb a traffic burst.
+    PUBLIC_CACHE_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    PUBLIC_CACHE_TTL_SECONDS: z.coerce.number().int().min(1).max(3600).default(60),
     AUTH_SECRET: z.string().min(1),
     JWT_ACCESS_SECRET: z.string().min(1).default('access-secret-change-me'),
     JWT_REFRESH_SECRET: z.string().min(1).default('refresh-secret-change-me'),

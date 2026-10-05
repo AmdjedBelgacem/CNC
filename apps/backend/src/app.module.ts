@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
+import { PublicCacheModule } from './common/cache/public-cache.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
@@ -41,12 +42,30 @@ import { RedisThrottlerStorage } from './modules/auth/providers/redis-throttler-
     ScheduleModule.forRoot(),
     ConfigModule,
     DatabaseModule,
+    PublicCacheModule,
     HealthModule,
     AuthModule,
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        throttlers: [{ ttl: 60000, limit: 100 }],
+        /**
+         * Global abuse ceiling.
+         *
+         * These were hardcoded, which made the limit impossible to tune without a code
+         * change and made load testing impossible from a single IP: at 100 requests per
+         * minute per address, every run 429s after the first hundred. It is also a real
+         * production constraint — 100 req/min per IP throttles any client behind carrier
+         * NAT or a corporate proxy, where thousands of users share one address.
+         *
+         * Defaults are unchanged, so behaviour is identical unless these are set. Raise
+         * THROTTLE_LIMIT for load testing, or to match the real per-client request rate.
+         */
+        throttlers: [
+          {
+            ttl: config.get('THROTTLE_TTL_MS') ?? 60_000,
+            limit: config.get('THROTTLE_LIMIT') ?? 100,
+          },
+        ],
         storage: new RedisThrottlerStorage(config),
       }),
     }),
@@ -79,10 +98,14 @@ import { RedisThrottlerStorage } from './modules/auth/providers/redis-throttler-
     AiAssistantModule,
   ],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    // The throttler is registered globally. `THROTTLER_ENABLED=false` removes it entirely
+    // and exists for local load testing only: the guard counts per client IP, so every
+    // request from a single load generator shares one bucket and the run measures the
+    // limiter rather than the application. Mirrors the seed script's ALLOW_PROD_SEED
+    // affordance — explicit, off by default, never set in a deployed environment.
+    ...(process.env.THROTTLER_ENABLED === 'false'
+      ? []
+      : [{ provide: APP_GUARD, useClass: ThrottlerGuard }]),
     {
       provide: APP_GUARD,
       useClass: TenantResolveGuard,

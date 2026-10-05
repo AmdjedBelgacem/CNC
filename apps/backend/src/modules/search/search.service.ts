@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { and, asc, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../database/drizzle.service';
 import { ConfigService } from '../../config/config.service';
@@ -13,6 +13,7 @@ import { orders } from '../../database/schema/orders';
 import { certifications } from '../../database/schema/certifications';
 import { AiCorpusService } from '../ai/ai-corpus.service';
 import { extractLessonBlockText, extractTranslationText, parseContentDocumentOrLegacy } from '../courses/lesson-content';
+import { PublicCacheService } from '../../common/cache/public-cache.service';
 
 export type SearchScope = 'public' | 'admin';
 export type SearchSort = 'relevance' | 'title' | 'newest';
@@ -250,6 +251,7 @@ export class SearchService {
     private readonly drizzle: DrizzleService,
     private readonly config: ConfigService,
     private readonly aiCorpus: AiCorpusService,
+    @Optional() private readonly publicCache?: PublicCacheService,
   ) {}
 
   async search(query: string, tenantId: string, options: SearchOptions = {}) {
@@ -337,9 +339,36 @@ export class SearchService {
       return this.emptyResponse(query, page, pageSize, types);
     }
 
+    /**
+     * Short-TTL cache for search results.
+     *
+     * Load testing showed search to be the slowest public endpoint by a wide margin (1.86 s
+     * p95) and the reason was not Meilisearch: when it is unavailable every query falls
+     * back to `collectCandidates`, which reads a large slice of the catalogue and ranks it
+     * in process. That work is identical for every anonymous visitor asking the same
+     * question, so it is cached on the same short TTL as the course endpoints.
+     *
+     * Keyed by tenant, scope, query, page, size, types and sort, so no result can cross a
+     * tenant or a locale boundary.
+     */
+    const cacheKey = this.publicCache?.buildKey(`search:${scope}`, tenantId, undefined, {
+      q: query,
+      page,
+      limit: pageSize,
+      types: types.join(','),
+      sort,
+    });
+    if (cacheKey) {
+      const hit = await this.publicCache!.get<SearchResponse>(cacheKey);
+      if (hit) return hit;
+    }
+
     if (this.meiliState !== 'down') {
       const meili = await this.searchMeili(query, tenantId, scope, types, page, pageSize, sort);
-      if (meili) return meili;
+      if (meili) {
+        if (cacheKey) await this.publicCache!.set(cacheKey, meili);
+        return meili;
+      }
     }
 
     const candidates = await this.collectCandidates(tenantId, scope, types, MAX_FALLBACK_CANDIDATES, query);
@@ -357,7 +386,7 @@ export class SearchService {
     const counts: Partial<Record<SearchResultType, number>> = {};
     for (const candidate of ranked) counts[candidate.type] = (counts[candidate.type] ?? 0) + 1;
     const results = pageItems.map(publicResult);
-    return {
+    const response: SearchResponse = {
       query,
       results,
       items: results,
@@ -370,6 +399,10 @@ export class SearchService {
       types,
       engine: this.meiliState === 'down' ? 'postgres-fallback' : 'postgres',
     };
+    // Cache the fallback path too: it is the expensive one, since `collectCandidates`
+    // re-reads and re-ranks the catalogue on every call when Meilisearch is down.
+    if (cacheKey) await this.publicCache!.set(cacheKey, response);
+    return response;
   }
 
   private emptyResponse(query: string, page: number, pageSize: number, types: SearchResultType[]): SearchResponse {

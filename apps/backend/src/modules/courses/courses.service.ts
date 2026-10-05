@@ -32,6 +32,7 @@ import {
 } from './lesson-content';
 import { isCurrencyCode } from '@titan/shared';
 import type { ContentLocale, LessonBlock, LessonContentDocument, LessonLocaleMetadata, QuizQuestion } from '@titan/shared';
+import { PublicCacheService } from '../../common/cache/public-cache.service';
 
 type LessonViewer = { id: string; role: string; tenantId: string } | null | undefined;
 
@@ -58,6 +59,9 @@ export class CoursesService {
     private certification: CertificationService,
     @Optional() private notifications?: NotificationsService,
     @Optional() private search?: SearchService,
+    // Appended last, and optional, so existing positional construction in tests keeps
+    // working. Injecting it first shifted every argument and broke them.
+    @Optional() private readonly publicCache?: PublicCacheService,
   ) {
     this.syncSearch = (tenantId: string, type: 'course' | 'series' | 'lesson', id: string) => {
       void this.search?.indexEntity(tenantId, type, id);
@@ -286,8 +290,37 @@ export class CoursesService {
     return { items, total: Number(totalArr[0]?.count ?? 0), facets, facetTotal, page, limit };
   }
 
+  /**
+   * Read-through cache for the public course list.
+   *
+   * This is the highest-volume unauthenticated endpoint in the product and its result
+   * depends only on (tenant, locale, filters) — nothing about the caller. A short-TTL cache
+   * removes it from the database pool entirely under load; on miss the original query runs
+   * unchanged, so behaviour is identical whether or not Redis is available.
+   */
   async findByTenant(tenantId: string, filters?: CourseFilterDto, localeInput?: unknown) {
     const locale = this.localeFrom(localeInput);
+    // buildKey returns a string; the optional chain makes cacheKey `string | undefined`,
+    // so normalise it once rather than threading a non-null assertion through.
+    const cacheKey = this.publicCache?.buildKey('courses:list', tenantId, locale, {
+      page: filters?.page,
+      limit: filters?.limit,
+      difficulty: filters?.difficulty,
+      search: filters?.search,
+      academy: (filters as { academy?: string } | undefined)?.academy,
+      sort: (filters as { sort?: string } | undefined)?.sort,
+    });
+    // Typed against the uncached implementation so the cached branch cannot drift from it.
+    const cached = cacheKey
+      ? await this.publicCache!.get<Awaited<ReturnType<typeof this.findByTenantUncached>>>(cacheKey)
+      : null;
+    if (cached !== null && cached !== undefined) return cached;
+    const fresh = await this.findByTenantUncached(tenantId, filters, locale);
+    if (cacheKey) await this.publicCache!.set(cacheKey, fresh);
+    return fresh;
+  }
+
+  private async findByTenantUncached(tenantId: string, filters: CourseFilterDto | undefined, locale: ContentLocale) {
     const conditions: ReturnType<typeof eq>[] = [eq(courses.tenantId, tenantId)];
     conditions.push(eq(courses.isPublished, true), eq(courses.isArchived, false));
     if (filters?.difficulty) conditions.push(eq(courses.difficulty, filters.difficulty));
@@ -336,8 +369,26 @@ export class CoursesService {
     return { data: localizedData, total: Number(totalArr[0]?.count || 0), page, limit };
   }
 
+  /**
+   * Read-through cache for course detail.
+   *
+   * Same reasoning as the listing: the payload is a pure function of (tenant, locale, slug).
+   * The detail query is the heaviest read in the product — course, series and every lesson
+   * — and `series`/`lessons` had no index on the lookup columns at all.
+   */
   async findBySlug(tenantId: string, slug: string, localeInput?: unknown) {
     const locale = this.localeFrom(localeInput);
+    const cacheKey = this.publicCache?.buildKey('courses:detail', tenantId, locale, { slug });
+    const cached = cacheKey
+      ? await this.publicCache!.get<Awaited<ReturnType<typeof this.findBySlugUncached>>>(cacheKey)
+      : null;
+    if (cached !== null && cached !== undefined) return cached;
+    const fresh = await this.findBySlugUncached(tenantId, slug, locale);
+    if (cacheKey) await this.publicCache!.set(cacheKey, fresh);
+    return fresh;
+  }
+
+  private async findBySlugUncached(tenantId: string, slug: string, locale: ContentLocale) {
     const course = await this.drizzle.db.query.courses.findFirst({
       where: and(
         eq(courses.tenantId, tenantId),
