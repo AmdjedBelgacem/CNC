@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '../../../config/config.service';
 
+/** Canonical public brand. Kept in sync with the frontend's src/lib/brand.ts. */
+const BRAND_NAME = 'Baroot CNC Solutions';
+
 interface SendEmailParams {
   to: string;
   subject: string;
@@ -61,15 +64,44 @@ export class EmailService {
     return this.sendWithRetry(params, 3);
   }
 
+  /**
+   * Send, retrying transient failures.
+   *
+   * The critical detail: **the Resend SDK resolves on API errors rather than throwing.** It
+   * returns `{ data: null, error: { statusCode, message } }` for a 4xx or 5xx, and only
+   * rejects on a transport-level fault. Awaiting the call and returning `true` therefore
+   * reported *every* delivery failure as success — an unverified sending domain (403), a bad
+   * recipient (422), a suppressed address — with nothing logged and nothing thrown. That is
+   * why signup could claim an email was sent when none ever was, and why password reset
+   * failures were equally invisible. Both the resolved `error` and a rejection are handled.
+   */
   private async sendWithRetry(params: SendEmailParams, retriesLeft: number): Promise<boolean> {
     try {
-      await this.resendClient.emails.send({
-        from: `TITANS of Manufacturing <${this.config.get('SMTP_FROM') || 'noreply@titansofmanufacturing.com'}>`,
+      const result = await this.resendClient.emails.send({
+        // Branded and configurable. This was hardcoded to "TITANS of Manufacturing" while the
+        // product is Baroot CNC Solutions, so every transactional email contradicted the brand.
+        from: this.fromAddress(),
         to: [params.to],
         subject: params.subject,
         html: params.html,
         text: params.text,
       });
+
+      // Resolved-with-error: a real API rejection, not a delivery.
+      if (result?.error) {
+        const apiError = result.error as { statusCode?: number; message?: string; name?: string };
+        const status = apiError.statusCode ?? 0;
+        this.logger.error(
+          `Email provider rejected ${params.to} [${status} ${apiError.name ?? 'error'}]: ${apiError.message ?? 'unknown'}`,
+        );
+        if (retriesLeft > 0 && this.shouldRetry({ statusCode: status })) {
+          const delay = Math.pow(2, 4 - retriesLeft) * 500;
+          await new Promise((r) => setTimeout(r, delay));
+          return this.sendWithRetry(params, retriesLeft - 1);
+        }
+        return false;
+      }
+
       return true;
     } catch (error: any) {
       this.logger.error(`Failed to send email to ${params.to}: ${error.message}`);
@@ -87,6 +119,18 @@ export class EmailService {
     return status >= 500 || status === 429 || error?.code === 'ETIMEDOUT';
   }
 
+  /**
+   * The From header, as Resend wants it: `"Display Name <address>"`.
+   *
+   * `SMTP_FROM` must be a bare address (the config schema validates it as an email). Resend
+   * rejects an unverified sending domain outright with a 403, so this is also the knob to
+   * point at a verified domain once one exists.
+   */
+  private fromAddress(): string {
+    const address = this.config.get('SMTP_FROM');
+    return `${BRAND_NAME} <${address || 'onboarding@resend.dev'}>`;
+  }
+
   sendVerificationEmail(to: string, token: string, _tenantSlug: string): Promise<boolean> {
     const url = `${this.config.get('FRONTEND_URL')}/verify-email?token=${token}`;
     return this.send({
@@ -95,7 +139,7 @@ export class EmailService {
       html: `
         <!DOCTYPE html>
         <html><body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #7c3aed;">Welcome to TITANS of Manufacturing</h1>
+          <h1 style="color: #7c3aed;">Welcome to Baroot CNC Solutions</h1>
           <p>Please verify your email address by clicking the button below:</p>
           <a href="${url}" style="display: inline-block; padding: 12px 24px; background: #7c3aed; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">Verify Email</a>
           <p style="color: #666; font-size: 14px;">Or copy this link: <a href="${url}">${url}</a></p>

@@ -145,10 +145,16 @@ export class AuthController {
      */
     if ('session' in result && result.session) {
       this.cookieService.setAuthCookies(reply, result.session.accessToken, result.session.refreshToken, false);
+      const emailSent = 'verificationEmailSent' in result ? result.verificationEmailSent === true : false;
       return {
         user: result.user,
-        requiresEmailVerification: false,
+        // The account is usable now; the emailed link is what proves the address later.
+        requiresEmailVerification: !emailSent,
         authenticated: true,
+        verificationEmailSent: emailSent,
+        message: emailSent
+          ? 'Account created. Check your email to verify your address.'
+          : 'Account created. We could not send the verification email — use "Resend verification" to try again.',
       };
     }
 

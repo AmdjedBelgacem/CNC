@@ -189,9 +189,10 @@ export class AuthService {
     if (!created?.[0]) throw new Error('Failed to create user');
     const user = created[0];
 
-    const verificationToken = await this.emailVerificationService.sendVerificationEmail(
+    const verification = await this.emailVerificationService.sendVerificationEmail(
       user.id, user.email, params.tenantSlug,
     );
+    const verificationToken = verification.token;
 
     await this.auditService.log({
       userId: user.id, action: 'user.register',
@@ -234,7 +235,12 @@ export class AuthService {
     tenantId: string;
     tenantSlug?: string;
     username?: string;
-  }): Promise<{ user: typeof users.$inferSelect; session: SupabaseSession; verificationToken: null }> {
+  }): Promise<{
+    user: typeof users.$inferSelect;
+    session: SupabaseSession;
+    verificationToken: string | null;
+    verificationEmailSent: boolean;
+  }> {
     const existing = await this.drizzle.db.query.users.findFirst({
       where: and(eq(users.email, params.email), eq(users.tenantId, params.tenantId)),
     });
@@ -277,10 +283,14 @@ export class AuthService {
       role: 'learner' as const,
       accountStatus: 'active' as const,
       isActive: true,
-      emailVerifiedAt: new Date(),
       passwordChangedAt: new Date(),
       authUserId,
     };
+    // `emailVerifiedAt` is deliberately NOT set here. It is set when the emailed link is
+    // opened, so it means the address was actually proven rather than merely typed.
+    // `accountStatus` stays 'active' so the account is usable immediately — verification is
+    // trust/anti-abuse, not a gate, and gating it would re-break signup for anyone whose
+    // mail provider cannot deliver (see REQUIRE_EMAIL_VERIFICATION below).
 
     const created = existing
       ? await this.drizzle.db
@@ -296,6 +306,59 @@ export class AuthService {
     // Establish the session immediately so a confirmed signup lands authenticated instead of
     // bouncing the new user to the login page.
     const session = await this.supabaseAuth!.signInWithPassword(params.email, params.password);
+
+    /**
+     * Send the verification email.
+     *
+     * This was missing entirely, which is why "we can sign up but never get a verification
+     * email": the Supabase path created the account with `email_confirm: true`, stamped
+     * `emailVerifiedAt` immediately, and returned `verificationToken: null` — so neither
+     * Supabase nor this application ever sent anything. Signing up "worked" precisely
+     * because verification was being skipped.
+     *
+     * Supabase cannot be the sender here unless its own SMTP is configured, so the message
+     * goes through this application's Resend client using the same
+     * `verification_tokens` row that `/auth/verify-email` already consumes. A send failure
+     * must not undo the signup — the account exists and can sign in — so it is logged loudly
+     * and reported rather than thrown.
+     */
+    let verificationToken: string | null = null;
+    let verificationEmailSent = false;
+    try {
+      const result = await this.emailVerificationService.sendVerificationEmail(
+        user.id,
+        user.email,
+        params.tenantSlug,
+      );
+      verificationToken = result.token;
+      /**
+       * `sendVerificationEmail` resolves `false` when the provider rejects the message — it
+       * does not throw. Treating a resolved promise as success made the API report
+       * "verification email sent" while nothing had been delivered, which is precisely the
+       * kind of false green that hid this bug. The boolean is the only trustworthy signal.
+       */
+      verificationEmailSent = result.sent;
+      if (!verificationEmailSent) {
+        console.error(
+          '[register] verification token created but the provider refused the message for',
+          user.email,
+        );
+      }
+    } catch (error) {
+      this.auditService
+        .log({
+          userId: user.id,
+          action: 'user.register.verification_email_failed',
+          entityType: 'user',
+          entityId: user.id,
+          details: {
+            email: user.email,
+            reason: error instanceof Error ? error.message : String(error),
+          },
+        })
+        .catch(() => undefined);
+      console.error('[register] verification email could not be sent:', error instanceof Error ? error.message : error);
+    }
 
     await this.auditService.log({
       userId: user.id,
@@ -316,7 +379,7 @@ export class AuthService {
       idempotencyKey: `new-user:${params.tenantId}:${user.id}`,
     }).catch(() => {});
 
-    return { user, session, verificationToken: null };
+    return { user, session, verificationToken, verificationEmailSent };
   }
 
   /**

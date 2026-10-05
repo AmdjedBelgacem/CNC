@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { DrizzleService } from '../../../database/drizzle.service';
 import { verificationTokens } from '../../../database/schema/auth';
 import { users } from '../../../database/schema/users';
@@ -6,9 +6,12 @@ import { TokenService } from './token.service';
 import { AuditService } from './audit.service';
 import { EmailService } from './email.service';
 import { eq, and, isNull } from 'drizzle-orm';
+import { ServiceUnavailableException } from '@nestjs/common';
 
 @Injectable()
 export class EmailVerificationService {
+  private readonly logger = new Logger(EmailVerificationService.name);
+
   constructor(
     private drizzle: DrizzleService,
     private tokenService: TokenService,
@@ -16,7 +19,25 @@ export class EmailVerificationService {
     private emailService: EmailService,
   ) {}
 
-  async sendVerificationEmail(userId: string, email: string, tenantSlug?: string): Promise<string> {
+  /**
+   * Create a verification token and attempt to email it.
+   *
+   * Returns the token *and whether it was actually delivered*.
+   *
+   * The send used to be fire-and-forget — `this.emailService.sendVerificationEmail(...)` was
+   * never awaited and the raw token was returned regardless. Every caller therefore believed
+   * the mail had gone out, including when Resend rejected it (an unverified sending domain
+   * returns 403). That is how signup could report success while no email ever existed.
+   * Awaiting the provider result makes the outcome observable.
+   *
+   * The token row is written either way: a failed send still leaves a valid, unexpired token
+   * so "Resend verification" can re-deliver the same link.
+   */
+  async sendVerificationEmail(
+    userId: string,
+    email: string,
+    tenantSlug?: string,
+  ): Promise<{ token: string; sent: boolean }> {
     const rawToken = this.tokenService.generateVerificationToken();
     const tokenHash = this.tokenService.hashToken(rawToken);
 
@@ -27,14 +48,30 @@ export class EmailVerificationService {
       userId, tokenHash, type: 'email_verification', expiresAt,
     });
 
-    this.emailService.sendVerificationEmail(email, rawToken, tenantSlug || 'app');
+    let sent = false;
+    try {
+      sent = await this.emailService.sendVerificationEmail(email, rawToken, tenantSlug || 'app');
+    } catch (error) {
+      sent = false;
+      this.logger.error(
+        `Verification email threw for ${email}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
 
     await this.audit.log({
       userId, action: 'user.email.verify',
-      entityType: 'verification_token', details: { email },
+      entityType: 'verification_token',
+      details: { email, delivered: sent },
     });
 
-    return rawToken;
+    if (!sent) {
+      this.logger.error(
+        `Verification email NOT delivered to ${email}. The account exists and can sign in; ` +
+          'the user can request a new link. Check SMTP_FROM / the sending domain.',
+      );
+    }
+
+    return { token: rawToken, sent };
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -80,7 +117,8 @@ export class EmailVerificationService {
     if (!user) return;
     if (user.emailVerifiedAt) throw new ConflictException('Email is already verified');
 
-    await this.sendVerificationEmail(user.id, user.email, tenantSlug);
+    const { sent } = await this.sendVerificationEmail(user.id, user.email, tenantSlug);
+    if (!sent) throw new ServiceUnavailableException('Could not send the verification email. Please try again.');
   }
 
   async createPasswordResetToken(email: string, tenantId: string, tenantSlug?: string): Promise<string | null> {
