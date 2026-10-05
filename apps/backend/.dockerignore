@@ -1,0 +1,28 @@
+# Keep the build context small and, critically, keep host state out of the image.
+# node_modules and dist are produced *inside* the image; copying the host's would leak a
+# different platform's native binaries (argon2) and stale build output.
+node_modules
+**/node_modules
+dist
+**/dist
+.turbo
+**/.turbo
+.next
+**/.next
+
+# Secrets must never enter an image layer.
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+
+# Vercel CLI state and logs
+.vercel
+*.log
+
+# Editor / OS noise
+.DS_Store
+.idea
+.vscode
+coverage

@@ -16,8 +16,7 @@
     },
     "backend": {
       "root": "apps/backend",
-      "entrypoint": "src/vercel-entry.ts",
-      "buildCommand": "cd ../.. && pnpm turbo build --filter=@titan/backend"
+      "runtime": "container"
     }
   },
   "rewrites": [
