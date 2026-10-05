@@ -23,7 +23,8 @@
     "db:sync-users": "node scripts/sync-users-to-supabase.mjs",
     "db:send-recovery": "node scripts/send-recovery.mjs",
     "smoke:production": "node scripts/production-smoke.mjs",
-    "db:migrate-local-assets": "node scripts/migrate-local-assets.mjs"
+    "db:migrate-local-assets": "node scripts/migrate-local-assets.mjs",
+    "postbuild": "node scripts/materialize-shared.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1094.0",
