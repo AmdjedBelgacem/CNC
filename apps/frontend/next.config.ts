@@ -13,7 +13,22 @@ const nextConfig: NextConfig = {
     root: path.join(__dirname, '../..'),
   },
   images: {
+    /**
+     * Hosts Next is allowed to pull remote images through `/_next/image` for.
+     *
+     * This used to end with `{ hostname: '**' }` on both http and https, which is two
+     * problems at once. It made Vercel an open image proxy — any visitor could point the
+     * optimizer at an arbitrary host and have Vercel fetch it — and it meant every remote
+     * image was re-served through Vercel (optimizer CPU + egress) even though the assets
+     * already live on Supabase Storage's own CDN, which serves them for free.
+     *
+     * The allowlist is the hosts assets can actually come from: Supabase Storage (uploads and
+     * generated covers) and the marketing domain. Local MinIO/backend origins stay for dev.
+     * Same-origin paths such as `/uploads/*` need no entry — Next optimizes those without
+     * consulting this list.
+     */
     remotePatterns: [
+      { protocol: 'https', hostname: '**.supabase.co' },
       { protocol: 'https', hostname: '**.titansofmanufacturing.com' },
       // Local MinIO/S3 uploads (http://localhost:9000/titans-local/...) + dev frontend
       { protocol: 'http', hostname: 'localhost', port: '9000', pathname: '/**' },
@@ -23,8 +38,6 @@ const nextConfig: NextConfig = {
       { protocol: 'http', hostname: 'localhost', pathname: '/**' },
       { protocol: 'https', hostname: 'localhost', pathname: '/**' },
       { protocol: 'http', hostname: '127.0.0.1', pathname: '/**' },
-      { protocol: 'https', hostname: '**' },
-      { protocol: 'http', hostname: '**' },
     ],
   },
   async rewrites() {

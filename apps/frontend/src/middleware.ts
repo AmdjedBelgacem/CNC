@@ -141,23 +141,38 @@ function buildCsp(nonce: string): string {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', buildCsp(nonce));
-  response.cookies.set('x-tenant-slug', tenantSlug, {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 365,
-  });
   response.headers.set('x-tenant-slug', tenantSlug);
   // Cookie-based locale resolution — no URL prefix, no redirect.
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
   const locale = cookieLocale
     ? coerceLocale(cookieLocale)
     : (localeFromAcceptLanguage(request.headers.get('accept-language')) ?? DEFAULT_LOCALE);
-  response.cookies.set(LOCALE_COOKIE, locale, {
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 365,
-    path: '/',
-  });
   response.headers.set('x-locale', locale);
+
+  // Only write these cookies when they would actually CHANGE.
+  //
+  // Every Set-Cookie forces the response to be `private, no-store`: a shared cache cannot
+  // hold a response whose body is negotiated per visitor. Re-asserting an unchanged cookie on
+  // every single request therefore guaranteed zero CDN caching for the whole site — one
+  // function invocation and one full render per pageview, forever.
+  //
+  // Repeat visitors already send the right values, so there is nothing to tell them, and
+  // skipping the write keeps the response cacheable. Same values, same behaviour, one fewer
+  // reason for the edge to treat the response as uncacheable.
+  if (request.cookies.get('x-tenant-slug')?.value !== tenantSlug) {
+    response.cookies.set('x-tenant-slug', tenantSlug, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+  if (cookieLocale !== locale) {
+    response.cookies.set(LOCALE_COOKIE, locale, {
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+      path: '/',
+    });
+  }
   // The access cookie is the WRONG signal on its own: it lives 15 minutes, and the
   // browser deletes it on expiry while the refresh cookie is still good for 7 days.
   // Keying the redirect on it alone hard-bounced every live session to /login the
