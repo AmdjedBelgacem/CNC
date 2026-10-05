@@ -121,9 +121,10 @@ export class AuthController {
   async register(
     @Body() body: { email: string; password: string; name: string; username?: string },
     @Req() req: any,
+    @Res({ passthrough: true }) reply: any,
   ) {
     const tenant = await this.resolveTenant(req);
-    return this.auth.register({
+    const result = await this.auth.register({
       email: body.email,
       password: body.password,
       name: body.name,
@@ -131,6 +132,31 @@ export class AuthController {
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
     });
+
+    /**
+     * When Supabase owns credentials the service hands back a live session, so the new
+     * account is authenticated on arrival. Previously the response carried only a user
+     * object, which left the browser with no cookies and pushed every new signup back to
+     * the login page for a credential it had just supplied.
+     *
+     * `user` is returned under `user` for both paths so the client's success handling does
+     * not have to know which mode produced it.
+     */
+    if ('session' in result && result.session) {
+      this.cookieService.setAuthCookies(reply, result.session.accessToken, result.session.refreshToken, false);
+      return {
+        user: result.user,
+        requiresEmailVerification: false,
+        authenticated: true,
+      };
+    }
+
+    return {
+      user: result.user,
+      requiresEmailVerification: true,
+      authenticated: false,
+      message: 'Account created. Check your email to verify your address before signing in.',
+    };
   }
 
   @Public()

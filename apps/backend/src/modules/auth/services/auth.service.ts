@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, HttpException, HttpStatus, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, InternalServerErrorException, Optional, UnauthorizedException } from '@nestjs/common';
 import { DrizzleService } from '../../../database/drizzle.service';
 import { users } from '../../../database/schema/users';
 import { userTenantRoles, verificationTokens as vt, refreshTokens as rt, userSessions as us, impersonationSessions } from '../../../database/schema/auth';
@@ -17,6 +17,7 @@ import { PlatformAlertsService } from '../../notifications/platform-alerts.servi
 import { SearchService } from '../../search/search.service';
 import { eq, and, isNull, gte, lte, or, ilike, sql, gt, desc } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
+import { SupabaseAuthClient, SupabaseAuthError, type SupabaseSession } from '../supabase-auth.client';
 
 /**
  * Roles whose compromise is a platform problem rather than one tenant's
@@ -47,6 +48,7 @@ export class AuthService {
     private emailService: EmailService,
     private keyManagement: KeyManagementService,
     private rbac: RbacService,
+    @Optional() private supabaseAuth?: SupabaseAuthClient,
     @Optional() private notifications?: NotificationsService,
     @Optional() private search?: SearchService,
     @Optional() private platformAlerts?: PlatformAlertsService,
@@ -128,6 +130,22 @@ export class AuthService {
     tenantSlug?: string;
     username?: string;
   }) {
+    /**
+     * Supabase-exclusive mode has to create the auth identity here, not just the local row.
+     *
+     * `login()` authenticates against Supabase whenever `SUPABASE_AUTH_ENABLED` is set, so a
+     * registration that only inserted into `users` produced an account that could never sign
+     * in: register answered 201 with a user object, then the very next login returned 401
+     * "Invalid email or password". The two halves had to be reconciled.
+     *
+     * Order matters. Supabase is created FIRST: if it rejects the address (already taken,
+     * weak password) we must fail before writing a local row, otherwise a rejected signup
+     * leaves an orphaned `pending_verification` user blocking a retry with "already exists".
+     */
+    if (this.supabaseAuth?.enabled) {
+      return this.registerWithSupabase(params);
+    }
+
     const existing = await this.drizzle.db.query.users.findFirst({
       where: and(eq(users.email, params.email), eq(users.tenantId, params.tenantId)),
     });
@@ -193,6 +211,141 @@ export class AuthService {
     }).catch(() => {});
 
     return { user, verificationToken };
+  }
+
+  /**
+   * Registration when Supabase owns credentials.
+   *
+   * Creates the Supabase user with `email_confirm: true` (the address is our own record and
+   * there is no reason to make a new learner wait on an SMTP round-trip before their first
+   * login), then mirrors the row into `users` so tenancy, RBAC and progress all resolve.
+   *
+   * `email_confirm: true` is what makes this work locally and in CI with no mail provider at
+   * all — previously the local flow produced `pending_verification` users who could never log
+   * in because no SMTP was configured to deliver the confirmation link.
+   *
+   * Returns the same shape as the legacy path plus a session, so the controller can set
+   * cookies exactly as it does for login.
+   */
+  private async registerWithSupabase(params: {
+    email: string;
+    password: string;
+    name: string;
+    tenantId: string;
+    tenantSlug?: string;
+    username?: string;
+  }): Promise<{ user: typeof users.$inferSelect; session: SupabaseSession; verificationToken: null }> {
+    const existing = await this.drizzle.db.query.users.findFirst({
+      where: and(eq(users.email, params.email), eq(users.tenantId, params.tenantId)),
+    });
+    if (existing && existing.accountStatus !== 'deleted') {
+      throw new ConflictException(
+        existing.emailVerifiedAt
+          ? 'An account with this email already exists'
+          : 'An account with this email is pending verification. Please check your email or request a new verification link.',
+      );
+    }
+
+    const username = params.username || (await this.deriveUsername(params.email, params.name));
+    if (params.username) {
+      const taken = await this.drizzle.db.query.users.findFirst({
+        where: eq(users.username, params.username),
+      });
+      if (taken) throw new ConflictException('Username is already taken');
+    }
+
+    // Supabase first: a rejection here must not leave a half-created local account.
+    let authUserId: string;
+    try {
+      authUserId = await this.supabaseAuth!.createUser({
+        email: params.email,
+        password: params.password,
+        name: params.name,
+        username,
+      });
+    } catch (error) {
+      throw this.translateSupabaseSignupError(error);
+    }
+
+    // A deleted local row for the same address is revived rather than duplicated, because
+    // `users.email` is unique per tenant and a second insert would violate it.
+    const values = {
+      tenantId: params.tenantId,
+      email: params.email,
+      name: params.name,
+      username,
+      role: 'learner' as const,
+      accountStatus: 'active' as const,
+      isActive: true,
+      emailVerifiedAt: new Date(),
+      passwordChangedAt: new Date(),
+      authUserId,
+    };
+
+    const created = existing
+      ? await this.drizzle.db
+          .update(users)
+          .set({ ...values, name: params.name, username })
+          .where(eq(users.id, existing.id))
+          .returning()
+      : await this.drizzle.db.insert(users).values(values).returning();
+
+    const user = created[0];
+    if (!user) throw new Error('Failed to create user');
+
+    // Establish the session immediately so a confirmed signup lands authenticated instead of
+    // bouncing the new user to the login page.
+    const session = await this.supabaseAuth!.signInWithPassword(params.email, params.password);
+
+    await this.auditService.log({
+      userId: user.id,
+      action: 'user.register',
+      entityType: 'user',
+      entityId: user.id,
+      details: { email: user.email, tenantId: params.tenantId, provider: 'supabase' },
+    });
+    void this.notifications?.notifyTenantAdmins(params.tenantId, {
+      type: 'new_user_signup',
+      category: 'system',
+      title: 'New user signup',
+      body: `${user.name || user.email} joined the workspace.`,
+      href: `/admin/users?focus=${user.id}`,
+      actorId: user.id,
+      entityType: 'user',
+      entityId: user.id,
+      idempotencyKey: `new-user:${params.tenantId}:${user.id}`,
+    }).catch(() => {});
+
+    return { user, session, verificationToken: null };
+  }
+
+  /**
+   * Turn a Supabase signup rejection into a message the register form can actually show.
+   *
+   * Without this the frontend received a bare 5xx/400 and rendered a generic
+   * "Registration failed", hiding the one fact the user needs: that the address is taken or
+   * the password is too weak.
+   */
+  private translateSupabaseSignupError(unknownError: unknown): Error {
+    if (unknownError instanceof SupabaseAuthError) {
+      const error = unknownError;
+      const raw = (error as SupabaseAuthError & { rawBody?: unknown }).rawBody;
+      const code =
+        (raw && typeof raw === 'object' && 'error_code' in raw
+          ? String((raw as { error_code?: unknown }).error_code ?? '')
+          : '') || error.code || '';
+      const message = /already been registered|already exists|duplicate/i.test(
+        `${error.message} ${code}`,
+      )
+        ? 'An account with this email already exists'
+        : /password/i.test(`${error.message} ${code}`)
+          ? 'Password does not meet the required strength'
+          : error.status === 429
+            ? 'Too many signup attempts. Please try again later.'
+            : 'Registration is unavailable. Please try again.';
+      return new ConflictException(message);
+    }
+    return new InternalServerErrorException('Registration is unavailable. Please try again.');
   }
 
   async login(params: {

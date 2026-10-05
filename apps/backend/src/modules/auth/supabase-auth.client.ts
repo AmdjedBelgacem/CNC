@@ -129,8 +129,19 @@ export class SupabaseAuthClient {
       },
       true,
     );
-    if (!json.user?.id) throw new SupabaseAuthError('no_user', 'Supabase did not return a user id', 502);
-    return json.user.id;
+    /**
+     * `/admin/users` returns the created user at the TOP level
+     * (`{ id, aud, role, email, email_confirmed_at, ... }`), not wrapped in a `user` key.
+     * Reading `json.user?.id` therefore always yielded undefined and threw `no_user` (502),
+     * which surfaced to the register form as a generic "Registration is unavailable" even
+     * though Supabase had in fact created the account — leaving an orphaned auth user and
+     * making every retry fail with "already registered".
+     *
+     * Both shapes are accepted so this keeps working if the response is ever enveloped.
+     */
+    const created = (json.user ?? json) as { id?: string };
+    if (!created.id) throw new SupabaseAuthError('no_user', 'Supabase did not return a user id', 502);
+    return created.id;
   }
 
   async setPassword(userId: string, password: string): Promise<void> {
