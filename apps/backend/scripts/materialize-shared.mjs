@@ -84,11 +84,23 @@ if (!existsSync(entry)) {
   process.exit(1);
 }
 
-// Remove pnpm's workspace link so the tracer is forced to the root copy above.
-const perPackageLink = join(backendRoot, 'node_modules/@titan/shared');
-if (existsSync(perPackageLink) || lstatExists(perPackageLink)) {
-  rmSync(perPackageLink, { recursive: true, force: true });
-  console.log('[shared] removed per-package workspace link so resolution uses the root copy');
+// Drop the backend's own node_modules so nothing resolves from it.
+//
+// pnpm's hoisted install puts every package at the repo root, but it ALSO leaves a
+// per-package node_modules for some direct dependencies. Vercel's tracer then traces those
+// through the nearer path and emits them at 'apps/backend/node_modules/<pkg>/', which no
+// Node resolver inside the lambda will ever find. Observed affecting jsonwebtoken,
+// socket.io, ioredis, @aws-sdk, @smithy, jws, @ioredis, cluster-key-slot and jwa -- each
+// present at the root, and each resolving fine from there.
+//
+// Deleting it after the build forces both the tracer and runtime Node onto the hoisted
+// root: the layout that verifiably emits resolvable top-level paths. The backend has
+// already been compiled at this point and its .bin scripts are invoked through the package
+// manager, so nothing needs this directory afterwards.
+const perPackageModules = join(backendRoot, 'node_modules');
+if (lstatExists(perPackageModules)) {
+  rmSync(perPackageModules, { recursive: true, force: true });
+  console.log('[shared] removed apps/backend/node_modules so resolution uses the hoisted root');
 }
 
 console.log(`[shared] materialised @titan/shared (entry ${pkg.main}) -> ${target}`);
