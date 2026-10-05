@@ -86,7 +86,14 @@ shorter than the minimum length.
 ### Auth and Supabase
 
 `SUPABASE_AUTH_ENABLED=true`, `SUPABASE_URL`, `SUPABASE_JWKS_URL`,
-`SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`).
+`SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`), **and `SUPABASE_PUBLISHABLE_KEY`**
+(or `SUPABASE_ANON_KEY`).
+
+`SUPABASE_PUBLISHABLE_KEY` is easy to overlook and breaks password login when missing:
+`SupabaseAuthClient` throws `not_configured`, and the login route maps any non-400 error
+from Supabase to a generic `401 Authentication is unavailable` — which reads like bad
+credentials rather than a missing env var. It is the key GoTrue needs for the password
+grant, and it is public by design, so store it as Config.
 
 ### Routing / OAuth
 
@@ -203,8 +210,12 @@ socket.io was not a supported framework there). Both are now moot.
 
 Still open:
 
-1. **Redis is unreachable in production.** `REDIS_URL` must be a hosted instance; until
-   then `/health` reports `redis: degraded` and rate limiting falls back to the database.
+1. **Redis is unreachable in production, and rate limiting is effectively OFF.**
+   `REDIS_URL` is still the placeholder, so `RedisThrottlerStorage` fails **open** — every
+   request is allowed. That is the right failure mode for availability but it means
+   `/auth/login` (limit 10/min), `/auth/forgot-password` (3/hour) and the admin write
+   routes are currently unthrottled in production. Provision a hosted Redis and set
+   `REDIS_URL`; until then treat the deployment as unsuitable for public sign-ups.
 2. **Meilisearch is not configured.** Search falls back to Postgres full-text and
    `/health` reports `search: degraded`. Omit the variables rather than pointing them at
    `localhost`.
