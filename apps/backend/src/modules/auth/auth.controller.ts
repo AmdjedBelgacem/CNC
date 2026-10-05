@@ -27,6 +27,7 @@ import { providerAuthorizeUrl } from './strategies/provider-authorize-url';
 import { callbackOrigin } from './strategies/oauth-callback-url';
 import { SupabaseAuthClient, SupabaseAuthError } from './supabase-auth.client';
 import { AuditService } from './services/audit.service';
+import { EmailOnlyDto, VerifyEmailDto } from './dto/email-verification.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -355,7 +356,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email address with token' })
   @Throttle({ default: { ttl: 3600000, limit: 5 } })
-  async verifyEmail(@Body() body: { token: string }) {
+  async verifyEmail(@Body() body: VerifyEmailDto) {
     await this.auth.emailVerification.verifyEmail(body.token);
     return { message: 'Email verified successfully' };
   }
@@ -365,7 +366,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend email verification' })
   @Throttle({ default: { ttl: 3600000, limit: 3 } })
-  async resendVerification(@Body() body: { email: string }, @Req() req: any) {
+  async resendVerification(@Body() body: EmailOnlyDto, @Req() req: any) {
     const tenant = await this.resolveTenant(req);
     await this.auth.emailVerification.resendVerification(body.email, tenant.id, tenant.slug);
     return { message: 'If the email exists, a verification link has been sent' };
@@ -376,7 +377,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset' })
   @Throttle({ default: { ttl: 3600000, limit: 3 } })
-  async forgotPassword(@Body() body: { email: string }, @Req() req: any) {
+  async forgotPassword(@Body() body: EmailOnlyDto, @Req() req: any) {
     const tenant = await this.resolveTenant(req);
     await this.auth.emailVerification.createPasswordResetToken(body.email, tenant.id, tenant.slug);
     return { message: 'If the email exists, a reset link has been sent' };
