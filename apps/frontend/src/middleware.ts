@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
@@ -81,7 +82,65 @@ export async function middleware(request: NextRequest) {
   const tenantSlug = resolveTenantSlug(request.headers.get('host') || '');
   const { pathname } = request.nextUrl;
   const isProtected = PROTECTED_ROUTES.some((r) => pathname.startsWith(r));
-  const response = NextResponse.next();
+/**
+ * Content-Security-Policy.
+ *
+ * This used to be a static header in next.config.ts with `script-src 'self'` and no
+ * `'unsafe-inline'`. That works in development (which adds 'unsafe-inline' and
+ * 'unsafe-eval') but blocks production outright: Next.js emits its hydration payload and
+ * several bootstrap scripts as INLINE <script> elements, so every one of them was refused
+ * and React never hydrated. The site sat on loading skeletons forever with a wall of
+ * "Executing inline script violates ... script-src 'self'" console errors.
+ *
+ * `'unsafe-inline'` would fix hydration but hand back exactly the XSS exposure the
+ * original policy was written to prevent. So a per-request nonce is used instead: it is
+ * forwarded to Next via the `x-nonce` request header, Next stamps it onto every script it
+ * emits, and the policy then only trusts scripts carrying this request's nonce. An
+ * injected inline script has no way to know it.
+ */
+function buildCsp(nonce: string): string {
+  const isDev = process.env.NODE_ENV !== 'production';
+  const explicit = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
+  let mediaOrigin = '';
+  if (explicit) {
+    try {
+      mediaOrigin = new URL(explicit).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  if (!mediaOrigin && isDev) mediaOrigin = 'http://localhost:4000';
+
+  // Development keeps 'unsafe-eval' because the dev overlay and HMR need it.
+  const scriptSrc = [`'self'`, `'nonce-${nonce}'`];
+  if (isDev) scriptSrc.push("'unsafe-eval'", "'unsafe-inline'");
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc.join(' ')}`,
+    // Styles must allow inline: the layout injects a <style> block built from tenant
+    // theme tokens, and Tailwind injects rules at runtime.
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: https:${isDev ? ' http://localhost:* http://127.0.0.1:*' : ''}${mediaOrigin ? ` ${mediaOrigin}` : ''}`,
+    "font-src 'self' data:",
+    `media-src 'self' blob: https:${mediaOrigin ? ` ${mediaOrigin}` : ''}`,
+    `connect-src 'self' https: wss:${isDev ? ' ws: http://localhost:*' : ''}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    ...(isDev ? [] : ['upgrade-insecure-requests']),
+  ].join('; ');
+}
+
+  // A fresh nonce per request. It goes on the REQUEST so Next.js can stamp it onto the
+  // scripts it renders, and on the RESPONSE so the browser only trusts that nonce.
+  const nonce = randomBytes(16).toString('base64');
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set('Content-Security-Policy', buildCsp(nonce));
   response.cookies.set('x-tenant-slug', tenantSlug, {
     httpOnly: true,
     sameSite: 'lax',

@@ -41,54 +41,25 @@ const nextConfig: NextConfig = {
    *
    * The CSP is as strict as the app tolerates: no `unsafe-eval` in production
    * (Next's dev overlay needs it, and it is scoped to development), and
-   * `unsafe-inline` for styles only — required by the inline theme-token style
-   * block and Tailwind's runtime style injection. `script-src` has no
-   * `unsafe-inline`, so an injected `<script>` still cannot execute.
+   * Content-Security-Policy is NOT set here. It is issued per request by
+   * src/middleware.ts with a nonce, because a static header cannot work: Next.js emits its
+   * hydration payload as inline <script>, and `script-src 'self'` without 'unsafe-inline'
+   * blocks every one of them, leaving the app permanently unhydrated on skeletons. The
+   * nonce policy keeps `script-src` free of 'unsafe-inline'. Setting CSP in both places
+   * would make the browser apply the stricter of the two and re-break hydration.
    */
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';
-    // Uploaded media is served by the API, not by Next, so its origin has to be
-    // an allowed image source. Without this every hero image, product thumbnail
-    // and academy logo silently fails to load, and it fails silently because a
-    // blocked image is not a console *error* the app surfaces.
-    const mediaOrigin = (() => {
-      const explicit = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
-      if (explicit) {
-        try {
-          return new URL(explicit).origin;
-        } catch {
-          /* fall through */
-        }
-      }
-      const port = process.env.API_PORT ?? process.env.BACKEND_PORT ?? '4000';
-      return isDev ? `http://localhost:${port}` : '';
-    })();
-    const csp = [
-      "default-src 'self'",
-      `script-src 'self'${isDev ? " 'unsafe-eval'" : ''}${isDev ? " 'unsafe-inline'" : ''}`,
-      // Styles must allow inline: the layout injects a <style> block built from
-      // tenant theme tokens, and Tailwind/emotion inject rules at runtime.
-      "style-src 'self' 'unsafe-inline'",
-      `img-src 'self' data: blob: https:${isDev ? ' http://localhost:* http://127.0.0.1:*' : ''}${mediaOrigin ? ` ${mediaOrigin}` : ''}`,
-      "font-src 'self' data:",
-      `media-src 'self' blob: https:${mediaOrigin ? ` ${mediaOrigin}` : ''}`,
-      `connect-src 'self' https: wss:${isDev ? ' ws: http://localhost:*' : ''}`,
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-      ...(isDev ? [] : ['upgrade-insecure-requests']),
-    ].join('; ');
-
     const security = [
-      { key: 'Content-Security-Policy', value: csp },
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'X-Frame-Options', value: 'DENY' },
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
       {
         key: 'Permissions-Policy',
         // Camera/mic/geolocation are not used; payment and clipboard are.
-        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+        // `interest-cohort` was removed from the spec and Chrome warns on it
+        // ('Unrecognized feature'), so it is deliberately absent.
+        value: 'camera=(), microphone=(), geolocation=()',
       },
       { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
       { key: 'X-DNS-Prefetch-Control', value: 'off' },
