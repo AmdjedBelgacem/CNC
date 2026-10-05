@@ -4,6 +4,7 @@
     "frontend": {
       "root": "apps/frontend",
       "framework": "nextjs",
+      "buildCommand": "cd ../.. && pnpm turbo build --filter=@titan/frontend",
       "bindings": [
         {
           "type": "service",
@@ -15,9 +16,8 @@
     },
     "backend": {
       "root": "apps/backend",
-      "entrypoint": "dist/vercel-entry.js",
-      "installCommand": "pnpm install --filter @titan/backend...",
-      "buildCommand": "pnpm turbo build --filter=@titan/backend"
+      "entrypoint": "src/vercel-entry.ts",
+      "buildCommand": "cd ../.. && pnpm turbo build --filter=@titan/backend"
     }
   },
   "rewrites": [
