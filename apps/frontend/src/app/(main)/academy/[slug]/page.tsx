@@ -15,10 +15,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Course } from '@titan/shared';
-import { fetchAcademyDetail, fetchPublishedAcademies } from '@/lib/academies';
+import { fetchAcademyDetail } from '@/lib/academies';
 import { fetchLinkedProducts } from '@/lib/products';
 import { getTenantSlug } from '@/lib/tenant';
-import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { getImageSrc } from '@/lib/images';
 import { formatMoney } from '@/lib/api/normalize';
 import { coerceLocale } from '@/i18n/config';
@@ -31,7 +30,22 @@ import { cn } from '@/lib/utils';
 import { serializeJsonLd } from '@/lib/json-ld';
 import { SITE_URL } from '@/lib/brand';
 
-export const revalidate = 60;
+/**
+ * This route is dynamic, and must stay that way.
+ *
+ * `revalidate = 60` made Next treat the page as statically generatable, but the component
+ * reads the tenant from an httpOnly cookie via `cookies()`. Next refuses to cache a page
+ * that reads request data, and on Vercel that surfaced as a hard 500 on every request:
+ *
+ *   Failed to handle /academy/aerospace
+ *   Server Components render ... digest: 'DYNAMIC_SERVER_USAGE'
+ *
+ * The route segment was still being served as a prerendered/ISR shell, so the conflict only
+ * manifested in production — it reproduced on neither the dev server nor a local
+ * `next start`. Data freshness comes from the fetches themselves (`next: { revalidate: 60 }`
+ * inside lib/academies.ts), which is the correct place for it, rather than from the segment.
+ */
+export const dynamic = 'force-dynamic';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -201,15 +215,12 @@ function toStoreProduct(product: {
   };
 }
 
-export async function generateStaticParams() {
-  try {
-    const academies = await fetchPublishedAcademies(DEFAULT_TENANT_SLUG);
-    return academies.map((academy) => ({ slug: academy.slug }));
-  } catch {
-    return [];
-  }
-}
-
+/**
+ * No `generateStaticParams`: this route is `force-dynamic` because it reads the tenant from
+ * a cookie. Prerendering slugs at build time also cannot work here — `API_INTERNAL_URL` is a
+ * Vercel service binding that only exists at runtime, so the build-time academy fetch returns
+ * nothing and the prerender is empty.
+ */
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { slug } = await props.params;
   const tenantSlug = await getTenantSlug();

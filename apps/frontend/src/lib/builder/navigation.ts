@@ -1,6 +1,23 @@
 import { cookies } from 'next/headers';
 import type { NavItemView } from '@titan/shared';
-import { API_BASE, tenantHeaders } from '@/lib/builder/theme';
+import { tenantHeaders } from '@/lib/builder/theme';
+
+/**
+ * Server-side origin for backend calls.
+ *
+ * `lib/builder/theme.ts` resolves its base from `NEXT_PUBLIC_API_URL` only. That is the
+ * browser-facing API origin, so during SSR the navigation fetch was pointed at the public
+ * frontend host and asked it for `/content/navigation` — a path the frontend does not serve.
+ * The request 404'd, `fetchNavigation` swallowed it and returned `[]`, and
+ * `SiteNavDesktop` returns `null` for an empty list, so the entire primary navigation
+ * silently disappeared from the header.
+ *
+ * `API_INTERNAL_URL` is the Vercel service binding and exists at runtime, which is what a
+ * server component must use. It is checked first for the same reason the sitemap fix was
+ * needed: build-time there is no binding, so the value is only present when actually serving.
+ */
+const SERVER_API_BASE =
+  process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 
 /**
@@ -20,7 +37,7 @@ export async function fetchNavigation(
   locale: 'en' | 'ar',
 ): Promise<NavItemView[]> {
   try {
-    const res = await fetch(`${API_BASE}/content/navigation?locale=${locale}`, {
+    const res = await fetch(`${SERVER_API_BASE}/content/navigation?locale=${locale}`, {
       headers: { ...tenantHeaders(tenantSlug), Accept: 'application/json' },
       cache: 'no-store',
     });

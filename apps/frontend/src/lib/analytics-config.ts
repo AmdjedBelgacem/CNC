@@ -1,7 +1,8 @@
 import type { AnalyticsIds } from '@/lib/analytics';
 import { normalizeAnalyticsIds } from '@/lib/analytics';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Server-side only: prefers the runtime service binding, like lib/builder/theme.ts.
+const API_BASE = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 /**
  * Server-side resolution of analytics tag IDs.

@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { BadgeCheck, XCircle } from 'lucide-react';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 
-export const revalidate = 60;
+/**
+ * Reads the tenant from a cookie, so this route cannot be statically generated. Same
+ * DYNAMIC_SERVER_USAGE 500 as academy/[slug]; freshness belongs on the fetch, not the segment.
+ */
+export const dynamic = 'force-dynamic';
 
 type Props = { params: Promise<{ number: string }> };
 
