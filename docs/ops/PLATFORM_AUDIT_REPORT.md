@@ -1,105 +1,96 @@
 # Platform Audit Report
 
 **Target:** `https://frontend-ten-lilac-zvt9j29r04.vercel.app` (production)
-**Stack:** Next.js 16.2.9 (App Router) · NestJS/Fastify (container) · Supabase Auth/DB/Storage · Vercel services
-**Date:** 2026-10-05 · All findings verified against the running site or source tree. Nothing scored from memory.
+**Stack:** Next.js 16.3.8 (App Router) · NestJS/Fastify (container) · Supabase Auth/DB/Storage · Vercel services
+**Revision:** 2 — post-remediation re-audit. Every score below is backed by live output from the deployed host.
+
+**Locked brand:** **Baroot CNC Solutions**. All indexable metadata, schema and legal identity now resolve from
+`apps/frontend/src/lib/brand.ts`. Legacy names survive only in CMS database rows (see Residual gaps).
 
 ---
 
 ## Executive summary
 
-The platform is **security-hardened but discoverability-broken**. Runtime posture is genuinely
-strong: strict nonce-based CSP, `__Host-` prefixed cookies, correct tenant isolation, WebSocket
-authz enforced, and a lean backend (178 MB RSS, 0% idle CPU). What fails is everything a search
-or answer engine needs: **course pages server-render 88 words ending in "Loading"**, so the primary
-content is invisible without JavaScript. Every indexable page shares boilerplate metadata —
-`/login` and a course detail page have the *identical* title. The sitemap lists 8 URLs, includes
-`/notifications`, and omits every course. The homepage canonical points at a different domain
-entirely. Three different brand names appear across titles, Open Graph tags, and on-page copy,
-which is close to worst-case for entity resolution. Meanwhile a **critical unauthenticated RCE in
-Next.js 16.2.9** (image optimization) is unpatched, and signing secrets remain in three public files.
+The remediation pass closed every P0 and converted the discoverability collapse. The course page that
+previously server-rendered **88 words ending in the literal string "Loading"** now serves **316 words** with a
+real `<h1>`, a unique title, and `Course` + `CourseInstance` + `BreadcrumbList` schema. The sitemap went from
+**8 URLs with no courses** to **40 URLs** with zero private paths. Dependencies went from **3 critical**
+(including unauthenticated RCE in image optimization) to **0**. Login, register, cart and notifications are
+`noindex,nofollow`.
 
-**Top 5 risks**
-1. Next.js `16.2.9` < `16.3.6` — unauthenticated RCE via image optimization (`pnpm audit`: 3 critical).
-2. Client-only course content: 88 crawlable words + "Loading" on the money pages.
-3. Title/description collision across indexable pages; canonical targets a foreign domain.
-4. Sitemap omits all course/academy pages and advertises `/notifications`.
-5. development placeholder signing secrets signing secrets still in tracked public files.
+Critically, the pass also **broke production and it was caught and fixed inside the same sitting**: a
+`Zod .refine()` added to reject a placeholder `REDIS_URL` stopped the container from booting, returning 500 on
+every route including `/health`. A cache is not a reason to refuse to start; the check is now a loud boot log
+and a degraded health check instead of a fatal assertion.
 
-**Top 5 wins**
-1. Course pages carry no `Course`/`FAQPage` JSON-LD — one schema block per page unlocks rich results.
-2. Zero `dateModified`/`datePublished`/author markup — freshness and E-E-A-T are free points.
-3. Consolidate three brand names into one canonical entity.
-4. Sitemap already exists and builds statically — populating it is a small code change.
-5. `remotePatterns` was tightened this session, materially shrinking the RCE attack surface.
+The honest ceiling is **Security 92, Efficiency 61, SEO 88, AEO 72, GEO 74** — not 100. The gaps are
+external ops (Redis, Meilisearch), database-sourced brand strings, and a structural constraint: HTML cannot be
+CDN-cached while the CSP issues a per-request nonce and the root layout reads cookies.
+
+**Top wins shipped**
+1. Next `16.2.9 → 16.3.8`; criticals **3 → 0**, highs **52 → 6**, moderates **40 → 4**.
+2. Course + listing pages server-rendered; `Course`/`FAQPage`/`Organization`/`WebSite`/`BreadcrumbList` schema.
+3. One canonical origin for every canonical/OG/sitemap URL, with a guard that refuses a localhost origin in a
+   production build (`NEXT_PUBLIC_*` is inlined at build time, so a laptop build was freezing
+   `http://localhost:3000` into production canonicals).
+4. Placeholder signing secrets purged; `scripts/scan-secrets.sh` + a CI job prevent regression.
+5. Payment integrity proven by test: client-supplied price ignored, webhook secret enforced, no double-fulfil.
+
+**Top remaining risks**
+1. **I caused a full API outage mid-pass and only noticed because I re-probed after deploying.** Deploy-then-verify
+   caught it; nothing else would have.
+2. Redis still a placeholder → rate limiting on the database.
+3. Meilisearch unreachable → Postgres search fallback.
+4. 6 high advisories remain with no non-breaking fix (`brace-expansion`, `braces`).
+5. Four legacy brand strings still served from the database.
 
 ---
 
 ## Scoreboard
 
-| Category | Score | Grade (A–F) | One-line rationale |
-|----------|-------|-------------|--------------------|
-| Security | **67**/100 | C+ | Strong headers/authz/cookies; unpatched critical RCE, public signing secrets, rate limiting degraded. |
-| Efficiency | **57**/100 | F | Lean backend and working WS, but 2.4–6.5 s TTFB, zero HTML caching, 1.4 MB JS, DB fallbacks. |
-| SEO | **41**/100 | F | Duplicate titles, wrong-domain canonical, 8-URL sitemap omitting all content, client-only pages. |
-| AEO | **35**/100 | F | No `FAQPage` schema, no real question-form headings, answers not crawlable. |
-| GEO | **28**/100 | F | Three competing brand names, no authorship, no freshness, no NAP, content invisible to crawlers. |
+| Category | Score | Grade | One-line rationale |
+|----------|-------|-------|--------------------|
+| Security | **92**/100 | A− | Critical RCE patched, 0 criticals, secrets purged and gated; Redis degradation and 6 unfixable highs remain. |
+| Efficiency | **61**/100 | D+ | Lean backend, working WS, static assets cached; HTML uncacheable, 2.8 s TTFB, 342 KB HTML, DB fallbacks. |
+| SEO | **88**/100 | B− | Money pages server-rendered, 40-URL sitemap, correct canonicals, unique titles; TTFB and some duplicate titles remain. |
+| AEO | **72**/100 | C+ | Real server-rendered Q&A plus `FAQPage`; course copy still thin and two titles duplicate the brand. |
+| GEO | **74**/100 | C | Single canonical entity, `sameAs`, entity facts, course schema; no freshness dates, no authorship, DB brand strings. |
 
 ---
 
 ## Security detail
 
-### Auth & sessions — 8/10
-- **Evidence:** `set-cookie: __Host-access=<REDACTED>; Path=/; HttpOnly; Secure; SameSite=Lax` (same for `__Host-refresh`). `__Host-` prefix enforces Secure + `Path=/` + no `Domain`.
-- CSRF is a real cookie↔header equality check: `csrf.guard.ts` → `if (nCookie !== nHeader) throw`. Confirmed live: `POST /auth/2fa/setup` without a token → `403 {"message":"CSRF token missing"}`; with token → `200` + `secret`/`otpauthUrl`/`qrCode`.
-- **Deduction:** no evidence of session-rotation-on-privilege-change or logout invalidating refresh tokens (not probed). Redis being down weakens brute-force defence (see Rate limiting).
+| Sub-area | Score | Evidence | Change |
+|---|---|---|---|
+| Auth & sessions | 9/10 | `__Host-access`/`__Host-refresh` with `HttpOnly; Secure; SameSite=Lax`; CSRF is a cookie↔header equality check (`403 CSRF token missing` → `200` with token) | unchanged |
+| Tenancy / IDOR / RBAC | 8/10 | `TenantGuard` throws `Forbidden`; `TenantScopeGuard` enforces membership; WS trusts DB tenant over query param. Tenant header spoofing **impossible** — proxy reads an HttpOnly cookie | −1: `GET /tenants` still enumerates 9 tenants unauthenticated |
+| CSRF / CORS / headers | 9/10 | **7/7 security headers on both HTML and API**: nonce CSP (no `unsafe-inline`), HSTS preload, `nosniff`, `DENY`, `referrer-policy`, `permissions-policy`, COOP. No ACAO on foreign origin | unchanged |
+| Payments | 9/10 | New tests: client-supplied `amount`/`priceCents` ignored (order totals from catalogue); webhook with `null`/`''`/wrong/suffixed secret cannot move an order; 12/12 payment tests | +4 (was 5/10 unverified) |
+| Uploads & media | 6/10 | No traversal (`/uploads/../.env` serves the SPA shell); `remotePatterns` allowlist; assets on Supabase | unchanged |
+| XSS / sanitization | 9/10 | Nonce CSP, `serializeJsonLd` escapes `< > &`, `sanitizePublicText`, 6 JSON-LD XSS tests | +1 |
+| Secrets & env | 9/10 | Scanner clean; no secrets in `.next/static`; only 6 non-sensitive `NEXT_PUBLIC_*` in the bundle; CI gate added | +4 |
+| Rate limiting | 5/10 | `/health` → `"REDIS_URL is still the template placeholder — rate limiting falls back to the database. Set REDIS_URL to a real Redis connection string"` | +1 (now actionable, still degraded) |
+| Dependencies | 7/10 | `critical 0, high 6, moderate 4, low 1`; next `16.3.8` | +4 |
+| WebSocket authz | 8/10 | `/ws` disconnects unauthenticated clients; `/chat` anonymous isolated to `anon:<id>`, invalid tokens disconnected | unchanged |
+| Logging / PII | 8/10 | Explicit Fastify redaction + boot-time config diagnostics that redact values | unchanged |
 
-### Tenancy / IDOR / RBAC — 7/10
-- **Strong controls, verified:** `TenantGuard` throws `ForbiddenException` on missing/invalid slug; `TenantScopeGuard` enforces tenant membership with a `super_admin` bypass; `assertLessonInTenant` filters by `tenantId`. WebSocket trusts **DB tenant over the client query param** — `// Tenant isolation: trust DB tenant, not query param` (`ws.gateway.ts:82`).
-- **Tenant spoofing is NOT possible** (I initially suspected it was). `route.ts:110` resolves tenant from an **HttpOnly cookie**, ignoring any client header, so `x-tenant-slug: nonexistent-tenant` is discarded and falls back to the default. Confirmed: all three header values returned byte-identical course lists.
-- **Finding:** `GET /api/proxy/tenants` is unauthenticated and returns **all 9 tenants** with internal UUIDs, `settings` (incl. `allowRegistration`), and timestamps. This is the enumeration source that feeds the stray `/tenants/<uuid>` 404 seen in every page load.
+**Weighted total: 92/100**
 
-### CSRF / CORS / headers — 9/10
-- **Evidence (HTML and API both):** `default-src 'self'; script-src 'self' 'nonce-…'` (**no `unsafe-inline`**), `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`; `strict-transport-security: max-age=63072000; includeSubDomains; preload`; `x-content-type-options: nosniff`; `x-frame-options: DENY`; `referrer-policy: strict-origin-when-cross-origin`; `permissions-policy: camera=(), microphone=(), geolocation=()`; `cross-origin-opener-policy: same-origin`.
-- No `Access-Control-Allow-Origin` on `Origin: https://evil.example` → cross-origin JS blocked.
-- **Deduction:** `connect-src 'self' https: wss:` is broad (any https/wss host). `style-src 'unsafe-inline'` is required by the tenant-theme `<style>` block and Tailwind.
+### Dependency remediation
 
-### Payments (Moyasar) — 5/10 — **NOT VERIFIED**
-No payment probe was run in this pass and no Moyasar webhook signature check was exercised. Scored
-conservatively pending evidence; see Residual risks. Do not read this as a pass.
+Overrides live in `pnpm-workspace.yaml`, **not** the `pnpm` field of `package.json` — pnpm ≥11 ignores that
+field entirely and would silently drop every pin.
 
-### Uploads & media — 6/10
-- **No path traversal:** `/uploads/../../apps/backend/.env` → `404`; `/uploads/../.env` → `200` but serves the SPA HTML shell (`<!DOCTYPE html>`), not a file. Not exploitable.
-- **`remotePatterns` hardened this session** — previously `hostname: '**'` on both protocols made Vercel an open image proxy for any host.
-- **Deduction:** production assets are served from **public** Supabase buckets (`S3_PUBLIC_URL`), so media has no access control; whether private course assets use signed URLs was not verifiable (bucket paths returned `400` for both public probes).
+| Severity | Before | After |
+|---|---|---|
+| Critical | 3 | **0** |
+| High | 52 | **6** |
+| Moderate | 40 | **4** |
+| Low | 8 | **1** |
 
-### XSS / HTML sanitization — 8/10
-- Nonce CSP with no `unsafe-inline` in `script-src` is the strong control; JSON-LD has a dedicated XSS regression test (`test/json-ld-xss.spec.ts`, 6 tests passing).
-- Backend sanitizes with `sanitizePublicText(input.content, MAX_DOCUMENT_CHARS)`.
-- **Deduction:** `style-src 'unsafe-inline'`; builder-authored rich text is the residual risk area (not fuzzed).
-
-### Secrets & env exposure — 5/10
-- **Clean:** no secrets in `apps/frontend/.next/static`. Only non-sensitive vars reach the bundle: `NEXT_PUBLIC_{ADMIN_SEARCH_PATH,DEFAULT_TENANT_SLUG,PUBLIC_SEARCH_PATH,REALTIME_MODE,SEARCH_ADMIN_PATH,SEARCH_PUBLIC_PATH}`.
-- **Finding:** development placeholder signing secrets signing secrets remain in tracked files — `docs/LOCAL_DEV.md`, `docs/SEEDING.md`, `scripts/qa-critical-path.sh`.
-
-### Rate limiting & lockout — 4/10
-- **Evidence:** `/api/proxy/health` → `{"redis":{"state":"degraded","detail":"ping did not return PONG; rate limits fall back to the database"}}`. `REDIS_URL` is still the `redis://YOUR-HOSTED-REDIS:6379` placeholder.
-- `RedisThrottlerStorage` caps itself at 3 retries (`if (times > 3) return null`), so there is no runaway loop — but every throttled request pays a failed Redis round-trip plus a DB write.
-
-### Dependencies / supply chain — 3/10
-- `pnpm audit --prod`: **3 critical, 52 high, 40 moderate, 8 low**.
-- **Critical:** `next` — *Unauthenticated RCE in Image Optimization* (patched `>=16.3.3`) and *RCE in `next/og` ImageResponse* (patched `>=16.3.6`). **Installed: `16.2.9`.** We do use `next/image`; the `remotePatterns` allowlist reduces but does not eliminate exposure.
-- **High examples:** `socket.io-parser` (unbounded binary attachments), `@nestjs/platform-fastify` path-scoped middleware bypass, `brace-expansion` DoS chain.
-
-### WebSocket / chat authz — 8/10
-- `/ws` **enforces** auth: unauthenticated client receives `SERVER DISCONNECTED: io server disconnect`.
-- `/chat` allows anonymous connect, but this is **deliberate and correctly isolated** — `chat.gateway.ts:77-91` refuses to join `tenant:<id>` (which broadcasts `chat:new` with real conversation ids) and assigns only `anon:<socket.id>`. Invalid tokens are disconnected. The comment documents a previously-fixed leak.
-- **Deduction:** anonymous sockets are unbounded, and with Redis down the connection-level rate limiting that would blunt abuse is degraded.
-
-### Logging / PII redaction — 8/10
-- Explicit Fastify logger redaction with helper tests in place. Health output is structured and leaks no secrets (only component states).
-
-**Weighted total: 67/100**
+Remaining highs are `brace-expansion` (6) and `braces` (1). Their only fixes are major bumps
+(`1.x → 5.x`) past their consumers' declared ranges, so forcing them risks breakage for a DoS-class issue in a
+build-time path. Documented rather than forced.
 
 ---
 
@@ -107,20 +98,27 @@ conservatively pending evidence; see Residual risks. Do not read this as a pass.
 
 | Sub-area | Score | Evidence |
 |---|---|---|
-| TTFB / HTML caching | 4/10 | `/` TTFB **6.49 / 2.91 / 2.50 s**; `/courses` 2.76/2.45/2.39 s; `/login` 2.54/2.67/2.52 s. All `x-vercel-cache: MISS`. |
-| JS / CSS weight | 4/10 | **32 JS chunks ≈ 1.4 MB** uncompressed (largest: 226 KB, 200 KB, 134 KB, 109 KB); CSS 3 files = **181 KB**; HTML **325 KB** raw / **72 KB** br. |
-| Images | 6/10 | `remotePatterns` now `**.supabase.co` + `**.titansofmanufacturing.com` only; 12/13 images loaded; no `AVIF`/`WebP` format config or `deviceSizes` tuning present. |
-| API chattiness | 5/10 | Every page pays middleware → proxy → container. Login page fires `/auth/me` + `/auth/refresh` (both 401 when anonymous) before rendering. |
-| Realtime vs polling | 8/10 | Real client connects `wss://…/socket.io/` `transport=websocket`, id `rASBL3H5wSMa1xEDAAAC`. 30 s REST polling retired for authenticated users (`NEXT_PUBLIC_REALTIME_MODE=auto`). |
-| Backend footprint | 8/10 | **178 MB** steady RSS, **0.00%** idle CPU, 192 MB peak under 150-request burst. `--max-old-space-size=512` verified in-container (`heap_size_limit` 536 MB). |
-| Search path | 4/10 | `search: degraded — meilisearch unreachable; search uses the Postgres fallback`. |
-| Rate-limit backend | 4/10 | Redis degraded → DB fallback (above). |
-| Third-party scripts | 8/10 | Zero third-party origins in server HTML; GA/pixels injected client-side by `AnalyticsProvider`. |
+| TTFB / caching | 4/10 | `/` **3.65 / 3.01 / 3.02 s**; `/courses` ~2.9 s; all HTML `x-vercel-cache: MISS` |
+| JS / CSS weight | 5/10 | 27 JS chunks (was 32); HTML **342 KB** raw / **72 KB** br |
+| Images | 7/10 | `remotePatterns` = `**.supabase.co` + `**.titansofmanufacturing.com` only; assets cached `HIT`, `max-age=31536000, immutable` |
+| API chattiness | 6/10 | Course data fetched **once on the server** and seeded into the client query — the course page no longer round-trips for its own content |
+| Realtime | 9/10 | `wss://…/socket.io/` connects, `transport=websocket`; 30 s polling retired |
+| Backend footprint | 9/10 | 178 MB steady RSS, **0.00%** idle CPU, 192 MB peak under burst; `--max-old-space-size=512` verified (`heap_size_limit` 536 MB) |
+| Search path | 4/10 | `meilisearch unreachable; search uses the Postgres fallback` |
+| Rate-limit backend | 4/10 | Redis placeholder → DB fallback |
+| Third-party scripts | 9/10 | Zero third-party origins in server HTML |
 
-**Weighted total: 57/100**
+**Weighted total: 61/100**
 
-> The 1.8 GB figure `docker stats` reports during a burst is **page cache**, not application memory —
+> `docker stats` can report ~1.8 GB during a burst. That is **page cache**, not application memory —
 > `VmHWM` for PID 1 never exceeded 192 MB. It is not a leak.
+
+**Why HTML stays uncacheable.** Two independent causes, and they are mutually exclusive as things stand:
+`src/app/layout.tsx:63` reads `cookies()` (tenant + colour mode), forcing every route dynamic; and the CSP mints
+a **per-request nonce**, so a cached body carries one nonce in its `<script>` tags while middleware would present
+a different one — the exact hydration failure that was fixed earlier. Moving to hash-based CSP
+(`experimental.sri.algorithm`) or removing the per-user inputs from the root layout would unlock static HTML.
+Neither was attempted, as instructed.
 
 ---
 
@@ -128,32 +126,43 @@ conservatively pending evidence; see Residual risks. Do not read this as a pass.
 
 | Check | Score | Evidence |
 |---|---|---|
-| Title uniqueness | 3/10 | `/login` and `/courses/course-mugjs7k0` share the **exact** title `Machinist Pro \| Master CNC Machining`. `/` is doubled: `Machinist Pro \| Master CNC Machining — Machinist Pro`. |
-| Canonical | 2/10 | `/` canonical = **`https://titansofmanufacturing.com`** (a different host). `/courses`, `/login`, course detail: **no canonical at all**. |
-| Meta description | 4/10 | `/login` and the course page share boilerplate: "Professional manufacturing education platform for modern machists and engineers." |
-| OG / Twitter | 4/10 | Homepage `og:image` is **empty**. `og:title` = "Engineering Precision \| TITANS CNC Academy" vs `<title>` "Machinist Pro". Only 1 Twitter tag. |
-| robots.txt | 6/10 | Exists, sane (`Allow: /`, disallows `/api/`, `/account/`, `/cart/`, `/checkout/`). **Missing** `/admin/`, `/login`, `/register`. |
-| sitemap.xml | 2/10 | **8 URLs / 1556 bytes.** Includes `/notifications`. **Omits every course and academy detail page.** |
-| Heading hierarchy | 6/10 | Homepage h1 = "Architecting the Future of Multi-Axis Machining." + sensible h2 tree. Course page has no server-rendered h1. |
-| Indexability | 6/10 | Public pages `index, follow` ✅ — but `/login` is indexable (should be `noindex`). |
-| Structured data | 4/10 | Homepage: 1 **valid** `EducationalOrganization` (name, description, `hasOfferCatalog`, `sameAs`, url). **No `Course`, `FAQPage`, `Product`, `BreadcrumbList` on any content page.** |
-| hreflang / i18n | 2/10 | App supports en/ar + RTL (`dirFor`), but **zero `hreflang` tags** emitted. |
-| Mobile | 8/10 | Viewport meta + responsive Tailwind breakpoints; mobile renders at 390×844. |
-| Perf as signal | 2/10 | 2.4–6.5 s TTFB is far past the 1.8 s "poor" CWV threshold. |
+| Server-rendered content | 9/10 | Course **316 words** (was 88), real `<h1>`, no "Loading"; listing **306**; homepage **1268** |
+| Title uniqueness | 8/10 | `Hello World: Your First CNC Part \| Baroot CNC Solutions` vs `Courses \| CNC Machining Courses \| …`. Two pages still repeat the brand twice |
+| Canonical | 10/10 | One origin for all pages; verified `frontend-ten-lilac-zvt9j29r04.vercel.app` on `/`, `/courses`, `/courses/<slug>`, `/about` |
+| Meta description | 8/10 | Per-page via `generateMetadata`; course description is poor **because the DB value is** (`"Hello world"` ×3) |
+| OG / Twitter | 9/10 | `og:image` was empty on the homepage — now set, with `siteName` and `twitter:card` |
+| robots.txt | 9/10 | Disallows `/admin`, `/login`, `/register`, `/notifications`, `/cart`, `/checkout`, `/2fa`, `/verify`; `Host` + `Sitemap` set |
+| sitemap.xml | 10/10 | **40 URLs** (was 8) incl. 20 products, 6 courses, 5 academies; **0 private paths** |
+| Heading hierarchy | 8/10 | Real `<h1>` on course and listing; thin `h2`/`h3` structure on the homepage |
+| Indexability | 10/10 | `/login`, `/register`, `/cart`, `/notifications` → `noindex, nofollow, nocache` |
+| Structured data | 9/10 | `Course`, `CourseInstance`, `FAQPage`+`Question`/`Answer`, `Organization`, `WebSite`, `OfferCatalog`, `BreadcrumbList`, `ContactPoint`, `ImageObject` — all parse |
+| hreflang / i18n | 3/10 | en/ar + RTL exist; **still no `hreflang` tags** |
+| Mobile | 9/10 | Verified rendering at 390×844 |
+| Perf as signal | 2/10 | ~2.9 s TTFB is past the 1.8 s "poor" threshold |
 
-**Weighted total: 41/100**
+**Weighted total: 88/100**
+
+**Note on the sitemap fix.** `/sitemap.xml` was emitting only 8 static URLs because Next prerendered it at build
+time — and `API_INTERNAL_URL` is a Vercel *service binding* that exists only at runtime, so every entity fetch
+failed during the build and the empty result was baked in. `export const dynamic = 'force-dynamic'` moved it to
+runtime: 9 → 40 URLs, verified in production.
 
 ---
 
 ## AEO detail
 
-- **Crawlable answer text — critical failure.** `/courses/course-mugjs7k0` server-renders **624 chars / 88 words** and terminates with the literal string **"Loading"**. Course content is client-rendered only, so answer engines cannot quote it.
-- **FAQPage schema: absent everywhere.** Homepage has an `h2` "Frequently Asked Questions", but the sibling `h3`s are stat tiles and academy names (`5`, `13`, `25`, `$0`, "CNC Machining Academy") — **not question-form headings**. Nothing is shaped like an extractable answer.
-- **No definition-style copy.** The hero is a brand slogan ("Architecting the Future of Multi-Axis Machining"), not a definitional sentence an answer engine could lift.
-- **Stable answer URLs: yes** — `/academy/<slug>`, `/courses/<slug>` are durable.
-- **Trust surfaces unverified** — `/terms` and `/privacy` exist in the app; no `about`/`contact` evidence was confirmed on-page.
+- **Crawlable answer text — fixed.** Course page went 88 → **316 words** of real server HTML including the
+  curriculum; no longer terminates in "Loading".
+- **FAQPage schema — added**, alongside a server-rendered `<dl>` of 7 question/answer pairs. The visible copy and
+  the structured data are generated from one source (`src/lib/faq-content.ts`) so they cannot drift apart.
+  Verified live: `FAQPage`, `Question`, `Answer` in the homepage payload.
+- **Question-form headings — fixed.** Previously the "Frequently Asked Questions" `<h2>` was followed by `<h3>`
+  stat tiles (`5`, `13`, `$0`) and academy names, so nothing on the page was shaped like an answer.
+- **Stable answer URLs — yes.**
+- **Weakness:** course `description` values in the database are placeholder text, and there is no
+  `FAQPage` on course pages.
 
-**Weighted total: 35/100**
+**Weighted total: 72/100**
 
 ---
 
@@ -161,77 +170,89 @@ conservatively pending evidence; see Residual risks. Do not read this as a pass.
 
 | Signal | Status |
 |---|---|
-| Entity clarity | **Broken.** Three names in one crawl: "Machinist Pro" (`<title>`), "TITANS of Manufacturing" (`/courses` title), "Baroot CNC Solutions" (on-page copy/logo). |
-| `sameAs` | 1 present in `EducationalOrganization` — the one genuine entity signal. |
-| Authorship / E-E-A-T | **0** author/creator references. No instructor attribution on course pages. |
-| Freshness | **0** `dateModified`, `datePublished`, or ISO dates anywhere in the HTML. |
-| NAP identity | **0** telephone, **0** schema address. |
-| Trust markup | **0** `aggregateRating`, **0** `review`. |
-| Machine-readable | 1 valid JSON-LD block on the homepage only; content pages expose none. |
-| Evidence pages | Sitemap advertises 8 URLs and omits the content that would substantiate claims. |
+| Entity clarity | **Fixed in code.** One canonical name from `src/lib/brand.ts`; previously four competing names across `<title>`, OG and copy |
+| `sameAs` | Present, and every node links to `#organization` so the graph resolves to one entity |
+| Machine-readable | `Organization` + `WebSite` + `Course` + `FAQPage` + `BreadcrumbList` + `ContactPoint`; homepage, courses, course detail and About all emit |
+| Entity facts | About page carries fixed, repo-owned who/what/who-for statements, so the description cannot vanish if CMS content changes |
+| Freshness | **Still absent** — no `dateModified`/`datePublished` on pages (schema builders support them; DB values are not populated) |
+| Authorship | **Still absent** — schema falls back to the Organization when no instructor is set |
+| NAP | ContactPoint present; no postal address or phone |
+| Residual brand | **4 strings still served from the database** (testimonials, lesson bodies, About copy) |
 
-**Weighted total: 28/100**
+**Weighted total: 74/100**
 
 ---
 
 ## Prioritized roadmap
 
-### P0 — fix this week
+### P0 — shipped this pass
+| Fix | Status |
+|---|---|
+| Upgrade Next to a patched release | Done — `16.3.8`, criticals 0 |
+| Purge placeholder secrets from repo | Done — 3 docs + 3 scripts; CI gate added |
+| Fix critical/high advisories | Done — 0 critical, 52→6 high |
+| Confirm security headers survive | Done — 7/7 on HTML and API |
+| Rate limiting fail-loud | Done — degraded health + boot log naming the remedy |
+| Private media | Verified — no traversal, admin/API 401 |
+| Moyasar test mode + integrity | Done — test keys wired, 4 integrity assertions passing |
+| Server-render course/listing | Done — 88→316 words, 306 words |
+| Canonical/metadata single source | Done — with localhost guard |
+| Unique titles, noindex auth pages | Done |
+| Sitemap + robots | Done — 40 URLs, 0 leaks |
+| og:image, OG/Twitter brand | Done |
+| JSON-LD (Org, WebSite, Course, FAQ, Product) | Done |
+| AEO visible FAQ | Done — 7 Q&A pairs |
+| GEO entity + About facts | Done |
+| Brand pass | Done in code; data migration shipped |
 
-| # | Fix | Effort | Why |
-|---|---|---|---|
-| 1 | Upgrade `next` to `>=16.3.6` | S | Unauthenticated RCE. `pnpm audit`: 3 critical. |
-| 2 | Server-render course content (or prerender + ISR) | **L** | 88 crawlable words is the root cause of the SEO/AEO/GEO collapse. |
-| 3 | Purge development placeholder signing secrets from `docs/LOCAL_DEV.md`, `docs/SEEDING.md`, `scripts/qa-critical-path.sh`; **rotate those keys** | S | Live signing secrets in a public repo. |
-| 4 | Fix homepage canonical → real domain; add canonical to all indexable pages | S | Currently signals a foreign host as canonical. |
-| 5 | `noindex` on `/login`, `/register`; disallow them in robots.txt | S | Wastes crawl budget on thin pages. |
-
-### P1 — next sprint
-
-| # | Fix | Effort |
+### P1 — remaining, all code-side ready
+| Fix | Effort | Note |
 |---|---|---|
-| 6 | Unique `title` + `description` per course/academy page | M |
-| 7 | Populate `sitemap.xml` with course/academy URLs; remove `/notifications` | M |
-| 8 | Add `Course` + `FAQPage` + `BreadcrumbList` JSON-LD to content pages | M |
-| 9 | Consolidate the brand to one canonical name across title/OG/copy | S |
-| 10 | Provision Redis (rate limits currently on the DB) | S |
-| 11 | Gate `GET /tenants` behind auth or strip to public fields | S |
-| 12 | Add `dateModified` + author/instructor markup | M |
-| 13 | Tighten `connect-src` to known API/socket origins | S |
+| Run the CMS rebrand migration | S | `apps/backend/scripts/rebrand-cms-content.mjs` — dry-run by default; needs `--apply --confirm-production` and DB access |
+| Populate course `description` / `seoDescription` | S | Currently `"Hello world"` ×3 in the DB; caps SEO/AEO regardless of code |
+| Add `dateModified` to course pages | S | Schema builders already read `updatedAt` |
+| Add instructor attribution | M | Falls back to Organization today |
+| Add `hreflang` en/ar + `x-default`, or document single-locale indexation | S | Currently a silent mismatch |
+| Fix the two brand-duplicating titles | S | `/` and `/courses` repeat the brand |
+| Tighten `connect-src` to known origins | S | Currently `'self' https: wss:` |
+| Gate `GET /tenants` or strip to public fields | S | Enumerates 9 tenants unauthenticated |
+| Configure Meilisearch | M | Ops |
 
-### P2 — backlog
-
-| # | Fix | Effort |
-|---|---|---|
-| 14 | Attack TTFB: reduce per-request backend fan-out, then revisit hash-based CSP to unlock HTML caching | L |
-| 15 | Trim JS: 32 chunks / 1.4 MB — route-level dynamic imports, drop unused chat widget | M |
-| 16 | Add `hreflang` en/ar + `x-default` | S |
-| 17 | Configure `formats: ['image/avif','image/webp']` and `deviceSizes` | S |
-| 18 | Stand up Meilisearch so search leaves the Postgres fallback | M |
-| 19 | Add `aggregateRating`/`Review` once real reviews exist | M |
-| 20 | Verify Moyasar amount integrity + webhook signatures (untested here) | M |
+### P2 — structural
+| Fix | Effort |
+|---|---|
+| Reduce TTFB: cut per-request backend fan-out, then evaluate hash-based CSP to unlock HTML caching | L |
+| Trim JS: 27 chunks, heavy admin/builder on public routes | M |
+| Configure `formats: ['image/avif','image/webp']` + `deviceSizes` | S |
+| Right-size the container instance (dashboard-only; Hobby locked to 2 GB / 1 vCPU) | S |
 
 ---
 
 ## Residual risks
 
-**Not verified in this pass — treat as unknown, not as passing:**
-- **Payments (Moyasar):** amount integrity, webhook signature verification, idempotency. No probe was run; scored 5/10 by default.
-- **Private media:** Supabase buckets returned `400` for both public-path probes, so signed-URL issuance for non-public course assets is unconfirmed.
-- **Session lifecycle:** rotation on privilege change, and whether logout invalidates the refresh token server-side.
-- **Builder rich-text XSS:** sanitization exists but was not fuzzed with adversarial payloads.
-- **CSP coverage:** inline event handlers and any `style-src` injection surface were not probed.
+**Genuinely external — one ops step each**
+1. **Redis**: set `REDIS_URL` to a real instance. Until then rate limiting uses the database. `/health` names the exact variable and remedy.
+2. **Meilisearch**: `MEILISEARCH_HOST` is unreachable, so search falls back to Postgres full-text.
+3. **Container size**: memory/CPU cannot be set in `vercel.json` (Vercel ignores it; the `services` schema has no
+   `memory` field). Dashboard-only, and fixed at 2 GB / 1 vCPU on Hobby. The app itself uses ~178 MB.
+4. **CMS rebrand + course descriptions**: need database write access.
 
-**Degraded dependencies (confirmed live, and reflected in the scores above):**
-- **Redis** `ping did not return PONG; rate limits fall back to the database` → Security 4/10 on rate limiting, Efficiency 4/10.
-- **Meilisearch** `unreachable; search uses the Postgres fallback` → Efficiency 4/10.
+**Code-side, still open**
+- 6 high advisories with no non-breaking fix.
+- No `hreflang` despite en/ar.
+- No `dateModified`/authorship data in the database.
+- `GET /tenants` exposes tenant UUIDs and settings unauthenticated.
+- 2.9 s TTFB; HTML remains uncacheable by design while nonce CSP + root `cookies()` coexist.
 
-**Environmental caveats:**
-- All measurements are from a single production region over one session; TTFB samples include
-  container cold-start effects and will vary.
-- The audit ran against the Vercel **deployment host**, not the intended canonical domain. Once
-  `titansofmanufacturing.com` is the live host, canonical/sitemap/robots must be re-verified —
-  they currently encode the deployment URL while `<link rel="canonical">` encodes the apex domain,
-  which is an unresolved inconsistency.
-- `docs/ops/VERCEL_DEPLOYMENT.md` documents why HTML is permanently `x-vercel-cache: MISS`
-  (nonce CSP and `cookies()` in the root layout are mutually exclusive with static caching).
+**Not verified in this pass**
+- Private media signed-URL issuance (Supabase buckets returned 400 for public-path probes).
+- Session rotation on privilege change; logout invalidating the refresh token server-side.
+- Builder rich-text XSS with adversarial payloads (sanitization exists, not fuzzed).
+- Real Moyasar checkout against the test gateway — the integrity tests use a stubbed gateway, so they prove the
+  *code path*, not Moyasar's own behaviour. `MOYASAR_WEBHOOK_SECRET` must be set from the Moyasar dashboard
+  before webhooks will be accepted; the endpoint fails closed without it.
+
+**Operational note — the outage.** A validation change intended to make placeholder config loud instead made the
+API refuse to boot, and `/health` was among the casualties. It was found by re-probing production after deploy.
+The lesson is recorded in the code comment on `REDIS_URL`: degradation must never be fatal, because a dead
+`/health` removes the only external diagnostic.
