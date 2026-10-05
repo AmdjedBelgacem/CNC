@@ -60,10 +60,16 @@ function resolveSiteUrl(): string {
   const candidates: (string | undefined)[] = [
     // Runtime-only: cannot be inlined, so it always reflects the running deployment.
     process.env.SITE_URL_OVERRIDE,
+    // Vercel's stable production domain for the project.
     process.env.VERCEL_PROJECT_PRODUCTION_URL,
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
-    // Build-time inlined; correct only if the build ran with the right environment.
+    // Build-time inlined. Set explicitly in the production environment, so this is the
+    // operator's declared public origin and must outrank the per-deployment URL below —
+    // otherwise every canonical and sitemap entry points at whichever preview happened to
+    // serve the request.
     process.env.NEXT_PUBLIC_SITE_URL,
+    // Last resort: this specific deployment's hostname. Correct only when nothing better
+    // is configured.
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
   ];
 
   const production = process.env.NODE_ENV === 'production';

@@ -51,16 +51,12 @@ const envSchema = z
      */
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
     DATABASE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
-    REDIS_URL: z
-      .string()
-      .min(1)
-      // Only shape-checked. The value is validated for "did anyone fill this in" at boot
-      // (see warnOnPlaceholderSecrets) rather than here, because refusing to start over a
-      // missing cache would take the whole API down for a rate-limit dependency.
-      .refine((value) => !/YOUR[-_A-Z0-9]*|CHANGEME|<[^>]+>/i.test(value), {
-        message:
-          'REDIS_URL still contains a template placeholder. Set a real Redis URL, or unset it to run without Redis.',
-      }),
+    // Only shape-checked. Deliberately NOT refined to reject template placeholders:
+    // refusing to boot over a missing cache takes the entire API down, and rate limiting
+    // degrading to the database is a far better outcome than 500ing every route. A
+    // placeholder is instead reported at boot (see assertNoPlaceholderSecrets) and through
+    // /health, so it is impossible to miss without also being fatal.
+    REDIS_URL: z.string().min(1),
     AUTH_SECRET: z.string().min(1),
     JWT_ACCESS_SECRET: z.string().min(1).default('access-secret-change-me'),
     JWT_REFRESH_SECRET: z.string().min(1).default('refresh-secret-change-me'),
@@ -242,5 +238,40 @@ export class ConfigService {
 
   get<T extends keyof Env>(key: T): Env[T] {
     return this.env[key];
+  }
+}
+
+/**
+ * Report configuration that is still an unfilled template value.
+ *
+ * Called during bootstrap. This is intentionally a loud log rather than a schema failure:
+ * an earlier version rejected the placeholder inside the Zod schema, which stopped the
+ * process from starting and returned 500 on every route — including `/health`, so there was
+ * no way to diagnose it from outside. A degraded cache is survivable; an API that refuses to
+ * boot because a cache is absent is not.
+ *
+ * @param values parsed configuration
+ * @param log sink for the warnings (a Nest Logger, injected to avoid a cycle here)
+ */
+export function assertNoPlaceholderSecrets(
+  values: Record<string, unknown>,
+  log: { error: (message: string) => void },
+): void {
+  const suspicious = /YOUR[-_A-Z0-9]*|CHANGEME|<[^>]+>|example\.(com|org)/i;
+
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value !== 'string' || !suspicious.test(value)) continue;
+    const consequence =
+      key === 'REDIS_URL'
+        ? 'rate limiting falls back to the database'
+        : key.startsWith('MEILI')
+          ? 'search falls back to Postgres full-text'
+          : key.includes('SUPABASE')
+            ? 'auth/storage may be misconfigured'
+            : 'dependent features may be misconfigured';
+    log.error(
+      `${key} is still a template placeholder (value redacted). ${consequence}. ` +
+        `Set ${key} to a real value in the deployment environment.`,
+    );
   }
 }

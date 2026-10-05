@@ -11,6 +11,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import * as querystring from 'node:querystring';
 import { AppModule } from './app.module';
+import { assertNoPlaceholderSecrets } from './config/config.service';
 
 /**
  * Whether to serve the interactive API docs.
@@ -217,6 +218,22 @@ export async function createApp(): Promise<NestFastifyApplication> {
     console.log('[security] API docs enabled at /api/docs');
   } else {
     console.log('[security] API docs disabled (set API_DOCS_ENABLED=true to expose)');
+  }
+
+  /**
+   * Surface unfilled template values loudly at boot.
+   *
+   * Runs after the app is constructed so it cannot affect startup: an earlier attempt
+   * enforced this inside the Zod schema and the placeholder REDIS_URL stopped the process
+   * from booting at all, which 500'd every route including /health and left no way to
+   * diagnose from outside. Degradation is reported, never fatal.
+   */
+  try {
+    assertNoPlaceholderSecrets(process.env, {
+      error: (message: string) => console.error(`[config] ${message}`),
+    });
+  } catch {
+    /* never let diagnostics break boot */
   }
 
   return app;
