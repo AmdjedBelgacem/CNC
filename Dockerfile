@@ -2,6 +2,10 @@
 #
 # Backend as a Vercel **container** service.
 #
+# Lives at the repository root because Vercel uses the service root as the container build
+# context, and this image needs the whole pnpm workspace (lockfile, packages/shared and the
+# puck patch). The backend service therefore declares `"root": "."`.
+#
 # Why a container and not a Node function: the function launcher rejected the module's
 # export shape ("Invalid export found in module /var/task/main.js") no matter how the
 # entrypoint was authored, and a function cannot hold the Socket.IO connections at /ws
@@ -13,7 +17,7 @@ FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-WORKDIR /app
+WORKDIR /repo
 
 # ── deps ──────────────────────────────────────────────────────────────────────────
 # The lockfile, workspace manifests and the pnpm patch are the only inputs that affect
@@ -51,13 +55,13 @@ RUN pnpm turbo build --filter=@titan/backend
 FROM node:22-bookworm-slim AS runner
 ENV NODE_ENV=production
 ENV PORT=4000
-WORKDIR /app
+WORKDIR /repo
 
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/packages ./packages
-COPY --from=base /app/apps/backend/dist ./apps/backend/dist
-COPY --from=base /app/apps/backend/package.json ./apps/backend/package.json
-COPY --from=base /app/apps/backend/scripts ./apps/backend/scripts
+COPY --from=base /repo/node_modules ./node_modules
+COPY --from=base /repo/packages ./packages
+COPY --from=base /repo/apps/backend/dist ./apps/backend/dist
+COPY --from=base /repo/apps/backend/package.json ./apps/backend/package.json
+COPY --from=base /repo/apps/backend/scripts ./apps/backend/scripts
 
 EXPOSE 4000
 

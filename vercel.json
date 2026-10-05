@@ -15,7 +15,7 @@
       ]
     },
     "backend": {
-      "root": "apps/backend",
+      "root": ".",
       "runtime": "container"
     }
   },
