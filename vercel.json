@@ -1,42 +1,40 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "frontend": {
-      "root": "apps/frontend",
-      "framework": "nextjs",
-      "buildCommand": "cd ../.. && pnpm turbo build --filter=@titan/frontend",
-      "bindings": [
-        {
-          "type": "service",
-          "service": "backend",
-          "format": "url",
-          "env": "API_INTERNAL_URL"
-        }
-      ]
-    },
-    "backend": {
-      "root": ".",
-      "runtime": "container"
-    }
+  "$schema": "https://openapi.vercel.app/vercel.json",
+  "$comment": [
+    "Frontend only. The Nest backend runs on Fly.io (see fly.toml and",
+    "docs/ops/DEPLOY_VERCEL_FLY.md). This used to declare a second service with",
+    "\"runtime\": \"container\", which made Vercel build and run the backend too —",
+    "fine functionally, but it pays Vercel container build minutes and keeps the",
+    "backend inside the frontend's deployment unit.",
+    "",
+    "CUTOVER ORDER MATTERS: deploy Fly FIRST and confirm https://<fly-host>/health",
+    "returns JSON. Only then deploy this config. Setting API_URL to a Fly origin",
+    "that does not exist yet takes the whole site down, because every",
+    "/api/proxy/* request and every SSR fetch would fail.",
+    "",
+    "The backend origin is API_URL, resolved in src/lib/server-api-url.ts by the",
+    "BFF and by the /uploads/* rewrite below. It is deliberately NOT inlined into",
+    "the bundle, so switching backends is one env change and one redeploy — no",
+    "code change, no rebuild of anything else."
+  ],
+  "framework": "nextjs",
+  "rootDirectory": "apps/frontend",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=@titan/frontend",
+  "outputDirectory": ".next",
+  "github": {
+    "silent": true
   },
   "rewrites": [
     {
-      "source": "/auth/oauth/(.*)",
-      "destination": {
-        "service": "backend"
-      }
+      "$comment": "Same-origin path to the Socket.IO transport so the browser needs no API hostname and no cross-site cookie.",
+      "source": "/socket.io/:path*",
+      "destination": "${API_URL}/socket.io/:path*"
     },
     {
-      "source": "/socket.io/(.*)",
-      "destination": {
-        "service": "backend"
-      }
-    },
-    {
-      "source": "/(.*)",
-      "destination": {
-        "service": "frontend"
-      }
+      "$comment": "OAuth callbacks must be handled by the backend, which owns the state cookie.",
+      "source": "/auth/oauth/:path*",
+      "destination": "${API_URL}/auth/oauth/:path*"
     }
   ]
 }

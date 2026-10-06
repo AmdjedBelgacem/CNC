@@ -10,10 +10,14 @@ import { DrizzleService } from '../../database/drizzle.service';
 import { ConfigService } from '../../config/config.service';
 import { users } from '../../database/schema/users';
 import { eq } from 'drizzle-orm';
+import { wsCorsOrigin } from '../../common/http/cors-origins';
 
 @WSGateway({
   cors: {
-    origin: (process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map((origin) => origin.trim()),
+    // Same resolver as the HTTP CORS block in main.ts. They used to differ: this
+    // one split FRONTEND_URL on commas while main.ts passed the raw string, so a
+    // preview+production allowlist broke one transport and not the other.
+    origin: wsCorsOrigin(),
     credentials: true,
   },
   namespace: '/ws',

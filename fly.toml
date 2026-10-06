@@ -1,0 +1,99 @@
+# Fly.io — NestJS backend.
+#
+# Only the backend lives here. The Next.js frontend stays on Vercel as a
+# containerless app, so neither platform pays for the other's runtime shape:
+# Vercel bills per build/bandwidth and never holds a long-lived Node process,
+# Fly bills one small always-on machine and carries the Socket.IO connections
+# that a serverless function cannot.
+#
+# Image: the repository-root `Dockerfile`, which is unchanged in spirit from the
+# one Vercel's container service used. The same image therefore serves a later
+# Hetzner deployment — only this file and the host's URL change.
+#
+# Deploy:  ./scripts/fly/deploy.sh
+# Docs:    docs/ops/DEPLOY_VERCEL_FLY.md
+
+app = "baroot-api"
+primary_region = "iad"
+
+[build]
+  # The build context must be the repository root: the image needs the pnpm
+  # workspace, packages/shared and patches/ to compile the backend.
+  dockerfile = "Dockerfile"
+
+[env]
+  # The image already listens on 0.0.0.0 and reads PORT; these make the contract
+  # explicit at the config layer and keep `fly console` honest.
+  PORT = "8080"
+  NODE_ENV = "production"
+
+  # Single 256 MB shared vCPU. See "Memory" below before raising it.
+  # Measured on this app: steady-state RSS ~178 MB, idle CPU ~0%.
+  # 256 MB leaves roughly 40% headroom over the working set, which is enough for
+  # steady traffic but tight during a burst — a cold start plus a request spike
+  # is the realistic OOM. If you see restarts, go to 512 MB rather than tuning
+  # anything else.
+  #
+  # NOTE: there is no NODE_OPTIONS cap here. The Vercel image sets
+  # --max-old-space-size=512, which is deliberately larger than the 256 MB cgroup
+  # on purpose: V8 sizes its heap against the limit, so an unbounded heap on a
+  # 256 MB machine means the kernel OOM-kills the process before V8 ever feels
+  # pressure and collects. Leave it unset at 256 MB. At 512 MB, set
+  # NODE_OPTIONS=--max-old-space-size=384.
+  #
+
+  # Bounded so a slow or hung provider cannot pin the single machine.
+  AI_PROVIDER_TIMEOUT_MS = "20000"
+  AI_PROVIDER_MAX_RESPONSE_BYTES = "2000000"
+
+  # Supabase's session-mode pooler allows 15 clients TOTAL across everything that
+  # connects to that project, including the pooler itself. 20 (the schema default)
+  # exhausts it and every request fails with
+  # (EMAXCONNSESSION) max clients reached in session mode.
+  DATABASE_POOL_MAX = "10"
+  DATABASE_CONNECT_TIMEOUT_MS = "10000"
+
+  # Placeholder, not a real host: boot requires the var, and this keeps /health
+  # honestly "degraded" while rate limiting falls back to the database. See the
+  # Redis section in the docs before assuming realtime is fully backed.
+  REDIS_URL = "redis://YOUR-HOSTED-REDIS:6379"
+
+# Always-on. Socket.IO has no request to attach a scale-to-zero instance to, so
+# a machine that wakes on demand cannot serve a websocket handshake within a
+# client's 8s timeout. This is the single line that costs money: 1 x shared-cpu-1x
+# bills hourly whether or not anyone is on the site. Fly's free allowance does not
+# cover an always-on machine, so this is a deliberate, documented cost — set
+# min_machines_running = 0 only if you disable realtime
+# (NEXT_PUBLIC_REALTIME_MODE=polling) and accept REST-only.
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Fly terminates TLS on *.fly.dev and forwards plain HTTP to internal_port.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    # Long-lived websocket connections hold a slot for their whole lifetime. The
+    # default of 100 would admit more sockets than a 256 MB machine can track.
+    type = "requests"
+    soft_limit = 60
+    hard_limit = 100
+
+  # Fly's own health check. Point it at the app's /health so a machine that has
+  # lost its database is restarted rather than left in rotation answering 500s.
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/health"
+
+# No [[vm]] block on purpose: `shared-cpu-1x` / `256mb` is Fly's default machine
+# size. Pinning it explicitly would only matter if you later want a dedicated
+# CPU, and `fly machine update` can do that without a config change.
+#
+# [vm]
+#   size = "shared-cpu-1x"
+#   memory = "256mb"

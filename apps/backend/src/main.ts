@@ -4,6 +4,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
+import { corsOrigins, isOriginAllowed } from './common/http/cors-origins';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import fastifyRawBody from 'fastify-raw-body';
@@ -185,8 +186,19 @@ export async function createApp(): Promise<NestFastifyApplication> {
     decorateReply: false,
   });
 
+  /**
+   * A function, not a fixed array, so Vercel preview origins — which are generated
+   * per commit and cannot be enumerated — are matched by suffix instead of
+   * requiring an env edit on every push. `corsOrigins()` is the same resolver the
+   * Socket.IO gateway uses, so REST and WS can no longer disagree about who is
+   * allowed.
+   */
+  const allowedOrigins = corsOrigins();
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin, allowedOrigins)) return callback(null, true);
+      callback(new Error(`Origin not allowed by CORS: ${origin}`), false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-slug', 'x-2fa-verified', 'x-csrf-token', 'stripe-signature'],
@@ -242,9 +254,14 @@ export async function createApp(): Promise<NestFastifyApplication> {
 /** Long-running server (local dev, Docker, any process manager). */
 async function bootstrap() {
   const app = await createApp();
-  const port = process.env.PORT || 4000;
-  await app.listen(port, '0.0.0.0');
-  console.log(`Server running on http://localhost:${port}`);
+  // PORT and HOST come from the host, not from us: Fly injects PORT and routes to
+  // the container's internal port, compose/Hetzner set both explicitly. Binding
+  // 127.0.0.1 here instead of 0.0.0.0 is the classic "works locally, unreachable
+  // in a container" failure.
+  const port = Number(process.env.PORT || 4000);
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`Server listening on ${host}:${port}`);
 }
 
 // Only start the server when executed directly; importing this module (for the

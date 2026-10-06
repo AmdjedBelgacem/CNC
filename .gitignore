@@ -63,4 +63,11 @@ LAUNCH_CHECKLIST.md
 
 # Vercel CLI local project link
 .vercel
+# Every real env file, including the deploy-target ones an operator creates
+# (.env, .env.local, .env.fly). Template files are the exception: they document the
+# contract and contain no secrets, and `.env.example` was previously caught by this
+# rule — so the deployment instructions that reference it shipped a file nobody else
+# could see.
 .env*
+!.env.example
+!.env.*.example

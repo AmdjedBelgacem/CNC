@@ -1,16 +1,21 @@
 # syntax=docker/dockerfile:1
 #
-# Backend as a Vercel **container** service.
+# Backend as a single portable long-running Node server.
 #
-# Lives at the repository root because Vercel uses the service root as the container build
-# context, and this image needs the whole pnpm workspace (lockfile, packages/shared and the
-# puck patch). The backend service therefore declares `"root": "."`.
+# Serves three targets with one image: Fly.io (fly.toml), a future Hetzner host
+# (docker compose / docker run), and the previous Vercel container service. Only
+# the host and the URL change between them — `node apps/backend/dist/main.js` is
+# exactly what serves /health locally, so local and production behaviour are
+# identical by construction.
 #
-# Why a container and not a Node function: the function launcher rejected the module's
-# export shape ("Invalid export found in module /var/task/main.js") no matter how the
-# entrypoint was authored, and a function cannot hold the Socket.IO connections at /ws
-# anyway. A container runs the exact same long-running `node dist/main.js` that serves
-# /health locally, so local and production behaviour are identical by construction.
+# Lives at the repository root because the image needs the whole pnpm workspace
+# (lockfile, packages/shared and the pnpm patches) to compile the backend.
+#
+# Why a long-running process rather than a Vercel function: the function launcher
+# rejected this module's export shape ("Invalid export found in module
+# /var/task/main.js") regardless of entrypoint, and a function cannot hold the
+# Socket.IO connections at /ws anyway. Fly.io runs the image directly, so the
+# container is kept rather than replaced.
 
 # ── base ──────────────────────────────────────────────────────────────────────────
 FROM node:22-bookworm-slim AS base
@@ -54,7 +59,12 @@ RUN pnpm turbo build --filter=@titan/backend
 # Debian-slim keeps that consistent and avoids a musl/mismatch class of failures.
 FROM node:22-bookworm-slim AS runner
 ENV NODE_ENV=production
+# PORT is supplied by the host: Fly injects it, Hetzner/compose can set it, and
+# the previous Vercel deployment relied on this default.
 ENV PORT=4000
+# Bind address. Fly and Docker both need 0.0.0.0; hardcoding it in the image means
+# no host has to remember.
+ENV HOST=0.0.0.0
 WORKDIR /repo
 
 COPY --from=base /repo/node_modules ./node_modules
@@ -63,7 +73,26 @@ COPY --from=base /repo/apps/backend/dist ./apps/backend/dist
 COPY --from=base /repo/apps/backend/package.json ./apps/backend/package.json
 COPY --from=base /repo/apps/backend/scripts ./apps/backend/scripts
 
-EXPOSE 4000
+# The node image already ships an unprivileged `node` user (uid 1000). Running as
+# root inside the container is unnecessary and turns any image-level bug into a
+# host-level one. Ownership is fixed at copy time so no chown step is needed.
+COPY --from=base --chown=node:node /repo/node_modules ./node_modules
+COPY --from=base --chown=node:node /repo/packages ./packages
+COPY --from=base --chown=node:node /repo/apps/backend/dist ./apps/backend/dist
+COPY --from=base --chown=node:node /repo/apps/backend/package.json ./apps/backend/package.json
+COPY --from=base --chown=node:node /repo/apps/backend/scripts ./apps/backend/scripts
+
+# /repo itself is root-owned, and UPLOAD_DIR defaults to `<cwd>/uploads`. Running as
+# `node` therefore fails at boot with EACCES on mkdir — the app dies before it can
+# serve /health. Creating the directory here, owned by the runtime user, keeps the
+# default path working without granting write access to the code.
+RUN mkdir -p /repo/uploads && chown node:node /repo/uploads
+
+USER node
+
+# Informational only: Fly routes to `internal_port` in fly.toml and overrides
+# PORT; the EXPOSE value here does not need to match it.
+EXPOSE 8080
 
 # Cap V8's old-space so the heap is bounded by something we choose rather than by
 # whatever the container happens to be given.
@@ -73,6 +102,12 @@ EXPOSE 4000
 # before collecting. On a container billed by provisioned memory that headroom is pure
 # risk, and on a smaller instance it is an OOM kill. 512 MB leaves ~3x headroom over the
 # measured working set, so GC runs earlier under load instead of the heap expanding.
+#
+# At 512 MB of provisioned memory this is ~3x the measured working set, so V8
+# collects before the heap expands. On a SMALLER machine the cap must come DOWN,
+# not up: V8 sizes its heap against the limit it is given, so an unbounded heap
+# on a 256 MB machine means the kernel OOM-kills the process before V8 feels any
+# pressure. Override with -e NODE_OPTIONS on Fly at 256 MB; see fly.toml.
 ENV NODE_OPTIONS="--max-old-space-size=512"
 
 # Containers are long-running processes, so this is a real server rather than a

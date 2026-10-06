@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { serverApiUrl } from './src/lib/server-api-url';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
@@ -41,7 +42,11 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
-    const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    // Same resolver as the /api/proxy BFF. They must agree: if the BFF talks to
+    // Fly and this rewrite still pointed at a Vercel service binding, uploaded
+    // images would 404 while every other API call worked, which is a miserable
+    // thing to diagnose in production.
+    const apiUrl = serverApiUrl();
     return [{ source: '/uploads/:path*', destination: `${apiUrl}/uploads/:path*` }];
   },
   /**

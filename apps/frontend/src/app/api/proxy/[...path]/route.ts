@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { LOCALE_COOKIE, coerceLocale, localeFromAcceptLanguage, type Locale } from '@/i18n/config';
+import { serverApiUrl } from '@/lib/server-api-url';
 
 /**
- * Server-side only. `API_INTERNAL_URL` is the Vercel service binding and points at the
- * backend's *internal* URL, so this proxy never leaves the deployment. Falling back to
- * `NEXT_PUBLIC_API_URL` keeps local development working (and any non-Vercel host where
- * the backend is genuinely public).
+ * Server-side only — never shipped to the browser.
+ *
+ * Resolution order and the reasoning behind it live in `@/lib/server-api-url`;
+ * this route is one of three consumers, kept in sync by using the same helper.
  */
-const API_BASE = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = serverApiUrl();
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
