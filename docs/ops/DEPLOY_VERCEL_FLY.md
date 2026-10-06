@@ -341,3 +341,127 @@ Nothing new is required. If you add a deploy job:
   frontend build proves nothing if the backend origin is dead.
 - `scripts/scan-secrets.sh` runs in CI already and will fail on any committed
   `.env.fly`.
+---
+
+# Run log — the deploy that actually happened
+
+Recorded 2026-10-06. Commands are real and redacted; no secret value appears here.
+
+## Live URLs
+
+| Role | URL |
+| --- | --- |
+| Backend (Fly) | `https://baroot-api.fly.dev` |
+| Frontend (Vercel) | `https://cnc-web-topaz.vercel.app` |
+| Vercel project | `cnc-web` (Next.js, Root Directory `apps/frontend`) |
+| Fly app | `baroot-api`, `shared-cpu-1x` / 256 MB, `min_machines_running = 1` |
+| Superseded | Vercel project `cnc` — safe to delete |
+
+## What was run
+
+```bash
+# Fly
+fly launch --no-deploy --copy-config --name baroot-api   # then fly.toml restored
+umask 077 && cp .env.example .env.fly && $EDITOR .env.fly # 33 keys, mode 600, gitignored
+./scripts/fly/deploy.sh --secrets                          # flyctl 0.4.x has no --from-file
+./scripts/fly/deploy.sh
+fly scale count 1 --yes --app baroot-api                   # deploy left 2 machines running
+curl -fsS https://baroot-api.fly.dev/health
+
+# Vercel
+rm -rf .vercel
+vercel link --yes --project cnc-web --scope <team>
+# Root Directory=apps/frontend via the Vercel API
+vercel env add API_URL production --no-sensitive
+vercel deploy --prod
+```
+
+Build time fell from **12 minutes** (backend container on Vercel) to **1–3 minutes**
+(frontend only). That is the consumption win in concrete terms.
+
+## Four things that broke, and why
+
+**1. `fly launch` overwrote `fly.toml`.** `--copy-config` still regenerated it and emitted
+`[[vm]] memory = '1gb'`. Leaving the block out to mean "the default" had stopped meaning
+the smallest machine — at 1 GB the cost is ~4x. Now pinned explicitly.
+
+**2. Two machines ran after one deploy**, each billed hourly. `fly scale count 1` fixed
+it. Check `fly machine list` after every deploy.
+
+**3. `vercel.json` must live at `apps/frontend/vercel.json`.** With Root Directory set to
+`apps/frontend`, Vercel reads `vercel.json` from *inside* it; the repo-root copy is
+silently ignored and the build falls back to Vercel's Next.js defaults.
+
+**4. Backend routing: three layers, only one works.**
+
+| Layer | Result |
+| --- | --- |
+| `next.config` rewrites | Middleware runs first and its matcher is a catch-all, so `/socket.io` and `/auth/oauth` got the Next.js 404 page. |
+| `vercel.json` rewrites | `${API_URL}` did not expand. Hardcoding the Fly URL worked instantly — which is how the cause was isolated — but loses the single-switch property. |
+| **middleware** | **Works.** Runs first, and in the `nodejs` runtime `process.env` is fully readable, so `API_URL` works even as a Secret. |
+
+`/socket.io` also needs its trailing slash restored: Vercel strips it before middleware
+sees the request, so forwarding bare `/socket.io` gave Fastify `Cannot GET /socket.io`.
+
+## Socket.IO was never mounted — pre-existing
+
+`@nestjs/platform-fastify` ignores `@WebSocketGateway` until an adapter is registered, and
+none ever was, so nothing served `/socket.io` and every handshake 404'd. It was invisible
+because the frontend degrades to its REST poller, and the docs claimed realtime worked
+based on the rewrite existing rather than on a socket ever opening.
+
+Fixed by `app.useWebSocketAdapter(new IoAdapter(app))`. Direct on Fly and through the
+public origin the handshake now returns the Engine.IO OPEN packet. The **websocket upgrade
+still cannot traverse Vercel**; long-polling does, which is the working path.
+
+## Smoke results
+
+| Check | Result |
+| --- | --- |
+| `GET https://baroot-api.fly.dev/health` | **200** — `degraded`: database/auth/storage/email up, redis + search degraded (unprovisioned) |
+| Vercel `/`, `/academy`, `/courses`, `/about` | **200** |
+| `POST /api/proxy/auth/register` | **201** — authenticated, role `learner`, `authUserId` set |
+| `GET /api/proxy/auth/me` with cookies | **200** — same user; `__Host-access` + `__Host-refresh` set |
+| `/socket.io?EIO=4&transport=polling` | **200** — Engine.IO OPEN packet |
+| `/auth/oauth/google` | **302** to the backend |
+| CORS, production origin | allow-origin set, credentials allowed |
+| CORS, foreign origin | no allow-origin header |
+| Guards | `/auth/me` and `/admin/email/*` → **401** unauthenticated |
+| Nest container on Vercel | **none** — preset Next.js, Root Directory `apps/frontend` |
+
+## Human-only steps still outstanding
+
+**1. Supabase Auth URL Configuration.** Read-only with the service-role key
+(`/auth/v1/admin/settings` → 404). In the dashboard:
+
+- Site URL → `https://cnc-web-topaz.vercel.app`
+- Redirect URLs → include the same, plus `https://cnc-web-topaz.vercel.app/auth/callback`
+
+Lower urgency than usually stated: the frontend uses **no** Supabase browser SDK, so auth
+flows through the Nest BFF and the app's own verification/reset links are built from
+`FRONTEND_URL`. The allowlist only affects OAuth, which has no client IDs configured at all.
+`mailer_autoconfirm` is `false`, consistent with the intended policy.
+
+**2. Delete the superseded Vercel project `cnc`.** It still holds the old container service
+and the previous environment. Keep it until the new deployment has run a day.
+
+**3. Resend sending domain.** Still unverified — `verificationEmailSent` reports `false`
+and no real mail can leave.
+
+**4. Moyasar webhook** must point at `https://cnc-web-topaz.vercel.app` or payments stop
+verifying.
+
+**5. Upstash Redis.** Free tier; set `REDIS_URL` on Fly. Until then rate limiting uses the
+database fallback and `/health` stays `degraded`.
+
+## Test accounts created during the smoke run
+
+`probe*@example.com`, `smoke*@example.com` and `final*@example.com` rows exist in
+production Supabase. Delete them before launch:
+
+```sql
+delete from users
+ where email like 'probe%@example.com'
+    or email like 'smoke%@example.com'
+    or email like 'final%@example.com';
+```
