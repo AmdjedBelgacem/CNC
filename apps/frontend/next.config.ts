@@ -47,7 +47,28 @@ const nextConfig: NextConfig = {
     // images would 404 while every other API call worked, which is a miserable
     // thing to diagnose in production.
     const apiUrl = serverApiUrl();
-    return [{ source: '/uploads/:path*', destination: `${apiUrl}/uploads/:path*` }];
+    const backend = (path: string) => `${apiUrl}${path}`;
+
+    /**
+     * Same-origin paths that must reach the backend rather than Next.js.
+     *
+     * `/socket.io` needs both an exact rule and a `:path*` rule: Vercel strips the
+     * trailing slash, so the Socket.IO handshake arrives as `/socket.io` with an empty
+     * path, which `:path*` does not match — without the exact rule the request got a
+     * 308 to itself and realtime never connected.
+     *
+     * These live here, not in vercel.json, because Vercel resolves `${VAR}` in
+     * vercel.json destinations at the routing layer, which cannot read a Secret-type
+     * variable. Here `process.env` is read inside the Node process, so the same
+     * serverApiUrl() that serves /api/proxy applies and API_URL stays the only switch.
+     */
+    return [
+      { source: '/uploads/:path*', destination: backend('/uploads/:path*') },
+      { source: '/socket.io', destination: backend('/socket.io') },
+      { source: '/socket.io/:path*', destination: backend('/socket.io/:path*') },
+      // OAuth callbacks are handled by the backend, which owns the state cookie.
+      { source: '/auth/oauth/:path*', destination: backend('/auth/oauth/:path*') },
+    ];
   },
   /**
    * Security headers.

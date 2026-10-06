@@ -1,25 +1,19 @@
 {
   "$schema": "https://openapi.vercel.app/vercel.json",
   "$comment": [
-    "Lives at apps/frontend/vercel.json, NOT the repository root: this project",
-    "sets Root Directory=apps/frontend, and Vercel reads vercel.json from INSIDE that",
-    "directory. A root-level copy is silently ignored.",
+    "Frontend only. The Nest backend runs on Fly.io (fly.toml + docs/ops/DEPLOY_VERCEL_FLY.md);",
+    "this project must never build or run a backend service or container.",
     "",
-    "Frontend only. The Nest backend runs on Fly.io (see fly.toml and",
-    "docs/ops/DEPLOY_VERCEL_FLY.md). This used to declare a second service with",
-    "\"runtime\": \"container\", which made Vercel build and run the backend too —",
-    "fine functionally, but it pays Vercel container build minutes and keeps the",
-    "backend inside the frontend's deployment unit.",
+    "There are deliberately NO rewrites here. Vercel expands \\${VAR} in vercel.json rewrite",
+    "destinations at the routing layer, which does not decrypt Secret-type variables \u2014",
+    "with API_URL stored as a Secret the destination resolved to nothing and every request",
+    "fell through to the Next.js 404. The /uploads, /socket.io and /auth/oauth rewrites",
+    "therefore live in next.config.ts, which reads process.env inside the Node process and",
+    "uses the same serverApiUrl() as the /api/proxy BFF. That keeps API_URL the single",
+    "backend switch AND works with a secret value.",
     "",
-    "CUTOVER ORDER MATTERS: deploy Fly FIRST and confirm https://<fly-host>/health",
-    "returns JSON. Only then deploy this config. Setting API_URL to a Fly origin",
-    "that does not exist yet takes the whole site down, because every",
-    "/api/proxy/* request and every SSR fetch would fail.",
-    "",
-    "The backend origin is API_URL, resolved in src/lib/server-api-url.ts by the",
-    "BFF and by the /uploads/* rewrite below. It is deliberately NOT inlined into",
-    "the bundle, so switching backends is one env change and one redeploy — no",
-    "code change, no rebuild of anything else."
+    "Lives at apps/frontend/vercel.json, not the repo root: Root Directory is apps/frontend",
+    "and Vercel reads vercel.json from inside it."
   ],
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
@@ -27,17 +21,5 @@
   "outputDirectory": ".next",
   "github": {
     "silent": true
-  },
-  "rewrites": [
-    {
-      "$comment": "Same-origin path to the Socket.IO transport so the browser needs no API hostname and no cross-site cookie.",
-      "source": "/socket.io/:path*",
-      "destination": "${API_URL}/socket.io/:path*"
-    },
-    {
-      "$comment": "OAuth callbacks must be handled by the backend, which owns the state cookie.",
-      "source": "/auth/oauth/:path*",
-      "destination": "${API_URL}/auth/oauth/:path*"
-    }
-  ]
+  }
 }

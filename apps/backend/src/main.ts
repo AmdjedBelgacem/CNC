@@ -4,6 +4,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { corsOrigins, isOriginAllowed } from './common/http/cors-origins';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
@@ -194,6 +195,21 @@ export async function createApp(): Promise<NestFastifyApplication> {
    * allowed.
    */
   const allowedOrigins = corsOrigins();
+  /**
+   * Attach the Socket.IO adapter.
+   *
+   * This was missing. With `@nestjs/platform-fastify` a `@WebSocketGateway` is inert
+   * until an adapter is registered: nothing ever mounts `/socket.io`, so the gateway's
+   * `namespace: '/ws'` had no HTTP endpoint to attach to and every handshake 404'd.
+   * It was invisible because the frontend degrades to its REST poller, and the docs
+   * claimed "realtime works" based on the rewrite existing rather than on a socket
+   * ever opening.
+   *
+   * `path` is left at the Socket.IO default so clients keep calling `/socket.io/?...`
+   * with `/ws` as the NAMESPACE — that is why the two are conflated in the docs.
+   */
+  app.useWebSocketAdapter(new IoAdapter(app));
+
   app.enableCors({
     origin: (origin, callback) => {
       if (isOriginAllowed(origin, allowedOrigins)) return callback(null, true);
