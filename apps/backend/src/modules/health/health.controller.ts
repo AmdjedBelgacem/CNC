@@ -4,6 +4,10 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '../../config/config.module';
 import { DrizzleService } from '../../database/database.module';
 import { Public } from '../auth/decorators/public.decorator';
+import Redis from 'ioredis';
+
+/** The single index the search service reads and writes. */
+const SEARCH_INDEX_NAME = 'titan_search';
 
 /**
  * Operational health, deliberately free of any new dependency.
@@ -26,6 +30,14 @@ interface Check {
   detail?: string;
 }
 
+/**
+ * Prove Redis accepts writes.
+ *
+ * PING only proves something answers on that port. The throttler and the public cache both
+ * need to SET and DEL keys; a read-only replica, a maxmemory instance that refuses writes,
+ * or a Redis in a different database index would pass PING and silently break both. Writes a
+ * namespaced probe key, reads it back and removes it.
+ */
 /** Detect an unmodified `.env.example`/template value that was never filled in. */
 function isPlaceholderUrl(value: string): boolean {
   return /YOUR[-_A-Z0-9]*|example\.com|CHANGEME|<[^>]+>|\.\.\./i.test(value);
@@ -106,7 +118,15 @@ export class HealthController {
     // Redis — not required; auth state falls back to the database.
     const redisUrl = this.config.get('REDIS_URL');
     if (!redisUrl) {
-      checks.redis = { state: 'disabled', detail: 'REDIS_URL unset' };
+      // Unset is a real misconfiguration for a public API, not a neutral state: it means
+      // rate limiting silently runs on the database and the public read cache is inert.
+      // Reported as degraded with the consequence, not 'disabled'.
+      checks.redis = {
+        state: 'degraded',
+        detail:
+          'REDIS_URL unset — rate limiting falls back to the database and the public read cache is inert. ' +
+          'Set REDIS_URL to a dedicated Redis instance (do not point it at another app\'s Redis).',
+      };
     } else if (isPlaceholderUrl(redisUrl)) {
       // The schema only enforces min(1), so an untouched template value
       // ("redis://YOUR-HOSTED-REDIS:6379") boots cleanly and then fails every rate-limit
@@ -120,22 +140,67 @@ export class HealthController {
       };
     } else {
       checks.redis = await this.checkRedis(redisUrl);
+      if (checks.redis.state === 'up') {
+        // PING succeeding proves reachability, not that this application can store keys.
+        // A round-trip write/delete is what the throttler and the cache actually need.
+        const roundTrip = await this.checkRedisWritable(redisUrl);
+        if (roundTrip) {
+          checks.redis = {
+            state: 'degraded',
+            detail: `redis reachable but a write test failed (${roundTrip}); rate limiting and the public cache will not work`,
+          };
+        }
+      }
     }
 
     // Meilisearch — not required; search falls back to Postgres full-text.
     const meiliHost = this.config.get('MEILISEARCH_HOST');
+    /**
+     * Search must never read as healthy while the primary engine is down.
+     *
+     * A reachable `/health` is not sufficient: Meilisearch answers /health even when the
+     * index the application actually queries is missing, so a green health probe could hide
+     * an empty or absent `titan_search`. The probe therefore checks the real index, and
+     * "reachable but not usable" is reported as degraded with the consequence spelled out —
+     * search silently degrading to a slower Postgres query is exactly the kind of thing that
+     * must not look like a clean bill of health.
+     */
     checks.search = meiliHost
       ? await withTimeout(
-          fetch(`${meiliHost}/health`)
-            .then((r) =>
-              r.ok
-                ? { state: 'up' as State }
-                : { state: 'degraded' as State, detail: `meilisearch HTTP ${r.status}; search uses the Postgres fallback` },
-            )
-            .catch(() => ({ state: 'degraded' as State, detail: 'meilisearch unreachable; search uses the Postgres fallback' })),
-          { state: 'degraded' as State, detail: `meilisearch no response in ${TIMEOUT_MS}ms; search uses the Postgres fallback` },
+          (async () => {
+            const probe = await fetch(`${meiliHost}/health`);
+            if (!probe.ok) {
+              return { state: 'degraded' as State, detail: `meilisearch HTTP ${probe.status}; search uses the Postgres fallback` };
+            }
+            // Reachable. Now confirm the index this application reads actually exists.
+            const key = this.config.get('MEILISEARCH_API_KEY');
+            const index = await fetch(`${meiliHost}/indexes/${SEARCH_INDEX_NAME}/stats`, {
+              headers: key ? { Authorization: `Bearer ${key}` } : {},
+            });
+            if (!index.ok) {
+              return {
+                state: 'degraded' as State,
+                detail: `meilisearch is up but index '${SEARCH_INDEX_NAME}' is unavailable (HTTP ${index.status}); search uses the Postgres fallback`,
+              };
+            }
+            const stats = (await index.json()) as { numberOfDocuments?: number };
+            return {
+              state: 'up' as State,
+              detail: `meilisearch, index '${SEARCH_INDEX_NAME}' with ${stats.numberOfDocuments ?? 0} documents`,
+            };
+          })().catch(() => ({
+            state: 'degraded' as State,
+            detail: 'meilisearch unreachable; search uses the Postgres fallback',
+          })),
+          {
+            state: 'degraded' as State,
+            detail: `meilisearch no response in ${TIMEOUT_MS}ms; search uses the Postgres fallback`,
+          },
         )
-      : { state: 'disabled', detail: 'MEILISEARCH_HOST unset; search uses the Postgres fallback' };
+      : {
+          state: 'degraded' as State,
+          detail: `MEILISEARCH_HOST unset; search uses the Postgres fallback (no full-text index)`,
+        };
 
     // Storage — configuration check only. Probing the bucket would cost a signed
     // request on every probe and is covered by the storage invariant tests.
@@ -160,6 +225,37 @@ export class HealthController {
     const overall: State = states.includes('down') ? 'down' : states.includes('degraded') ? 'degraded' : 'up';
 
     return { status: overall, checks };
+  }
+
+  /**
+   * Prove Redis accepts writes, not just that something answers.
+   *
+   * PING succeeds against a read-only replica or a full instance that refuses SET, both of
+   * which would silently break the throttler and the public cache. Writes a namespaced probe
+   * key, reads it back, removes it. Returns null on success or a reason string on failure.
+   */
+  private async checkRedisWritable(url: string): Promise<string | null> {
+    const probe = `health:probe:${Math.random().toString(36).slice(2)}`;
+    const client = new Redis(url, {
+      lazyConnect: true,
+      connectTimeout: 2000,
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+    });
+    try {
+      await client.connect();
+      await client.set(probe, '1', 'EX', 30);
+      const got = await client.get(probe);
+      return got === '1' ? null : 'key did not read back';
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    } finally {
+      try {
+        await client.quit();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   private async checkRedis(url: string): Promise<Check> {

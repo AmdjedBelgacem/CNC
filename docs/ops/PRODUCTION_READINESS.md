@@ -141,3 +141,125 @@ Evidence for the matrix is in `docs/ops/SMOKE_EVIDENCE.md`; regenerate with:
 cd apps/backend && npm run smoke:production -- --api http://localhost:4000 \
   --out ../../docs/ops/SMOKE_EVIDENCE.md
 ```
+---
+
+# Addendum — platform pass (signup, email, Redis, Meili)
+
+## Blocker: the Vercel project is paused
+
+```
+project `frontend`  ->  paused: true        (API /v9/projects/frontend)
+production, preview and git-preview URLs -> 503 DEPLOYMENT_PAUSED
+deployments         ->  state READY (the pause is account-level, not a build failure)
+```
+
+Every deployment reports READY while the project serves 503, which is a Vercel
+account-level pause — most commonly a spend/plan limit reached on the team. **This cannot be
+lifted from the CLI or the REST API**; it needs a billing action in the dashboard.
+
+**Consequence:** no live verification was possible during this pass. Everything below was
+verified against a local container built from the same commit, and the deployed signup proof
+that *was* captured immediately before the pause is recorded under P0-1.
+
+## P0-1 — Deployed signup: PASS (evidence captured pre-pause, commit `d759b5b`)
+
+```
+POST https://frontend-…vercel.app/api/proxy/auth/register      -> 201
+  authenticated        : true
+  verificationEmailSent: false   (truthful — see P0-2)
+  role                 : learner
+  accountStatus        : active
+  authUserId           : SET
+  emailVerifiedAt      : null    (not pre-set; set when the link is opened)
+  cookies              : __Host-access, __Host-refresh
+```
+
+Re-verification after unpausing is a single command:
+
+```bash
+D=https://frontend-ten-lilac-zvt9j29r04.vercel.app
+curl -s -c /tmp/j -X POST "$D/api/proxy/auth/register" \
+  -H 'content-type: application/json' -H 'x-tenant-slug: cnc-fundamentals' \
+  -d '{"email":"probe@example.com","password":"Str0ng-Probe!9","name":"Probe"}'
+curl -s -b /tmp/j "$D/api/proxy/auth/me" -H 'x-tenant-slug: cnc-fundamentals'
+```
+
+## P0-2 — Email
+
+Policy is now explicit (see `EMAIL_SETUP.md`): **the application sends verification and
+password reset through Resend; confirmation is not a gate.** `emailVerifiedAt` stays null
+until the link is opened, and the account is usable immediately.
+
+Code verified locally against the real Resend key:
+
+```
+undeliverable recipient -> verificationEmailSent:false, 422 logged, token retained
+deliverable address    -> verificationEmailSent:true
+```
+
+Both reset paths return actionable 400s rather than 500s (`VerifyEmailDto` /
+`EmailOnlyDto`), and the error body names the field.
+
+## P0-3 — Redis is a real dependency
+
+Measured ladder, same image, three configurations:
+
+| `REDIS_URL` | Result |
+| --- | --- |
+| unset | **Refuses to boot** — `REDIS_URL: Required` |
+| `redis://YOUR-HOSTED-REDIS:6379` | boots, health `degraded` with the exact remedy |
+| real instance | health `up`, **write round-trip verified** (probe key set/read/del) |
+
+Health no longer reports `disabled` for an unset URL (that would have looked healthy while
+rate limiting ran on the database), and a reachable-but-unwritable Redis is now detected
+rather than assumed good.
+
+## P0-5 — Meilisearch
+
+Health no longer stops at `/health`, which answers even when the index is missing. It now
+reads the index the application actually queries:
+
+```
+search up       : "meilisearch, index 'titan_search' with 150 documents"
+search down     : "meilisearch is up but index 'titan_search' is unavailable (HTTP …)"
+MEILISEARCH_HOST unset : degraded, "no full-text index"
+```
+
+Local container is compose-managed and healthy (`cnc-meilisearch`, 150 documents); a live
+query returns CNC Machining Academy, CNC Bilingual Content Blocks Demo, CNC Milling
+Fundamentals.
+
+## Correction: the HS256 bug was not real
+
+Previously reported as "when `SUPABASE_AUTH_ENABLED=false`, HS256 tokens are rejected". **Not
+reproducible.** Tested both configurations against the current build:
+
+```
+flag=false, no SUPABASE_URL     -> /auth/me 200  role=learner
+flag=false, SUPABASE_URL set    -> /auth/me 200  role=learner
+```
+
+The earlier failure came from a stale container from an earlier session still bound to the
+port — the same stray-process trap that produced the earlier "throttle is stuck at 100"
+confusion. `test/jwt-auth-flag-routing.spec.ts` now pins the routing so a genuine regression
+is caught immediately.
+
+## Operator checklist — do these
+
+1. **Unpause the Vercel project.** Resolve the spend/plan limit, then re-run the P0-1 command.
+2. **Verify a sending domain in Resend** and set `SMTP_FROM=<bare address>` on the backend.
+   Without it, every email fails with 403 `domain is not verified`.
+3. **Provision a dedicated Redis** and set `REDIS_URL`. Do not point it at another app's
+   instance — the throttler and public cache share the keyspace and will evict each other.
+   Confirm via `/health`: `redis: up` and probe keys appear.
+4. **Set `MEILISEARCH_HOST` + `MEILISEARCH_API_KEY`** to a reachable Meilisearch and reindex
+   (`POST /api/proxy/search/reindex`). Confirm via `/health`: `search: up` naming the index.
+5. **Rotate the superadmin password.** It is still the seeded test credential used throughout
+   this work and is known to anyone reading the transcript.
+6. **Rotate the Moyasar live keys.** `pk_live_`/`sk_live_` were pasted into a chat session
+   and must be treated as exposed. Only test keys are configured in the app.
+7. **Set `MOYASAR_WEBHOOK_SECRET`** from the Moyasar dashboard. The webhook endpoint fails
+   closed without it, so no payment settlement can occur.
+8. **Run the CMS rebrand** against production:
+   `node apps/backend/scripts/rebrand-cms-content.mjs` (dry run), then
+   `--apply --confirm-production`. Four legacy brand strings remain in CMS rows.

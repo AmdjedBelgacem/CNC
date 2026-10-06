@@ -1,21 +1,49 @@
-# Email Setup — Resend + Supabase Auth SMTP
+# Email Setup — Resend (app mail) + Supabase Auth SMTP (optional)
 
-Transactional app email works today. **Auth email does not**, and that blocks the 12
-users who still need a password setup. Both remaining steps are dashboard-only.
+## The intended production policy
+
+Decided explicitly, because the previous behaviour was an accident rather than a choice.
+
+**Who sends what**
+
+| Mail | Sent by | Transport | Gate |
+| --- | --- | --- | --- |
+| Email verification ("verify your address") | **This application** | Resend | **Not a gate** |
+| Password reset / forgot password | **This application** | Resend | Not a gate |
+| Supabase-native notices (magic link, OTP, invite) | Supabase | Supabase SMTP → Resend | Supabase's own |
+
+The application sends verification and reset itself because it already owns a working
+`verification_tokens` table and a `/auth/verify-email` endpoint that consumes it. Routing
+those through Supabase's SMTP instead would add a second token system for no benefit.
+
+**Why confirmation is not a gate.** `accountStatus` stays `active` at signup and
+`emailVerifiedAt` stays null until the link is opened. So:
+
+- a new account can sign in immediately, even if its mail provider cannot deliver;
+- the address is still *proven* rather than merely typed, and the audit trail records
+  whether delivery succeeded.
+
+This was chosen deliberately. An earlier change set `email_confirm: true`, which made signup
+work but silently removed verification entirely — users were told nothing and no email was
+ever sent. Gating on confirmation would fix that only by re-breaking signup for anyone whose
+mail cannot be delivered. If you want confirmation enforced, that is a one-line policy
+change plus verified SMTP, and it should be made when the domain is live, not before.
+
+**Failure is never silent.** The mailer checks the resolved provider error (the Resend SDK
+resolves on API errors instead of throwing), so `verificationEmailSent` in the register
+response is truthful, and a failed send is logged with the status and reason.
 
 ## Current state
 
 ```
-RESEND_API_KEY  configured   -> send to ahmed@barootcnc.com returned 200
+RESEND_API_KEY  configured   -> sends accepted (verified against the live key)
 Resend key type restricted    -> only the account owner may be a recipient
-Supabase Auth SMTP            -> not configured; GoTrue falls back to its own rate-limited
-                                 built-in SMTP, which cannot deliver to arbitrary domains
+Sending domain   NOT verified -> titansofmanufacturing.com returns 403
+Supabase SMTP     not configured
 ```
 
-Consequence: password-reset and verification emails to real users fail. The app's
-`forgot-password` path must not 500 — see "Validating without the domain" below.
-
----
+So: the code path is correct and observable, but **no real email can leave the system until
+a sending domain is verified**. Both remaining steps are dashboard-only.
 
 ## Step 1 — Verify a domain in Resend (human, ~2 min)
 
@@ -40,8 +68,18 @@ curl -s https://api.resend.com/domains -H "Authorization: Bearer $RESEND_API_KEY
 Set the app's sender to the verified domain in `apps/backend/.env`:
 
 ```
-SMTP_FROM=TITANS of Manufacturing <notifications@titansofmanufacturing.com>
+SMTP_FROM=notifications@titansofmanufacturing.com
 ```
+
+**`SMTP_FROM` must be a bare email address, not `"Name <address>"`.** The config schema
+validates it with `z.string().email()`, so a display-name form fails boot with
+`SMTP_FROM: Invalid email` — verified, it is a real startup failure, not a warning. The
+display name is added by the application, which now sends as `Baroot CNC Solutions <
+SMTP_FROM>`.
+
+Until a domain is verified, omit `SMTP_FROM` entirely and the app sends as
+`Baroot CNC Solutions <onboarding@resend.dev>`. That address only delivers to your own
+Resend account, which is enough to prove the path end-to-end.
 
 ## Step 2 — Point Supabase Auth SMTP at Resend (human, ~1 min)
 
