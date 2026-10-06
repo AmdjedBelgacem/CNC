@@ -33,6 +33,7 @@ export { sponsors } from './sponsors';
 export { navigationItems } from './navigation';
 export { themes, themeVersions } from './themes';
 export { pages, pageVersions } from './pages';
+export { emailTemplates, emailTemplateVersions, emailTriggerBindings, emailOutbox } from './emails';
 export { savedSections } from './saved-sections';
 export { aiConversations, aiMessages, aiConversationSources, aiConversationStatuses } from './ai-assistant';
 export { notifications, platformNotificationPrefs } from './notifications';

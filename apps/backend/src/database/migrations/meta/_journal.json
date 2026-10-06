@@ -264,6 +264,20 @@
       "when": 1787361693672,
       "tag": "032_supabase_auth_link",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1787361694672,
+      "tag": "033_hot_path_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1787361695672,
+      "tag": "034_admin_email_system",
+      "breakpoints": true
     }
   ]
 }

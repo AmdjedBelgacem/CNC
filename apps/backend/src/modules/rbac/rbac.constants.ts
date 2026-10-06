@@ -73,6 +73,14 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   { key: 'builder:edit', group: 'builder', label: 'Edit builder' },
   { key: 'builder:publish', group: 'builder', label: 'Publish builder' },
   { key: 'builder:sections_manage', group: 'builder', label: 'Manage builder sections' },
+  // admin custom email system
+  { key: 'email:view', group: 'email', label: 'View email templates' },
+  { key: 'email:edit', group: 'email', label: 'Edit email templates and triggers' },
+  // Separated from edit on purpose: publishing is the act that changes what real
+  // learners receive, so it is its own grant rather than part of general editing.
+  { key: 'email:publish', group: 'email', label: 'Publish, rollback or retry email' },
+  { key: 'email:test_send', group: 'email', label: 'Send test emails' },
+  { key: 'email:settings', group: 'email', label: 'Edit email sender settings' },
   // analytics
   { key: 'analytics:view', group: 'analytics', label: 'View analytics' },
   { key: 'analytics:export', group: 'analytics', label: 'Export analytics' },

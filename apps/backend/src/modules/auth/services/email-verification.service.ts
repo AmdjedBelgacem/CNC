@@ -4,7 +4,7 @@ import { verificationTokens } from '../../../database/schema/auth';
 import { users } from '../../../database/schema/users';
 import { TokenService } from './token.service';
 import { AuditService } from './audit.service';
-import { EmailService } from './email.service';
+import { EmailService } from '../../email/email.service';
 import { eq, and, isNull } from 'drizzle-orm';
 import { ServiceUnavailableException } from '@nestjs/common';
 

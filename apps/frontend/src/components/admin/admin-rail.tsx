@@ -19,6 +19,7 @@ import {
   Crosshair,
   Package,
   DollarSign,
+  Mail,
   Navigation,
   TriangleAlert,
 } from 'lucide-react';
@@ -47,6 +48,12 @@ const tabsBase: Omit<TabDef, 'title'>[] = [
     icon: LayoutTemplate,
     roles: ['super_admin', 'admin', 'instructor'],
     match: (p) => p.startsWith('/admin/builder'),
+  },
+  {
+    href: '/admin/email',
+    icon: Mail,
+    roles: ADMIN_ROLES,
+    match: (p) => p.startsWith('/admin/email'),
   },
   {
     href: '/admin/navigation',

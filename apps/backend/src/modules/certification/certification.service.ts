@@ -11,7 +11,7 @@ import { generateCertificateNumber } from '@titan/shared';
 import * as crypto from 'crypto';
 import { AuditService } from '../auth/services/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { EmailService } from '../auth/services/email.service';
+import { EmailService } from '../email/email.service';
 import { StorageService } from '../storage/storage.service';
 import {
   CertificateRendererService,

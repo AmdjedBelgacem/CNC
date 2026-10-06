@@ -12,3 +12,4 @@ export * from './certification';
 export * from './event';
 export * from './theme';
 export * from './page';
+export * from './email';

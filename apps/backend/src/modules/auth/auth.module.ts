@@ -11,7 +11,8 @@ import { TotpService } from './services/totp.service';
 import { OAuthService } from './services/oauth.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { LockoutService } from './services/lockout.service';
-import { EmailService } from './services/email.service';
+import { EmailService } from '../email/email.service';
+import { EmailModule } from '../email/email.module';
 import { CsrfService } from './services/csrf.service';
 import { KeyManagementService } from './services/key-management.service';
 import { UserPreferencesService } from './services/user-preferences.service';
@@ -48,6 +49,9 @@ import { SearchModule } from '../search/search.module';
     }),
     RbacModule,
     forwardRef(() => NotificationsModule),
+    // EmailModule forward-refs back here for AuditService (template publishes are
+    // audited), so the cycle must be broken on both sides.
+    forwardRef(() => EmailModule),
     SearchModule,
   ],
   controllers: [AuthController, ProfileController],
@@ -60,7 +64,6 @@ import { SearchModule } from '../search/search.module';
     OAuthService,
     EmailVerificationService,
     LockoutService,
-    EmailService,
     CsrfService,
     KeyManagementService,
     UserPreferencesService,

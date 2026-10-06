@@ -6,7 +6,7 @@ import { userPreferences } from '../../database/schema/user-preferences';
 import { users } from '../../database/schema/users';
 import { WsGateway } from '../ws/ws.gateway';
 import { UserPreferencesService } from '../auth/services/user-preferences.service';
-import { EmailService } from '../auth/services/email.service';
+import { EmailService } from '../email/email.service';
 import { ConfigService } from '../../config/config.service';
 
 export type NotificationCategory = 'social' | 'learning' | 'commerce' | 'messages' | 'security' | 'system' | string;

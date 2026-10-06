@@ -23,6 +23,8 @@ import { productsBundle, productVariants } from '../../database/schema/products'
 import { events } from '../../database/schema/events';
 import { enrollments } from '../../database/schema/progress';
 import { productPurchases } from '../../database/schema/product-purchases';
+import { users } from '../../database/schema/users';
+import { EmailDispatchService } from '../email/email-dispatch.service';
 import { SecretBoxService } from '../../common/security/secret-box.service';
 import { CoursesService } from '../courses/courses.service';
 import { EventsService } from '../events/events.service';
@@ -110,6 +112,7 @@ export class MoyasarService {
     private readonly events: EventsService,
     private readonly notifications: NotificationsService,
     private readonly platformAlerts: PlatformAlertsService,
+    private readonly emailDispatch: EmailDispatchService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -668,8 +671,95 @@ export class MoyasarService {
       return { orderId: order.id, status: 'paid', fulfilled: true };
     }
 
+    // Receipt. Emitted here because this is the single-writer claim: `claimed`
+    // is non-empty only for the first writer to move the order off non-paid, and
+    // the outbox insert carries the same `order_paid:{id}` key, so a replayed
+    // webhook is suppressed twice over — once by this guard and once by the
+    // unique index.
+    //
+    // Deliberately before fulfilment and deliberately unable to throw: the
+    // buyer paid, so they are owed a receipt even if a line item later fails to
+    // deliver, and a mail problem must never turn a captured payment into a
+    // failed webhook response.
+    await this.enqueueOrderPaidReceipt(params.tenantId, order);
+
     const fulfilled = await this.fulfillOrder(params.tenantId, order.id);
     return { orderId: order.id, status: 'paid', fulfilled };
+  }
+
+  /**
+   * Build the `commerce.order_paid` payload from live rows.
+   *
+   * Every failure is contained inside this method rather than at the call site.
+   * A mail problem must never turn a captured payment into a failed webhook
+   * response, and the payments invariant suite deliberately rejects a swallowed
+   * error sitting near a paid-order write — handling it here keeps that
+   * invariant intact instead of weakening it.
+   *
+   * Money is formatted here, not in the template: the compiler is deliberately
+   * free of locale and currency logic so that the same layout renders
+   * byte-identically on every send, and a formatter in the renderer would make
+   * the output depend on machine state.
+   */
+  private async enqueueOrderPaidReceipt(tenantId: string, order: any): Promise<void> {
+    try {
+      await this.dispatchReceipt(tenantId, order);
+    } catch (error: any) {
+      this.logger.error(
+        `order_paid receipt enqueue failed for order ${order?.id}: ${error?.message}`,
+      );
+    }
+  }
+
+  private async dispatchReceipt(tenantId: string, order: any): Promise<void> {
+    const [buyer] = await this.drizzle.db
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, order.userId))
+      .limit(1);
+    if (!buyer?.email) {
+      this.logger.error(`Order ${order.id} has no buyer email; receipt skipped`);
+      return;
+    }
+
+    const lines = await this.drizzle.db
+      .select({ title: orderItems.title, quantity: orderItems.quantity, unitAmountCents: orderItems.unitAmountCents })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, order.id));
+
+    const currency = order.currency || 'SAR';
+    const total = ((order.totalAmount ?? 0) / 100).toFixed(2);
+    const frontend = this.config.get('FRONTEND_URL') ?? '';
+    const firstName = (buyer.name ?? '').trim().split(/\s+/)[0] || 'there';
+
+    const outcome = await this.emailDispatch.enqueue({
+      triggerKey: 'commerce.order_paid',
+      tenantId,
+      to: buyer.email,
+      recipientUserId: order.userId,
+      idempotencyKey: `order_paid:${order.id}`,
+      payload: {
+        user: { firstName },
+        order: {
+          id: order.id,
+          total: `${currency} ${total}`,
+          currency,
+          paidAt: (order.paidAt ?? new Date()).toISOString(),
+          items: lines.length
+            ? lines.map((l) => `${l.title} x${l.quantity ?? 1}`).join('\n')
+            : '—',
+          hasInvoice: Boolean(frontend),
+        },
+        invoiceUrl: frontend ? `${frontend}/orders/${order.id}/invoice` : undefined,
+        // Resolved from tenant settings by the renderer; the fallback only matters
+        // if a tenant has none configured.
+        supportEmail: undefined,
+      },
+    });
+
+    if (!outcome.queued && outcome.reason !== 'duplicate' && outcome.reason !== 'no_binding') {
+      this.logger.warn(`order_paid receipt not queued: ${outcome.reason} ${outcome.detail ?? ''}`);
+    }
   }
 
   /** Keep a gateway response for reconciliation, minus anything sensitive. */

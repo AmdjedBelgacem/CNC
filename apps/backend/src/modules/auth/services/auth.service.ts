@@ -9,7 +9,7 @@ import { TotpService } from './totp.service';
 import { OAuthService } from './oauth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { LockoutService } from './lockout.service';
-import { EmailService } from './email.service';
+import { EmailService } from '../../email/email.service';
 import { KeyManagementService } from './key-management.service';
 import { RbacService } from '../../rbac/rbac.service';
 import { NotificationsService } from '../../notifications/notifications.service';

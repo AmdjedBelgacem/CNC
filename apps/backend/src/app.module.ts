@@ -21,6 +21,7 @@ import { UploadModule } from './modules/upload/upload.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { EmailModule } from './modules/email/email.module';
 import { ProductsModule } from './modules/products/products.module';
 import { SocialModule } from './modules/social/social.module';
 import { RepairModule } from './modules/repair/repair.module';
@@ -83,6 +84,7 @@ import { RedisThrottlerStorage } from './modules/auth/providers/redis-throttler-
     PaymentsModule,
     IntegrationsModule,
     NotificationsModule,
+    EmailModule,
     ProductsModule,
     SocialModule,
     RepairModule,

@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { EmailService } from '../src/modules/auth/services/email.service';
+import { EmailService } from '../src/modules/email/email.service';
+import { EmailProvider } from '../src/modules/email/email.provider';
 import { TotpService } from '../src/modules/auth/services/totp.service';
 
 /**
@@ -18,7 +19,10 @@ const src = (rel: string) => readFileSync(join(__dirname, '..', 'src', rel), 'ut
 
 function makeEmail(env: Record<string, string | undefined>) {
   const config = { get: (key: string) => env[key] } as any;
-  return new EmailService(config);
+  // EmailService now delegates transport to EmailProvider (the class moved out of
+  // modules/auth so the outbox and the legacy helpers share exactly one sender),
+  // so the provider is what has to be constructed.
+  return new EmailService(new EmailProvider(config), config);
 }
 
 describe('EmailService — no RESEND_API_KEY must never claim delivery', () => {
@@ -53,9 +57,10 @@ describe('EmailService — no RESEND_API_KEY must never claim delivery', () => {
   // described in a comment that quotes the old code. Matching the loose form would fail
   // on the comment and, worse, would keep passing after someone reintroduced the bug.
   it('never returns a bare `!this.isDev` again', () => {
-    expect(src('modules/auth/services/email.service.ts')).not.toMatch(
-      /return\s+!this\.isDev\s*;/,
-    );
+    // The fail-open guard now belongs to the provider, which is where the
+    // unconfigured branch lives after the class moved out of modules/auth.
+    expect(src('modules/email/email.provider.ts')).not.toMatch(/return\s+!this\.isDev\s*;/);
+    expect(src('modules/email/email.service.ts')).not.toMatch(/return\s+!this\.isDev\s*;/);
   });
 });
 
