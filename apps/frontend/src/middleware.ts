@@ -78,9 +78,59 @@ function resolveTenantSlug(hostHeader: string): string {
 // `/cart` is deliberately public: the cart lives in local storage, so guests browse
 // and review it freely and only authenticate at `/checkout`.
 const PROTECTED_ROUTES = ['/account', '/checkout', '/notifications', '/admin'];
+/**
+ * Paths that belong to the backend and must never be handled by Next.js.
+ *
+ * `/socket.io`  Socket.IO's HTTP long-polling transport. It is not the websocket
+ *               upgrade — Vercel does not proxy that — but polling is plain HTTP and
+ *               works, and without this the frontend's realtime fell back to its REST
+ *               poller on every client.
+ * `/auth/oauth` OAuth callbacks, which the backend handles because it owns the state
+ *               cookie.
+ * `/uploads`    Media served by the backend.
+ *
+ * Why middleware and not next.config rewrites: this file's matcher is a catch-all, so
+ * middleware runs BEFORE any afterFiles rewrite, and those paths were being answered
+ * with the Next.js 404 page. Why not vercel.json: Vercel resolves `${VAR}` in those
+ * destinations at the routing layer, which did not expand API_URL here, and a
+ * hardcoded hostname would destroy the single-switch property that makes the later
+ * Hetzner move a one-variable change.
+ */
+const BACKEND_PREFIXES = ['/socket.io', '/auth/oauth', '/uploads'];
+
+function backendUrlFor(pathname: string, request: NextRequest): URL | null {
+  const base = (
+    process.env.API_URL ||
+    process.env.API_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:4000'
+  ).replace(/\/+$/, '');
+  if (!base.startsWith('http')) return null;
+  // Socket.IO mounts at /socket.io/ WITH the trailing slash. Vercel strips it before
+  // middleware sees the request, so forwarding the bare /socket.io gave Fastify a 404
+  // ("Cannot GET /socket.io") even though the handshake worked when called directly.
+  const forwardPath = pathname === '/socket.io' ? '/socket.io/' : pathname;
+  // Cookie, authorization and tenant headers must survive the hop; without them the
+  // handshake is unauthenticated and the tenant is unresolvable.
+  return new URL(forwardPath + request.nextUrl.search, base);
+}
+
 export async function middleware(request: NextRequest) {
   const tenantSlug = resolveTenantSlug(request.headers.get('host') || '');
   const { pathname } = request.nextUrl;
+
+  if (BACKEND_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    const target = backendUrlFor(pathname, request);
+    if (target) {
+      const headers = new Headers();
+      for (const name of ['cookie', 'authorization', 'content-type', 'x-tenant-slug', 'x-csrf-token', 'x-2fa-verified']) {
+        const value = request.headers.get(name);
+        if (value) headers.set(name, value);
+      }
+      if (!headers.has('x-tenant-slug')) headers.set('x-tenant-slug', tenantSlug);
+      return NextResponse.rewrite(target, { request: { headers } });
+    }
+  }
   const isProtected = PROTECTED_ROUTES.some((r) => pathname.startsWith(r));
 /**
  * Content-Security-Policy.
