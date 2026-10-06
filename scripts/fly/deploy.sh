@@ -95,8 +95,25 @@ if [ "$SYNC_SECRETS" -eq 1 ]; then
     exit 1
   }
   say "Syncing secrets from $SECRETS_FILE (values are not echoed)"
-  # --from-file parses KEY=VALUE without putting any value in argv.
-  fly secrets set --app "$APP_NAME" --from-file "$SECRETS_FILE"
+
+  # `--from-file` does not exist in flyctl 0.4.x (it was added later), so feature-detect
+  # and fall back to a per-key loop rather than failing the whole deploy on a version
+  # mismatch. Both branches read values from the file, never from a literal in this
+  # script, so nothing is hardcoded here.
+  if fly secrets set --help 2>&1 | grep -q -- '--from-file'; then
+    fly secrets set --app "$APP_NAME" --from-file "$SECRETS_FILE"
+  else
+    echo "  flyctl has no --from-file; setting keys individually"
+    echo "  (values pass through argv for a few ms — never paste them into a shell yourself)"
+    count=0
+    while IFS= read -r line; do
+      case "$line" in ''|'#'*) continue ;; esac
+      case "$line" in *=*) ;; *) continue ;; esac
+      fly secrets set --app "$APP_NAME" "$line" >/dev/null
+      count=$((count + 1))
+    done < "$SECRETS_FILE"
+    echo "  staged $count secret(s)"
+  fi
 fi
 
 say "Deploying $APP_NAME"

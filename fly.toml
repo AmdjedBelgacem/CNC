@@ -90,10 +90,13 @@ primary_region = "iad"
     method = "GET"
     path = "/health"
 
-# No [[vm]] block on purpose: `shared-cpu-1x` / `256mb` is Fly's default machine
-# size. Pinning it explicitly would only matter if you later want a dedicated
-# CPU, and `fly machine update` can do that without a config change.
-#
-# [vm]
-#   size = "shared-cpu-1x"
-#   memory = "256mb"
+# Pinned explicitly, and this was found the hard way: `fly launch` regenerated this
+# file and emitted `[[vm]] memory = '1gb'`. Leaving the block out to "use the
+# default" therefore stopped meaning the smallest machine the moment Fly changed its
+# default — and at 1 GB the cost is roughly 4x. Stating 256 MB makes the intent
+# survive a config regeneration.
+[[vm]]
+  size = "shared-cpu-1x"
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "256mb"

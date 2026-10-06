@@ -1,6 +1,10 @@
 {
   "$schema": "https://openapi.vercel.app/vercel.json",
   "$comment": [
+    "Lives at apps/frontend/vercel.json, NOT the repository root: this project",
+    "sets Root Directory=apps/frontend, and Vercel reads vercel.json from INSIDE that",
+    "directory. A root-level copy is silently ignored.",
+    "",
     "Frontend only. The Nest backend runs on Fly.io (see fly.toml and",
     "docs/ops/DEPLOY_VERCEL_FLY.md). This used to declare a second service with",
     "\"runtime\": \"container\", which made Vercel build and run the backend too —",
@@ -18,7 +22,6 @@
     "code change, no rebuild of anything else."
   ],
   "framework": "nextjs",
-  "rootDirectory": "apps/frontend",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm turbo build --filter=@titan/frontend",
   "outputDirectory": ".next",
