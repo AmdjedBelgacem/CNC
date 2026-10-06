@@ -263,3 +263,43 @@ is caught immediately.
 8. **Run the CMS rebrand** against production:
    `node apps/backend/scripts/rebrand-cms-content.mjs` (dry run), then
    `--apply --confirm-production`. Four legacy brand strings remain in CMS rows.
+
+---
+
+# Addendum — new Vercel account migration
+
+Production moved to a new Vercel account and a fresh project. Four things cost
+real time and are worth not rediscovering:
+
+**1. `vercel env pull` cannot read sensitive values.** It writes the literal
+string `[SENSITIVE]` for every secret. Transferring env from one project to
+another by pull-then-push therefore uploads placeholders, and the app boots with
+no database, no JWT secret and no mail key while looking correctly configured.
+Recovered from `apps/backend/.env`, but `API_PUBLIC_URL`,
+`GOOGLE_OAUTH_REDIRECT_URI` and `NEXT_PUBLIC_DEFAULT_TENANT_SLUG` had to be
+supplied by hand. **Verify secrets functionally — by calling the endpoint — never
+by reading them back.**
+
+**2. dotenv quotes are syntax, not content.** `env pull` quotes every value. Pushing
+those quotes verbatim made Next reject the build:
+`destination does not start with /, http:// or https://`, because the rewrite target
+was literally `"https://…"`. Strip surrounding quotes before re-pushing.
+
+**3. Zod defaults do not save you from a missing numeric var.** `DATABASE_POOL_MAX`
+and `DATABASE_CONNECT_TIMEOUT_MS` are declared
+`z.coerce.number().default(...)`, but coercion turns an absent value into `NaN`
+*before* the default is considered, so omitting them fails boot with
+`Expected number, received nan`. **Set numeric vars explicitly.**
+
+**4. Supabase's session-mode pooler caps at 15 clients.** `DATABASE_POOL_MAX=20`
+(the schema default) exhausts it: `(EMAXCONNSESSION) max clients reached in session
+mode - max clients are limited to pool_size: 15`, and every request 500s. Set 10.
+
+**Nest DI is not covered by unit tests here.** AuthModule re-exporting
+`EmailService` after the class moved to `EmailModule` passed 749 tests and took
+production down with `UnknownExportException`, because the suite builds services
+with mocks and never instantiates a module. `test/di-graph.spec.ts` now asserts
+that no module exports a provider it does not provide.
+
+**Migration 034 was applied to production** (four `email_*` tables, additive and
+idempotent). Without it the outbox dispatcher logged a failing query every 5s.
