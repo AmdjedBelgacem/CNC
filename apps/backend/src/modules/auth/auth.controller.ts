@@ -1,4 +1,8 @@
-import { Controller, Post, Get, Patch, Put, Body, HttpCode, HttpStatus, UseGuards, Req, Res, Query, Inject, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Controller, Post, Get, Patch, Put, Body, HttpCode, HttpStatus, UseGuards, Req, Res,
+  Query, Inject, UnauthorizedException, BadRequestException, NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { DrizzleService } from '../../database/drizzle.service';
@@ -89,12 +93,46 @@ export class AuthController {
     return { state };
   }
 
+  /**
+   * Resolve the tenant a public auth request targets.
+   *
+   * This used to end with `{ id: '', slug: 'main' }` when nothing resolved. That
+   * placeholder looked harmless and was catastrophic: the empty string went
+   * straight into `eq(users.tenantId, '')`, and Postgres rejected it with
+   *
+   *   PostgresError: invalid input syntax for type uuid: ""
+   *
+   * so an unknown tenant slug surfaced to the caller as an opaque 500. It hit on
+   * every public auth route — register, login, forgot-password — which is exactly
+   * the set an attacker or a misconfigured client probes first.
+   *
+   * A missing tenant is not something the caller can fix by retrying, so it is
+   * reported as what it is: 404 when a specific slug was asked for and does not
+   * exist, and 503 when the platform has no tenant configured at all.
+   */
   private async resolveTenant(req: any): Promise<{ id: string; slug: string }> {
     if (req.tenant?.id) return { id: req.tenant.id, slug: req.tenant.slug };
+
+    const rawSlug = req.headers?.['x-tenant-slug'];
+    const requestedSlug = typeof rawSlug === 'string' && rawSlug.trim() ? rawSlug.trim() : null;
+
+    if (requestedSlug) {
+      const match = await this.drizzle.db.query.tenants.findFirst({
+        where: eq(tenants.slug, requestedSlug),
+      });
+      if (match) return { id: match.id, slug: match.slug };
+      throw new NotFoundException(`Unknown tenant: ${requestedSlug}`);
+    }
+
     const fallback = await this.drizzle.db.query.tenants.findFirst({
       where: eq(tenants.isActive, true),
     });
-    return fallback ? { id: fallback.id, slug: fallback.slug } : { id: '', slug: 'main' };
+    if (!fallback) {
+      throw new ServiceUnavailableException(
+        'No tenant is configured. Create a tenant row, or send an x-tenant-slug header.',
+      );
+    }
+    return { id: fallback.id, slug: fallback.slug };
   }
 
   @Public()
