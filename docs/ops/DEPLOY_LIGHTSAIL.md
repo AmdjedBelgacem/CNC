@@ -396,13 +396,33 @@ cause.
 # backend-only deploy (the supported path)
 bash scripts/lightsail/deploy.sh
 
-# frontend: build elsewhere
-docker build -f apps/frontend/Dockerfile -t baroot/frontend:<tag> \
-  --build-arg NEXT_PUBLIC_SITE_URL=https://barootcnc.com .
-docker save baroot/frontend:<tag> | ssh ubuntu@13.206.178.25 'docker load'
-ssh ubuntu@13.206.178.25 'cd /opt/titanic/cnc/deploy/lightsail && \
-  docker compose --project-name titan up -d frontend'
+# frontend: build elsewhere (cross-building for the host's amd64 is fine)
+docker buildx build --platform linux/amd64 --load \
+  -f apps/frontend/Dockerfile -t baroot/frontend:<tag> \
+  --build-arg NEXT_PUBLIC_SITE_URL=https://barootcnc.com \
+  --build-arg NEXT_PUBLIC_DEFAULT_TENANT_SLUG=cnc-fundamentals . \
+&& docker save baroot/frontend:<tag> | gzip | \
+     ssh ubuntu@13.206.178.25 'gunzip | docker load'
+
+# on the host: point compose at the loaded image, then recreate ONLY that service
+echo 'FRONTEND_IMAGE=baroot/frontend:<tag>' >> deploy/lightsail/.env
+cd deploy/lightsail && docker compose --project-name titan up -d --no-build frontend
 ```
+
+`FRONTEND_IMAGE` is what makes this safe: with it set, compose uses the image that was
+built elsewhere and **never invokes a build on this host**. Unset (a fresh clone), it
+behaves exactly as before and builds locally.
+
+Always pass `--no-build` on that `up`, and verify the image actually changed:
+
+```bash
+docker inspect titan-frontend-1 --format '{{.Config.Image}}'   # expect baroot/frontend:<tag>
+docker exec titan-frontend-1 sh -c "grep -rl '<a string unique to your change>' /repo/apps/frontend/.next/static | head -1"
+bash scripts/lightsail/smoke.sh
+```
+
+The second check matters: a stale container looks identical to a successful deploy
+from the outside, and shipping a frontend is how you discover you did not.
 
 ### Host hardening applied
 

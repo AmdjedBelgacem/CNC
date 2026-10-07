@@ -53,6 +53,12 @@ services:
         max-file: "3"
 
   frontend:
+    # This 2 GB host must never run `next build` — it has OOM-killed the instance
+    # twice. Set FRONTEND_IMAGE in .env to an image built off-box
+    # (docker buildx build --platform linux/amd64 ... && docker save | ssh docker load);
+    # compose then uses that image instead of building here. Left unset, a fresh clone
+    # still builds locally.
+    image: ${FRONTEND_IMAGE:-}
     build:
       context: ../..
       dockerfile: apps/frontend/Dockerfile
