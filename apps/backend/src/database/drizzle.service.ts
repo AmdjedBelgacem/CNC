@@ -128,6 +128,30 @@ export class DrizzleService implements OnModuleInit {
       } catch (err) {
         console.warn('[DrizzleService] ensure product price/pinpoints/documents failed (non-fatal)', err);
       }
+      // Product gallery (see schema/products.ts productImages). Idempotent CREATE so
+      // this host — which never runs `db:migrate` — converges on boot. The partial
+      // unique index is what guarantees one primary per product.
+      try {
+        await this.client.unsafe(`
+          CREATE TABLE IF NOT EXISTS "product_images" (
+            "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+            "tenant_id" uuid NOT NULL REFERENCES "tenants"("id"),
+            "product_id" uuid NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,
+            "url" varchar(500) NOT NULL,
+            "alt" varchar(300),
+            "sort_order" integer DEFAULT 0 NOT NULL,
+            "is_primary" boolean DEFAULT false NOT NULL,
+            "created_at" timestamp DEFAULT now() NOT NULL,
+            "updated_at" timestamp DEFAULT now() NOT NULL
+          )
+        `);
+        await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "product_images_product_order_idx" ON "product_images" ("product_id", "sort_order")`);
+        await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "product_images_tenant_idx" ON "product_images" ("tenant_id")`);
+        await this.client.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "product_images_one_primary_idx" ON "product_images" ("product_id") WHERE "is_primary" = true`);
+      } catch (err) {
+        console.warn('[DrizzleService] ensure product_images table failed (non-fatal)', err);
+      }
+
       // Finance budgets table — idempotent CREATE for fresh clones
       try {
         await this.client.unsafe(`

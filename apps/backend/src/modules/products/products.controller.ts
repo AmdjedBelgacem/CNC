@@ -108,14 +108,32 @@ export class ProductsController {
   }
 
   @Get(':slug')
-  @ApiOperation({ summary: 'Get product by slug' })
-  findBySlug(
+  @ApiOperation({ summary: 'Get product by slug, with its ordered gallery' })
+  async findBySlug(
     @CurrentTenant() tenant: { id: string } | null,
     @Param('slug') slug: string,
     @Req() req: any,
   ) {
     if (!tenant) throw new NotFoundException('Tenant not resolved');
-    return this.products.findBySlug(tenant.id, slug, req);
+    const product = await this.products.findBySlug(tenant.id, slug, req);
+    /**
+     * Public shape: the storefront needs the same gallery the admin manages, and
+     * `ensureImagesFromLegacy` backfills it for products created before the gallery
+     * existed. Card/list endpoints keep reading the single `thumbnailUrl` column.
+     */
+    const images = await this.products.ensureImagesFromLegacy(product as {
+      id: string;
+      tenantId: string;
+      title?: string | null;
+      thumbnailUrl?: string | null;
+      mediaUrls?: string[] | null;
+    });
+    const primary = images.find((i) => i.isPrimary) ?? images[0] ?? null;
+    return {
+      ...product,
+      images,
+      thumbnailUrl: product.thumbnailUrl ?? primary?.url ?? null,
+    };
   }
 
   @Post()

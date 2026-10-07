@@ -21,6 +21,16 @@ import {
   useProductForm,
   type ProductFormValue,
 } from '../../product-form';
+import { ProductGalleryManager } from '../../product-gallery';
+
+export interface ProductImage {
+  id: string;
+  productId?: string;
+  url: string;
+  alt: string | null;
+  sortOrder: number;
+  isPrimary: boolean;
+}
 
 interface ProductDetail {
   id: string; slug: string; title: string; tagline: string | null;
@@ -34,6 +44,7 @@ interface ProductDetail {
   sortOrder: number | null; academyId: string | null; courseId: string | null;
   seoTitle: string | null; seoDescription: string | null;
   updatedAt: string;
+  images?: ProductImage[] | null;
   pinpoints?: any[] | null;
   documents?: any[] | null;
   academy?: { id: string; title: string; slug: string } | null;
@@ -82,6 +93,11 @@ export default function ProductEditorPage() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  /** Blocks save while any upload is still in flight, so a save can't race one. */
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const beginUpload = useCallback(() => setUploadingCount((n) => n + 1), []);
+  const endUpload = useCallback(() => setUploadingCount((n) => Math.max(0, n - 1)), []);
 
   const { value, set, reset } = useProductForm();
 
@@ -92,14 +108,27 @@ export default function ProductEditorPage() {
       const res = await fetch(`/api/proxy/admin/products/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error(`${res.status}`);
       const data: ProductDetail = await res.json();
+      const next = baselineOf(data);
       setProduct(data);
-      setBaseline(baselineOf(data));
+      setBaseline(next);
+      setImages(Array.isArray(data.images) ? data.images : []);
+      /**
+       * Populate the form. This line is the entire data-loss fix.
+       *
+       * It was missing: `baseline` was set but the form state was never seeded, so
+       * `value` stayed at empty defaults while `dirty` immediately compared
+       * "empty" against "the real product" and reported true. The admin was shown a
+       * blank form with Save enabled, and saving sent every field empty — which
+       * nulled title, description, price, thumbnail, pinpoints and documents, and left
+       * `slug` as '' so the product then 404'd on every subsequent save.
+       */
+      reset(next);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('loadFailed', { default: 'Failed to load' }));
     } finally {
       setLoading(false);
     }
-  }, [slug, t]);
+  }, [slug, t, reset]);
 
   useEffect(() => {
     void load();
@@ -108,15 +137,33 @@ export default function ProductEditorPage() {
   const dirty = baseline ? JSON.stringify(value) !== JSON.stringify(baseline) : false;
 
   const save = useCallback(async () => {
-    if (!product || !dirty) return;
+    // Guard the in-flight request, not just the button's disabled prop: a double
+    // click can dispatch twice before React re-renders, and two concurrent saves of a
+    // stale payload is exactly how one clobbers the other.
+    if (!product || !dirty || saving || uploadingCount > 0) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/proxy/admin/products/${slug}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productFormPayload(value)),
+        body: JSON.stringify({
+          ...productFormPayload(value),
+          // Optimistic lock: the version we loaded. If someone else saved in the
+          // meantime the server answers 409 instead of silently overwriting them.
+          expectedUpdatedAt: product.updatedAt,
+        }),
       });
+      if (res.status === 409) {
+        // Preserve what the user typed. Discarding their edits because of a conflict
+        // is its own data loss.
+        const data = await res.json().catch(() => null);
+        setError(
+          data?.message ??
+            t('saveConflict', { default: 'This product changed since you opened it. Reload before saving.' }),
+        );
+        return;
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.message ?? t('saveFailed', { status: res.status, default: 'Save failed ({status})' }));
@@ -126,6 +173,16 @@ export default function ProductEditorPage() {
       // A slug change moves the record to a new URL; follow it.
       if (updated?.slug && updated.slug !== slug) {
         router.replace(`/admin/products/${updated.slug}/edit`);
+      } else if (updated) {
+        /**
+         * Rehydrate from the RESPONSE, not from local state. The server is the only
+         * authority on what was stored; trusting local state after a save is how a
+         * second save sends stale or half-applied values.
+         */
+        const next = baselineOf(updated as ProductDetail);
+        reset(next);
+        setProduct(updated as ProductDetail);
+        setBaseline(next);
       } else {
         void load();
       }
@@ -261,7 +318,7 @@ export default function ProductEditorPage() {
         primary={
           <BarPrimaryButton
             icon={<Save className="size-4" strokeWidth={2.5} />}
-            disabled={!dirty || saving}
+            disabled={!dirty || saving || uploadingCount > 0}
             onClick={() => void save()}
           >
             {saving ? t('saving', { default: 'Saving…' }) : t('saveChanges', { default: 'Save changes' })}
@@ -298,6 +355,25 @@ export default function ProductEditorPage() {
 
         <div className="space-y-5">
           <ProductFormSections value={value} set={set} />
+
+          <section className="rounded-2xl border border-border bg-background p-4 sm:p-6">
+            <h2 className="text-sm font-semibold text-foreground">
+              {t('galleryTitle', { default: 'Gallery' })}
+            </h2>
+            <p className="mt-1 mb-4 text-xs leading-relaxed text-muted-foreground">
+              {t('galleryHint', {
+                default:
+                  'Images are saved immediately, on their own, so saving the form above can never overwrite them.',
+              })}
+            </p>
+            <ProductGalleryManager
+              slug={product.slug}
+              images={images}
+              onChange={setImages}
+              onUploadStart={beginUpload}
+              onUploadEnd={endUpload}
+            />
+          </section>
         </div>
 
         <FormActions

@@ -1,15 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { localizeProductFields, resolveContentLocale } from '../courses/lesson-content';
 import { DrizzleService } from '../../database/drizzle.service';
-import { productsBundle, productVariants } from '../../database/schema/products';
+import { productsBundle, productVariants, productImages } from '../../database/schema/products';
 import { eq, and, asc, desc, like, count, inArray, sql } from 'drizzle-orm';
 import { SearchService } from '../search/search.service';
+import { StorageService } from '../storage/storage.service';
+import { ConfigService } from '../../config/config.service';
 
 @Injectable()
 export class ProductsService {
   constructor(
     private drizzle: DrizzleService,
     private search?: SearchService,
+    private storage?: StorageService,
+    private config?: ConfigService,
   ) {}
 
   private syncSearch(tenantId: string, id: string) {
@@ -270,13 +274,434 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: string, data: any) {
+  /**
+   * Columns a client may ever write through PATCH.
+   *
+   * This is a strict allowlist, and it is the second half of the data-loss fix. The
+   * endpoint previously spread the request body straight into the UPDATE, which meant
+   * (a) any key the client sent — including nulls for fields it had simply never loaded
+   * — overwrote the row, and (b) `tenantId`, `id`, `createdAt` and `isPublished` were
+   * all writable, so one request could move a product to another tenant or self-publish
+   * it. Anything not listed here is ignored rather than trusted.
+   */
+  private static readonly UPDATABLE: Record<string, true> = {
+    title: true, slug: true, tagline: true, description: true, category: true,
+    price: true, compareAtPrice: true, currency: true, trackInventory: true,
+    inventory: true, allowBackorder: true, backorderLeadDays: true, isDigital: true,
+    featured: true, sortOrder: true, tags: true, features: true,
+    thumbnailUrl: true, mediaUrls: true, pinpoints: true, documents: true,
+    academyId: true, courseId: true, seoTitle: true, seoDescription: true,
+  };
+
+  async update(id: string, data: Record<string, unknown>, expectedUpdatedAt?: string | Date | null) {
+    /**
+     * Optimistic locking. The client sends the `updatedAt` it loaded; if the row moved
+     * underneath it, two admins editing the same product would otherwise silently
+     * overwrite each other with no trace. Returns 409 + the current row so the caller
+     * can show the conflict instead of clobbering.
+     */
+    if (expectedUpdatedAt) {
+      const current = await this.db
+        .select({ updatedAt: productsBundle.updatedAt })
+        .from(productsBundle)
+        .where(eq(productsBundle.id, id))
+        .limit(1);
+      if (!current[0]) throw new NotFoundException('Product not found');
+      const expected = new Date(expectedUpdatedAt).getTime();
+      const actual = new Date(current[0].updatedAt).getTime();
+      if (Number.isFinite(expected) && expected !== actual) {
+        throw new ConflictException({
+          message: 'Product was modified by someone else. Reload to see the current version.',
+          code: 'product_conflict',
+          currentUpdatedAt: current[0].updatedAt,
+        });
+      }
+    }
+
+    /**
+     * Partial-update semantics, stated once so every caller agrees:
+     *   - a key that is ABSENT is not mentioned in the UPDATE at all (unchanged);
+     *   - a key present with `null` clears that field;
+     *   - a key present with `""` or `[]` is a real value and is stored as given.
+     *
+     * Nothing else is inferred. The old code sent every column on every save, so a
+     * form that had not finished loading nulled the entire product.
+     */
+    const patch: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data ?? {})) {
+      if (ProductsService.UPDATABLE[key]) patch[key] = value;
+    }
+
+    /**
+     * A product cannot be renamed to nothing.
+     *
+     * This is a domain rule, not a patch for one bad client: `title` and `slug` are
+     * the product's identity, and a row with `slug = ''` is unreachable afterwards —
+     * `findBySlug` matches nothing, so the admin list links to a 404 and every further
+     * save fails. It is exactly the state the data-loss bug produced.
+     *
+     * It matters for safety beyond the admin UI: this endpoint is the only thing
+     * standing between any client and a product that can never be edited again.
+     */
+    for (const field of ['title', 'slug'] as const) {
+      if (patch[field] === undefined) continue;
+      if (typeof patch[field] === 'string' && patch[field].trim() === '') {
+        throw new BadRequestException(`${field === 'title' ? 'Title' : 'Slug'} cannot be empty.`);
+      }
+    }
+    if (Object.keys(patch).length === 0) {
+      // Nothing editable in the body: return the row untouched rather than issuing a
+      // no-op UPDATE, so `updatedAt` does not move and clients can detect no-op saves.
+      const existing = await this.db
+        .select()
+        .from(productsBundle)
+        .where(eq(productsBundle.id, id))
+        .limit(1);
+      if (!existing[0]) throw new NotFoundException('Product not found');
+      return existing[0];
+    }
+
+    return this.writeRow(id, patch);
+  }
+
+  /**
+   * Server-side lifecycle write (publish / unpublish / archive / restore).
+   *
+   * Deliberately separate from `update()`: those columns are off the client allowlist
+   * on purpose, and routing them through the filtered path made `publish` a silent
+   * no-op — the row came back with `isPublished: false` and no error. A lifecycle
+   * change is a decision the server makes, never one a request body can ask for.
+   */
+  private async applyLifecycle(id: string, values: Record<string, unknown>) {
+    return this.writeRow(id, values);
+  }
+
+  private async writeRow(id: string, patch: Record<string, unknown>) {
     const [product] = await this.db
-      .update(productsBundle).set({ ...data, updatedAt: new Date() })
+      .update(productsBundle).set({ ...patch, updatedAt: new Date() })
       .where(eq(productsBundle.id, id)).returning();
     if (!product) throw new NotFoundException('Product not found');
     this.syncSearch(product.tenantId, product.id);
     return product;
+  }
+
+  // ---------------------------------------------------------------- images ---
+
+  /** Gallery cap. Kept small so the storefront never ships a 40-image carousel. */
+  static readonly MAX_IMAGES = 12;
+
+  /**
+   * Only URLs this application produced are accepted as gallery images.
+   *
+   * Accepting an arbitrary URL would let an admin (or anything that gets hold of the
+   * admin session) point the storefront at a third-party host and track every visitor,
+   * or at an internal address and turn the product page into an SSRF/probe primitive.
+   * Uploads come back from UploadService as either a storage key or an absolute URL on
+   * our own S3_PUBLIC_URL, so both shapes are accepted and nothing else is.
+   */
+  private assertOwnImageUrl(url: string, publicBase?: string | null): string {
+    const value = String(url ?? '').trim();
+    if (!value) throw new BadRequestException('Image url is required');
+    const base = String(publicBase ?? '').replace(/\/+$/, '');
+    const isOwn = value.startsWith('/uploads/')
+      || value.startsWith('tenants/')
+      || value.startsWith('uploads/')
+      || (base.length > 0 && value.startsWith(`${base}/`));
+    if (!isOwn) {
+      throw new BadRequestException(
+        'Image must be an upload from this storefront (a /uploads/... path or a URL on the configured storage host).',
+      );
+    }
+    if (value.length > 500) throw new BadRequestException('Image url is too long');
+    return value;
+  }
+
+  async listImages(productId: string) {
+    return this.db
+      .select()
+      .from(productImages)
+      .where(eq(productImages.productId, productId))
+      .orderBy(asc(productImages.sortOrder), asc(productImages.createdAt));
+  }
+
+  /**
+   * Seed the gallery from the pre-gallery shape: `thumbnailUrl` plus any legacy
+   * `mediaUrls`. Idempotent, and safe to call on every read of a product that has no
+   * gallery rows yet — which is what makes the backfill safe for the row an older
+   * deploy created after the migration but before the gallery code shipped.
+   */
+  async ensureImagesFromLegacy(product: {
+    id: string;
+    tenantId: string;
+    title?: string | null;
+    thumbnailUrl?: string | null;
+    mediaUrls?: string[] | null;
+  }) {
+    const existing = await this.listImages(product.id);
+    if (existing.length > 0) return existing;
+
+    const legacy: string[] = [];
+    const primary = (product.thumbnailUrl ?? '').trim();
+    if (primary) legacy.push(primary);
+    for (const url of (product.mediaUrls ?? []) as string[]) {
+      const value = String(url ?? '').trim();
+      if (value && !legacy.includes(value)) legacy.push(value);
+    }
+    if (legacy.length === 0) return [];
+
+    return this.db.transaction(async (tx) => {
+      const inserted = await tx
+        .insert(productImages)
+        .values(
+          legacy.slice(0, ProductsService.MAX_IMAGES).map((url, index) => ({
+            tenantId: product.tenantId,
+            productId: product.id,
+            url,
+            alt: index === 0 ? (product.title ?? null) : null,
+            sortOrder: index,
+            isPrimary: index === 0,
+          })),
+        )
+        .returning();
+      return inserted.sort((a, b) => a.sortOrder - b.sortOrder);
+    });
+  }
+
+  private async assertProductInTenant(tenantId: string, productId: string) {
+    const row = await this.db
+      .select({ id: productsBundle.id })
+      .from(productsBundle)
+      .where(and(eq(productsBundle.id, productId), eq(productsBundle.tenantId, tenantId)))
+      .limit(1);
+    if (!row[0]) {
+      // Deliberately NotFound rather than Forbidden: a caller must not be able to
+      // probe for the existence of another tenant's product id.
+      throw new NotFoundException('Product not found');
+    }
+  }
+
+  /** Append an image. Position, primary flag and thumbnail stay consistent in one tx. */
+  async addImage(params: {
+    tenantId: string;
+    productId: string;
+    url: string;
+    alt?: string | null;
+    publicBase?: string | null;
+    makePrimary?: boolean;
+  }) {
+    await this.assertProductInTenant(params.tenantId, params.productId);
+    const url = this.assertOwnImageUrl(params.url, params.publicBase);
+    const current = await this.listImages(params.productId);
+    if (current.length >= ProductsService.MAX_IMAGES) {
+      throw new BadRequestException(`A product can have at most ${ProductsService.MAX_IMAGES} images.`);
+    }
+
+    return this.db.transaction(async (tx) => {
+      const nextOrder = current.length === 0 ? 0 : Math.max(...current.map((i) => i.sortOrder)) + 1;
+      const makePrimary = params.makePrimary === true || current.length === 0;
+      const insertedRow = await tx
+        .insert(productImages)
+        .values({
+          tenantId: params.tenantId,
+          productId: params.productId,
+          url,
+          alt: params.alt ?? null,
+          sortOrder: nextOrder,
+          isPrimary: makePrimary,
+        })
+        .returning();
+      const inserted = insertedRow[0];
+      if (!inserted) throw new BadRequestException('Could not store the image');
+      if (makePrimary) {
+        // Demote first: the partial unique index rejects two primaries at once.
+        await tx.update(productImages).set({ isPrimary: false }).where(and(eq(productImages.productId, params.productId), sql`${productImages.id} <> ${inserted.id}`));
+        // Single write path for the denormalised primary: gallery row + thumbnail.
+        await tx.update(productsBundle).set({ thumbnailUrl: url, updatedAt: new Date() }).where(eq(productsBundle.id, params.productId));
+      }
+      return inserted;
+    });
+  }
+
+  /**
+   * Rename one image, or promote it to primary.
+   *
+   * Setting the primary writes the gallery flag and `products.thumbnail_url` in the
+   * same transaction, so the two can never disagree.
+   */
+  async updateImage(params: {
+    tenantId: string;
+    productId: string;
+    imageId: string;
+    alt?: string | null;
+    setPrimary?: boolean;
+  }) {
+    await this.assertProductInTenant(params.tenantId, params.productId);
+    const current = await this.listImages(params.productId);
+    const target = current.find((i) => i.id === params.imageId);
+    if (!target) throw new NotFoundException('Image not found');
+
+    return this.db.transaction(async (tx) => {
+      const values: Record<string, unknown> = { updatedAt: new Date() };
+      if (params.alt !== undefined) values.alt = params.alt;
+      if (params.setPrimary === true) values.isPrimary = true;
+      let updated;
+      if (params.setPrimary === true) {
+        /**
+         * Demote everyone BEFORE promoting. `product_images_one_primary_idx` is a
+         * partial unique index, so setting the new primary while the old one is still
+         * primary is an immediate constraint violation — the order of these two
+         * statements is load-bearing, not stylistic.
+         */
+        await tx.update(productImages)
+          .set({ isPrimary: false, updatedAt: new Date() })
+          .where(and(eq(productImages.productId, params.productId), sql`${productImages.id} <> ${params.imageId}`));
+        const promoted = await tx
+          .update(productImages)
+          .set({ ...values, isPrimary: true, updatedAt: new Date() })
+          .where(and(eq(productImages.id, params.imageId), eq(productImages.tenantId, params.tenantId)))
+          .returning();
+        updated = promoted[0];
+        if (!updated) throw new NotFoundException('Image not found');
+        await tx.update(productsBundle)
+          .set({ thumbnailUrl: updated.url, updatedAt: new Date() })
+          .where(eq(productsBundle.id, params.productId));
+      } else {
+        const updatedRow = await tx
+          .update(productImages)
+          .set(values)
+          .where(and(eq(productImages.id, params.imageId), eq(productImages.tenantId, params.tenantId)))
+          .returning();
+        updated = updatedRow[0];
+        if (!updated) throw new NotFoundException('Image not found');
+      }
+      return updated;
+    });
+  }
+
+  /**
+   * Reorder by explicit id list. The whole set is renumbered from 0 in one
+   * transaction, which keeps `sort_order` gapless without a unique index fighting
+   * intermediate states. Ids not belonging to this product are rejected rather than
+   * silently ignored.
+   */
+  async reorderImages(params: { tenantId: string; productId: string; imageIds: string[] }) {
+    await this.assertProductInTenant(params.tenantId, params.productId);
+    const current = await this.listImages(params.productId);
+    const known = new Set(current.map((i) => i.id));
+    const requested = Array.isArray(params.imageIds) ? params.imageIds : [];
+    /**
+     * "Exactly once" means exactly once. A length check alone lets a duplicated id
+     * through, which would then assign two rows the same sort_order — and since
+     * sort_order is deliberately not uniquely constrained (see the schema comment),
+     * nothing downstream would notice. Duplicates are rejected here.
+     */
+    const unique = new Set(requested);
+    if (
+      requested.length !== current.length
+      || unique.size !== requested.length
+      || requested.some((id) => !known.has(id))
+    ) {
+      throw new BadRequestException('Reorder must list every image of this product exactly once.');
+    }
+
+    return this.db.transaction(async (tx) => {
+      const updated: typeof current = [];
+      for (let index = 0; index < requested.length; index += 1) {
+        const imageId = requested[index];
+        if (!imageId) continue;
+        const row = await tx
+          .update(productImages)
+          .set({ sortOrder: index, updatedAt: new Date() })
+          .where(and(eq(productImages.id, imageId), eq(productImages.tenantId, params.tenantId)))
+          .returning();
+        if (row[0]) updated.push(row[0]);
+      }
+      return updated.sort((a, b) => a.sortOrder - b.sortOrder);
+    });
+  }
+
+  /**
+   * Delete one image. If it was primary, another image is promoted in the same
+   * transaction so the product is never left without a thumbnail.
+   *
+   * Storage deletion is best-effort and deliberately NOT awaited: the object is only
+   * removed if it lives on our own bucket, and a storage outage must not roll back a
+   * database change the admin already saw succeed.
+   */
+  async deleteImage(params: { tenantId: string; productId: string; imageId: string }) {
+    await this.assertProductInTenant(params.tenantId, params.productId);
+    const current = await this.listImages(params.productId);
+    const target = current.find((i) => i.id === params.imageId);
+    if (!target) throw new NotFoundException('Image not found');
+    const remaining = current.filter((i) => i.id !== params.imageId);
+
+    const result = await this.db.transaction(async (tx) => {
+      await tx.delete(productImages)
+        .where(and(eq(productImages.id, params.imageId), eq(productImages.tenantId, params.tenantId)));
+
+      let nextPrimary = remaining.find((i) => i.isPrimary) ?? null;
+      if (target.isPrimary || !nextPrimary) nextPrimary = remaining[0] ?? null;
+
+      if (nextPrimary) {
+        // Always promote unconditionally: the replacement was usually a non-primary
+        // row, and copying its existing flag left the product with NO primary at all.
+        await tx.update(productImages)
+          .set({ isPrimary: false, updatedAt: new Date() })
+          .where(and(eq(productImages.productId, params.productId), sql`${productImages.id} <> ${nextPrimary.id}`));
+        await tx.update(productImages)
+          .set({ isPrimary: true, updatedAt: new Date() })
+          .where(eq(productImages.id, nextPrimary.id));
+        await tx.update(productsBundle)
+          .set({ thumbnailUrl: nextPrimary.url, updatedAt: new Date() })
+          .where(eq(productsBundle.id, params.productId));
+      } else {
+        // Last image removed: the product keeps a consistent, empty primary.
+        await tx.update(productsBundle)
+          .set({ thumbnailUrl: null, updatedAt: new Date() })
+          .where(eq(productsBundle.id, params.productId));
+      }
+
+      // Gapless renumber so a later reorder starts from a clean sequence.
+      for (let index = 0; index < remaining.length; index += 1) {
+        const row = remaining[index];
+        if (row && row.sortOrder !== index) {
+          await tx.update(productImages).set({ sortOrder: index }).where(eq(productImages.id, row.id));
+        }
+      }
+      return { deleted: true, id: params.imageId, nextPrimaryUrl: nextPrimary?.url ?? null, remaining: remaining.length };
+    });
+
+    void this.deleteStoredObject(target.url);
+    return result;
+  }
+
+  /**
+   * Best-effort removal of an uploaded object. Failures are logged, never thrown.
+   *
+   * Production stores objects in S3/Supabase Storage, where UploadService.deleteFile is
+   * a no-op (it only unlinks local disk), so the S3 key is derived from the URL and
+   * removed through StorageService. A leftover object costs storage; failing the
+   * admin's delete over it would be worse than an orphan.
+   */
+  private async deleteStoredObject(url: string) {
+    try {
+      const publicBase = String(this.config?.get('S3_PUBLIC_URL') ?? '').replace(/\/+$/, '');
+      const key = publicBase && url.startsWith(`${publicBase}/`)
+        ? url.slice(publicBase.length + 1)
+        : url.replace(/^https?:\/\/[^/]+/, '').replace(/^\/+/, '');
+      // Only ever delete inside our own uploads prefix.
+      if (!/^(uploads|tenants)\//.test(key)) {
+        console.warn('[products] refusing to delete a path outside the uploads prefix', key);
+        return;
+      }
+      if (this.storage) {
+        await this.storage.deleteObject(key);
+        return;
+      }
+      console.warn('[products] storage service unavailable; leaving object', key);
+    } catch (error) {
+      console.warn('[products] could not remove stored object', url, (error as Error)?.message ?? error);
+    }
   }
 
   async publish(id: string) {
@@ -289,19 +714,19 @@ export class ProductsService {
     if (reasons.length > 0) {
       throw new BadRequestException({ message: 'Product is not ready to publish', reasons });
     }
-    return this.update(id, { isPublished: true, status: 'published' });
+    return this.applyLifecycle(id, { isPublished: true, status: 'published' });
   }
 
   async unpublish(id: string) {
-    return this.update(id, { isPublished: false, status: 'draft' });
+    return this.applyLifecycle(id, { isPublished: false, status: 'draft' });
   }
 
   async archive(id: string) {
-    return this.update(id, { isArchived: true, status: 'archived', isPublished: false });
+    return this.applyLifecycle(id, { isArchived: true, status: 'archived', isPublished: false });
   }
 
   async restore(id: string) {
-    return this.update(id, { isArchived: false, status: 'draft' });
+    return this.applyLifecycle(id, { isArchived: false, status: 'draft' });
   }
 
   async remove(id: string) {

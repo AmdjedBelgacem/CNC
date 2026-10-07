@@ -1,5 +1,6 @@
 import type { ContentLocale, InteractiveHotspot } from '@titan/shared';
-import { pgTable, uuid, varchar, text, integer, boolean, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, integer, boolean, jsonb, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { tenants } from './tenants';
 import { academies } from './academies';
 import { courses } from './courses';
@@ -76,3 +77,45 @@ export const productVariants = pgTable('product_variants', {
   options: jsonb('options').$type<Record<string, string>>(),
   sortOrder: integer('sort_order').default(0),
 });
+
+/**
+ * Ordered gallery for a product.
+ *
+ * A table rather than a `jsonb` array on `products`, because admin reorder and delete
+ * need per-row identity, and because the storefront must be able to ask for "the other
+ * images" without parsing a blob. `thumbnail_url` on `products` stays the denormalised
+ * primary so cards and lists keep reading one column; `is_primary` here is the source
+ * of truth and both are written in the same transaction by ProductsService.
+ *
+ * `sort_order` is intentionally NOT uniquely constrained: a unique (productId, sortOrder)
+ * makes a reorder a sequence of updates that transiently collide. Reordering instead
+ * renumbers the whole set inside one transaction (see ProductsService.reorderImages),
+ * so gaps are impossible without transient unique-violation failures.
+ */
+export const productImages = pgTable(
+  'product_images',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    productId: uuid('product_id')
+      .references(() => productsBundle.id, { onDelete: 'cascade' })
+      .notNull(),
+    url: varchar('url', { length: 500 }).notNull(),
+    alt: varchar('alt', { length: 300 }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isPrimary: boolean('is_primary').notNull().default(false),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    productOrderIdx: index('product_images_product_order_idx').on(table.productId, table.sortOrder),
+    tenantIdx: index('product_images_tenant_idx').on(table.tenantId),
+    // At most one primary per product. A partial unique index is the only way to say
+    // this in SQL; the service keeps it correct in the same transaction as the write.
+    onePrimaryIdx: uniqueIndex('product_images_one_primary_idx')
+      .on(table.productId)
+      .where(sql`${table.isPrimary} = true`),
+  }),
+);

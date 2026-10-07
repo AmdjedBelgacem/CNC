@@ -1406,7 +1406,10 @@
       "readinessPrice": "السعر محدد",
       "pdfOnly": "PDF فقط",
       "pdfOnlyHint": "اختر ملف PDF لإرفاقه.",
-      "fieldPriceOptional": "السعر (اختياري)"
+      "fieldPriceOptional": "السعر (اختياري)",
+      "saveConflict": "تغيّر هذا المنتج منذ فتحه. أعد التحميل قبل الحفظ.",
+      "galleryTitle": "معرض الصور",
+      "galleryHint": "تُحفظ الصور فورًا وبشكل منفصل، لذا لا يمكن لحفظ النموذج أعلاه أن يمسحها."
     },
     "productsPage": {
       "action": {
@@ -1760,6 +1763,32 @@
       "widthDesktop": "سطح مكتب",
       "widthMobile": "جوال",
       "widthTablet": "لوحي"
+    },
+    "productGallery": {
+      "title": "معرض الصور",
+      "add": "إضافة صور",
+      "working": "جارٍ العمل…",
+      "count": "{used} من {max}",
+      "empty": "لا توجد صور بعد. سيعرض المتجر صورة بديلة.",
+      "alt": "النص البديل (وصف الصورة)",
+      "primary": "الرئيسية",
+      "makePrimary": "اجعلها رئيسية",
+      "moveUp": "تحريك للأمام",
+      "moveLater": "تحريك للخلف",
+      "remove": "إزالة",
+      "removeImage": "إزالة الصورة",
+      "added": "تمت إضافة الصورة",
+      "removed": "تمت إزالة الصورة",
+      "primarySet": "تم تحديث الصورة الرئيسية",
+      "addFailed": "تعذّرت إضافة الصورة",
+      "removeFailed": "تعذّرت إزالة الصورة",
+      "reorderFailed": "تعذّر إعادة الترتيب",
+      "primaryFailed": "تعذّر تعيين الصورة الرئيسية",
+      "altFailed": "تعذّر حفظ النص البديل",
+      "uploadFailed": "فشل الرفع",
+      "badType": "نوع صورة غير مدعوم",
+      "tooLarge": "الصورة كبيرة جدًا",
+      "limitReached": "تم بلوغ الحد الأقصى {max} صورة."
     }
   },
   "aiAssistant": {

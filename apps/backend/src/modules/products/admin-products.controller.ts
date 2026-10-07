@@ -9,6 +9,7 @@ import { CurrentTenant } from '../../common/decorators/current-tenant.decorator'
 import { ProductsService } from './products.service';
 import { UploadService } from '../auth/services/upload.service';
 import { UploadFileDto } from '../courses/dto/courses.dto';
+import { ConfigService } from '../../config/config.service';
 
 @ApiTags('admin-products')
 @Controller('admin/products')
@@ -16,7 +17,11 @@ import { UploadFileDto } from '../courses/dto/courses.dto';
 export class AdminProductsController {
   private readonly logger = new Logger(AdminProductsController.name);
 
-  constructor(private products: ProductsService, private upload: UploadService) {}
+  constructor(
+    private products: ProductsService,
+    private upload: UploadService,
+    private config: ConfigService,
+  ) {}
 
   private effectiveTenant(req: any, queryTenantId?: string): string {
     const actorRole = (req.user as any)?.role;
@@ -63,15 +68,30 @@ export class AdminProductsController {
 
   @Get(':slug')
   @Roles('super_admin', 'admin')
-  @ApiOperation({ summary: 'Get product detail by slug (admin)' })
-  detail(
+  @ApiOperation({ summary: 'Get product detail by slug (admin), including its ordered gallery' })
+  async detail(
     @Req() req: any,
     @CurrentTenant() tenant: { id: string },
     @Param('slug') slug: string,
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    return this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug);
+    /**
+     * The gallery is seeded from the legacy `thumbnailUrl` / `mediaUrls` shape on first
+     * read, so an existing product gains gallery rows without a migration needing to
+     * know which rows already existed. Cheap, and idempotent.
+     */
+    // findBySlug returns the raw row or a localized view depending on whether a locale
+    // was passed; both carry the five fields the gallery backfill needs.
+    const images = await this.products.ensureImagesFromLegacy(product as {
+      id: string;
+      tenantId: string;
+      title?: string | null;
+      thumbnailUrl?: string | null;
+      mediaUrls?: string[] | null;
+    });
+    return { ...product, images, thumbnailUrl: product.thumbnailUrl ?? images.find((i) => i.isPrimary)?.url ?? null };
   }
 
   @Post()
@@ -89,17 +109,28 @@ export class AdminProductsController {
 
   @Patch(':slug')
   @Roles('super_admin', 'admin')
-  @ApiOperation({ summary: 'Update a product by slug (admin)' })
+  @ApiOperation({
+    summary: 'Partially update a product by slug (admin)',
+    description:
+      'Only keys present in the body are changed; omitted keys are left untouched. ' +
+      'Pass expectedUpdatedAt for optimistic locking (409 on conflict). The gallery is ' +
+      'managed through the /images endpoints, never through this body.',
+  })
   async update(
     @Req() req: any,
     @CurrentTenant() tenant: { id: string },
     @Param('slug') slug: string,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
     const product = await this.products.findBySlug(tid, slug);
-    return this.products.update(product.id, body);
+    const { expectedUpdatedAt, ...fields } = (body ?? {}) as { expectedUpdatedAt?: string } & Record<string, unknown>;
+    const updated = await this.products.update(product.id, fields, expectedUpdatedAt ?? null);
+    const images = await this.products.listImages(updated.id);
+    // Return the FULL entity so the client can rehydrate from the server's version
+    // rather than from whatever local state produced this request.
+    return { ...updated, images };
   }
 
   @Post('upload')
@@ -109,6 +140,103 @@ export class AdminProductsController {
     // The fron宔 uses this so thumbnails and PDFs become hosted URLs rather
     // than base64 data URLs that would blow past the varchar(500) columns.
     return this.upload.uploadGeneric(body.file, body.folder || 'covers', body.name);
+  }
+
+  // ------------------------------------------------------------- gallery ---
+  // Dedicated endpoints rather than a body field, so an ordinary product save can
+  // never touch images. `images` is intentionally NOT part of the PATCH body.
+
+  @Post(':slug/images')
+  @Roles('super_admin', 'admin')
+  @ApiOperation({ summary: 'Attach an uploaded image to a product gallery' })
+  async addImage(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('slug') slug: string,
+    @Body() body: { url: string; alt?: string | null; makePrimary?: boolean },
+    @Query('tenantId') tenantIdOverride?: string,
+  ) {
+    const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
+    const product = await this.products.findBySlug(tid, slug);
+    const created = await this.products.addImage({
+      tenantId: tid,
+      productId: product.id,
+      url: body?.url ?? '',
+      alt: body?.alt ?? null,
+      makePrimary: body?.makePrimary === true,
+      publicBase: this.config.get('S3_PUBLIC_URL'),
+    });
+    return created;
+  }
+
+  @Get(':slug/images')
+  @Roles('super_admin', 'admin')
+  @ApiOperation({ summary: 'List a product gallery in display order' })
+  async listImages(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('slug') slug: string,
+    @Query('tenantId') tenantIdOverride?: string,
+  ) {
+    const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
+    const product = await this.products.findBySlug(tid, slug);
+    return this.products.ensureImagesFromLegacy(product as never);
+  }
+
+  @Patch(':slug/images/reorder')
+  @Roles('super_admin', 'admin')
+  @ApiOperation({ summary: 'Reorder a product gallery; body is { imageIds: [...] } in display order' })
+  async reorderImages(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('slug') slug: string,
+    @Body() body: { imageIds: string[] },
+    @Query('tenantId') tenantIdOverride?: string,
+  ) {
+    const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
+    const product = await this.products.findBySlug(tid, slug);
+    return this.products.reorderImages({
+      tenantId: tid,
+      productId: product.id,
+      imageIds: Array.isArray(body?.imageIds) ? body.imageIds : [],
+    });
+  }
+
+  @Patch(':slug/images/:imageId')
+  @Roles('super_admin', 'admin')
+  @ApiOperation({ summary: 'Edit an image alt text, or set it as the primary' })
+  async updateImage(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('slug') slug: string,
+    @Param('imageId') imageId: string,
+    @Body() body: { alt?: string | null; setPrimary?: boolean },
+    @Query('tenantId') tenantIdOverride?: string,
+  ) {
+    const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
+    const product = await this.products.findBySlug(tid, slug);
+    return this.products.updateImage({
+      tenantId: tid,
+      productId: product.id,
+      imageId,
+      alt: body?.alt,
+      setPrimary: body?.setPrimary === true,
+    });
+  }
+
+  @Delete(':slug/images/:imageId')
+  @Roles('super_admin', 'admin')
+  @ApiOperation({ summary: 'Delete one gallery image (never the whole product)' })
+  async deleteImage(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('slug') slug: string,
+    @Param('imageId') imageId: string,
+    @Query('tenantId') tenantIdOverride?: string,
+  ) {
+    const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
+    const product = await this.products.findBySlug(tid, slug);
+    return this.products.deleteImage({ tenantId: tid, productId: product.id, imageId });
   }
 
   @Post(':slug/publish')

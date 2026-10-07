@@ -54,8 +54,14 @@ export default function NewProductPage() {
           data?.message ?? t('createFailed', { status: res.status, default: 'Create failed ({status})' }),
         );
       }
+      const created = await res.json();
       toast({ type: 'ok', title: t('created', { default: 'Product created' }) });
-      router.replace(`/admin/products/${body.slug}/edit`);
+      /**
+       * Hand over to the editor rather than staying on a form that cannot manage the
+       * gallery. The editor seeds itself from the server response, which is the same
+       * path every later save takes.
+       */
+      router.replace(`/admin/products/${created?.slug ?? body.slug}/edit`);
     } catch (e) {
       const message = e instanceof Error ? e.message : t('createFailedGeneric', { default: 'Create failed' });
       setError(message);

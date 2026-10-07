@@ -18,7 +18,7 @@ export { academies } from './academies';
 export { courses, series, lessons } from './courses';
 export { enrollments, lessonProgress, lessonQuizAttempts } from './progress';
 export { certifications, certTemplates } from './certifications';
-export { productsBundle as products, productVariants } from './products';
+export { productsBundle as products, productVariants, productImages } from './products';
 export { orders, orderItems } from './orders';
 export {
   productPurchases,

@@ -1406,7 +1406,10 @@
       "readinessPrice": "Price set",
       "pdfOnly": "PDF only",
       "pdfOnlyHint": "Choose a PDF file to attach.",
-      "fieldPriceOptional": "Price (optional)"
+      "fieldPriceOptional": "Price (optional)",
+      "saveConflict": "This product changed since you opened it. Reload before saving.",
+      "galleryTitle": "Gallery",
+      "galleryHint": "Images are saved immediately, on their own, so saving the form above can never overwrite them."
     },
     "productsPage": {
       "action": {
@@ -1760,6 +1763,32 @@
       "widthDesktop": "Desktop",
       "widthMobile": "Mobile",
       "widthTablet": "Tablet"
+    },
+    "productGallery": {
+      "title": "Gallery",
+      "add": "Add images",
+      "working": "Working…",
+      "count": "{used} of {max}",
+      "empty": "No images yet. The storefront falls back to a placeholder.",
+      "alt": "Alt text (describe the image)",
+      "primary": "Primary",
+      "makePrimary": "Make primary",
+      "moveUp": "Move earlier",
+      "moveLater": "Move later",
+      "remove": "Remove",
+      "removeImage": "Remove image",
+      "added": "Image added",
+      "removed": "Image removed",
+      "primarySet": "Primary image updated",
+      "addFailed": "Could not add image",
+      "removeFailed": "Could not remove image",
+      "reorderFailed": "Could not reorder",
+      "primaryFailed": "Could not set primary",
+      "altFailed": "Could not save alt text",
+      "uploadFailed": "Upload failed",
+      "badType": "Unsupported image type",
+      "tooLarge": "Image too large",
+      "limitReached": "Maximum {max} images reached."
     }
   },
   "aiAssistant": {

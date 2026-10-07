@@ -62,12 +62,28 @@ export default function ProductDetailPage() {
   );
   const hasPinpoints = pinpointList.length > 0;
 
+  /**
+   * Gallery comes from the ordered `images[]` the API now returns, primary first.
+   *
+   * Before the gallery table it was `[thumbnailUrl, ...mediaUrls]`, which silently
+   * dropped any image the admin had reordered or promoted, and `mediaUrls` is legacy
+   * data that is no longer written. `mediaUrls` is kept only as a fallback for a
+   * product whose gallery has not been seeded yet.
+   */
   const gallery = useMemo(() => {
-    if (!product) return [];
-    const urls = [product.thumbnailUrl, ...(product.mediaUrls ?? [])].filter(
+    if (!product) return [] as string[];
+    const source = product as unknown as {
+      images?: Array<{ url?: string }> | null;
+      mediaUrls?: string[] | null;
+    };
+    const fromImages = (source.images ?? [])
+      .map((image) => (typeof image?.url === 'string' ? image.url.trim() : ''))
+      .filter(Boolean);
+    if (fromImages.length > 0) return Array.from(new Set(fromImages));
+    const legacy = [product.thumbnailUrl, ...(source.mediaUrls ?? [])].filter(
       (u): u is string => typeof u === 'string' && u.length > 0,
     );
-    return Array.from(new Set(urls));
+    return Array.from(new Set(legacy));
   }, [product]);
 
   if (isLoading) {
@@ -147,6 +163,9 @@ export default function ProductDetailPage() {
       <div className="grid gap-10 lg:grid-cols-2">
         <div className="space-y-3">
           <div
+            id="product-image-panel"
+            role="tabpanel"
+            aria-labelledby={gallery.length > 1 ? `product-image-tab-${Math.min(imageIndex, gallery.length - 1)}` : undefined}
             className={cn(
               'relative overflow-hidden rounded-lg border border-border bg-muted',
               // An annotated product must not be cropped: the admin placed the
@@ -210,14 +229,31 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {gallery.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
+          {gallery.length > 1 ? (
+            <div
+              className="flex gap-2 overflow-x-auto pb-1"
+              role="tablist"
+              aria-label="Product images"
+              onKeyDown={(event) => {
+                // Arrow keys move between thumbnails; without this the gallery is
+                // mouse-only and unusable by keyboard.
+                if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                event.preventDefault();
+                const delta = event.key === 'ArrowRight' ? 1 : -1;
+                setImageIndex((i) => (i + delta + gallery.length) % gallery.length);
+              }}
+            >
               {gallery.map((url, i) => (
                 <button
                   key={url}
                   type="button"
+                  role="tab"
+                  id={`product-image-tab-${i}`}
+                  aria-selected={i === imageIndex}
+                  aria-controls="product-image-panel"
+                  tabIndex={i === imageIndex ? 0 : -1}
                   onClick={() => setImageIndex(i)}
-                  aria-label={`Image ${i + 1}`}
+                  aria-label={`Image ${i + 1} of ${gallery.length}`}
                   aria-current={i === imageIndex}
                   className={cn(
                     'size-16 shrink-0 overflow-hidden rounded-md border-2 bg-muted transition',
@@ -229,7 +265,7 @@ export default function ProductDetailPage() {
                 </button>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="space-y-6">
