@@ -8,7 +8,7 @@
 #   bash scripts/lightsail/deploy.sh --teardown # stop it
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/deploy/lightsail"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/deploy/lightsail"
 COMPOSE=(docker compose -f "$DIR/docker-compose.yml" --project-name titan)
 
 cd "$DIR"
@@ -41,22 +41,26 @@ sleep 5
 # Public smoke tests happen from the operator once DNS is pointed.
 echo "> smoke: backend /health"
 docker compose -f "$DIR/docker-compose.yml" --project-name titan exec -T backend \
-  sh -c 'curl -fsS http://localhost:4000/health' || {
+  node -e "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" || {
     echo "backend health check failed"; docker compose -f "$DIR/docker-compose.yml" --project-name titan logs --tail=60 backend; exit 1;
   }
 
 echo "> smoke: frontend responds"
 docker compose -f "$DIR/docker-compose.yml" --project-name titan exec -T frontend \
-  sh -c 'curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:3000/' || {
+  node -e "fetch('http://localhost:3000/',{redirect:'manual'}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))" || {
     echo "frontend did not come up"; "${COMPOSE[@]}" logs --tail=60 frontend; exit 1;
   }
 
 echo ""
 echo "> stack is up. Containers all respond locally. Next: DNS."
 DOMAIN_VALUE=$(grep '^DOMAIN=' .env | head -1 | sed 's/DOMAIN=//')
-echo "  Now set DNS for $DOMAIN_VALUE -> this host's public IP, then:"
+echo "  Caddy is now serving locally. Check it via the loopback with the right Host"
+echo "  header before DNS is live:"
+echo "    curl -s -H \"Host: $DOMAIN_VALUE\" http://127.0.0.1/__ping"
+echo "    curl -s -H \"Host: $DOMAIN_VALUE\" http://127.0.0.1/api/proxy/health | head -c 300"
+echo "  Once DNS points at this host and Let's Encrypt has issued, drop the Host header:"
 echo "    curl -fsS https://$DOMAIN_VALUE/__ping"
-echo "    curl -fsS https://$DOMAIN_VALUE/api/proxy/health | head"
+echo "    curl -fsS https://$DOMAIN_VALUE/api/proxy/health | head -c 300"
 echo ""
 echo "> compose ps:"
 "${COMPOSE[@]}" ps

@@ -276,3 +276,53 @@ answer.
   `caddy_data` volume survives restarts.
 - Monitoring: log rotation is set in compose (`max-size: 30m`,3 files). For proactive
   alerts, watch `/health` from UptimeRobot or similar rather than pulling in Prometheus.
+---
+
+## www.barootcnc.com handling (added Oct 7 2026)
+
+DNS is intentional on both hosts pointing to the same static IP:
+
+```
+barootcnc.com     A  13.206.178.25
+www.barootcnc.com A  13.206.178.25
+```
+
+Application canonical URL is the apex: `https://barootcnc.com`.
+
+Caddy now serves both names, but keeps apex canonical:
+
+```caddyfile
+{$DOMAIN} {
+    encode zstd gzip
+    # ... full header + route set (socket.io/oauth/uploads/frontend) ...
+}
+
+# www and bare-HTTP both canonicalize to apex HTTPS
+http://{$DOMAIN}, http://www.{$DOMAIN} {
+    redir https://{$DOMAIN}{uri} permanent
+}
+
+www.{$DOMAIN} {
+    redir https://{$DOMAIN}{uri} permanent
+}
+```
+
+The www site block exists specifically so it can hold a certificate; without it
+auto-TLS still fails for `https://www.…` even though it is only a redirect.
+
+App code alignment for this stack:
+
+- `FRONTEND_URL=https://barootcnc.com`
+- `NEXT_PUBLIC_SITE_URL=https://barootcnc.com` (builds canonical hypertext)
+- `CORS_ORIGINS` is empty, the backend derives from `FRONTEND_URL` deliberately
+- Socket.io / OAauth absolute URLs should use the apex hostname; the middleware
+  proxy forwards to `http://backend:4000`, so browsers stay on the apex host
+
+Verification used:
+
+```bash
+curl -I https://www.barootcnc.com/                       # 301 -> apex
+curl -I https://www.barootcnc.com/courses/...             # 301 -> apex path
+curl -I -L https://www.barootcnc.com/api/proxy/health     # 200
+curl -I https://barootcnc.com/                            # 200
+```

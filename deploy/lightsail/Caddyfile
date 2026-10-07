@@ -99,7 +99,17 @@
 }
 
 # HTTP to HTTPS redirect. Caddy's automatic HTTPS does this by default, but we
-# make it explicit so it stays visible if you edit the TLS block later.
-http://{$DOMAIN} {
+# make it explicit so it stays visible if you edit the TLS block later. Configured
+# for both apex and www: visitors typed www should end up on https apex after one
+# hop, not two.
+http://{$DOMAIN}, http://www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+# www TLS block: required even though it only redirects, because Caddy needs to
+# hold a certificate for www in order to answer the TLS handshake that precedes the
+# redirect. Without it, browsers on www.* fail with a rate-own cert before the
+# redirect is in play. 301 preserves the original request method.
+www.{$DOMAIN} {
 	redir https://{$DOMAIN}{uri} permanent
 }
