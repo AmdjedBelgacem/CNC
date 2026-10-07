@@ -102,6 +102,12 @@ services:
       SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
       SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL}
       SUPABASE_AUTH_ENABLED: ${SUPABASE_AUTH_ENABLED:-true}
+      # Google OAuth. Redirect URI becomes https://${DOMAIN}/auth/oauth/google/callback.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # callbackOrigin() reads this for the redirect_uri — must be the single sanitized
+      # origin a user actually opens, otherwise Google rejects the email redirect.
+      API_PUBLIC_URL: ${API_PUBLIC_URL}
       AUTH_SECRET: ${AUTH_SECRET}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
