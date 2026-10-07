@@ -1325,7 +1325,7 @@
       "fieldFeaturesHint": "واحدة في كل سطر.",
       "fieldInventory": "المخزون",
       "fieldPrice": "السعر",
-      "fieldPriceHint": "يُخزَّن بوحدة {unit}.",
+      "fieldPriceHint": "يُحفظ بالوحدة الفرعية ({unit}). اتركه فارغًا ليظهر «السعر عند الطلب».",
       "fieldSeoDescription": "وصف تحسين محركات البحث",
       "fieldSeoTitle": "عنوان تحسين محركات البحث",
       "fieldSlug": "المعرّف في الرابط",
@@ -1382,7 +1382,31 @@
         "draft": "مسودة",
         "published": "منشور",
         "archived": "مؤرشف"
-      }
+      },
+      "sectionHotspots": "نقاط على صورة المنتج",
+      "sectionHotspotsDesc": "اشرح نقاط صورة المنتج بنفس طريقة النقاط التفاعلية في صور الدورات.",
+      "sectionDocs": "مستندات PDF إضافية",
+      "sectionDocsDesc": "أدلة الاستخدام وأوراق المواصفات وأدلة الإعداد — أي ملف PDF يُضاف هنا يظهر في صفحة المنتج.",
+      "hotspotPlace": "اضغط على الصورة لتحديد نقطة",
+      "placeHotspot": "إضافة نقطة",
+      "clickToPlaceHotspot": "اضغط لتحديد نقطة",
+      "hotspotNeedsImage": "أضف صورة مصغرة أولاً لتحديد النقاط على الصورة.",
+      "hotspotLabel": "العنوان",
+      "hotspotTooltip": "تلميح قصير عند المرور",
+      "hotspotDetail": "الشرح الذي يظهر عند الضغط على العلامة",
+      "hotspotNumber": "نقطة {number}",
+      "readinessTitle": "جاهزية النشر",
+      "readinessMissing": "ناقص: {items}",
+      "readinessReady": "جاهز للنشر.",
+      "publishReadiness": "جاهزية النشر",
+      "readinessSlug": "المعرّف",
+      "readinessDescription": "الوصف",
+      "readinessCategory": "الفئة",
+      "readinessThumbnail": "الصورة المصغرة",
+      "readinessPrice": "السعر محدد",
+      "pdfOnly": "PDF فقط",
+      "pdfOnlyHint": "اختر ملف PDF لإرفاقه.",
+      "fieldPriceOptional": "السعر (اختياري)"
     },
     "productsPage": {
       "action": {
@@ -2660,7 +2684,12 @@
     "emptyHint": "جرّب توسيع نطاق السعر أو إزالة أحد الفلاتر.",
     "loadFailedShort": "تعذّر تحميل الكتالوج",
     "retry": "أعد المحاولة",
-    "sale": "تخفيض"
+    "sale": "تخفيض",
+    "priceOnRequest": "السعر عند الطلب",
+    "priceNotSet": "السعر غير محدد",
+    "priceSetToSell": "حدّد السعر للبيع عبر المتجر",
+    "documents": "المستندات",
+    "selectHotspotHint": "اختر علامة مرقمة لاستكشاف الصورة."
   },
   "events": {
     "title": "الفعاليات",

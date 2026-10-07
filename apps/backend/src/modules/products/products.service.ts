@@ -284,7 +284,7 @@ export class ProductsService {
     const reasons: string[] = [];
     if (!product.title) reasons.push('Title is required');
     if (!product.slug) reasons.push('Slug is required');
-    if (!product.price || product.price <= 0) reasons.push('Price must be greater than 0');
+    if (product.price != null && product.price <= 0) reasons.push('Price must be greater than 0');
     if (!product.thumbnailUrl) reasons.push('Thumbnail image is required');
     if (reasons.length > 0) {
       throw new BadRequestException({ message: 'Product is not ready to publish', reasons });

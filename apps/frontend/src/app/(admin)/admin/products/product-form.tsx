@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ImageIcon, Link2, Package, Search, Store, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DEFAULT_CURRENCY, isCurrencyCode, type CurrencyCode } from '@titan/shared';
+import { DEFAULT_CURRENCY, isCurrencyCode, type CurrencyCode, type InteractiveHotspot } from '@titan/shared';
 import {
   Field,
   FieldGrid,
@@ -14,6 +14,7 @@ import {
   TextField,
 } from '@/components/admin/admin-form';
 import { ErrorBanner } from '@/components/admin/admin-ui';
+import { makeId } from '@/lib/lesson-blocks';
 import { toast } from '@/components/ui/toast';
 
 /* The create and edit screens collect the same ~20 fields. They are defined
@@ -43,6 +44,15 @@ export interface ProductFormValue {
   seoTitle: string;
   seoDescription: string;
   thumbnailUrl: string | null;
+  pinpoints: InteractiveHotspot[];
+  documents: ProductDocument[];
+}
+
+export interface ProductDocument {
+  title: string;
+  url: string;
+  name?: string;
+  size?: number;
 }
 
 export interface ProductFormOptions {
@@ -97,6 +107,8 @@ export function useProductForm(initial?: Partial<ProductFormValue>) {
     seoTitle: '',
     seoDescription: '',
     thumbnailUrl: null,
+    pinpoints: [],
+    documents: [],
     ...initial,
   });
   const set = <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) =>
@@ -113,8 +125,10 @@ export function productFormPayload(value: ProductFormValue) {
     tagline: value.tagline.trim() || null,
     description: value.description.trim() || null,
     category: value.category.trim() || null,
-    price: Math.round(Number(value.priceCents) || 0),
+    price: value.priceCents.trim() ? Math.round(Number(value.priceCents)) : null,
     compareAtPrice: value.compareAtCents ? Math.round(Number(value.compareAtCents)) : null,
+    pinpoints: value.pinpoints.length > 0 ? value.pinpoints : null,
+    documents: value.documents.length > 0 ? value.documents : null,
     currency: value.currency,
     inventory: Math.round(Number(value.inventory) || 0),
     trackInventory: value.trackInventory,
@@ -361,8 +375,7 @@ export function ProductFormSections({
       >
         <FieldGrid>
           <TextField
-            label={t('fieldPrice', { default: 'Price' })}
-            required
+            label={t('fieldPriceOptional')}
             type="number"
             min={0}
             inputMode="numeric"
@@ -505,8 +518,37 @@ export function ProductFormSections({
           label={t('fieldThumbnail', { default: 'Product thumbnail' })}
           hint={t('thumbnailHint', { default: 'Square recommended · JPG, PNG, WebP, AVIF · up to 10 MB' })}
           previewUrl={value.thumbnailUrl}
-          onSelect={(dataUrl) => set('thumbnailUrl', dataUrl)}
+          onSelect={(dataUrl) => {
+            uploadProductFile(dataUrl, 'covers')
+              .then((url) => set('thumbnailUrl', url))
+              .catch((e) =>
+                toast({ type: 'err', title: 'Upload failed', description: e instanceof Error ? e.message : undefined }),
+              );
+          }}
           onClear={() => set('thumbnailUrl', null)}
+        />
+      </FormSection>
+
+      <FormSection
+        title={t('sectionHotspots')}
+        icon={ImageIcon}
+        description={t('sectionHotspotsDesc')}
+      >
+        <ProductHotspotsEditor
+          imageUrl={value.thumbnailUrl}
+          pinpoints={value.pinpoints}
+          onChange={(next) => set('pinpoints', next)}
+        />
+      </FormSection>
+
+      <FormSection
+        title={t('sectionDocs')}
+        icon={ImageIcon}
+        description={t('sectionDocsDesc')}
+      >
+        <ProductDocumentsField
+          documents={value.documents}
+          onChange={(next) => set('documents', next)}
         />
       </FormSection>
     </>
@@ -537,3 +579,259 @@ function TextInputMono({
 }
 
 export { ErrorBanner, isCurrencyCode };
+
+async function uploadProductFile(dataUrl: string, folder: string): Promise<string> {
+  const res = await fetch('/api/proxy/admin/products/upload', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: dataUrl, folder }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.message || `Upload failed (${res.status})`);
+  }
+  const data = await res.json();
+  return data.url as string;
+}
+
+export function ProductHotspotsEditor({
+  imageUrl,
+  pinpoints,
+  onChange,
+}: {
+  imageUrl: string | null | undefined;
+  pinpoints: InteractiveHotspot[];
+  onChange: (next: InteractiveHotspot[]) => void;
+}) {
+  const t = useTranslations('admin.productForm');
+  const [placing, setPlacing] = useState(false);
+
+  const place = (x: number, y: number) => {
+    const id = makeId('pinpoint');
+    onChange([...pinpoints, { id, x, y, label: `Point ${pinpoints.length + 1}`, tooltip: null, detail: null }]);
+    setPlacing(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-foreground">
+          {t('hotspotPlace')}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            // No thumbnail yet: say so instead of rendering a button that silently
+            // does nothing, which is what a disabled control looks like.
+            if (!imageUrl) {
+              toast({ type: 'err', title: t('hotspotNeedsImage') });
+              return;
+            }
+            setPlacing((v) => !v);
+          }}
+          className={cn(
+            'rounded-lg border px-3 py-1.5 text-xs font-semibold',
+            placing ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground',
+          )}
+        >
+          {placing ? t('cancel') : t('placeHotspot')}
+        </button>
+      </div>
+      {imageUrl ? (
+        <div className="relative inline-block max-w-full overflow-hidden rounded-xl border border-border bg-muted align-top">
+          <img src={imageUrl} alt="Product" className="block max-h-96 max-w-full object-contain" />
+          {placing && (
+            <button
+              type="button"
+              aria-label={t('clickToPlaceHotspot')}
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
+                const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100));
+                place(Number(x.toFixed(2)), Number(y.toFixed(2)));
+              }}
+              className="absolute inset-0 cursor-crosshair bg-primary/10"
+            />
+          )}
+          {pinpoints.map((p, index) => (
+            <button
+              key={p.id}
+              type="button"
+              className="absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-primary/90 text-xs font-bold text-primary-foreground shadow-lg transition hover:scale-110"
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}
+              aria-label={t('hotspotNumber', { number: index + 1 })}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {t('hotspotNeedsImage')}
+        </p>
+      )}
+      <div className="space-y-3">
+        {pinpoints.map((p, index) => (
+          <div key={p.id} className="space-y-2 rounded-xl border border-border bg-card p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-foreground">
+                Point {index + 1} · {Math.round(p.x)}%, {Math.round(p.y)}%
+              </p>
+              <button
+                type="button"
+                onClick={() => onChange(pinpoints.filter((x) => x.id !== p.id))}
+                className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-destructive transition hover:bg-destructive/8"
+              >
+                Remove
+              </button>
+            </div>
+            <input
+              value={p.label}
+              placeholder={t('hotspotLabel')}
+              onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, label: e.target.value } : x)))}
+              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+            />
+            <input
+              value={p.tooltip ?? ''}
+              placeholder={t('hotspotTooltip')}
+              onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, tooltip: e.target.value || null } : x)))}
+              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+            />
+            <textarea
+              value={p.detail ?? ''}
+              placeholder={t('hotspotDetail')}
+              rows={2}
+              onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, detail: e.target.value || null } : x)))}
+              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function ProductDocumentsField({
+  documents,
+  onChange,
+}: {
+  documents: ProductDocument[];
+  onChange: (next: ProductDocument[]) => void;
+}) {
+  const t = useTranslations('admin.productForm');
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const addPdf = async (file: File) => {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      toast({ type: 'err', title: t('pdfOnly'), description: t('pdfOnlyHint') });
+      return;
+    }
+    setUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ''));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/proxy/admin/products/upload', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: dataUrl, folder: 'attachments', name: file.name }),
+      });
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+      const data = await res.json();
+      onChange([...documents, { title: file.name, url: data.url, name: file.name, size: file.size }]);
+      toast({ type: 'ok', title: t('pdfAttached', { default: 'PDF attached' }) });
+    } catch (e) {
+      toast({ type: 'err', title: t('uploadFailed', { default: 'Upload failed' }), description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+        className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:border-primary/50"
+      >
+        {uploading ? t('uploading', { default: 'Uploading…' }) : t('attachPdf', { default: '+ Attach PDF' })}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void addPdf(file);
+          e.target.value = '';
+        }}
+      />
+      <div className="space-y-2">
+        {documents.map((doc, index) => (
+          <div key={`${doc.url}-${index}`} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
+            <input
+              value={doc.title}
+              onChange={(e) => onChange(documents.map((d, i) => (i === index ? { ...d, title: e.target.value } : d)))}
+              placeholder={t('documentTitle', { default: 'Document title' })}
+              className="min-w-0 flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+            />
+            <a
+              href={doc.url}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/8"
+            >
+              {t('viewDocument', { default: 'View' })}
+            </a>
+            <button
+              type="button"
+              onClick={() => onChange(documents.filter((_, i) => i !== index))}
+              className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/8"
+            >
+              {t('removeDocument', { default: 'Remove' })}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function PublishReadiness({
+  checks,
+}: {
+  checks: { label: string; ok: boolean }[];
+}) {
+  const t = useTranslations('admin.productForm');
+  const ready = checks.filter((c) => c.ok).length;
+  const pct = checks.length === 0 ? 100 : Math.round((ready / checks.length) * 100);
+  const missing = checks.filter((c) => !c.ok).map((c) => c.label);
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-foreground">{t('publishReadiness')}</p>
+        <span className="font-mono text-xs text-muted-foreground">{ready}/{checks.length}</span>
+      </div>
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {missing.length === 0
+          ? t('readinessReady')
+          : t('readinessMissing', { items: missing.join(', ') })}
+      </p>
+    </div>
+  );
+}

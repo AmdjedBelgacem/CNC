@@ -1325,7 +1325,7 @@
       "fieldFeaturesHint": "One per line.",
       "fieldInventory": "Inventory",
       "fieldPrice": "Price",
-      "fieldPriceHint": "Stored in {unit}.",
+      "fieldPriceHint": "Stored in {unit}. Leave blank for “Price on request”.",
       "fieldSeoDescription": "SEO description",
       "fieldSeoTitle": "SEO title",
       "fieldSlug": "Slug",
@@ -1382,7 +1382,31 @@
         "draft": "Draft",
         "published": "Published",
         "archived": "Archived"
-      }
+      },
+      "sectionHotspots": "Pinpoints on the product image",
+      "sectionHotspotsDesc": "Explain points of the product image the same way course images use hotspots.",
+      "sectionDocs": "Extra PDF documents",
+      "sectionDocsDesc": "Instruction manuals, spec sheets, setup guides — any PDF added here appears on the product page.",
+      "hotspotPlace": "Place a pinpoint by clicking the image",
+      "placeHotspot": "Place pinpoint",
+      "clickToPlaceHotspot": "Click to place pinpoint",
+      "hotspotNeedsImage": "Add a thumbnail first to place pinpoints on the image.",
+      "hotspotLabel": "Label",
+      "hotspotTooltip": "Short tooltip on hover",
+      "hotspotDetail": "Explanation shown when the marker is tapped",
+      "hotspotNumber": "Pinpoint {number}",
+      "readinessTitle": "Publish readiness",
+      "readinessMissing": "Missing: {items}",
+      "readinessReady": "Ready to publish.",
+      "publishReadiness": "Publish readiness",
+      "readinessSlug": "Slug",
+      "readinessDescription": "Description",
+      "readinessCategory": "Category",
+      "readinessThumbnail": "Thumbnail",
+      "readinessPrice": "Price set",
+      "pdfOnly": "PDF only",
+      "pdfOnlyHint": "Choose a PDF file to attach.",
+      "fieldPriceOptional": "Price (optional)"
     },
     "productsPage": {
       "action": {
@@ -2660,7 +2684,12 @@
     "emptyHint": "Try widening your price range or clearing a filter.",
     "loadFailedShort": "Could not load the catalog",
     "retry": "Try again",
-    "sale": "Sale"
+    "sale": "Sale",
+    "priceOnRequest": "Price on request",
+    "priceNotSet": "Price not set",
+    "priceSetToSell": "Set a price to sell online",
+    "documents": "Documents",
+    "selectHotspotHint": "Select a numbered marker to explore the image."
   },
   "events": {
     "title": "Events",

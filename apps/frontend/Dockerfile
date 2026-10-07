@@ -52,6 +52,10 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_REALTIME_MODE=$NEXT_PUBLIC_REALTIME_MODE \
     NEXT_PUBLIC_GA_ID=$NEXT_PUBLIC_GA_ID \
     NEXT_PUBLIC_SNAPCHAT_PIXEL_ID=$NEXT_PUBLIC_SNAPCHAT_PIXEL_ID
+# `next build` sizes its heap against this limit. Unbounded it grew past the
+# 2 GB the Lightsail box actually has, and the kernel OOM-killer took the whole
+# host down mid-build — every container came back only because of a reboot.
+ENV NODE_OPTIONS="--max-old-space-size=1400"
 RUN pnpm turbo build --filter=@titan/frontend
 
 # ── runner ────────────────────────────────────────────────────────────────────

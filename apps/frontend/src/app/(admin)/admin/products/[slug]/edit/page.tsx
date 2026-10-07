@@ -16,6 +16,7 @@ import { FormActions, FormSkeleton } from '@/components/admin/admin-form';
 import { ErrorBanner, StatusPill } from '@/components/admin/admin-ui';
 import {
   ProductFormSections,
+  PublishReadiness,
   productFormPayload,
   useProductForm,
   type ProductFormValue,
@@ -33,6 +34,8 @@ interface ProductDetail {
   sortOrder: number | null; academyId: string | null; courseId: string | null;
   seoTitle: string | null; seoDescription: string | null;
   updatedAt: string;
+  pinpoints?: any[] | null;
+  documents?: any[] | null;
   academy?: { id: string; title: string; slug: string } | null;
   course?: { id: string; title: string; slug: string } | null;
   variants?: unknown[];
@@ -46,7 +49,7 @@ function baselineOf(p: ProductDetail): ProductFormValue {
     tagline: p.tagline ?? '',
     description: p.description ?? '',
     category: p.category ?? '',
-    priceCents: String(p.price ?? ''),
+    priceCents: p.price != null ? String(p.price) : '',
     compareAtCents: p.compareAtPrice ? String(p.compareAtPrice) : '',
     currency: p.currency ?? 'SAR',
     inventory: String(p.inventory ?? 0),
@@ -62,6 +65,8 @@ function baselineOf(p: ProductDetail): ProductFormValue {
     seoTitle: p.seoTitle ?? '',
     seoDescription: p.seoDescription ?? '',
     thumbnailUrl: p.thumbnailUrl ?? null,
+    pinpoints: (p as any).pinpoints ?? [],
+    documents: (p as any).documents ?? [],
   };
 }
 
@@ -279,6 +284,17 @@ export default function ProductEditorPage() {
         />
 
         {error && <ErrorBanner message={error} onRetry={() => load()} />}
+
+        <PublishReadiness
+          checks={[
+            { label: t('readinessTitle'), ok: !!product.title },
+            { label: t('readinessSlug'), ok: !!product.slug },
+            { label: t('readinessDescription'), ok: !!product.description?.trim() },
+            { label: t('readinessCategory'), ok: !!product.category },
+            { label: t('readinessThumbnail'), ok: !!product.thumbnailUrl },
+            { label: t('readinessPrice'), ok: product.price != null && product.price > 0 },
+          ]}
+        />
 
         <div className="space-y-5">
           <ProductFormSections value={value} set={set} />

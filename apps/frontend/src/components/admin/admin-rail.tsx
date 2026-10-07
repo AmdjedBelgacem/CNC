@@ -139,14 +139,17 @@ const tabsBase: Omit<TabDef, 'title'>[] = [
 /**
  * Leaf keys under the `admin` namespace, one per rail tab.
  *
- * These must address a *string*. `admin.navigation` is an object, so it is
- * reached as `navigation.title` — passing the bare segment makes next-intl throw
- * INSUFFICIENT_PATH at render time rather than falling back to a missing key.
+ * These must address a *string*. `admin.navigation` and `admin.email` are both
+ * objects — they hold nested copy for the editors — so they are reached as
+ * `navigation.title` / `email.title`. Passing the bare segment makes next-intl
+ * throw INSUFFICIENT_PATH at render time rather than falling back to a missing
+ * key, which is how `/admin/email` used to log MISSING_MESSAGE on every render.
  */
 const tabKeyMap: Record<string, string> = {
   '/admin': 'dashboard',
   '/admin/builder': 'builder',
   '/admin/navigation': 'navigation.title',
+  '/admin/email': 'email.title',
   '/admin/theme': 'theme',
   '/admin/analytics': 'analytics',
   '/admin/staff': 'staff',

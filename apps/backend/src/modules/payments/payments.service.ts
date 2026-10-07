@@ -114,6 +114,7 @@ export class PaymentsService {
       if (!prodRow.isPublished) throw new BadRequestException(`Product ${prodRow.title} not published`);
       // Resolve price: variant price > product price > item.price
       let price = prodRow.price;
+      if (price == null) throw new BadRequestException(`Product ${prodRow.title} has no price set`);
       let title = prodRow.title;
       let sku: string | undefined = undefined;
       const isDigital = prodRow.isDigital ?? false;

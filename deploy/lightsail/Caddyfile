@@ -33,8 +33,14 @@
 		# terminates TLS, so these headers are safe.
 		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 		X-Content-Type-Options nosniff
-		X-Frame-Options DENY
+		# SAMEORIGIN rather than DENY: DENY also blocks our own origin from framing
+		# itself, which the admin page builder will want the moment it renders a
+		# preview in an iframe. External framing stays blocked either way.
+		X-Frame-Options SAMEORIGIN
 		Referrer-Policy strict-origin-when-cross-origin
+		# The platform uses no camera, microphone or geolocation; deny all three so
+		# an injected script cannot prompt for them.
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		# Caddy's own Server header is always added in front of the response, but
 		# stripping it reduces fingerprinting risk.
 		-Server

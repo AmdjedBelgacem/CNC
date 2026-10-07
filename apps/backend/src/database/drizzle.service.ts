@@ -118,6 +118,16 @@ export class DrizzleService implements OnModuleInit {
       } catch (err) {
         console.warn('[DrizzleService] ensure product relation columns failed (non-fatal)', err);
       }
+      // Product price is optional, plus pinpoints and documents. Mirrors the
+      // schema diff in apps/backend/src/database/schema/products.ts; safe to
+      // re-run at every boot (DROP NOT NULL is a no-op once applied).
+      try {
+        await this.client.unsafe(`ALTER TABLE "products" ALTER COLUMN "price" DROP NOT NULL`);
+        await this.client.unsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "pinpoints" jsonb`);
+        await this.client.unsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "documents" jsonb`);
+      } catch (err) {
+        console.warn('[DrizzleService] ensure product price/pinpoints/documents failed (non-fatal)', err);
+      }
       // Finance budgets table — idempotent CREATE for fresh clones
       try {
         await this.client.unsafe(`

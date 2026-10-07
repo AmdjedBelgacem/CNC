@@ -1,4 +1,4 @@
-import type { ContentLocale } from '@titan/shared';
+import type { ContentLocale, InteractiveHotspot } from '@titan/shared';
 import { pgTable, uuid, varchar, text, integer, boolean, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants';
 import { academies } from './academies';
@@ -33,7 +33,7 @@ export const productsBundle = pgTable('products', {
   features: jsonb('features').$type<string[]>(),
   thumbnailUrl: varchar('thumbnail_url', { length: 500 }),
   mediaUrls: jsonb('media_urls').$type<string[]>(),
-  price: integer('price').notNull(),
+  price: integer('price'),
   compareAtPrice: integer('compare_at_price'),
   currency: varchar('currency', { length: 3 }).default('USD'),
   trackInventory: boolean('track_inventory').default(true),
@@ -47,6 +47,8 @@ export const productsBundle = pgTable('products', {
   status: varchar('status', { length: 20 }).default('draft'),
   category: varchar('category', { length: 100 }),
   tags: varchar('tags').array(),
+  pinpoints: jsonb('pinpoints').$type<InteractiveHotspot[]>(),
+  documents: jsonb('documents').$type<Array<{ title: string; url: string; name?: string; size?: number }>>(),
   featured: boolean('featured').default(false),
   sortOrder: integer('sort_order').default(0),
   academyId: uuid('academy_id').references(() => academies.id, { onDelete: 'set null' }),

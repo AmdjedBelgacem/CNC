@@ -64,7 +64,10 @@ export function ProductCard({ product }: { product: Product }) {
     pending ? t('pricePending') : formatMinorUnits(convert(minor), displayCurrency, locale);
   const unitMinor = product.variants?.[0]?.price ?? product.price;
   const unitDisplay = convert(unitMinor) ?? 0;
-  const price = format(unitMinor);
+  const price =
+    unitMinor == null
+      ? t('priceOnRequest')
+      : format(unitMinor);
   const compareAtDisplay = product.compareAtPrice ? convert(product.compareAtPrice) : null;
   const hasSale = Boolean(compareAtDisplay !== null && compareAtDisplay > unitDisplay);
   const href = `/products/${product.slug}`;
@@ -138,11 +141,13 @@ export function ProductCard({ product }: { product: Product }) {
             size="sm"
             variant={backorder ? 'outline' : 'default'}
             aria-label={`${backorder ? t('backorder') : t('addToCart')}: ${product.title}`}
+            disabled={unitMinor == null}
+            title={unitMinor == null ? t('priceNotSet') : undefined}
             onClick={() =>
               addItem({
                 productId: product.slug,
                 title: product.title,
-                price: product.variants?.[0]?.price ?? product.price,
+                price: product.variants?.[0]?.price ?? product.price ?? 0,
                 currency: sourceCurrency,
                 thumbnailUrl: product.thumbnailUrl,
               })

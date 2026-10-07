@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   Tag,
 } from 'lucide-react';
-import { DEFAULT_CURRENCY } from '@titan/shared';
+import { DEFAULT_CURRENCY, type InteractiveHotspot } from '@titan/shared';
 import { useProduct, useRelatedProducts } from '@/hooks/use-products';
 import { useFxRates } from '@/hooks/use-fx-rates';
 import { useCartStore } from '@/stores/cart-store';
@@ -46,12 +46,21 @@ export default function ProductDetailPage() {
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
+  const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
 
   // Reset selections when navigating between products.
   useEffect(() => {
     setSelectedVariant(null);
     setImageIndex(0);
   }, [slug]);
+
+  const pinpointList = useMemo(
+    () => ((product as unknown as { pinpoints?: InteractiveHotspot[] | null })?.pinpoints ?? []).filter(
+      (h) => typeof h?.x === 'number' && typeof h?.y === 'number' && Boolean(h.id),
+    ),
+    [product],
+  );
+  const hasPinpoints = pinpointList.length > 0;
 
   const gallery = useMemo(() => {
     if (!product) return [];
@@ -95,8 +104,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  const p = product as Product;
-  const displayPrice = selectedVariant?.price ?? p.price ?? 0;
+  const p = product as Product & { pinpoints?: InteractiveHotspot[] | null; documents?: { title?: string; url: string; name?: string; size?: number }[] | null };
+  const displayPrice = selectedVariant?.price ?? p.price ?? null;
   const stock = selectedVariant?.inventory ?? p.inventory ?? 0;
   const allowBackorder = selectedVariant?.allowBackorder ?? p.allowBackorder ?? false;
   const outOfStock = stock <= 0 && !allowBackorder;
@@ -111,6 +120,7 @@ export default function ProductDetailPage() {
   const activeImage = gallery[Math.min(imageIndex, Math.max(0, gallery.length - 1))];
 
   const add = () => {
+    if (displayPrice == null) return;
     addItem({
       productId: p.slug,
       title: p.title,
@@ -136,14 +146,45 @@ export default function ProductDetailPage() {
       {/* ------------------------------------------------------ hero / buy */}
       <div className="grid gap-10 lg:grid-cols-2">
         <div className="space-y-3">
-          <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getImageSrc(activeImage, 'product')}
-              alt={p.title}
-              className="size-full object-cover"
-              loading="eager"
-            />
+          <div
+            className={cn(
+              'relative overflow-hidden rounded-lg border border-border bg-muted',
+              // An annotated product must not be cropped: the admin placed the
+              // markers against the whole image, so a cover crop here would put
+              // every marker on the wrong feature.
+              hasPinpoints
+                ? 'flex min-h-[22rem] items-center justify-center'
+                : 'aspect-square',
+            )}
+          >
+            <div className={cn('relative', hasPinpoints ? 'inline-block max-h-[34rem] max-w-full' : 'size-full')}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getImageSrc(activeImage, 'product')}
+                alt={p.title}
+                className={hasPinpoints ? 'block max-h-[34rem] max-w-full object-contain' : 'size-full object-cover'}
+                loading="eager"
+              />
+
+              {pinpointList.map((h, index) => (
+                <button
+                  type="button"
+                  key={h.id}
+                  aria-label={h.label}
+                  aria-expanded={activeHotspotId === h.id}
+                  onClick={() => setActiveHotspotId(activeHotspotId === h.id ? null : h.id)}
+                  className={cn(
+                    'absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow-lg transition hover:scale-110',
+                    activeHotspotId === h.id
+                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/30'
+                      : 'bg-primary/90 text-primary-foreground',
+                  )}
+                  style={{ left: `${h.x}%`, top: `${h.y}%` }}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
 
             {gallery.length > 1 && (
               <>
@@ -220,9 +261,9 @@ export default function ProductDetailPage() {
 
           <div className="flex flex-wrap items-baseline gap-3">
             <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
-              {showPrice(displayPrice)}
+              {displayPrice == null ? t('priceOnRequest') : showPrice(displayPrice)}
             </span>
-            {!!p.compareAtPrice && p.compareAtPrice > (p.price ?? 0) && (
+            {displayPrice != null && !!p.compareAtPrice && p.compareAtPrice > (p.price ?? 0) && (
               <span className="font-mono text-lg text-muted-foreground line-through">
                 {showPrice(p.compareAtPrice)}
               </span>
@@ -276,7 +317,7 @@ export default function ProductDetailPage() {
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="flex-1" disabled={outOfStock} onClick={add}>
+            <Button size="lg" className="flex-1" disabled={outOfStock || displayPrice == null} onClick={add}>
               <ShoppingCart />
               {outOfStock ? t('outOfStock') : backorder ? t('buyNow') : t('addToCart')}
             </Button>
@@ -284,7 +325,7 @@ export default function ProductDetailPage() {
               size="lg"
               variant="outline"
               className="flex-1"
-              disabled={outOfStock}
+              disabled={outOfStock || displayPrice == null}
               onClick={() => {
                 add();
                 router.push('/checkout');
@@ -324,6 +365,44 @@ export default function ProductDetailPage() {
                   <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <Check className="mt-0.5 size-4 shrink-0 text-primary" />
                     {f}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {hasPinpoints && activeHotspotId && (
+            <section>
+              {(() => {
+                const h = pinpointList.find((x) => x.id === activeHotspotId);
+                if (!h) return null;
+                return (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">
+                    <p className="font-semibold">{h.label}</p>
+                    {h.tooltip && <p className="mt-1 text-muted-foreground">{h.tooltip}</p>}
+                    {h.detail && <p className="mt-1 text-muted-foreground">{h.detail}</p>}
+                  </div>
+                );
+              })()}
+            </section>
+          )}
+
+          {!!p.documents?.length && (
+            <section>
+              <h2 className="mb-3 font-display text-lg font-semibold text-foreground">{t('documents')}</h2>
+              <ul className="space-y-2">
+                {p.documents.map((doc, index) => (
+                  <li key={`${doc.url}-${index}`}>
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/5"
+                    >
+                      <span className="rounded-md border border-border bg-muted px-2 py-1 font-mono text-xs uppercase text-muted-foreground">PDF</span>
+                      <span className="min-w-0 flex-1 truncate">{doc.title || doc.name || t('documents')}</span>
+                      <Download className="size-4 shrink-0 text-primary" />
+                    </a>
                   </li>
                 ))}
               </ul>

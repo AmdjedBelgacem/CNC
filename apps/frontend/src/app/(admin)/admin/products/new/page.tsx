@@ -13,6 +13,7 @@ import {
 import { FormActions } from '@/components/admin/admin-form';
 import {
   ProductFormSections,
+  PublishReadiness,
   productFormPayload,
   slugify,
   useProductForm,
@@ -25,16 +26,16 @@ export default function NewProductPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const valid = value.title.trim().length > 0 && Number(value.priceCents) > 0;
+  const priceText = value.priceCents.trim();
+  const valid = value.title.trim().length > 0 && (priceText === '' || (Number.isFinite(Number(priceText)) && Number(priceText) >= 0));
 
   const submit = async () => {
     if (!value.title.trim()) {
       toast({ type: 'err', title: t('titleRequired', { default: 'Title required' }) });
       return;
     }
-    const price = Number(value.priceCents);
-    if (!Number.isFinite(price) || price <= 0) {
-      toast({ type: 'err', title: t('priceRequired', { default: 'Valid price required' }) });
+    if (priceText !== '' && (!Number.isFinite(Number(priceText)) || Number(priceText) < 0)) {
+      toast({ type: 'err', title: t('priceRequired', { default: 'Price must be a number' }) });
       return;
     }
     setBusy(true);
@@ -92,6 +93,16 @@ export default function NewProductPage() {
         <AdminPageHeader
           title={t('newProduct', { default: 'New product' })}
           description={t('newDescription', { default: 'Create a new product for your catalog.' })}
+        />
+        <PublishReadiness
+          checks={[
+            { label: t('readinessTitle'), ok: !!value.title.trim() },
+            { label: t('readinessSlug'), ok: !!value.slug.trim() },
+            { label: t('readinessDescription'), ok: !!value.description.trim() },
+            { label: t('readinessCategory'), ok: !!value.category.trim() },
+            { label: t('readinessThumbnail'), ok: !!value.thumbnailUrl },
+            { label: t('readinessPrice'), ok: value.priceCents.trim() !== '' && Number(value.priceCents) > 0 },
+          ]}
         />
         {error && (
           <div

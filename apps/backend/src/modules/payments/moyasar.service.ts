@@ -358,6 +358,7 @@ export class MoyasarService {
       }
 
       let unitAmountCents = product.price;
+      if (unitAmountCents == null) throw new BadRequestException('This product is not purchasable');
       let variantTitle: string | null = null;
       let sku: string | null = null;
       if (line.variantId) {

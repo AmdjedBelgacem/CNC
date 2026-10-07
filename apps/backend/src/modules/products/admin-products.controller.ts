@@ -7,6 +7,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { ProductsService } from './products.service';
+import { UploadService } from '../auth/services/upload.service';
+import { UploadFileDto } from '../courses/dto/courses.dto';
 
 @ApiTags('admin-products')
 @Controller('admin/products')
@@ -14,7 +16,7 @@ import { ProductsService } from './products.service';
 export class AdminProductsController {
   private readonly logger = new Logger(AdminProductsController.name);
 
-  constructor(private products: ProductsService) {}
+  constructor(private products: ProductsService, private upload: UploadService) {}
 
   private effectiveTenant(req: any, queryTenantId?: string): string {
     const actorRole = (req.user as any)?.role;
@@ -98,6 +100,15 @@ export class AdminProductsController {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
     const product = await this.products.findBySlug(tid, slug);
     return this.products.update(product.id, body);
+  }
+
+  @Post('upload')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'Upload a product media file (thumbnail, PDFs)' })
+  uploadFile(@Body() body: UploadFileDto) {
+    // The fron宔 uses this so thumbnails and PDFs become hosted URLs rather
+    // than base64 data URLs that would blow past the varchar(500) columns.
+    return this.upload.uploadGeneric(body.file, body.folder || 'covers', body.name);
   }
 
   @Post(':slug/publish')

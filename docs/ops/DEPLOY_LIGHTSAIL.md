@@ -366,3 +366,92 @@ Fix it in the console: Networking → Firewall → SSH 22 → Source = your curr
 (`curl -s https://api.ipify.org`). Home ISPs hand out a new address often enough that a
 pinned source silently locks you out, so widen to `0.0.0.0/0` while working and rely on the
 key plus fail2ban, or keep the pin and re-pin when it changes.
+
+## This host is RUNTIME ONLY — never build the frontend here (Oct 7 2026)
+
+A Next.js production build on this 2 GB instance has **twice** driven the kernel
+OOM-killer into rebooting the box. Both times the site went down *and* SSH became
+unreachable (TCP :22 accepted, sshd never got a banner because the host was
+swapping), which is indistinguishable from an intrusion if you did not know the
+cause.
+
+```
+21:05  docker compose build frontend   -> next-build RSS ~1.4 GB, load 22+
+21:27  reboot (kernel OOM)
+21:29  reboot (kernel OOM)
+```
+
+### Policy
+
+- **Never** run `next build`, `docker compose build frontend`, or any image build
+  that includes the frontend on this host while the stack is serving.
+- Build frontend images in CI or on a larger machine, then `docker save | docker load`.
+- Only the **backend** image is built on the host, and only when its code changed.
+- `scripts/lightsail/deploy.sh` enforces this: it refuses when `MemTotal < 4096 MB`
+  and prints the off-box build recipe. It builds the backend only.
+- The Dockerfile heap cap (`ENV NODE_OPTIONS=--max-old-space-size=1400` in the build
+  stage) is a **safety net only**, not permission to build here.
+
+```
+# backend-only deploy (the supported path)
+bash scripts/lightsail/deploy.sh
+
+# frontend: build elsewhere
+docker build -f apps/frontend/Dockerfile -t baroot/frontend:<tag> \
+  --build-arg NEXT_PUBLIC_SITE_URL=https://barootcnc.com .
+docker save baroot/frontend:<tag> | ssh ubuntu@13.206.178.25 'docker load'
+ssh ubuntu@13.206.178.25 'cd /opt/titanic/cnc/deploy/lightsail && \
+  docker compose --project-name titan up -d frontend'
+```
+
+### Host hardening applied
+
+| Layer | Setting |
+| --- | --- |
+| sshd | `PasswordAuthentication no`, `KbdInteractive no`, `PermitRootLogin no`, `MaxAuthTries 4`, `AllowUsers ubuntu` — `/etc/ssh/sshd_config.d/50-baroot-hardening.conf` |
+| UFW | `deny incoming`, allow 22/80/443, enabled at boot |
+| fail2ban | `sshd` jail: maxretry 5, findtime 10m, bantime 1h |
+| updates | `unattended-upgrades` + `apt-daily-upgrade.timer` |
+| sysctl | `/etc/sysctl.d/99-baroot-hardening.conf` — redirects off, broadcast pings ignored, `rp_filter=2` (**loose, not 1**: this host is a Docker bridge router and strict mode drops container NAT return traffic) |
+| secrets | `deploy/lightsail/.env` is `600`, no `.git` on the host, `.env.fly` quarantined out of the deploy tree |
+| edge | HSTS, `X-Frame-Options SAMEORIGIN`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Server` stripped |
+
+If a frontend build is ever genuinely unavoidable, stop the stack first so ~600 MB
+is free, and expect the site to be down for the duration:
+`docker compose --project-name titan stop caddy backend frontend redis`.
+
+## Lightsail console firewall parity (operator checklist)
+
+The host-side UFW rules below are not sufficient on Lightsail: the **instance
+firewall in the AWS console is a separate layer** and is checked *before* the host
+ever sees a packet. If it disagrees with UFW, UFW is not the thing protecting you.
+
+> AWS CLI on the ops laptop currently fails `InvalidClientTokenId` and the host has
+> no CLI/credentials, so the console could not be verified or edited
+> programmatically. It must be checked by hand.
+
+Lightsail → **Instances** → select `barootcnc` → **Networking** → **Firewall**:
+
+| Rule | Protocol | Port | Source | Notes |
+| --- | --- | --- | --- | --- |
+| SSH | TCP | 22 | **your current public IP** (`curl -s ifconfig.me`) | Never `0.0.0.0/0` in steady state |
+| HTTP | TCP | 80 | `0.0.0.0/0` | ACME challenges + redirect to HTTPS |
+| HTTPS | TCP | 443 | `0.0.0.0/0` | the only app port |
+
+Verify there is **no other rule** — especially 3000 (frontend), 4000 (backend),
+6379 (Redis), 2019 (Caddy admin) or 5432/6543 (Postgres). Nothing but Caddy should
+ever have needed a host port, so any such rule is either dead or a mistake:
+
+```bash
+# host-side confirmation that only Caddy is published
+sudo docker ps --format '{{.Names}} {{.Ports}}' | grep -E '0\.0\.0\.0'
+# -> titan-caddy-1 0.0.0.0:80->80/tcp 0.0.0.0:443->443/tcp      (expected)
+sudo ss -tlnp | grep -E ':3000|:4000|:6379'                     # -> empty (expected)
+```
+
+To open browser SSH (which bypasses the IP-pinned SSH rule) without widening it,
+keep the SSH rule pinned to your IP and use the console **Connect** button instead.
+
+**Before any `sshd` change:** take a snapshot (Networking → instance → **Snapshot**)
+so a bad edit cannot lock the operator out; `sudo sshd -t` validates config, and
+`sudo systemctl reload ssh` keeps existing sessions alive.

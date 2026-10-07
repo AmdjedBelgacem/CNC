@@ -58,6 +58,7 @@ const AUTH_ROUTES = [
   '/verify-email',
   '/2fa',
   '/callback',
+  '/auth/callback',
   '/offline',
 ];
 

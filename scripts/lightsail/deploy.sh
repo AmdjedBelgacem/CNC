@@ -28,8 +28,42 @@ case "$action" in
   --teardown) "${COMPOSE[@]}" down; exit 0 ;;
 esac
 
-echo "> building images (this can take several minutes on a small instance)"
-"${COMPOSE[@]}" build --pull
+# ---------------------------------------------------------------------------
+# Frontend images are built OFF this box. This is a 2 GB instance and a
+# `next build` here has twice driven the kernel OOM-killer into rebooting the
+# instance, taking the site and SSH offline with it. Availability is a security
+# property, so this refuses instead of warning.
+# ---------------------------------------------------------------------------
+mem_mb() { awk '/MemTotal/ {printf "%d", $2 / 1024}' /proc/meminfo; }
+MEM_MB="$(mem_mb)"
+NEEDED_MB=4096
+
+if [[ "${BAROOT_ALLOW_ONBOX_FRONTEND_BUILD:-0}" != "1" && "$MEM_MB" -lt "$NEEDED_MB" ]]; then
+  echo "REFUSING to build the frontend on this host." >&2
+  echo "  detected memory: ${MEM_MB} MB   required for a safe build: ${NEEDED_MB} MB" >&2
+  cat >&2 <<'BUILDHELP'
+
+A Next.js production build on a 2 GB host has twice driven the kernel
+OOM-killer into rebooting the instance, taking the site and SSH offline.
+
+Build the frontend image elsewhere and ship it instead:
+
+  # on a build machine or CI, targeting this host's architecture:
+  docker build -f apps/frontend/Dockerfile -t baroot/frontend:<tag> \
+    --build-arg NEXT_PUBLIC_SITE_URL=... .
+  docker save baroot/frontend:<tag> | ssh ubuntu@<host> 'docker load'
+
+  # then on this host recreate only the frontend service against that image:
+  cd deploy/lightsail && docker compose --project-name titan up -d frontend
+
+Override only if you accept the outage risk:
+  BAROOT_ALLOW_ONBOX_FRONTEND_BUILD=1 bash scripts/lightsail/deploy.sh
+BUILDHELP
+  exit 1
+fi
+
+echo "> building BACKEND image only (frontend builds are off-box by policy)"
+"${COMPOSE[@]}" build --pull backend
 
 echo "> starting the stack"
 "${COMPOSE[@]}" up -d
