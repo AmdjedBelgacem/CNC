@@ -455,3 +455,30 @@ keep the SSH rule pinned to your IP and use the console **Connect** button inste
 **Before any `sshd` change:** take a snapshot (Networking → instance → **Snapshot**)
 so a bad edit cannot lock the operator out; `sudo sshd -t` validates config, and
 `sudo systemctl reload ssh` keeps existing sessions alive.
+
+## Companion documents
+
+| Document | Purpose |
+| --- | --- |
+| `docs/ops/CLOUDFLARE_IN_TERNT.md` | Putting Cloudflare in front, in the order that will not brick the site |
+| `docs/ops/ROTATION_CHECKLIST.md` | Per-secret rotation procedure, cheapest blast radius first |
+| `docs/ops/SUPABASE_HARDENING.md` | Dashboard MFA, leaked-password protection, RLS risk tables |
+| `docs/ops/RECOVERY.md` | Snapshots, restore, and what a snapshot does not cover |
+| `scripts/lightsail/smoke.sh` | One-command post-deploy / post-restore verification (exit 0 = healthy) |
+
+Edge rate limiting lives in the Caddyfile (`auth_login`, `auth_write`, `oauth`,
+`auth_refresh`). It needs the `caddy-ratelimit` module, which the official image does
+not ship — see `CADDY_IMAGE` in `deploy/lightsail/.env` and the off-box build in
+`apps/frontend`-style workflow documented in `scripts/lightsail/deploy.sh`:
+
+```bash
+# build OFF the production host (laptop or CI, targeting linux/amd64)
+docker buildx build --platform linux/amd64 --load \
+  -f deploy/lightsail/Caddyfile.Dockerfile -t baroot/caddy-ratelimit:2.10.2 .
+docker save baroot/caddy-ratelimit:2.10.2 | gzip | \
+  ssh ubuntu@13.206.178.25 'gunzip | docker load'
+```
+
+Application-layer abuse (repeated auth failures) is blocked by the `caddy-auth-abuse`
+fail2ban jail, which reads Caddy's JSON access log from a path glob so it survives
+container recreation, and bans on ports 80/443 only — never SSH.

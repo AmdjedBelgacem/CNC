@@ -213,12 +213,20 @@ function buildCsp(nonce: string): string {
     response.cookies.set('x-tenant-slug', tenantSlug, {
       httpOnly: true,
       sameSite: 'lax',
+      // Absent, the cookie was written without Secure even on the HTTPS-only
+      // production origin. Neither this cookie nor NEXT_LOCALE carries a
+      // credential, so the exposure is small — but a cookie the browser will
+      // happily send over plaintext HTTP is not what the rest of the app does.
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 365,
     });
   }
   if (cookieLocale !== locale) {
     response.cookies.set(LOCALE_COOKIE, locale, {
       sameSite: 'lax',
+      // See the note on x-tenant-slug above: production is HTTPS-only, so write
+      // it as Secure rather than letting the cookie travel over plaintext too.
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 365,
       path: '/',
     });

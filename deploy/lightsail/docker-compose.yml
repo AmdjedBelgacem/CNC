@@ -21,7 +21,10 @@ networks:
 
 services:
   caddy:
-    image: caddy:2.10-alpine
+    # rate_limit is not in the official image; the default below stays vanilla so
+    # a fresh clone still boots. Set CADDY_IMAGE in .env to the off-box build that
+    # includes github.com/mholt/caddy-ratelimit (see docs/ops/DEPLOY_LIGHTSAIL.md).
+    image: ${CADDY_IMAGE:-caddy:2.10-alpine}
     restart: unless-stopped
     ports:
       - "80:80"
@@ -35,6 +38,9 @@ services:
       - caddy_data:/data
       - caddy_config:/config
       - ${CADDYFILE_PATH:-./Caddyfile}:/etc/caddy/Caddyfile:ro
+      # Stable host path for the access log. Must survive `up -d`, or the
+      # fail2ban jail that reads it loses its history on every deploy.
+      - ./logs:/var/log/caddy
     networks:
       - public
     depends_on:

@@ -14,9 +14,19 @@
 const DEFAULT_ORIGIN = 'http://localhost:3000';
 
 /**
- * Wildcard hostname suffixes. Preview deployments are generated per commit, so a
- * Vercel preview origin cannot be enumerated ahead of time — `*.vercel.app` is the
- * only way to accept them without editing env on every push.
+ * Wildcard hostname suffixes, opt-in via `CORS_ALLOW_VERCEL_PREVIEWS`.
+ *
+ * This existed because preview deployments are generated per commit, so a Vercel
+ * preview origin cannot be enumerated ahead of time. But it also allowed ANY
+ * `*.vercel.app` origin to make credentialed calls to the API, which is only
+ * defensible while previews are actually in use. Production runs a single origin
+ * behind one host (Lightsail + Caddy) and has no preview deployments at all, so
+ * the allowance is now off unless someone deliberately turns it back on.
+ *
+ * Practical exposure was already low: auth cookies are `SameSite=Lax` and
+ * `__Host-` bound, so a foreign origin cannot cause the browser to attach them on
+ * a cross-site request. This closes the remaining gap — an ACAO response for an
+ * origin we do not control.
  */
 const WILDCARD_SUFFIXES = ['.vercel.app'];
 
@@ -53,7 +63,11 @@ export function corsOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
  * (non-browser callers: curl, health checks, server-to-server) returns true, since
  * CORS does not apply to them and refusing would break internal traffic.
  */
-export function isOriginAllowed(origin: string | null | undefined, allowed: readonly string[]): boolean {
+export function isOriginAllowed(
+  origin: string | null | undefined,
+  allowed: readonly string[],
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
   if (!origin) return true;
   // Compare case-insensitively. The URL spec serialises an origin with a
   // lowercased scheme and host, so a browser always sends lower case — but a
@@ -63,6 +77,12 @@ export function isOriginAllowed(origin: string | null | undefined, allowed: read
   // cannot change its meaning.
   const candidate = origin.replace(/\/+$/, '').toLowerCase();
   if (allowed.some((entry) => entry.replace(/\/+$/, '').toLowerCase() === candidate)) return true;
+
+  /**
+   * Preview wildcards are opt-in. Without this the sole production deployment
+   * would hand an ACAO header to any `*.vercel.app` origin anyone can deploy to.
+   */
+  if (env.CORS_ALLOW_VERCEL_PREVIEWS !== 'true') return false;
   return WILDCARD_SUFFIXES.some(
     (suffix) => candidate.endsWith(suffix) && !candidate.endsWith(`www${suffix}`),
   );

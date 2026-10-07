@@ -22,8 +22,20 @@
 
 	# Fastifying already emits request logs, and upstream responses already have
 	# proper content-type. Avoid Caddy default logging noise for routine requests.
+	# Access log goes to a file bind-mounted from the host, not stdout. Reason:
+	# the fail2ban jail below correlates abusive IPs from this log, and reading it
+	# out of docker's per-container json files broke every time the container was
+	# recreated (a new container id, and the old log file is deleted with it) —
+	# the jail went silently quiet while still reporting "0 failures". A stable path
+	# also means the filter reads plain JSON instead of the docker driver's
+	# escaped-quote wrapping, and Caddy rolls the file itself so it cannot fill
+	# the disk.
 	log {
-		output stdout
+		output file /var/log/caddy/access.log {
+			roll_size     10MiB
+			roll_keep     5
+			roll_keep_for 720h
+		}
 		format json
 		level INFO
 	}
@@ -46,6 +58,72 @@
 		-Server
 		# App sets its own CSP per-request with a nonce (middleware). Caddy only
 		# frames the policy; no need to duplicate here.
+	}
+
+	# ---- Edge rate limits ----------------------------------------------------
+	# Requires the caddy-ratelimit module (CADDY_IMAGE), and note its semantics:
+	# `events` IS the allowance (max_events) and `window` the sliding window. There
+	# is no `burst` and no `limit` subdirective — writing them looks plausible and is
+	# silently ignored, which is how this zone once ended up allowing ONE login per
+	# minute per IP.
+	#
+	# Each limit is deliberately LOOSER than the application throttle for the same
+	# route, so the API's own 429 is what a real person sees and this only absorbs
+	# floods before they reach a 2 GB box:
+	#   login 10/min, register+forgot+reset 3/hr, global 100 req/min (all per IP).
+	#
+	# KEY CAVEAT: {http.request.remote.host} is the TCP peer, which is the real
+	# client today because Caddy is the edge. If Cloudflare goes in front, every key
+	# collapses onto Cloudflare's own IPs and these limits become global rather than
+	# per-caller. When that happens, add `trusted_proxies static <Cloudflare ranges>`
+	# and switch the key to {http.request.header.CF-Connecting-IP}. Never switch the
+	# key first: trusting that header without the proxy allowlist lets any caller
+	# forge an IP and walk straight out of the limit.
+	#
+	# ipv6_prefix 64: a single subscriber /64 holds ~2^64 addresses, so per-address
+	# IPv6 limits are trivially bypassed. Bucketing the /64 makes cycling useless.
+	@rl_login path /api/proxy/auth/login
+	rate_limit @rl_login {
+		zone auth_login {
+			key         {http.request.remote.host}
+			events      12
+			window      1m
+			ipv6_prefix 64
+		}
+	}
+
+	@rl_auth_write path /api/proxy/auth/register /api/proxy/auth/forgot-password /api/proxy/auth/reset-password /api/proxy/auth/resend-verification /api/proxy/auth/verify-email
+	rate_limit @rl_auth_write {
+		zone auth_write {
+			key         {http.request.remote.host}
+			events      10
+			window      1m
+			ipv6_prefix 64
+		}
+	}
+
+	# Both spellings are live: the browser starts at /api/proxy/auth/oauth/* (Next BFF)
+	# and Google calls back on /auth/oauth/* which Caddy routes straight to the API.
+	# Limiting only the direct path left the BFF path completely uncovered.
+	@rl_oauth path /api/proxy/auth/oauth/* /auth/oauth/*
+	rate_limit @rl_oauth {
+		zone oauth {
+			key         {http.request.remote.host}
+			events      30
+			window      1m
+			ipv6_prefix 64
+		}
+	}
+
+	# Several tabs can each refresh a session on load, so this one is generous.
+	@rl_refresh path /api/proxy/auth/refresh
+	rate_limit @rl_refresh {
+		zone auth_refresh {
+			key         {http.request.remote.host}
+			events      60
+			window      1m
+			ipv6_prefix 64
+		}
 	}
 
 	# ---- Socket.IO ----------------------------------------------------------

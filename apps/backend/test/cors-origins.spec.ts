@@ -66,9 +66,17 @@ describe('isOriginAllowed', () => {
     expect(isOriginAllowed('https://cnc-rho-lilac.vercel.app', allowed)).toBe(true);
   });
 
-  it('allows any *.vercel.app preview, since those are generated per commit', () => {
-    expect(isOriginAllowed('https://cnc-abc123.vercel.app', allowed)).toBe(true);
-    expect(isOriginAllowed('https://cnc-x-y-z.vercel.app', allowed)).toBe(true);
+  it('refuses *.vercel.app previews unless they are explicitly opted back in', () => {
+    // Single-origin production must not hand an ACAO header to any vercel.app
+    // origin anybody can deploy to. Preview deployments are opt-in.
+    expect(isOriginAllowed('https://cnc-abc123.vercel.app', allowed)).toBe(false);
+    expect(isOriginAllowed('https://cnc-x-y-z.vercel.app', allowed)).toBe(false);
+  });
+
+  it('allows *.vercel.app previews when CORS_ALLOW_VERCEL_PREVIEWS is set', () => {
+    const on = { CORS_ALLOW_VERCEL_PREVIEWS: 'true' } as NodeJS.ProcessEnv;
+    expect(isOriginAllowed('https://cnc-abc123.vercel.app', allowed, on)).toBe(true);
+    expect(isOriginAllowed('https://cnc-x-y-z.vercel.app', allowed, on)).toBe(true);
   });
 
   it('rejects an unrelated origin', () => {

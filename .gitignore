@@ -71,3 +71,6 @@ LAUNCH_CHECKLIST.md
 .env*
 !.env.example
 !.env.*.example
+
+# Caddy access log (bind-mounted from the Lightsail host, not source)
+deploy/lightsail/logs/
