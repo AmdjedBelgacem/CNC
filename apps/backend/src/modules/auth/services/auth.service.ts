@@ -552,21 +552,13 @@ export class AuthService {
       throw new UnauthorizedException('Account is not accessible');
     }
 
-    const accessToken = this.tokenService.generateAccessToken({
-      sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId,
-    });
-
-    const refreshToken = await this.tokenService.generateRefreshToken(user.id, undefined, params.ip, params.userAgent);
-
-    await this.drizzle.db
-      .update(users).set({ lastLoginAt: new Date(), lastLoginIp: params.ip || null, lastLoginUserAgent: params.userAgent || null })
-      .where(eq(users.id, user.id));
-
-    await this.auditService.log({
-      userId: user.id, action: 'user.login', entityType: 'user', entityId: user.id,
-      details: { provider: params.provider }, ip: params.ip, userAgent: params.userAgent, tenantId: params.tenantId,
-    });
-
+    /**
+     * No session of any kind before 2FA is satisfied. The previous shape minted both
+     * an access token and a Supabase session first and only then looked at
+     * `twoFactorEnabled`, so the credentials existed before the second factor was
+     * checked. They were discarded, but a magic-link redemption is a real credential
+     * and there is no reason to create one for a login that will not be honoured.
+     */
     if (user.twoFactorEnabled) {
       await this.auditService.log({
         userId: user.id, action: 'user.login.2fa_pending', entityType: 'user', entityId: user.id,
@@ -574,7 +566,83 @@ export class AuthService {
       });
       return { user: await this.sanitizeUser(user), twoFactorRequired: true as const };
     }
-    return { accessToken, refreshToken, user: await this.sanitizeUser(user), twoFactorRequired: false as const };
+
+    const session = await this.issueSessionForUser(user, params);
+
+    await this.drizzle.db
+      .update(users).set({ lastLoginAt: new Date(), lastLoginIp: params.ip || null, lastLoginUserAgent: params.userAgent || null })
+      .where(eq(users.id, user.id));
+
+    await this.auditService.log({
+      userId: user.id, action: 'user.login', entityType: 'user', entityId: user.id,
+      details: { provider: params.provider, tokenIssuer: session.provider }, ip: params.ip, userAgent: params.userAgent, tenantId: params.tenantId,
+    });
+
+    return {
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+      user: await this.sanitizeUser(user),
+      twoFactorRequired: false as const,
+      provider: session.provider,
+    };
+  }
+
+  /**
+   * Mint the session a signed-in user will carry, from whichever authority owns
+   * credentials on this deployment.
+   *
+   * With Supabase auth enabled the tokens MUST come from Supabase: `JwtAuthGuard`
+   * validates only Supabase tokens, `SupabaseAuthGuard` resolves the caller by
+   * `users.auth_user_id`, and `/auth/refresh` uses Supabase's refresh grant. Returning
+   * this application's own JWT from an OAuth callback produced a cookie the stack
+   * rejected on the very next request. `authUserId` is therefore linked here rather
+   * than assumed, so an OAuth-only account works on its first sign-in.
+   */
+  private async issueSessionForUser(
+    user: { id: string; email: string; role: string; tenantId: string; authUserId?: string | null },
+    params: { ip?: string; userAgent?: string },
+  ): Promise<{ accessToken: string; refreshToken: string; provider: 'supabase' | 'local' }> {
+    if (this.supabaseAuth?.enabled) {
+      const session = await this.supabaseAuth.mintSessionForVerifiedEmail({ email: user.email });
+      if (user.authUserId !== session.userId) {
+        await this.drizzle.db
+          .update(users).set({ authUserId: session.userId })
+          .where(eq(users.id, user.id));
+        user.authUserId = session.userId;
+      }
+      return {
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+        provider: 'supabase',
+      };
+    }
+
+    const accessToken = this.tokenService.generateAccessToken({
+      sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId,
+    });
+    const refreshToken = await this.tokenService.generateRefreshToken(
+      user.id, undefined, params.ip, params.userAgent,
+    );
+    return { accessToken, refreshToken, provider: 'local' };
+  }
+
+  /**
+   * Issue a session for an already-authenticated user, from whichever authority owns
+   * credentials here. Used by the post-2FA completion step, which must mint the same
+   * token type the guard will validate.
+   */
+  async issueSessionForUserId(
+    userId: string,
+    params: { ip?: string; userAgent?: string } = {},
+  ): Promise<{ accessToken: string; refreshToken: string; provider: 'supabase' | 'local' }> {
+    const user = await this.drizzle.db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+    if (user.accountStatus === 'deleted' || user.accountStatus === 'suspended') {
+      throw new UnauthorizedException('Account is not accessible');
+    }
+    return this.issueSessionForUser(user, params);
   }
 
   async refreshAccessToken(refreshToken: string, ip?: string, userAgent?: string) {

@@ -24,7 +24,11 @@ interface TokenResponse {
   access_token?: string;
   refresh_token?: string;
   expires_in?: number;
-  user?: { id?: string; email?: string };
+  user?: { id?: string; email?: string; email_confirmed_at?: string | null };
+  /** Returned by `/admin/generate_link`. */
+  id?: string;
+  hashed_token?: string;
+  verification_type?: string;
   error?: string;
   error_description?: string;
   msg?: string;
@@ -159,6 +163,17 @@ export class SupabaseAuthClient {
     }
   }
 
+  /**
+   * Revokes a session server-side.
+   *
+   * Needed wherever a session is minted *before* a check that can still reject the
+   * login (see the 2FA gate in `POST /auth/login`): without this, the credentials for a
+   * login that was refused would stay valid until they expired, held by nobody.
+   */
+  async signOut(refreshToken: string): Promise<void> {
+    await this.post('/logout', { refresh_token: refreshToken }).catch(() => undefined);
+  }
+
   /** Sends Supabase's password-setup/reset email for a user. */
   async sendRecoveryEmail(email: string): Promise<void> {
     const res = await fetch(`${this.baseUrl}/auth/v1/recover`, {
@@ -170,5 +185,59 @@ export class SupabaseAuthClient {
       const body = await res.text().catch(() => '');
       throw new SupabaseAuthError('recover_failed', body.slice(0, 200) || 'Could not send recovery email', res.status);
     }
+  }
+
+  /**
+   * Issue a Supabase session for an address a federated provider has already proven.
+   *
+   * Google/GitHub sign-in proved control of the mailbox, but this deployment is
+   * Supabase-exclusive: `JwtAuthGuard` validates only Supabase tokens and
+   * `SupabaseAuthGuard` resolves the caller by `users.auth_user_id`. So an OAuth
+   * callback that returned this application's own JWT left the browser holding a
+   * cookie the guard rejects — `/auth/me` 401 and `/auth/refresh` answered
+   * `Refresh token is not valid`, no matter how many times the flow was retried.
+   *
+   * The link is generated with the admin API and redeemed immediately, so no email is
+   * sent and **the account's password is never read, reset or replaced**. That last
+   * property is why this is not the obvious "provision a user with a random password
+   * and sign in with it" approach: that silently invalidates a password the person
+   * may be relying on. `should_create_user` covers first-time OAuth sign-ins, and
+   * redeeming the link confirms the address, which the provider already did.
+   */
+  async mintSessionForVerifiedEmail(params: { email: string }): Promise<SupabaseSession> {
+    const email = params.email?.trim();
+    if (!email) throw new SupabaseAuthError('invalid_email', 'An email address is required', 400);
+
+    const link = await this.post(
+      '/admin/generate_link',
+      { type: 'magiclink', email, should_create_user: true },
+      true,
+    );
+
+    /**
+     * `/admin/generate_link` answers with the user object flattened and the link
+     * fields at the top level (`hashed_token`, `verification_type`), not wrapped in a
+     * `properties` key like supabase-js surfaces it. Reading `properties` returned
+     * undefined and the retry with an empty token failed with
+     * "Verify requires either a token or a token hash".
+     */
+    const tokenHash = link.hashed_token;
+    const verificationType = link.verification_type || 'magiclink';
+    if (!tokenHash) {
+      throw new SupabaseAuthError('no_link', 'Supabase did not return a verification token', 502);
+    }
+
+    /**
+     * `token_hash` is the hash embedded in `action_link`; `token` is the bare value,
+     * which this GoTrue version rejects for this flow ("Only an email address or
+     * phone number should be provided on verify"). Redemption is anonymous by
+     * design: the link is the credential.
+     */
+    const verified = await this.post('/verify', {
+      type: verificationType,
+      token_hash: tokenHash,
+    });
+
+    return this.toSession(verified);
   }
 }

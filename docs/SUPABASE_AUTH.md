@@ -191,3 +191,58 @@ that is done. Both remaining steps are dashboard-only:
 
 - **Redis** (`localhost:6379`) — tokens, payments, rate limiting. No Supabase equivalent.
 - **Meilisearch** (`localhost:7700`) — currently down, so search is broken.
+
+## Federated sign-in (Google / GitHub) — Oct 7 2026
+
+OAuth sign-in returned a valid-looking redirect and no session:
+
+```
+GET /auth/oauth/google/callback -> 302 https://barootcnc.com/auth/callback?provider=google
+FastifyError: Reply was already sent, did you forget to "return reply"
+POST /auth/refresh              -> SupabaseAuthError: Refresh token is not valid
+GET  /auth/me                   -> 401
+```
+
+Two independent defects, both a consequence of exclusive mode:
+
+1. `loginWithOauth` minted **this application's own JWT**. Exclusive mode validates only
+   Supabase tokens, so the cookie was refused by `JwtAuthGuard`, `/auth/refresh` sent a
+   first-party refresh token to Supabase's refresh grant, and `SupabaseAuthGuard` looks
+   the caller up by `users.auth_user_id` — which an OAuth-only account never had. A Google
+   sign-in could not have worked in this mode.
+2. The callbacks used `@Res({ passthrough: true })` **and** redirected manually, so Nest
+   sent a second response after Fastify had already replied.
+
+The fix, in `SupabaseAuthClient.mintSessionForVerifiedEmail`:
+
+```
+POST /auth/v1/admin/generate_link   { type: magiclink, email, should_create_user: true }   (secret key)
+POST /auth/v1/verify                { type: <verification_type>, token_hash: <hashed_token> } (anon key)
+```
+
+The provider already proved the mailbox, so the link is generated with the admin API and
+redeemed immediately — no email is sent and **the account's password is never read,
+reset or replaced**. Deliberately *not* the "provision a user with a random password and
+sign in with it" shortcut, which would silently invalidate a password the person may be
+relying on. Consequences:
+
+- First-time OAuth sign-in creates the Supabase user (`should_create_user`) and redeeming
+  the link confirms the address.
+- An existing account gets a session for the same `sub`, so its password keeps working.
+- `users.auth_user_id` is linked (or repaired) at sign-in instead of being assumed.
+- 2FA is checked *before* any session exists, and `POST /auth/2fa/verify` now mints from
+  the same authority — it used to hand out a first-party JWT that could never authenticate.
+- `POST /auth/login` in Supabase mode also honoured 2FA at all; it now issues the pending
+  marker and revokes the session it just created.
+
+Two traps in this flow, both hit while building it:
+
+- `/admin/generate_link` answers with the user object **flattened** — `hashed_token` and
+  `verification_type` sit at the top level, not under `properties` as supabase-js presents
+  them. Reading `properties` sent an empty token: `Verify requires either a token or a token hash`.
+- Redeem with `token_hash`. Passing the bare value as `token` is rejected by this GoTrue
+  version: `Only an email address or phone number should be provided on verify`.
+
+The provider's `email_verified` claim is now required (`profile.emailVerified`). GitHub's
+own `verified` flag is only reachable with `allRawEmails: true`; without it passport-github2
+collapses `/user/emails` to `[{ value }]` and the flag is gone.

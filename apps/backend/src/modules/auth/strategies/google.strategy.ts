@@ -28,6 +28,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const { name, emails, photos } = profile;
     const user = {
       email: emails?.[0]?.value,
+      /**
+       * `email_verified` is Google's own assertion about the mailbox, and this
+       * deployment turns a verified address into a credential authority identity
+       * (see `SupabaseAuthClient.mintSessionForVerifiedEmail`). Trusting an unverified
+       * claim would let any account name an address it does not control and be
+       * provisioned as it.
+       */
+      emailVerified: profile._json?.email_verified === true,
       name: name?.givenName
         ? `${name.givenName} ${name.familyName || ''}`.trim()
         : emails?.[0]?.value?.split('@')[0] || 'User',

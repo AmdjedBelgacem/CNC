@@ -13,6 +13,13 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       clientSecret: config.get('GITHUB_CLIENT_SECRET') || 'missing',
       callbackURL: `${callbackOrigin(config)}/auth/oauth/github/callback`,
       scope: ['user:email'],
+      /**
+       * Without this, passport-github2 collapses `/user/emails` to
+       * `[{ value }]` and drops GitHub's own `verified` flag, so the strategy could
+       * not tell a proven mailbox from an unverified one — and the address is what
+       * the Supabase identity is keyed on.
+       */
+      allRawEmails: true,
       // See google.strategy.ts — no req.session in this app, so passport needs a store.
       store: new StatelessOAuthStateStore(),
     } as any);
@@ -27,6 +34,8 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     const email = profile.emails?.[0]?.value || `${profile.username}@github.com`;
     const user = {
       email,
+      // See google.strategy.ts: the mailbox is what a Supabase identity is keyed on.
+      emailVerified: profile.emails?.[0]?.verified === true,
       name: profile.displayName || profile.username || email.split('@')[0],
       avatarUrl: profile.photos?.[0]?.value,
       provider: 'github',

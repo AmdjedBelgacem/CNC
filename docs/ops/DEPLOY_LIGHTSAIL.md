@@ -326,3 +326,43 @@ curl -I https://www.barootcnc.com/courses/...             # 301 -> apex path
 curl -I -L https://www.barootcnc.com/api/proxy/health     # 200
 curl -I https://barootcnc.com/                            # 200
 ```
+
+## OAuth (Google) sign-in on this stack (Oct 7 2026)
+
+Three separate things had to line up; each one failed on its own first.
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `/api/proxy/auth/oauth/google` 404, then a blank page | the browser was sent to a Next path that only exists under `/api` | frontend calls `/api/proxy/auth/oauth/*`; the proxy must use `redirect: 'manual'` and forward `Location` |
+| `invalid_client` from Google | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` never reached the container | both are in `deploy/lightsail/docker-compose.yml` alongside `API_PUBLIC_URL` |
+| lands on `/auth/callback?provider=google`, signed out | the callback returned a first-party JWT, which exclusive Supabase mode refuses; and it replied twice (`Reply was already sent`) | see `docs/SUPABASE_AUTH.md` → *Federated sign-in* |
+
+If the callback ever needs re-checking without a browser:
+
+```bash
+cd /opt/titanic/cnc/deploy/lightsail
+# 1. state + authorize hop (expect 302 to accounts.google.com)
+curl -si -c /tmp/c.txt 'https://barootcnc.com/api/proxy/auth/oauth/state' 
+curl -si -b /tmp/c.txt -c /tmp/c.txt -o /dev/null -w '%{redirect_url}\n' \
+  'https://barootcnc.com/api/proxy/auth/oauth/google?state=<state>&redirect=1'
+# 2. after signing in, the callback must set BOTH cookies once
+docker compose logs --tail=200 backend | grep -E 'oauth/google/callback|Reply was already sent|Refresh token is not valid'
+```
+
+Expected on success: exactly one `302` to `/auth/callback`, two `Set-Cookie` headers
+(`__Host-access`, `__Host-refresh`) carrying **Supabase** tokens, and `/auth/me` returning
+the user. A local JWT in those cookies is the failure mode above.
+
+## SSH access
+
+The AWS **instance firewall** is the layer that actually gates port 22; UFW on the host
+allows 22/80/443 from anywhere (see §4). If 443 answers but 22 times out:
+
+```bash
+nc -z -G 8 <host-ip> 22   # blocked here => the Lightsail console firewall, not UFW
+```
+
+Fix it in the console: Networking → Firewall → SSH 22 → Source = your current public IP
+(`curl -s https://api.ipify.org`). Home ISPs hand out a new address often enough that a
+pinned source silently locks you out, so widen to `0.0.0.0/0` while working and rely on the
+key plus fail2ban, or keep the pin and re-pin when it changes.

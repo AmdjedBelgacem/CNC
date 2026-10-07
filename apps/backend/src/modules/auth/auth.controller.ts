@@ -249,6 +249,33 @@ export class AuthController {
         throw new UnauthorizedException('No application account is linked to this identity');
       }
 
+      /**
+       * The password is proven by now, but a second factor is still owed. This branch
+       * used to hand over cookies unconditionally, so an account with 2FA enabled
+       * signed in with nothing but its password — the factor was silently skipped. The
+       * session that was just minted is revoked before the pending marker is issued, so
+       * the refused login leaves no live credentials behind.
+       */
+      if (linked.twoFactorEnabled) {
+        await this.supabaseAuth.signOut(session.refreshToken);
+        this.issuePending2fa(reply, linked.id);
+        await this.auditService
+          .log({
+            userId: linked.id,
+            action: 'user.login.2fa_pending',
+            entityType: 'user',
+            entityId: linked.id,
+            tenantId: tenant.id || undefined,
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
+            details: { provider: 'supabase' },
+          })
+          .catch(() => undefined);
+        // `getProfile`, not the raw row: this is a public response and the row still
+        // carries `passwordHash` for accounts that predate Supabase.
+        return { user: await this.auth.getProfile(linked.id), twoFactorRequired: true };
+      }
+
       // Record the session against our own audit trail, and keep the local user_sessions
       // row so session listing/revocation in Settings still works.
       await this.auditService
@@ -269,7 +296,7 @@ export class AuthController {
         session.refreshToken,
         !!body.rememberDevice,
       );
-      return { user: linked, twoFactorRequired: false, provider: 'supabase' };
+      return { user: await this.auth.getProfile(linked.id), twoFactorRequired: false, provider: 'supabase' };
     }
 
     const result: any = await this.auth.login({
@@ -685,16 +712,18 @@ export class AuthController {
       throw new UnauthorizedException('Account is not accessible');
     }
 
-    const accessToken = this.auth.token.generateAccessToken({
-      sub: u.id, email: u.email, role: u.role, tenantId: u.tenantId,
+    /**
+     * The tokens must come from whichever authority owns credentials: with Supabase
+     * auth enabled a first-party JWT is rejected by `JwtAuthGuard` on the very next
+     * request, so completing 2FA used to leave the browser holding a cookie that could
+     * never authenticate anything.
+     */
+    const session = await this.auth.issueSessionForUserId(u.id, {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
-    const refreshToken = await this.auth.token.generateRefreshToken(
-      u.id, undefined, req.ip, req.headers['user-agent'], !!body.rememberDevice,
-    );
-    try {
-      this.cookieService.setAuthCookies(reply, accessToken, refreshToken, !!body.rememberDevice);
-      this.cookieService.clearPending2faCookie(reply);
-    } catch {}
+    this.cookieService.setAuthCookies(reply, session.accessToken, session.refreshToken, !!body.rememberDevice);
+    this.cookieService.clearPending2faCookie(reply);
 
     await this.auditServiceLog(u.id, body.rememberDevice);
     return { verified: true, user: await this.auth.getProfile(u.id) };
@@ -768,7 +797,7 @@ export class AuthController {
   async googleAuthCallback(
     @Req() req: any,
     @Query('state') state: string | undefined,
-    @Res({ passthrough: true }) reply: any,
+    @Res() reply: any,
   ) {
     return this.finishOauth(req, reply, 'google', state, req.user);
   }
@@ -787,17 +816,39 @@ export class AuthController {
   async githubAuthCallback(
     @Req() req: any,
     @Query('state') state: string | undefined,
-    @Res({ passthrough: true }) reply: any,
+    @Res() reply: any,
   ) {
     return this.finishOauth(req, reply, 'github', state, req.user);
   }
 
+  /**
+   * Both OAuth callbacks take a bare `@Res()`, not `@Res({ passthrough: true })`.
+   *
+   * With passthrough Nest still owns the reply, so after this method redirected the
+   * browser with `reply.redirect()` and returned `undefined`, Nest sent the return
+   * value too and production logged
+   * `FastifyError: Reply was already sent, did you forget to "return reply"` from the
+   * callback route on every successful Google sign-in. Owning the reply here means the
+   * handler sends exactly one response.
+   */
   private async finishOauth(req: any, reply: any, provider: 'google' | 'github', state: string | undefined, profile: any) {
     const stateInfo = await this.consumeOauthState(state);
     // Enforce state validation (CSRF on OAuth)
     if (!stateInfo && process.env.OAUTH_REQUIRE_STATE !== 'false') {
       throw new (await import('@nestjs/common')).UnauthorizedException('Invalid or missing OAuth state');
     }
+
+    /**
+     * The provider's assertion about the mailbox is the only thing standing between a
+     * sign-in and a provisioned identity, so an unverified address stops here rather
+     * than becoming an account.
+     */
+    if (!profile?.email || profile.emailVerified !== true) {
+      throw new (await import('@nestjs/common')).UnauthorizedException(
+        `${provider} did not provide a verified email address`,
+      );
+    }
+
     const result: any = await this.auth.loginWithOauth({
       provider, providerAccountId: profile.providerAccountId,
       email: profile.email, name: profile.name, avatarUrl: profile.avatarUrl,
@@ -808,11 +859,14 @@ export class AuthController {
     if (result.twoFactorRequired) {
       this.issuePending2fa(reply, result.user?.id);
     } else {
-      try {
-        this.cookieService.setAuthCookies(reply, result.accessToken, result.refreshToken, false);
-      } catch {}
+      /**
+       * Not swallowed: these cookies ARE the session, so a failure here produced a
+       * redirect to `/auth/callback` that then reported "could not complete sign-in"
+       * with nothing in the logs to explain it.
+       */
+      this.cookieService.setAuthCookies(reply, result.accessToken, result.refreshToken, false);
     }
-    // Dual-write: JSON for old clients, 303 redirect target for browsers
+    // Dual-write: JSON for old clients, 302 redirect target for browsers
     const frontend = process.env.FRONTEND_URL || 'http://localhost:3000';
     const wantsRedirect = String(req.query?.redirect || '') === '1' || (req.headers?.accept || '').includes('text/html');
     if (wantsRedirect) {
@@ -820,10 +874,9 @@ export class AuthController {
       target.searchParams.set('provider', provider);
       if (result.twoFactorRequired && result.user?.id) target.searchParams.set('userId', result.user.id);
       if (stateInfo?.redirectTo) target.searchParams.set('returnTo', stateInfo.redirectTo);
-      reply.status(302).redirect(target.toString());
-      return;
+      return reply.status(302).redirect(target.toString());
     }
-    return result;
+    return reply.send(result);
   }
 
   @Get('oauth/accounts')
