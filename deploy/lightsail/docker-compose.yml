@@ -1,0 +1,184 @@
+# Production stack for the Lightsail single-origin deployment.
+#
+# Topology: Browser -> Caddy :443 -> (frontend | backend). Redis and Meilisearch
+# are internal-only and publish no host ports. Supabase Cloud is external, so the
+# backend gets an outbound-capable network for it while Redis/Meili stay private.
+#
+# Copy to deploy/lightsail/.env (mode 600), fill it with real values, then:
+#   docker compose -f deploy/lightsail/docker-compose.yml up -d --build
+#
+# Meilisearch only starts if you opt in with the "search" profile.
+
+name: titan
+
+networks:
+  # Caddy routes traffic here. Not "internal": containers cannot reply to the
+  # outside from an internal network, and the backend uses this to reach Supabase.
+  public: {}
+  # Redis + Meilisearch live here. internal: true means no outbound, no inbound.
+  internal:
+    internal: true
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+      API_UPSTREAM: ${API_UPSTREAM:-backend:4000}
+      FRONTEND_UPSTREAM: ${FRONTEND_UPSTREAM:-frontend:3000}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ${CADDYFILE_PATH:-./Caddyfile}:/etc/caddy/Caddyfile:ro
+    networks:
+      - public
+    depends_on:
+      - frontend
+      - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+        NEXT_PUBLIC_DEFAULT_TENANT_SLUG: ${NEXT_PUBLIC_DEFAULT_TENANT_SLUG}
+        NEXT_PUBLIC_REALTIME_MODE: ${NEXT_PUBLIC_REALTIME_MODE:-auto}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_SNAPCHAT_PIXEL_ID: ${NEXT_PUBLIC_SNAPCHAT_PIXEL_ID:-}
+    restart: unless-stopped
+    environment:
+      # Server-side switch: the only value that decides where the BFF and the
+      # middleware proxy go. Flipping it later is a one-line env change.
+      API_URL: http://backend:4000
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: 0.0.0.0
+    depends_on:
+      - backend
+    networks:
+      - public
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # The single domain for this deployment, comma-separated if you add aliases.
+      FRONTEND_URL: ${FRONTEND_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      # Inside the internal network, Redis is just the service name and published
+      # nowhere. REDIS_URL uses db 0 so throttler and public-cache keyspaces
+      # can't evict each other when you later add a second DB; document either way.
+      REDIS_URL: redis://redis:6379/${REDIS_DB_INDEX:-0}
+      MEILISEARCH_HOST: ${MEILISEARCH_HOST:-}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:-}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL}
+      SUPABASE_AUTH_ENABLED: ${SUPABASE_AUTH_ENABLED:-true}
+      AUTH_SECRET: ${AUTH_SECRET}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      JWT_REFRESH_EXPIRY_REMEMBER: ${JWT_REFRESH_EXPIRY_REMEMBER:-30d}
+      ARGON2_TIME_COST: ${ARGON2_TIME_COST:-3}
+      ARGON2_MEMORY_COST: ${ARGON2_MEMORY_COST:-65536}
+      ARGON2_PARALLELISM: ${ARGON2_PARALLELISM:-4}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      SMTP_FROM: ${SMTP_FROM}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_MEDIA_BUCKET: ${S3_MEDIA_BUCKET}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      AI_ASSISTANT_ENCRYPTION_KEY: ${AI_ASSISTANT_ENCRYPTION_KEY}
+      AI_PROVIDER_ALLOWED_HOSTS: ${AI_PROVIDER_ALLOWED_HOSTS:-api.openai.com}
+      AI_PROVIDER_MAX_RESPONSE_BYTES: ${AI_PROVIDER_MAX_RESPONSE_BYTES:-1048576}
+      AI_PROVIDER_TIMEOUT_MS: ${AI_PROVIDER_TIMEOUT_MS:-15000}
+      MOYASAR_PUBLISHABLE_KEY: ${MOYASAR_PUBLISHABLE_KEY:-}
+      MOYASAR_SECRET_KEY: ${MOYASAR_SECRET_KEY:-}
+      UPLOAD_DIR: /repo/uploads
+    volumes:
+      - uploads:/repo/uploads
+    depends_on:
+      - redis
+    networks:
+      # Backend stays on the public network because it reaches Supabase over the
+      # internet. It also joins internal for Redis. There are no published ports:
+      # Caddy reverse-proxies in on its behalf.
+      - public
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    restart: unless-stopped
+    profiles:
+      - search
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilidata:/meili_data
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  uploads:
+  redisdata:
+  meilidata:

@@ -7,17 +7,22 @@ import { trackLogin } from '@/lib/analytics';
 
 // OAuth: fetch a CSRF state from the backend, then redirect with redirect=1
 // so the callback sets httpOnly cookies and redirects back to the app.
+//
+// The navigation MUST go through /api/proxy/*: that is the only route the Next app
+// serves (apps/frontend/src/app/api/proxy/[...path]/route.ts). These lines used to
+// point at /api/auth/oauth/*, which matches nothing — the browser got a bare 404
+// before ever reaching Google, so sign-in appeared simply broken.
 async function oauthRedirect(provider: 'google' | 'github') {
   try {
     const res = await fetch('/api/proxy/auth/oauth/state', { credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
       if (data?.state) {
-        window.location.href = `/api/auth/oauth/${provider}?state=${encodeURIComponent(data.state)}&redirect=1`;
+        window.location.href = `/api/proxy/auth/oauth/${provider}?state=${encodeURIComponent(data.state)}&redirect=1`;
         return;
       }
     }
-  } catch {} // Fallback: direct navigation (backend may still accept, or shows error) window.location.href = `/api/auth/oauth/${provider}?redirect=1`;
+  } catch {} // Fallback: direct navigation (backend may still accept, or shows error) window.location.href = `/api/proxy/auth/oauth/${provider}?redirect=1`;
 }
 function LoginForm() {
   const router = useRouter();

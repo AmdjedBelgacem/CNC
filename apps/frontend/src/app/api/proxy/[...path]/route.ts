@@ -142,7 +142,22 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
       synthesizedCsrf = !clientToken;
     }
   }
-  let response = await fetch(url, { method, headers, body, cache: 'no-store' });
+  /**
+     * `redirect: 'manual'` is required, not an optimisation.
+     *
+     * With the default 'follow', the proxy chased the backend's own 302 to the
+     * OAuth provider, fetched that provider's HTML, and returned it here with
+     * status 200 — so Google sign-in rendered the provider's login page INSIDE
+     * barootcnc.com instead of redirecting the browser to it. A proxy must
+     * forward redirects, never resolve them.
+     */
+    let response = await fetch(url, {
+      method,
+      headers,
+      body,
+      cache: 'no-store',
+      redirect: 'manual',
+    });
   // The signing secret is derived from AUTH_SECRET, so a cached token goes stale if
   // that secret rotates. Only our own minted token can be stale — a client-supplied
   // one is the client's business — so re-mint and replay once, on the fallback path.
@@ -160,13 +175,23 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
           },
           body,
           cache: 'no-store',
+          redirect: 'manual',
         });
       }
     }
   }
   const data = await response.text();
-  // Forward Set-Cookie headers from backend to client
-  const responseHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+  // Forward Set-Cookie headers from backend to client.
+  //
+  // Content-Type is taken from upstream rather than hardcoded to application/json:
+  // mislabelling a redirect or an HTML error body makes some clients refuse to
+  // render it. Location is forwarded so a 3xx from the backend actually
+  // redirects the browser instead of being swallowed.
+  const responseHeaders: Record<string, string> = {
+    'Content-Type': response.headers.get('content-type') || 'application/json',
+  };
+  const upstreamLocation = response.headers.get('location');
+  if (upstreamLocation) responseHeaders['Location'] = upstreamLocation;
   const setCookie = response.headers.getSetCookie?.() || [];
   // Fallback for environments where getSetCookie not available
   if (setCookie.length === 0) {

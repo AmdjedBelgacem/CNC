@@ -72,6 +72,13 @@ export async function createApp(): Promise<NestFastifyApplication> {
      * that could appear inside an error message or a database URL.
      */
     new FastifyAdapter({
+      // The app sits behind a TLS-terminating third party in every real deployment:
+      // Caddy (Lightsail/Hetzner), Fly's proxy, or Vercel's edge. Those proxies set
+      // X-Forwarded-For / X-Forwarded-Proto. trustProxy lets Fastify use them for the
+      // client's real IP (the rate limiter keys on it) and the real scheme (so
+      // Secure/Lax cookies and redirects reflect https, not the internal http hop).
+      // Without it every client looks like one Caddy IP and the throttler collapses.
+      trustProxy: true,
       logger: {
         level: process.env.LOG_LEVEL || 'info',
         redact: {

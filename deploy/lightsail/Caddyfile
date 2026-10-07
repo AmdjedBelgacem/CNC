@@ -1,0 +1,105 @@
+# Caddy for the Lightsail single-origin deployment.
+#
+# One domain, three routes. Everything that belongs to the backend is addressed
+# before the catch-all, and so the middleware rewrite inside Next never has to be
+# trusted for those paths (it never runs because the browser never reaches Next
+# with them). /socket.io carries plain HTTP polling — Vercel or not, WebSocket
+# upgrade still needs a real proxy that supports it, which this is.
+{
+	# ACM-style certificate email, matches ACME_EMAIL env var.
+	email {$ACME_EMAIL}
+	# Automatic HTTPS via Let's Encrypt / ZeroSSL. This machine must be reachable
+	# on :80/:443 publicly or this will fail healthily: set it in the firewall
+	# section of the docs.
+}
+
+# Injected into the scope via the container environment ({$VAR}), documented in
+# .env.example. Example DOMAIN=barootcnc.com
+{$DOMAIN} {
+	# Compression for text assets. PDFs and images are already compressed and
+	# compressing them again wastes CPU.
+	encode zstd gzip
+
+	# Fastifying already emits request logs, and upstream responses already have
+	# proper content-type. Avoid Caddy default logging noise for routine requests.
+	log {
+		output stdout
+		format json
+		level INFO
+	}
+
+	header {
+		# This is the only origin for the app (FRONTEND_URL points here), and Caddy
+		# terminates TLS, so these headers are safe.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		# Caddy's own Server header is always added in front of the response, but
+		# stripping it reduces fingerprinting risk.
+		-Server
+		# App sets its own CSP per-request with a nonce (middleware). Caddy only
+		# frames the policy; no need to duplicate here.
+	}
+
+	# ---- Socket.IO ----------------------------------------------------------
+	# The namespace URL the browser calls is the Socket.IO HTTP path on the same
+	# origin. Caddy proxies it straight to the backend (which holds the WS upgrade
+	# and HTTP polling endpoints). websocket is the default upgrade path and Caddy
+	# supports it out of the box.
+	@socket path /socket.io/*
+	handle @socket {
+		reverse_proxy {$API_UPSTREAM} {
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-For {remote_host}
+			header_up Host $host
+			transport http {
+				# Never drop an open socket if traffic is bursty or the client is slow.
+				read_timeout 1h
+				write_timeout 1h
+			}
+		}
+	}
+
+	# ---- OAuth --------------------------------------------------------------
+	# Google/GitHub call back to the API on our public origin, and the backend
+	# sets cookies and 302s onward. Must reach the backend, not the Next app.
+	@oauth path /auth/oauth/*
+	handle @oauth {
+		reverse_proxy {$API_UPSTREAM} {
+			header_up X-Forwarded-Proto https
+			header_up Host $host
+		}
+	}
+
+	# ---- Uploaded media (Fastify static) ------------------------------------
+	@uploads path /uploads/*
+	handle @uploads {
+		reverse_proxy {$API_UPSTREAM} {
+			header_up X-Forwarded-Proto https
+			header_up Host $host
+		}
+	}
+
+	# ---- Everything else: the Next app --------------------------------------
+	# HTML/SSR, /api/proxy/* (Next route handler proxy to the backend), customer
+	# routes, metadata,images handled by the Next optimizer.
+	handle {
+		reverse_proxy {$FRONTEND_UPSTREAM} {
+			header_up X-Forwarded-Proto https
+			header_up Host $host
+		}
+	}
+
+	# Fly/Hetzner-style health hint so the host itself can probe the stack
+	# without depending on any app path.
+	handle_path /__ping {
+		respond pong 200
+	}
+}
+
+# HTTP to HTTPS redirect. Caddy's automatic HTTPS does this by default, but we
+# make it explicit so it stays visible if you edit the TLS block later.
+http://{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
