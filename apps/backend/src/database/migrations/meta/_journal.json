@@ -285,6 +285,13 @@
       "when": 1787361696672,
       "tag": "035_product_image_hotspots",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1787361697672,
+      "tag": "036_product_pricing_modes_and_quote_pipeline",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Mail,
   ShoppingCart,
   Tag,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ import { ErrorState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { getImageSrc } from '@/lib/images';
+import { QuoteRequestDialog } from '@/components/store/quote-request-dialog';
 import type { Product, ProductVariant } from '@/lib/api/types';
 
 interface ProductGalleryEntry {
@@ -194,6 +196,28 @@ export function ProductDetailClient({
     pricePending ? t('pricePending') : formatMinorUnits(inDisplay(minor), displayCurrency, locale);
   const activeEntry = gallery[Math.min(imageIndex, Math.max(0, gallery.length - 1))];
   const activeImage = activeEntry?.url ?? '';
+
+  /**
+   * How this product is priced.
+   *
+   * `from` takes the lowest figure a buyer could actually pay — the product price and
+   * every variant price — rather than a separate "from" field an admin could set to
+   * something the options do not support. Computed here because the variants are already
+   * in the payload.
+   */
+  const pricingMode = (p.pricingMode ?? 'fixed') as 'fixed' | 'from' | 'request';
+  const variantPrices = (p.variants ?? [])
+    .map((v) => v.price)
+    .filter((v): v is number => typeof v === 'number' && v > 0);
+  const fromPrice =
+    [p.price, ...variantPrices].filter((v): v is number => typeof v === 'number' && v > 0).length > 0
+      ? Math.min(...[p.price, ...variantPrices].filter((v): v is number => typeof v === 'number' && v > 0))
+      : null;
+  // Only 'from' uses `fromPrice`; 'fixed' keeps the exact figure, including zero-priced
+  // digital goods, which must not be mistaken for "no price".
+  const headlinePrice = pricingMode === 'from' ? fromPrice : displayPrice;
+  const isQuoteOnly = pricingMode === 'request';
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const add = () => {
     if (displayPrice == null) return;
@@ -407,9 +431,15 @@ export function ProductDetailClient({
           </div>
 
           <div className="flex flex-wrap items-baseline gap-3">
-            <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
-              {displayPrice == null ? t('priceOnRequest') : showPrice(displayPrice)}
-            </span>
+            {pricingMode === 'from' ? (
+              <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
+                {t('priceFrom', { price: headlinePrice == null ? '' : showPrice(headlinePrice) })}
+              </span>
+            ) : (
+              <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
+                {headlinePrice == null ? t('priceOnRequest') : showPrice(headlinePrice)}
+              </span>
+            )}
             {displayPrice != null && !!p.compareAtPrice && p.compareAtPrice > (p.price ?? 0) && (
               <span className="font-mono text-lg text-muted-foreground line-through">
                 {showPrice(p.compareAtPrice)}
@@ -463,23 +493,37 @@ export function ProductDetailClient({
             </div>
           )}
 
+          {/*
+            A quote-only product has no price to commit to, so the cart is replaced rather
+            than disabled. A greyed-out "Add to cart" reads as a broken site; a clear
+            "Request a quote" reads as the intended path.
+          */}
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="flex-1" disabled={outOfStock || displayPrice == null} onClick={add}>
-              <ShoppingCart />
-              {outOfStock ? t('outOfStock') : backorder ? t('buyNow') : t('addToCart')}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="flex-1"
-              disabled={outOfStock || displayPrice == null}
-              onClick={() => {
-                add();
-                router.push('/checkout');
-              }}
-            >
-              {t('buyNow')}
-            </Button>
+            {isQuoteOnly ? (
+              <Button size="lg" className="flex-1" onClick={() => setQuoteOpen(true)}>
+                <Mail />
+                {t('requestQuote', { default: 'Request a quote' })}
+              </Button>
+            ) : (
+              <Button size="lg" className="flex-1" disabled={outOfStock || displayPrice == null} onClick={add}>
+                <ShoppingCart />
+                {outOfStock ? t('outOfStock') : backorder ? t('buyNow') : t('addToCart')}
+              </Button>
+            )}
+            {!isQuoteOnly ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1"
+                disabled={outOfStock || displayPrice == null}
+                onClick={() => {
+                  add();
+                  router.push('/checkout');
+                }}
+              >
+                {t('buyNow')}
+              </Button>
+            ) : null}
           </div>
 
           {backorder && (
@@ -609,6 +653,15 @@ export function ProductDetailClient({
           </div>
         </section>
       )}
+
+      <QuoteRequestDialog
+        open={quoteOpen}
+        onOpenChange={setQuoteOpen}
+        productId={p.id}
+        productTitle={p.title}
+        variantId={selectedVariant?.id ?? null}
+        variantTitle={selectedVariant?.title ?? null}
+      />
     </div>
   );
 }

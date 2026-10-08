@@ -40,6 +40,7 @@ interface ProductDetail {
   description: string | null; features: string[] | null;
   thumbnailUrl: string | null; mediaUrls: string[] | null;
   price: number; compareAtPrice: number | null; currency: string;
+  pricingMode?: 'fixed' | 'from' | 'request' | null;
   inventory: number | null; trackInventory: boolean; allowBackorder: boolean;
   backorderLeadDays: number | null; isDigital: boolean;
   isPublished: boolean; isArchived: boolean; featured: boolean;
@@ -64,6 +65,9 @@ function baselineOf(p: ProductDetail): ProductFormValue {
     description: p.description ?? '',
     category: p.category ?? '',
     priceCents: p.price != null ? String(p.price) : '',
+    // Absent means the pre-migration default; treating it as 'fixed' is what the
+    // NOT NULL DEFAULT 'fixed' column guarantees for every existing row.
+    pricingMode: (p.pricingMode ?? 'fixed') as 'fixed' | 'from' | 'request',
     compareAtCents: p.compareAtPrice ? String(p.compareAtPrice) : '',
     currency: p.currency ?? 'SAR',
     inventory: String(p.inventory ?? 0),

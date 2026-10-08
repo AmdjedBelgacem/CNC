@@ -150,6 +150,23 @@ export class DrizzleService implements OnModuleInit {
         await this.client.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "product_images_one_primary_idx" ON "product_images" ("product_id") WHERE "is_primary" = true`);
         // Per-image hotspots, added after the table first shipped.
         await this.client.unsafe(`ALTER TABLE "product_images" ADD COLUMN IF NOT EXISTS "hotspots" jsonb`);
+
+        // Pricing modes + the quote pipeline. Mirrors migration 036; safe to re-run at
+        // every boot for hosts that never run `db:migrate`.
+        try {
+          await this.client.unsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "pricing_mode" varchar(20) DEFAULT 'fixed' NOT NULL`);
+          await this.client.unsafe(`ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "tenant_id" uuid REFERENCES "tenants"("id") ON DELETE SET NULL`);
+          await this.client.unsafe(`ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "product_id" uuid REFERENCES "products"("id") ON DELETE SET NULL`);
+          await this.client.unsafe(`ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "variant_id" uuid`);
+          await this.client.unsafe(`ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "status" varchar(20) DEFAULT 'new' NOT NULL`);
+          await this.client.unsafe(`ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "quoted_price" integer`);
+          await this.client.unsafe(`ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "admin_note" text`);
+          await this.client.unsafe(`ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now() NOT NULL`);
+          await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "quotes_tenant_created_idx" ON "quotes" ("tenant_id", "created_at" DESC)`);
+          await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "quotes_product_email_idx" ON "quotes" ("product_id", "email")`);
+        } catch (err) {
+          console.warn('[DrizzleService] ensure pricing modes / quote pipeline failed (non-fatal)', err);
+        }
       } catch (err) {
         console.warn('[DrizzleService] ensure product_images table failed (non-fatal)', err);
       }

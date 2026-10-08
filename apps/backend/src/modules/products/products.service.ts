@@ -318,6 +318,7 @@ export class ProductsService {
     // last would put the untrimmed original straight back over the normalised value.
     values.title = title;
     values.slug = slug;
+    values.pricingMode = ProductsService.assertPricingMode(data.pricingMode);
 
     const [product] = await this.db.insert(productsBundle).values(values as never).returning();
     if (product) this.syncSearch(product.tenantId, product.id);
@@ -341,7 +342,25 @@ export class ProductsService {
     featured: true, sortOrder: true, tags: true, features: true,
     thumbnailUrl: true, mediaUrls: true, pinpoints: true, documents: true,
     academyId: true, courseId: true, seoTitle: true, seoDescription: true,
+    pricingMode: true,
   };
+
+
+  /**
+   * Reject an unknown pricing mode before it reaches the database.
+   *
+   * `pricingMode` is on the client allowlist, so without this a request could store
+   * `'free'`, `'starting'` or `''` — and the storefront's switch would then fall through
+   * to `fixed`, silently publishing a price on a machine meant to be quote-only.
+   */
+  private static assertPricingMode(value: unknown): 'fixed' | 'from' | 'request' {
+    if (value === undefined || value === null) return 'fixed';
+    const mode = String(value).trim().toLowerCase();
+    if (mode === 'fixed' || mode === 'from' || mode === 'request') return mode;
+    throw new BadRequestException(
+      `pricingMode must be one of: fixed, from, request (received "${String(value)}")`,
+    );
+  }
 
   async update(id: string, data: Record<string, unknown>, expectedUpdatedAt?: string | Date | null) {
     /**
@@ -380,6 +399,9 @@ export class ProductsService {
     const patch: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data ?? {})) {
       if (ProductsService.UPDATABLE[key]) patch[key] = value;
+    }
+    if (patch.pricingMode !== undefined) {
+      patch.pricingMode = ProductsService.assertPricingMode(patch.pricingMode);
     }
 
     /**

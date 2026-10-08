@@ -30,6 +30,7 @@ export interface ProductFormValue {
   description: string;
   category: string;
   priceCents: string;
+  pricingMode: 'fixed' | 'from' | 'request';
   compareAtCents: string;
   currency: string;
   inventory: string;
@@ -91,6 +92,7 @@ export function useProductForm(initial?: Partial<ProductFormValue>) {
     description: '',
     category: '',
     priceCents: '',
+    pricingMode: 'fixed',
     compareAtCents: '',
     // Default to the platform currency. A store that charges in SAR must not
     // silently default to USD, which is what this did before.
@@ -127,6 +129,7 @@ export function productFormPayload(value: ProductFormValue) {
     description: value.description.trim() || null,
     category: value.category.trim() || null,
     price: value.priceCents.trim() ? Math.round(Number(value.priceCents)) : null,
+    pricingMode: value.pricingMode,
     compareAtPrice: value.compareAtCents ? Math.round(Number(value.compareAtCents)) : null,
     pinpoints: value.pinpoints.length > 0 ? value.pinpoints : null,
     documents: value.documents.length > 0 ? value.documents : null,
@@ -373,6 +376,32 @@ export function ProductFormSections({
         icon={Store}
         description={t('sectionPricingDesc', { default: 'Set the price customers pay and how stock behaves.' })}
       >
+        {/*
+          Pricing mode decides what the storefront shows and whether the cart is even
+          reachable, so it sits above the price field rather than being buried beside it.
+        */}
+        <FieldGrid>
+          <SelectField
+            label={t('fieldPricingMode', { default: 'Pricing' })}
+            value={value.pricingMode}
+            onChange={(e) => set('pricingMode', e.target.value as 'fixed' | 'from' | 'request')}
+            hint={t('pricingModeHint', { default: 'How this product is priced on the storefront.' })}
+          >
+            <option value="fixed">{t('pricingFixed', { default: 'Fixed price' })}</option>
+            <option value="from">{t('pricingFrom', { default: 'From a price' })}</option>
+            <option value="request">{t('pricingRequest', { default: 'Request a quote' })}</option>
+          </SelectField>
+        </FieldGrid>
+
+        {value.pricingMode === 'request' ? (
+          <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+            {t('pricingRequestExplain', {
+              default:
+                'No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.',
+            })}
+          </p>
+        ) : null}
+
         <FieldGrid>
           <TextField
             label={t('fieldPriceOptional')}
@@ -381,7 +410,15 @@ export function ProductFormSections({
             inputMode="numeric"
             value={value.priceCents}
             onChange={(e) => set('priceCents', e.target.value)}
-            hint={t('fieldPriceHint', { unit, default: 'Stored in {unit}.' })}
+            hint={
+              value.pricingMode === 'from'
+                ? t('fieldPriceHintFrom', {
+                    unit,
+                    default:
+                      'Used as the base. “From” is computed from the lowest option price across variants.',
+                  })
+                : t('fieldPriceHint', { unit, default: 'Stored in {unit}.' })
+            }
           />
           <TextField
             label={t('fieldCompareAt', { default: 'Compare-at price' })}

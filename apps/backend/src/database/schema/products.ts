@@ -37,6 +37,18 @@ export const productsBundle = pgTable('products', {
   price: integer('price'),
   compareAtPrice: integer('compare_at_price'),
   currency: varchar('currency', { length: 3 }).default('USD'),
+  /**
+   * How this product is priced.
+   *
+   *  'fixed'   show `price` exactly.
+   *  'from'    show "from <lowest price>", where the figure varies by variant.
+   *  'request' show no figure at all; the buyer sends a quote request instead.
+   *
+   * NOT NULL with a default so no existing row changes meaning when the migration runs,
+   * and so the read path never has to infer a mode from a null price — a genuinely free
+   * product and a quote-only machine look identical otherwise.
+   */
+  pricingMode: varchar('pricing_mode', { length: 20 }).default('fixed').notNull(),
   trackInventory: boolean('track_inventory').default(true),
   inventory: integer('inventory').default(0),
   allowBackorder: boolean('allow_backorder').default(false),

@@ -125,6 +125,11 @@ export interface Product {
   price?: number | null;
   compareAtPrice?: number | null;
   currency?: string | null;
+  /**
+   * 'fixed' shows `price`; 'from' shows a "from" figure computed across variants;
+   * 'request' shows no figure and offers a quote request instead.
+   */
+  pricingMode?: 'fixed' | 'from' | 'request' | null;
   trackInventory?: boolean;
   inventory?: number | null;
   allowBackorder?: boolean;

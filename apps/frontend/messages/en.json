@@ -1521,7 +1521,14 @@
       "uploadFailed": "Upload failed",
       "uploading": "Uploading…",
       "viewDocument": "View",
-      "working": "Working…"
+      "working": "Working…",
+      "fieldPricingMode": "Pricing",
+      "pricingModeHint": "How this product is priced on the storefront.",
+      "pricingFixed": "Fixed price",
+      "pricingFrom": "From a price",
+      "pricingRequest": "Request a quote",
+      "pricingRequestExplain": "No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.",
+      "fieldPriceHintFrom": "Used as the base. “From” is computed from the lowest option price across variants."
     },
     "productsPage": {
       "action": {
@@ -2011,6 +2018,24 @@
       },
       "guidedTitle": "A guided flow, not a blank canvas.",
       "guidedBody": "You can always change the template, reorder content, and add Arabic translations later."
+    },
+    "quotes": {
+      "title": "Quote requests",
+      "description": "Enquiries from customers who were not shown a price.",
+      "status": {
+        "new": "New",
+        "contacted": "Contacted",
+        "closed": "Closed"
+      },
+      "filterAll": "All",
+      "search": "Search name, email or company",
+      "empty": "No quote requests yet.",
+      "note": "Internal note",
+      "quotedPrice": "Quoted price (minor units)",
+      "markContacted": "Mark contacted",
+      "markClosed": "Close",
+      "updated": "Request updated",
+      "updateFailed": "Could not update"
     }
   },
   "aiAssistant": {
@@ -2940,7 +2965,26 @@
     "priceNotSet": "Price not set",
     "priceSetToSell": "Set a price to sell online",
     "documents": "Documents",
-    "selectHotspotHint": "Select a numbered marker to explore the image."
+    "selectHotspotHint": "Select a numbered marker to explore the image.",
+    "priceFrom": "From {price}",
+    "requestQuote": "Request a quote",
+    "quote": {
+      "title": "Request a quote",
+      "subtitleFor": "Tell us about {product}{variant} and we will come back with a price.",
+      "name": "Your name",
+      "email": "Email",
+      "company": "Company",
+      "message": "What do you need?",
+      "messagePlaceholder": "Machine size, tooling, tolerance, delivery window — anything that helps us quote accurately.",
+      "submit": "Send request",
+      "sending": "Sending…",
+      "cancel": "Cancel",
+      "sent": "Request sent",
+      "sentHint": "We will reply by email, usually within one business day.",
+      "failed": "Could not send your request. Please try again.",
+      "nameRequired": "Please give your name",
+      "emailInvalid": "Please give a valid email address"
+    }
   },
   "events": {
     "title": "Events",
