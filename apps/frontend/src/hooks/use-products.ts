@@ -28,11 +28,17 @@ export function useFeaturedProducts() {
   return { ...query, products: query.data ?? [] };
 }
 
-export function useProduct(slug: string) {
+/**
+ * `initialData` is what the server wrapper fetched. Seeding the cache with it means the
+ * first render already has the product, so the page is never a blank shell; React Query
+ * still revalidates in the background.
+ */
+export function useProduct(slug: string, initialData?: Product | null) {
   const query = useQuery({
     queryKey: productKeys.detail(slug),
     queryFn: () => api.get<Product>(`/products/${slug}`),
     enabled: !!slug,
+    initialData: initialData ?? undefined,
   });
   return { ...query, product: query.data ?? null };
 }

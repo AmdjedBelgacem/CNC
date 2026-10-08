@@ -1,8 +1,9 @@
+import { serverApiUrl } from '@/lib/server-api-url';
 import type { AnalyticsIds } from '@/lib/analytics';
 import { normalizeAnalyticsIds } from '@/lib/analytics';
 
 // Server-side only: prefers the runtime service binding, like lib/builder/theme.ts.
-const API_BASE = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = serverApiUrl();
 
 /**
  * Server-side resolution of analytics tag IDs.

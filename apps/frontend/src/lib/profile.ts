@@ -1,3 +1,4 @@
+import { serverApiUrl } from '@/lib/server-api-url';
 import type {
   FeedPost,
   Profile,
@@ -5,8 +6,7 @@ import type {
   ProfileLearningRecord,
 } from '@/lib/api/types';
 
-const API_BASE =
-  process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = serverApiUrl();
 
 /**
  * Server-side fetchers for the public profile page.

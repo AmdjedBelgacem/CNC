@@ -1,5 +1,6 @@
-const API_BASE =
-  process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { serverApiUrl } from '@/lib/server-api-url';
+
+const API_BASE = serverApiUrl();
 const REVALIDATE = 60;
 
 export interface EventLocation {
