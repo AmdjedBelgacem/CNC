@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { localizeProductFields, resolveContentLocale } from '../courses/lesson-content';
 import { DrizzleService } from '../../database/drizzle.service';
 import { productsBundle, productVariants, productImages } from '../../database/schema/products';
-import { eq, and, asc, desc, like, count, inArray, sql } from 'drizzle-orm';
+import { eq, and, asc, desc, like, count, arrayOverlaps, sql } from 'drizzle-orm';
 import type { InteractiveHotspot } from '@titan/shared';
 import { SearchService } from '../search/search.service';
 import { StorageService } from '../storage/storage.service';
@@ -126,7 +126,7 @@ export class ProductsService {
         eq(productsBundle.tenantId, tenantId),
         eq(productsBundle.isPublished, true),
         eq(productsBundle.isArchived, false),
-        inArray(productsBundle.tags as any, tags as any),
+        arrayOverlaps(productsBundle.tags, tags),
       ),
       limit,
     });
@@ -140,7 +140,7 @@ export class ProductsService {
         eq(productsBundle.tenantId, tenantId),
         eq(productsBundle.isPublished, true),
         eq(productsBundle.isArchived, false),
-        inArray(productsBundle.tags as any, tags as any),
+        arrayOverlaps(productsBundle.tags, tags),
       ),
       limit,
     });

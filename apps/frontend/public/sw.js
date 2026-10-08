@@ -64,6 +64,33 @@ async function trimImagesCache() {
   }
 }
 
+/**
+ * Last-resort page for when the network failed and nothing usable was cached.
+ *
+ * Built inline rather than relying on `/offline` being present, because a cache miss on the
+ * precache is exactly the situation this exists for. Returning a Response unconditionally is
+ * the point: an empty screen with an unhandled rejection gives the visitor nothing.
+ */
+function offlineResponse() {
+  const body =
+    '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>You are offline</title><style>' +
+    'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b0f14;color:#e6edf3;' +
+    'display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px}' +
+    'main{max-width:30rem;text-align:center}h1{font-size:1.25rem;margin:0 0 .5rem}' +
+    'p{color:#9aa7b4;line-height:1.6;margin:0 0 1.5rem}' +
+    'a{display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:.6rem 1.1rem;border-radius:.5rem}' +
+    '</style></head><body><main><h1>You are offline</h1>' +
+    '<p>Your connection dropped and this page was not saved for offline reading.</p>' +
+    '<a href="/">Reload</a></main></body></html>';
+  return new Response(body, {
+    status: 503,
+    statusText: 'Service Unavailable',
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -80,16 +107,44 @@ self.addEventListener('fetch', (event) => {
 
   if (isNavigation) {
     event.respondWith(
+      /**
+       * This handler must always settle with a Response.
+       *
+       * It previously ended in `.catch(async () => (await caches.match(req)) || caches.match('/offline'))`.
+       * `caches.match` resolves to `undefined` on a miss, so when the network failed *and*
+       * the page had never been cached *and* `/offline` was not in the cache, `respondWith`
+       * was handed `undefined` and the browser rejected the fetch event with
+       * "Failed to convert value to 'Response'" followed by a blank page. When `caches.match`
+       * itself rejected, the surfaced message was "the promise was rejected" instead. Either
+       * way a transient network failure became an unrecoverable empty screen.
+       *
+       * Every path below now produces a real Response, and a synthesised HTML page backs up
+       * the last resort so this cannot depend on the offline page having been precached.
+       */
       fetch(req)
-        .then((res) => {
-          // Cache a clone of successful same-origin navigations
+        .then(async (res) => {
+          // Only a real success is worth keeping: caching a 500 would pin the error page.
           if (res.ok) {
-            const copy = res.clone();
-            caches.open(PAGES_CACHE).then((c) => c.put(req, copy));
+            try {
+              const cache = await caches.open(PAGES_CACHE);
+              await cache.put(req, res.clone());
+            } catch {
+              /* a full or unavailable cache must not break the response */
+            }
           }
           return res;
         })
-        .catch(async () => (await caches.match(req)) || caches.match('/offline')),
+        .catch(async () => {
+          try {
+            const hit = await caches.match(req);
+            if (hit) return hit;
+            const offline = await caches.match('/offline');
+            if (offline) return offline;
+          } catch {
+            /* fall through to the inline page */
+          }
+          return offlineResponse();
+        }),
     );
     return;
   }
