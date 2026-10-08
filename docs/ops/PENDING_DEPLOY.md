@@ -1,9 +1,35 @@
 # Pending deploy — 5 commits not yet on the server
 
-**Status: blocked.** SSH to `13.206.178.25:22` is refused (TCP filtered) while the site
-itself answers 200, which is the signature of a fail2ban ban on this machine's egress IP
-(`105.235.134.182`) rather than a host outage. The host needs the ban lifted from the
-console or by an unbanned address before the steps below can run.
+**Status: blocked — second attempt 2026-10-10.** SSH to `13.206.178.25:22` is refused
+(TCP filtered) while ports 80 and 443 answer and the site serves 200. Only SSH is
+filtered, which is a fail2ban ban rather than a host outage.
+
+Attempt log:
+
+| Attempt | Egress IP | Result |
+|---|---|---|
+| 1 | `105.235.134.182` | filtered |
+| 2 | `105.235.136.121` | **connected** — code synced, then filtered again mid-session |
+| 3 | `105.235.134.138` | filtered; polled ~15 min, never lifted |
+
+The egress IP rotates through a small pool and at least one member is banned. The
+bantime is long enough that waiting does not clear it. Either the bans need lifting from
+the Lightsail console, or a bastion / different egress is needed.
+
+What *did* complete on attempt 2, and is safe to leave in place:
+
+* `rsync` of `03669a1..d8ebe14` to `/opt/titanic/cnc` succeeded. `deploy/lightsail/.env`
+  was excluded from `--delete`, so `FRONTEND_IMAGE` and every secret are untouched.
+  (The only `--delete` failure was the root-owned Caddy `logs/access.log` bind mount,
+  which is correct to leave alone.)
+* The frontend image transfer and the backend image build were both interrupted and are
+  **not** complete. `FRONTEND_IMAGE` still points at `qa-202610072339`.
+
+Post-attempt check from outside confirms the host is healthy and still on the old image:
+`/` 200, `/products` 200, and the Arabic navbar renders 1 of its 10 items with the GitHub
+button still on `/login`.
+
+The host needs the ban lifted before the steps below can run.
 
 ## What is ready
 
