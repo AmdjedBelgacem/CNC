@@ -70,6 +70,19 @@ COPY --chown=node:node package.json pnpm-workspace.yaml ./
 COPY --from=build --chown=node:node /repo/apps/frontend ./apps/frontend
 COPY --from=build --chown=node:node /repo/packages ./packages
 RUN mkdir -p .next/cache && chown node:node /repo/apps/frontend/.next/cache
+# Bind the service worker's cache names to this build's ID.
+#
+# It caches HTML, and Next content-hashes every script under /_next/static, so cached HTML
+# is only loadable by the build that produced it. A fixed version string left sw.js
+# byte-identical across deploys: the worker never re-activated, never cleared its caches, and
+# served one deploy's HTML against the next deploy's (absent) chunks. Whenever that fallback
+# was reached, hydration failed and the page went blank. Substituting the build ID means the
+# file changes whenever the app does, so `activate` fires and the old caches are deleted.
+RUN BUILD_ID="$(cat /repo/apps/frontend/.next/BUILD_ID)" \
+ && test -n "$BUILD_ID" \
+ && sed -i "s/__BUILD_ID__/$BUILD_ID/g" /repo/apps/frontend/public/sw.js \
+ && grep -q "$BUILD_ID" /repo/apps/frontend/public/sw.js \
+ && echo "service worker scoped to build $BUILD_ID"
 USER node
 
 # Same Node version as the Vercel client build and the backend image, so the

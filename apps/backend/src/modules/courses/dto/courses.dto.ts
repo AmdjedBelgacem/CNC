@@ -1,12 +1,11 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, Min, Max, MaxLength, Matches, IsUUID, IsIn, IsObject, IsArray, IsInt, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface, registerDecorator, ValidationArguments } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, Min, Max, MaxLength, IsUUID, IsIn, IsObject, IsArray, IsInt, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface, registerDecorator, ValidationArguments } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { type LessonVideoMeta } from '../../../database/schema/courses';
+import { isUploadedMediaRef, IsUploadedMediaUrl } from '../../../common/validators/uploaded-media-url';
 import { CURRENCY_CODES, courseTranslationsSchema, lessonContentDocumentSchema, lessonTranslationsSchema, seriesTranslationsSchema } from '@titan/shared';
 import type { CourseContentTranslation, LessonBlock, LessonContentDocument, LessonContentTranslation, SeriesContentTranslation } from '@titan/shared';
 import type { z } from 'zod';
-
-const uploadedMediaPattern = /^(?:tenants\/|uploads\/|\/uploads\/|\/images\/)[A-Za-z0-9._/-]+$/;
 
 function IsLessonZodSchema(schema: z.ZodTypeAny) {
   return function decorate(object: object, propertyName: string) {
@@ -60,7 +59,7 @@ class UploadedCourseMetadataConstraint implements ValidatorConstraintInterface {
     return Array.isArray(resources) && resources.every((resource) => {
       if (!resource || typeof resource !== 'object' || Array.isArray(resource)) return false;
       const url = (resource as Record<string, unknown>).url;
-      return typeof url === 'string' && (url.length === 0 || uploadedMediaPattern.test(url));
+      return isUploadedMediaRef(url);
     });
   }
 
@@ -87,17 +86,17 @@ export class CreateCourseDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() academyId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() subtitle?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) thumbnailUrl?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() thumbnailUrl?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(1) @Max(5) difficulty?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() estimatedHours?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) priceCents?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() @IsIn(['open', 'invite', 'paid']) accessMode?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(3) @IsIn(CURRENCY_CODES) currency?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) trailerUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() trailerUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() seoTitle?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() seoDescription?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() seoKeywords?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) ogImageUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() ogImageUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() autoIssueCertificate?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsUploadedCourseMetadata() metadata?: Record<string, unknown>;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsLessonZodSchema(courseTranslationsSchema) translations?: Partial<Record<'en' | 'ar', CourseContentTranslation>> | null;
@@ -112,17 +111,17 @@ export class UpdateCourseDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() academyId?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsString() subtitle?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) thumbnailUrl?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() thumbnailUrl?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(1) @Max(5) difficulty?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() estimatedHours?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) priceCents?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() @IsIn(['open', 'invite', 'paid']) accessMode?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(3) @IsIn(CURRENCY_CODES) currency?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) trailerUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() trailerUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() seoTitle?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() seoDescription?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() seoKeywords?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) ogImageUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() ogImageUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() autoIssueCertificate?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsUploadedCourseMetadata() metadata?: Record<string, unknown>;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsLessonZodSchema(courseTranslationsSchema) translations?: Partial<Record<'en' | 'ar', CourseContentTranslation>> | null;
@@ -137,7 +136,7 @@ export class CreateSeriesDto {
   @ApiProperty() @IsString() title: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsLessonZodSchema(seriesTranslationsSchema) translations?: Partial<Record<'en' | 'ar', SeriesContentTranslation>> | null;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) thumbnailUrl?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() thumbnailUrl?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() sortOrder?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isPublished?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isArchived?: boolean;
@@ -148,7 +147,7 @@ export class UpdateSeriesDto {
   @ApiPropertyOptional() @IsOptional() @IsString() title?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsLessonZodSchema(seriesTranslationsSchema) translations?: Partial<Record<'en' | 'ar', SeriesContentTranslation>> | null;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) thumbnailUrl?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() thumbnailUrl?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() sortOrder?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isPublished?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isArchived?: boolean;
@@ -158,7 +157,7 @@ class UploadedAttachmentDto {
   @IsString() @MaxLength(100) id!: string;
   @IsString() @MaxLength(300) name!: string;
   @IsString() @MaxLength(100) type!: string;
-  @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) url!: string;
+  @IsString() @MaxLength(500) @IsUploadedMediaUrl() url!: string;
   @IsInt() @Min(0) size!: number;
 }
 
@@ -167,8 +166,8 @@ export class CreateLessonDto {
   @ApiProperty() @IsString() slug: string;
   @ApiProperty() @IsString() title: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) videoUrl?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) thumbnailUrl?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() videoUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() thumbnailUrl?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsObject() videoMeta?: LessonVideoMeta | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() videoDuration?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() content?: string;
@@ -186,8 +185,8 @@ export class UpdateLessonDto {
   @ApiPropertyOptional() @IsOptional() @IsString() slug?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() title?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) videoUrl?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @Matches(uploadedMediaPattern) thumbnailUrl?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() videoUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() thumbnailUrl?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsObject() videoMeta?: LessonVideoMeta | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() videoDuration?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() content?: string;

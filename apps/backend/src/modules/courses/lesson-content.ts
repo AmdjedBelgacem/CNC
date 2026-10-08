@@ -13,6 +13,7 @@ import {
   type LessonContentTranslation,
   type QuizQuestionResult,
 } from '@titan/shared';
+import { isUploadedMediaRef } from '../../common/validators/uploaded-media-url';
 
 export type CourseTranslationMap = Partial<Record<ContentLocale, CourseContentTranslation>>;
 export type SeriesTranslationMap = Partial<Record<ContentLocale, SeriesContentTranslation>>;
@@ -289,14 +290,10 @@ export function isGatedLessonBlock(block: Partial<LessonBlock> & Record<string, 
   return blockIsGated(block);
 }
 
-function isUploadedMediaRef(value: unknown): value is string {
-  return typeof value === 'string' && /^(?:tenants\/|uploads\/|\/uploads\/|\/images\/)[A-Za-z0-9._/-]+$/.test(value);
-}
-
 function stripExternalMedia(content: Record<string, unknown>): Record<string, unknown> {
   const safe = { ...content };
   for (const field of ['source', 'storageKey', 'posterUrl', 'captionsUrl', 'src']) {
-    if (safe[field] !== undefined && !isUploadedMediaRef(safe[field])) delete safe[field];
+    if (safe[field] !== undefined && safe[field] !== '' && !isUploadedMediaRef(safe[field])) delete safe[field];
   }
   if (Array.isArray(safe.images)) {
     safe.images = safe.images.filter((image) => isRecord(image) && isUploadedMediaRef(image.src));
