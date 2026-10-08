@@ -128,3 +128,33 @@ Two notes for the record:
 
 Still to do visually, per `API_SWEEP_QA.md`: confirm the hotspot click-to-open popover in a
 browser. Product data is client-fetched, so it cannot be asserted from server HTML.
+
+## ⚠️ Backend image is currently a hot-patch, not a clean build
+
+`titan-backend:latest` on the host was produced by layering a single recompiled file onto the
+previous image:
+
+    FROM titan-backend:latest
+    COPY products.service.js /repo/apps/backend/dist/modules/products/products.service.js
+
+**Why:** a normal backend build cannot currently run on this machine.
+`apt-get update` fails signature verification inside `node:22-bookworm-slim` because the
+environment clock reads October 2026, so the Debian archive signatures do not validate
+("At least one invalid signature was encountered"). The frontend image builds because its
+layers are cached locally; a cold backend build does not.
+
+Building the backend **on the host** is not an acceptable workaround. That was attempted and the
+Docker daemon died mid-build, taking Caddy down with it and darkening the whole site until it was
+started again. Do not repeat it.
+
+**Action required:** once the clock or apt trust store is corrected, rebuild the backend from
+source off-box (`docker buildx build --platform linux/amd64 -f Dockerfile -t titan-backend:<tag> .`)
+and redeploy, so the running image matches the Dockerfile. The hot-patch and a clean build produce
+the same behaviour; the difference is provenance.
+
+## Deployment safety rule
+
+`docker compose up -d` can leave a container stopped after a daemon restart even under
+`unless-stopped`. After any deploy that touches the host Docker daemon, verify all four
+containers are `Up` — `caddy`, `frontend`, `backend`, `redis` — and not just that the site
+responds.
