@@ -85,3 +85,22 @@ with a cache-busting query parameter.
 * `saveImage` (avatars/covers/portfolio) writes without the `uploads/` key prefix, so those
   URLs read `…/public/uploads/avatars/<uuid>.jpg`. Left as-is: it predates this change,
   works correctly, and re-keying it would churn live avatar URLs for cosmetics.
+
+## Incident: one object readable via S3 but not publicly
+
+`uploads/covers/00861648-….png` returned 1472315 bytes from `HeadObject` and
+`NoSuchKey` from the public route, so the 3-Axis product's thumbnail and its
+single gallery image failed for shoppers while the object plainly existed.
+
+Supabase's S3 gateway and its REST public route disagreed about an object. The
+migration's own verification had passed, so this appeared afterwards rather than
+during the cutover. Nothing in this code causes or prevents it.
+
+Worked around by writing the object under a fresh key and repointing both
+`products.thumbnail_url` and `product_images.url` at it, then re-verifying
+through the public URL. The stale object was left in place rather than deleted:
+if the same URL is referenced by something not in these two tables, deleting it
+would turn a recoverable 404 into permanent breakage.
+
+When an image 404s publicly but lists fine in the bucket, re-upload under a new
+key and repoint. Do not assume the object is gone.
