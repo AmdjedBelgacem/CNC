@@ -25,6 +25,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Modal, GLASS_SUB } from '@/components/ui/modal';
@@ -394,18 +395,31 @@ export function StaffDrawer({
     };
   }, [activeTab, assignedIds, canManageRoles]);
 
+  /**
+   * Shared mutation helper for this drawer — suspend, delete, roles, password reset,
+   * revoke sessions and impersonation all fail without a CSRF header.
+   *
+   * Signature unchanged so no call site moved; the transport is fixed here. Callers still
+   * pass full `/api/proxy/...` URLs and the prefix is stripped for `api`.
+   */
   const mutate = async (path: string, init: RequestInit, okMessage: string) => {
-    const res = await fetch(path, { credentials: 'include', ...init });
-    if (!res.ok) {
-      let msg = tAdmin('drawer.requestFailed', {
-        status: res.status,
+    const url = path.replace(/^\/api\/proxy/, '');
+    const method = (init.method ?? 'POST').toUpperCase();
+    let body: unknown;
+    if (typeof init.body === 'string') {
+      try { body = JSON.parse(init.body); } catch { body = undefined; }
+    }
+    try {
+      if (method === 'PUT') await api.put(url, body ?? {});
+      else if (method === 'PATCH') await api.patch(url, body ?? {});
+      else if (method === 'DELETE') await api.delete(url);
+      else await api.post(url, body ?? {});
+    } catch (error) {
+      const detail = error as { status?: number; body?: { message?: string }; message?: string };
+      const msg = detail?.body?.message ?? detail?.message ?? tAdmin('drawer.requestFailed', {
+        status: detail?.status ?? '',
         default: 'Request failed ({status})',
       });
-      try {
-        msg = (await res.json())?.message ?? msg;
-      } catch {
-        /* keep default */
-      }
       toast({
         type: 'err',
         title: tAdmin('drawer.actionFailed', { default: 'Action failed' }),
@@ -663,11 +677,9 @@ export function StaffDrawer({
                     icon={MonitorSmartphone}
                     variant="info"
                     onConfirm={async () => {
-                      const res = await fetch(`/api/proxy/admin/users/${userId}/impersonate`, {
-                        method: 'POST',
-                        credentials: 'include',
-                      });
-                      if (!res.ok) {
+                      try {
+                        await api.post(`/admin/users/${userId}/impersonate`);
+                      } catch {
                         toast({
                           type: 'err',
                           title: tAdmin('drawer.impersonationFailed', {
@@ -1126,11 +1138,9 @@ export function StaffDrawer({
                     icon={UserCog}
                     variant="info"
                     onConfirm={async () => {
-                      const res = await fetch(`/api/proxy/admin/users/${userId}/impersonate`, {
-                        method: 'POST',
-                        credentials: 'include',
-                      });
-                      if (!res.ok) {
+                      try {
+                        await api.post(`/admin/users/${userId}/impersonate`);
+                      } catch {
                         toast({
                           type: 'err',
                           title: tAdmin('drawer.impersonationFailed', {

@@ -24,6 +24,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { difficultyKey, difficultyTone, difficultyFallback } from '@/lib/difficulty';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
@@ -176,17 +177,7 @@ export default function AcademyEditorPage() {
       for (const [k, v] of Object.entries(form)) {
         if ((v ?? '') !== ((academy as any)[k] ?? '')) patch[k] = v === '' ? null : v;
       }
-      const res = await fetch(`/api/proxy/admin/academies/${academy.slug}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
-      }
-      const updated = await res.json();
+      const updated = await api.patch<{ slug?: string }>(`/admin/academies/${academy.slug}`, patch);
       toast({ type: 'ok', title: t('saved', { default: 'Academy saved' }) });
       // Slug may have been edited — stay on the (possibly new) slug.
       if (updated.slug && updated.slug !== academy.slug) {
@@ -206,11 +197,10 @@ export default function AcademyEditorPage() {
     setPublishing(true);
     try {
       const action = academy.isPublished ? 'unpublish' : 'publish';
-      const res = await fetch(`/api/proxy/admin/academies/${academy.slug}/${action}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!res.ok) {
+      let publishedData: unknown = null;
+      try {
+        publishedData = await api.post(`/admin/academies/${academy.slug}/${action}`);
+      } catch (err: any) {
         if (action === 'publish') {
           const vres = await fetch(`/api/proxy/admin/academies/${academy.slug}/validate`, {
             credentials: 'include',
@@ -219,14 +209,13 @@ export default function AcademyEditorPage() {
           setPublishReasons(Array.isArray(vdata?.reasons) ? vdata.reasons : []);
           setPublishWarnings(Array.isArray(vdata?.warnings) ? vdata.warnings : []);
         }
-        const data = await res.json().catch(() => null);
+        const data = err?.body ?? null;
         const details =
           Array.isArray(data?.reasons) && data.reasons.length
             ? data.reasons.join('; ')
-            : (data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
+            : (data?.message ?? tAdmin('drawer.requestFailed', { status: err?.status }));
         throw new Error(details);
       }
-      const publishedData = await res.json().catch(() => null);
       // Publish now succeeds even with 0 courses — surface non-blocking warnings if any.
       try {
         const vres = await fetch(`/api/proxy/admin/academies/${academy.slug}/validate`, {
@@ -276,17 +265,9 @@ export default function AcademyEditorPage() {
     if (!academy || !slugs.length) return;
     setAssigning(true);
     try {
-      const res = await fetch(`/api/proxy/admin/academies/${academy.slug}/courses`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseSlugs: slugs }),
+      const data = await api.post<{ assigned: number }>(`/admin/academies/${academy.slug}/courses`, {
+        courseSlugs: slugs,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
-      }
-      const data = await res.json();
       toast({
         type: 'ok',
         title: t('coursesAdded', {
@@ -307,16 +288,7 @@ export default function AcademyEditorPage() {
   /** Unassign via the course PATCH flow (academyId: null) — never deletes course data. */
   const removeCourse = async (courseSlug: string) => {
     try {
-      const res = await fetch(`/api/proxy/admin/courses/${courseSlug}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ academyId: null }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
-      }
+      await api.patch(`/admin/courses/${courseSlug}`, { academyId: null });
       toast({ type: 'ok', title: t('courseRemoved', { default: 'Course removed from academy' }) });
       void load();
     } catch (e: any) {
@@ -1047,16 +1019,11 @@ function AcademyImageField({
     setUploading(true);
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      const res = await fetch(`/api/proxy/admin/academies/${slug}/images`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, image: dataUrl, filename: file.name }),
+      await api.post(`/admin/academies/${slug}/images`, {
+        kind,
+        image: dataUrl,
+        filename: file.name,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? t('uploadFailedStatus', { default: 'Upload failed' }));
-      }
       toast({ type: 'ok', title: t('uploaded', { label, default: '{label} uploaded' }) });
       await onChanged();
     } catch (e: any) {
@@ -1074,14 +1041,7 @@ function AcademyImageField({
     if (!currentUrl) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/proxy/admin/academies/${slug}/images/${kind}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? t('removeFailedStatus', { default: 'Remove failed' }));
-      }
+      await api.delete(`/admin/academies/${slug}/images/${kind}`);
       toast({ type: 'ok', title: t('removed', { label, default: '{label} removed' }) });
       await onChanged();
     } catch (e: any) {

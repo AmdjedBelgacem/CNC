@@ -13,41 +13,18 @@ import { useFxRates } from '@/hooks/use-fx-rates';
 import { convertMinorUnits, formatMinorUnits, needsConversion } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { getImageSrc } from '@/lib/images';
-export interface Product {
-  id: string;
-  title: string;
-  slug: string;
-  tagline?: string;
-  description?: string;
-  features?: string[];
-  thumbnailUrl?: string;
-  price: number;
-  compareAtPrice?: number;
-  currency: string;
-  inventory?: number;
-  allowBackorder?: boolean;
-  backorderLeadDays?: number;
-  isDigital?: boolean;
-  isPublished?: boolean;
-  category?: string;
-  tags?: string[];
-  featured?: boolean;
-  sortOrder?: number;
-  academyId?: string;
-  courseId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  variants?: ProductVariant[];
-}
-export interface ProductVariant {
-  id: string;
-  title: string;
-  sku?: string;
-  price?: number;
-  inventory?: number;
-  allowBackorder?: boolean;
-  options?: Record<string, string>;
-}
+/**
+ * The card re-exports the API's own types rather than declaring its own.
+ *
+ * It used to keep parallel copies of `Product`/`ProductVariant`, and they drifted: the
+ * local ones claimed `description?: string` where the API returns `null`, so nothing
+ * server-fetched satisfied them and callers added casts to bridge the gap. One definition
+ * removes the whole class of mismatch.
+ */
+import type { Product, ProductVariant } from '@/lib/api/types';
+
+export type { Product, ProductVariant };
+
 export function ProductCard({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
   const locale = useLocale();
@@ -154,8 +131,8 @@ export function ProductCard({ product }: { product: Product }) {
                 productId: product.slug,
                 title: product.title,
                 price: product.variants?.[0]?.price ?? product.price ?? 0,
-                currency: sourceCurrency,
-                thumbnailUrl: product.thumbnailUrl,
+                currency: sourceCurrency ?? DEFAULT_CURRENCY,
+                thumbnailUrl: product.thumbnailUrl ?? undefined,
               })
             }
           >

@@ -20,6 +20,7 @@ import { AdminCommandBar, AdminPageHeader, BarButton, BarPrimaryButton } from '@
 import { EmptyState, ErrorBanner, SkeletonRows, StatusPill, type Tone } from '@/components/admin/admin-ui';
 import { PillTabs, Toolbar } from '@/components/admin/admin-ui';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 
 /**
  * Platform-critical alert feed (super admins only).
@@ -116,21 +117,15 @@ export default function PlatformAlertsPage() {
     setItems((prev) =>
       prev?.map((a) => (a.id === id ? { ...a, isRead: true } : a)) ?? prev,
     );
-    await fetch(`/api/proxy/admin/platform-alerts/read/${id}`, {
-      method: 'POST',
-      credentials: 'include',
-    }).catch(() => undefined);
+    await api.post(`/admin/platform-alerts/read/${id}`).catch(() => undefined);
     void load();
   };
 
   const markAllRead = async () => {
     setBusy(true);
-    await fetch('/api/proxy/admin/platform-alerts/read-all', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(group ? { group } : {}),
-    }).catch(() => undefined);
+    await api
+      .post('/admin/platform-alerts/read-all', group ? { group } : {})
+      .catch(() => undefined);
     setBusy(false);
     void load();
   };

@@ -84,7 +84,12 @@ export default async function ProductsPage() {
         heroStats={productsHeroStats(tProducts, products, categories)}
         islands={{
           'products-featured': <ProductsFeatured products={products} />,
-          'products-inventory': <ProductsInventory categories={categories} />,
+          'products-inventory': (
+            <ProductsInventory
+              categories={categories}
+              products={products}
+            />
+          ),
           'products-departments': <ProductsDepartments categories={categories} />,
         }}
       />

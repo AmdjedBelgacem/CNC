@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArrowRight, Download, Headset, Truck } from 'lucide-react';
 import { ProductsCatalog } from '@/components/store/products-catalog';
+import type { Product as CatalogProduct } from '@/components/store/product-card';
 import { DepartmentLink } from '@/components/store/department-link';
 import { getImageSrc } from '@/lib/images';
 import { coerceCurrency, formatMinorUnits } from '@/lib/money';
@@ -87,7 +88,14 @@ export async function ProductsFeatured({ products }: { products: ApiProduct[] })
 }
 
 /** Live inventory island — the `products-inventory` island. */
-export async function ProductsInventory({ categories }: { categories: { name: string; count: number }[] }) {
+export async function ProductsInventory({
+  categories,
+  products,
+}: {
+  categories: { name: string; count: number }[];
+  /** Server-fetched, so the grid is populated in the HTML rather than after hydration. */
+  products?: CatalogProduct[];
+}) {
   const t = await getTranslations('products');
 
   return (
@@ -107,7 +115,10 @@ export async function ProductsInventory({ categories }: { categories: { name: st
         </div>
         <ProductsTrustStrip />
       </div>
-      <ProductsCatalog categories={categories.map((c) => c.name)} />
+      <ProductsCatalog
+        categories={categories.map((c) => c.name)}
+        initialProducts={products}
+      />
     </section>
   );
 }

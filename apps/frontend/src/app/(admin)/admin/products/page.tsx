@@ -1,4 +1,5 @@
 'use client';
+import { api } from '@/lib/api-client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -409,14 +410,22 @@ export default function AdminProductsPage() {
   const act = useCallback(
     async (slug: string, action: ProductAction) => {
       try {
-        const method = action === 'delete' ? 'DELETE' : 'POST';
-        const res = await fetch(`/api/proxy/admin/products/${slug}/${action}`, {
-          method,
-          credentials: 'include',
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.message ?? `${res.status}`);
+        /**
+         * Two bugs, both of which made every row action silently fail.
+         *
+         * 1. Raw `fetch` with cookie credentials and no `x-csrf-token`. The admin
+         *    session is cookie-based, so the CSRF guard correctly refused every one of
+         *    these — publish, unpublish, archive, restore and delete alike.
+         * 2. `DELETE /admin/products/:slug/{action}` does not exist. The lifecycle
+         *    actions are `POST .../{action}`; delete is `DELETE .../:slug` with nothing
+         *    after it, so it 404'd.
+         *
+         * `api` attaches the CSRF pair, so it is the only correct way to mutate here.
+         */
+        if (action === 'delete') {
+          await api.delete(`/admin/products/${slug}`);
+        } else {
+          await api.post(`/admin/products/${slug}/${action}`);
         }
         toast({ type: 'ok', title: t(`actionDone.${action}`, { default: `Product ${action}ed` }) });
         void load(true);

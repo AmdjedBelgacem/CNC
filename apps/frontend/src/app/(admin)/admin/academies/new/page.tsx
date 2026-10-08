@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Loader2, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import {
   AdminCommandBar,
   BarButton,
@@ -188,25 +189,15 @@ export default function NewAcademyPage() {
     setBusy(true);
     try {
       const slug = slugify(title);
-      const res = await fetch('/api/proxy/admin/academies', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug,
-          title: title.trim(),
-          subtitle: subtitle.trim() || undefined,
-          description: description.trim() || undefined,
-          accentColor: accentColor || undefined,
-          seoTitle: seoTitle.trim() || undefined,
-          seoDescription: seoDescription.trim() || undefined,
-        }),
+      const created = await api.post<{ slug: string }>('/admin/academies', {
+        slug,
+        title: title.trim(),
+        subtitle: subtitle.trim() || undefined,
+        description: description.trim() || undefined,
+        accentColor: accentColor || undefined,
+        seoTitle: seoTitle.trim() || undefined,
+        seoDescription: seoDescription.trim() || undefined,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? t('createFailedStatus', { status: res.status }));
-      }
-      const created = await res.json();
       const newSlug: string = created.slug;
 
       const uploads: Array<{ kind: 'hero' | 'logo' | 'seo'; pending: PendingFile }> = [
@@ -217,15 +208,17 @@ export default function NewAcademyPage() {
       for (const u of uploads) {
         if (!u.pending) continue;
         const dataUrl = u.pending.preview; // already dataUrl
-        const r = await fetch(`/api/proxy/admin/academies/${newSlug}/images`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ kind: u.kind, image: dataUrl, filename: u.pending.file.name }),
-        });
-        if (!r.ok) {
-          const d = await r.json().catch(() => null);
-          toast({ type: 'err', title: t('uploadFailedFor', { label: t(u.kind) }), description: d?.message });
+        // A failed image must not abort the remaining uploads or the create itself,
+        // so this one is reported and swallowed rather than thrown.
+        try {
+          await api.post(`/admin/academies/${newSlug}/images`, {
+            kind: u.kind,
+            image: dataUrl,
+            filename: u.pending.file.name,
+          });
+        } catch (err: any) {
+          const d = err?.body ?? null;
+          toast({ type: 'err', title: t('uploadFailedFor', { label: t(u.kind) }), description: d?.message ?? err?.message });
         }
       }
 

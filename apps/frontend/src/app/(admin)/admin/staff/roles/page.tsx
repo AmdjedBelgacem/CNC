@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Shield, Trash2, Loader2, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import {
@@ -313,45 +314,17 @@ function RoleEditor({
     try {
       let roleId = role?.id;
       if (mode === 'create') {
-        const res = await fetch('/api/proxy/admin/roles', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name.trim(), description: description.trim() || undefined }),
-        });
-        if (!res.ok) {
-          const m =
-            (await res.json().catch(() => ({})))?.message ??
-            tAdmin('roles.createFailed', { default: 'Failed to create role' });
-          throw new Error(m);
-        }
-        roleId = (await res.json()).id;
+        roleId = (await api.post<{ id: string }>('/admin/roles', {
+          name: name.trim(),
+          description: description.trim() || undefined,
+        })).id;
       } else if (role) {
-        const res = await fetch(`/api/proxy/admin/roles/${role.id}`, {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name.trim(), description: description.trim() || undefined }),
+        await api.patch(`/admin/roles/${role.id}`, {
+          name: name.trim(),
+          description: description.trim() || undefined,
         });
-        if (!res.ok) {
-          const m =
-            (await res.json().catch(() => ({})))?.message ??
-            tAdmin('roles.updateFailed', { default: 'Failed to update role' });
-          throw new Error(m);
-        }
       }
-      const pRes = await fetch(`/api/proxy/admin/roles/${roleId}/permissions`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ permissions: selected }),
-      });
-      if (!pRes.ok) {
-        const m =
-          (await pRes.json().catch(() => ({})))?.message ??
-          tAdmin('roles.savePermissionsFailed', { default: 'Failed to save permissions' });
-        throw new Error(m);
-      }
+      await api.put(`/admin/roles/${roleId}/permissions`, { permissions: selected });
       toast({
         type: 'ok',
         title:
@@ -383,16 +356,7 @@ function RoleEditor({
       return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/proxy/admin/roles/${role.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const m =
-          (await res.json().catch(() => ({})))?.message ??
-          tAdmin('roles.deleteFailed', { default: 'Failed to delete' });
-        throw new Error(m);
-      }
+      await api.delete(`/admin/roles/${role.id}`);
       toast({ type: 'ok', title: tAdmin('roles.roleDeleted', { default: 'Role deleted' }) });
       onDeleted?.();
     } catch (e: any) {

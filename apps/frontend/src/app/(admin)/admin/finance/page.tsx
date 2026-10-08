@@ -5,6 +5,7 @@ import {
   RefreshCw, Plus, DollarSign, TrendingUp, Clock, Undo2, Trash2, Pencil,
 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/api/normalize';
 import {
@@ -129,18 +130,9 @@ export default function AdminFinancePage() {
         targetCents: Number(form.targetCents) || 0,
         notes: form.notes || undefined,
       };
-      const url = editing ? `/api/proxy/admin/budgets/${editing.id}` : '/api/proxy/admin/budgets';
-      const method = editing ? 'PATCH' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Request failed (${res.status})`);
-      }
+      const url = editing ? `/admin/budgets/${editing.id}` : '/admin/budgets';
+      if (editing) await api.patch(url, payload);
+      else await api.post(url, payload);
       toast({
         type: 'ok',
         title: editing
@@ -162,8 +154,7 @@ export default function AdminFinancePage() {
 
   const remove = async (id: string) => {
     try {
-      const res = await fetch(`/api/proxy/admin/budgets/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      await api.delete(`/admin/budgets/${id}`);
       toast({ type: 'ok', title: t('budgetDeleted', { default: 'Budget deleted' }) });
       load(true);
     } catch (e: any) {

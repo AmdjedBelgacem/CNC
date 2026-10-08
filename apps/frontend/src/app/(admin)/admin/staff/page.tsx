@@ -21,6 +21,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
 import {
   AdminCommandBar,
@@ -248,22 +249,11 @@ export default function AdminStaffPage() {
     }
     setInviting(true);
     try {
-      const res = await fetch('/api/proxy/admin/staff/invite', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name: inviteName.trim() || undefined, role: inviteRole }),
+      await api.post('/admin/staff/invite', {
+        email,
+        name: inviteName.trim() || undefined,
+        role: inviteRole,
       });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(
-          data?.message ??
-            tAdmin('drawer.requestFailed', {
-              status: res.status,
-              default: 'Request failed ({status})',
-            }),
-        );
-      }
       toast({
         type: 'ok',
         title: tAdmin('access.invited', {

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Loader2, Search, AlertTriangle } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { api } from '@/lib/api-client';
 import { Modal, ModalHeader } from '@/components/ui/modal';
 import { INPUT, LABEL } from '../courses/studio/glass';
 interface IssueSheetProps {
@@ -98,19 +99,12 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
     }
     setSubmitting(true);
     try {
-      const res = await fetch('/api/proxy/admin/certifications/issue', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: selectedUserId,
-          courseId,
-          templateId: templateId || undefined,
-          expiresAt: expiresAt || undefined,
-        }),
+      const data = await api.post<{ certificateNumber?: string }>('/admin/certifications/issue', {
+        userId: selectedUserId,
+        courseId,
+        templateId: templateId || undefined,
+        expiresAt: expiresAt || undefined,
       });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message || `Request failed (${res.status})`);
       toast({
         type: 'ok',
         title: t('issued', { default: 'Certificate issued' }),

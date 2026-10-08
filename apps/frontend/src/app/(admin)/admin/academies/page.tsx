@@ -18,6 +18,7 @@ import {
     X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
 import {
   AdminCommandBar,
@@ -388,14 +389,7 @@ export default function AdminAcademiesPage() {
       okMsg?: string,
     ) => {
       try {
-        const res = await fetch(`/api/proxy/admin/academies/${slug}/${action}`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.message ?? `${res.status}`);
-        }
+        await api.post(`/admin/academies/${slug}/${action}`);
         toast({
           type: 'ok',
           title: okMsg ?? t(`actionDone.${action}`, { default: `Academy ${action}ed` }),
@@ -426,12 +420,9 @@ export default function AdminAcademiesPage() {
           .join(', ');
         throw new Error(`Duplicate course slugs must be resolved first: ${dups}`);
       }
-      const res = await fetch('/api/proxy/admin/academies/backfill/run', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message ?? 'Backfill failed');
+      const data = await api.post<{ created?: boolean; assigned: number }>(
+        '/admin/academies/backfill/run',
+      );
       toast({
         type: 'ok',
         title: t('defaultAcademyReady', { default: 'Default academy ready' }),

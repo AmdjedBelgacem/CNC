@@ -20,6 +20,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import {
@@ -241,12 +242,9 @@ function CertificateCard({
             onClick={(e) => {
               e.stopPropagation();
               setRegenerating(cert.id);
-              void fetch(`/api/proxy/admin/certifications/${cert.id}/regenerate-pdf`, {
-                method: 'POST',
-                credentials: 'include',
-              })
-                .then((r) => {
-                  if (!r.ok) throw new Error(String(r.status));
+              void api
+                .post(`/admin/certifications/${cert.id}/regenerate-pdf`)
+                .then(() => {
                   window.location.reload();
                 })
                 .catch(() => setRegenerating(null));

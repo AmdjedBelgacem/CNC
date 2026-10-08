@@ -4,6 +4,7 @@ import type { MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { Crosshair, ImageOff, Star, Trash2, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { uploadImage } from '@/lib/upload';
 import { toast } from '@/components/ui/toast';
 import type { ProductImage } from './[slug]/edit/page';
@@ -41,17 +42,24 @@ export function ProductGalleryManager({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
-  const call = async (path: string, init: RequestInit) => {
-    const res = await fetch(`/api/proxy/admin/products/${slug}/images${path}`, {
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      ...init,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      throw new Error(data?.message ?? `Request failed (${res.status})`);
-    }
-    return res.json();
+  /**
+   * Every gallery mutation goes through `api`.
+   *
+   * This wrapper used raw `fetch` with cookie credentials and no `x-csrf-token`, so the
+   * CSRF guard rejected all six of them — add, reorder, set primary, delete, hotspots and
+   * alt text. The buttons looked dead and nothing was being saved.
+   *
+   * `method` is taken explicitly rather than a raw `RequestInit` so the body is JSON-encoded
+   * once, here, instead of at each call site.
+   */
+  const call = async <T,>(
+    method: 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    body?: unknown,
+  ): Promise<T> => {
+    if (method === 'DELETE') return api.delete<T>(`/admin/products/${slug}/images${path}`);
+    if (method === 'PATCH') return api.patch<T>(`/admin/products/${slug}/images${path}`, body ?? {});
+    return api.post<T>(`/admin/products/${slug}/images${path}`, body ?? {});
   };
 
   /** Upload -> attach. The DB row is only created from a URL this storefront produced. */
@@ -89,10 +97,7 @@ export function ProductGalleryManager({
           });
           continue;
         }
-        const created = await call('', {
-          method: 'POST',
-          body: JSON.stringify({ url, alt: null }),
-        });
+        const created = await call<ProductImage>('POST', '', { url, alt: null });
         next = [...next, created];
       }
       onChange(next);
@@ -122,10 +127,7 @@ export function ProductGalleryManager({
     onChange(ordered); // optimistic: the controls stay responsive
     setBusy(true);
     try {
-      const saved = await call('/reorder', {
-        method: 'PATCH',
-        body: JSON.stringify({ imageIds: ordered.map((i) => i.id) }),
-      });
+      const saved = await call<ProductImage[]>('PATCH', '/reorder', { imageIds: ordered.map((i) => i.id) });
       onChange(saved);
     } catch (error) {
       onChange(images); // roll back to the server's truth
@@ -142,7 +144,7 @@ export function ProductGalleryManager({
   const setPrimary = async (image: ProductImage) => {
     setBusy(true);
     try {
-      await call(`/${image.id}`, { method: 'PATCH', body: JSON.stringify({ setPrimary: true }) });
+      await call('PATCH', `/${image.id}`, { setPrimary: true });
       onChange(images.map((i) => ({ ...i, isPrimary: i.id === image.id })));
       toast({ type: 'ok', title: t('primarySet', { default: 'Primary image updated' }) });
     } catch (error) {
@@ -159,7 +161,7 @@ export function ProductGalleryManager({
   const remove = async (image: ProductImage) => {
     setBusy(true);
     try {
-      const result = await call(`/${image.id}`, { method: 'DELETE' });
+      const result = await call<{ nextPrimaryUrl?: string | null }>('DELETE', `/${image.id}`);
       const remaining = images.filter((i) => i.id !== image.id);
       // The server promotes another image when the primary is deleted; reflect that.
       onChange(
@@ -186,10 +188,7 @@ export function ProductGalleryManager({
     const previous = images;
     onChange(images.map((i) => (i.id === image.id ? { ...i, hotspots } : i)));
     try {
-      const saved = await call(`/${image.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ hotspots }),
-      });
+      const saved = await call('PATCH', `/${image.id}`, { hotspots });
       onChange(Array.isArray(saved) ? saved : previous);
     } catch (error) {
       onChange(previous); // roll back to the server's truth
@@ -204,7 +203,7 @@ export function ProductGalleryManager({
   const setAlt = async (image: ProductImage, alt: string) => {
     onChange(images.map((i) => (i.id === image.id ? { ...i, alt } : i)));
     try {
-      await call(`/${image.id}`, { method: 'PATCH', body: JSON.stringify({ alt }) });
+      await call('PATCH', `/${image.id}`, { alt });
     } catch {
       onChange(images);
       toast({ type: 'err', title: t('altFailed', { default: 'Could not save alt text' }) });

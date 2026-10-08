@@ -46,10 +46,24 @@ function isInStock(product: CatalogProduct) {
 }
 
 function isOnSale(product: CatalogProduct) {
-  return Boolean(product.compareAtPrice && product.compareAtPrice > product.price);
+  return Boolean(product.compareAtPrice && product.compareAtPrice > (product.price ?? 0));
 }
 
-export function ProductsCatalog({ categories = [] }: { categories?: string[] }) {
+/**
+ * `initialProducts` comes from the server component that renders this page.
+ *
+ * The catalog used to start empty and fetch on the client, so the grid was blank in the
+ * server-rendered HTML and only filled in after hydration — which is why the listing
+ * appeared to need a refresh. The client fetch is kept as a revalidation, so a price or
+ * stock change still corrects itself.
+ */
+export function ProductsCatalog({
+  categories = [],
+  initialProducts,
+}: {
+  categories?: string[];
+  initialProducts?: CatalogProduct[];
+}) {
   const t = useTranslations('products');
   const locale = useLocale();
 
@@ -57,7 +71,11 @@ export function ProductsCatalog({ categories = [] }: { categories?: string[] }) 
   const setDisplayCurrency = useCurrencyStore((s) => s.setCode);
   const { rates, loading: ratesLoading, error: ratesError, source, refresh } = useFxRates();
 
-  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [products, setProducts] = useState<CatalogProduct[]>(initialProducts ?? []);
+  // Resync when the server sends a different set (client navigation, revalidation).
+  useEffect(() => {
+    if (initialProducts) setProducts(initialProducts);
+  }, [initialProducts]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);

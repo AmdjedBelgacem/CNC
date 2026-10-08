@@ -17,6 +17,7 @@ import {
 import { FormSection } from '@/components/admin/admin-form';
 import { StatusPill, type Tone } from '@/components/admin/admin-ui';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
@@ -94,14 +95,9 @@ export function PlatformAlertSettings() {
     // unknown groups anyway, so a failed save is corrected by the reload below.
     setGroups((prev) => prev?.map((g) => (g.key === key ? { ...g, enabled: next } : g)) ?? prev);
     try {
-      const res = await fetch('/api/proxy/admin/platform-alerts/settings', {
-        method: 'PUT',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prefs: { [key]: next } }),
+      const data = await api.put<Record<string, boolean>>('/admin/platform-alerts/settings', {
+        prefs: { [key]: next },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
       setGroups((prev) => prev?.map((g) => ({ ...g, enabled: data[g.key] ?? g.enabled })) ?? prev);
     } catch (e: any) {
       setError(e?.message ?? t('saveFailed', { default: 'Could not save' }));

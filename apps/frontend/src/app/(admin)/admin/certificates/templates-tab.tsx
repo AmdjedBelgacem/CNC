@@ -35,6 +35,7 @@ import { SelectInput } from '@/components/admin/admin-form';
 import { toast } from '@/components/ui/toast';
 import { Modal, ModalHeader } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 /* ---------------------------------- types --------------------------------- */ type TemplateField =
   {
@@ -581,13 +582,7 @@ function CertificateArt({
   const handleToggleActive = async (tpl: Template) => {
     setTogglingId(tpl.id);
     try {
-      const res = await fetch(`/api/proxy/admin/cert-templates/${tpl.id}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !tpl.isActive }),
-      });
-      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      await api.patch(`/admin/cert-templates/${tpl.id}`, { isActive: !tpl.isActive });
       setTemplates(
         (prev) => prev?.map((t) => (t.id === tpl.id ? { ...t, isActive: !t.isActive } : t)) ?? prev,
       );
@@ -609,24 +604,18 @@ function CertificateArt({
   };
   const handleDuplicate = async (tpl: Template) => {
     try {
-      const res = await fetch('/api/proxy/admin/cert-templates', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: `${tpl.name} (copy)`,
-          courseId: tpl.courseId,
-          layout: tpl.layout,
-          primaryColor: tpl.primaryColor,
-          secondaryColor: tpl.secondaryColor,
-          logoUrl: tpl.logoUrl,
-          backgroundUrl: tpl.backgroundUrl,
-          fontFamily: tpl.fontFamily,
-          fields: tpl.fields,
-          isActive: false,
-        }),
+      await api.post('/admin/cert-templates', {
+        name: `${tpl.name} (copy)`,
+        courseId: tpl.courseId,
+        layout: tpl.layout,
+        primaryColor: tpl.primaryColor,
+        secondaryColor: tpl.secondaryColor,
+        logoUrl: tpl.logoUrl,
+        backgroundUrl: tpl.backgroundUrl,
+        fontFamily: tpl.fontFamily,
+        fields: tpl.fields,
+        isActive: false,
       });
-      if (!res.ok) throw new Error(`Failed (${res.status})`);
       toast({
         type: 'ok',
         title: t('toastDuplicated', { default: 'Template duplicated' }),
@@ -1740,17 +1729,9 @@ function TemplateStudioSheet({
         fontFamily,
         fields,
       };
-      const url = isEdit
-        ? `/api/proxy/admin/cert-templates/${template!.id}`
-        : '/api/proxy/admin/cert-templates';
-      const res = await fetch(url, {
-        method: isEdit ? 'PATCH' : 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message || `Failed (${res.status})`);
+      const url = isEdit ? `/admin/cert-templates/${template!.id}` : '/admin/cert-templates';
+      if (isEdit) await api.patch(url, payload);
+      else await api.post(url, payload);
       toast({
         type: 'ok',
         title: isEdit

@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Globe, GlobeLock, Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
 import { formatMoney } from '@/lib/api/normalize';
 import {
@@ -150,32 +151,26 @@ export default function ProductEditorPage() {
     if (!product || !dirty || saving || uploadingCount > 0) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/proxy/admin/products/${slug}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      let updated: ProductDetail | undefined;
+      try {
+        updated = await api.patch<ProductDetail>(`/admin/products/${slug}`, {
           ...productFormPayload(value),
           // Optimistic lock: the version we loaded. If someone else saved in the
           // meantime the server answers 409 instead of silently overwriting them.
           expectedUpdatedAt: product.updatedAt,
-        }),
-      });
-      if (res.status === 409) {
+        });
+      } catch (err) {
+        const status = (err as { status?: number }).status;
+        if (status !== 409) throw err;
         // Preserve what the user typed. Discarding their edits because of a conflict
         // is its own data loss.
-        const data = await res.json().catch(() => null);
+        const body = (err as { body?: { message?: string } }).body;
         setError(
-          data?.message ??
+          body?.message ??
             t('saveConflict', { default: 'This product changed since you opened it. Reload before saving.' }),
         );
         return;
       }
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? t('saveFailed', { status: res.status, default: 'Save failed ({status})' }));
-      }
-      const updated = await res.json();
       toast({ type: 'ok', title: t('saved', { default: 'Product saved' }) });
       // A slug change moves the record to a new URL; follow it.
       if (updated?.slug && updated.slug !== slug) {
@@ -206,18 +201,7 @@ export default function ProductEditorPage() {
     setPublishing(true);
     try {
       const action = product.isPublished ? 'unpublish' : 'publish';
-      const res = await fetch(`/api/proxy/admin/products/${slug}/${action}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(
-          data?.message ??
-            data?.reasons?.join('; ') ??
-            t('loadFailed', { status: res.status, default: 'Request failed ({status})' }),
-        );
-      }
+      await api.post(`/admin/products/${slug}/${action}`);
       toast({
         type: 'ok',
         title: t(action === 'publish' ? 'published' : 'unpublished', {
@@ -241,11 +225,7 @@ export default function ProductEditorPage() {
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await fetch(`/api/proxy/admin/products/${slug}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
+      await api.delete(`/admin/products/${slug}`);
       toast({ type: 'ok', title: t('deleted', { default: 'Product deleted' }) });
       router.push('/admin/products');
     } catch (e) {

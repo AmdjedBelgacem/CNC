@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
 import {
   AdminCommandBar,
@@ -417,14 +418,7 @@ export default function AdminCoursesPage() {
   const act = useCallback(
     async (slug: string, action: CourseAction) => {
       try {
-        const res = await fetch(`/api/proxy/admin/courses/${slug}/${action}`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.message ?? `${res.status}`);
-        }
+        await api.post(`/admin/courses/${slug}/${action}`);
         toast({ type: 'ok', title: t(`actionDone.${action}`, { default: `Course ${action}ed` }) });
         void load(true);
       } catch (e) {

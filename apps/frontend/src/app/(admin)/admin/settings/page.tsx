@@ -16,6 +16,7 @@ import {
   Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { ErrorBanner } from '@/components/admin/admin-ui';
 import { useAuthStore } from '@/stores/auth-store';
 import { PlatformAlertSettings } from './platform-alert-settings';
@@ -245,16 +246,7 @@ export default function AdminSettingsPage() {
         setSaving(false);
         return;
       }
-      const res = await fetch('/api/proxy/admin/tenant', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `${res.status}`);
-      }
+      await api.patch('/admin/tenant', patch);
       toast({ type: 'ok', title: t('savedToast', { default: 'Settings saved' }) });
       void load();
     } catch (e) {

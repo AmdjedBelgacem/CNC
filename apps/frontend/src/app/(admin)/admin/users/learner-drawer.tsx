@@ -26,6 +26,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Modal, GLASS_SUB } from '@/components/ui/modal';
@@ -338,16 +339,34 @@ export function LearnerDrawer({
     };
   }, [canAssignRoles, userId]);
 
+  /**
+   * Shared mutation helper for this drawer — roughly a dozen buttons (suspend, delete,
+   * roles, force password reset, revoke sessions) that all fail without a CSRF header.
+   *
+   * The signature is unchanged so none of the call sites had to move; the transport is
+   * fixed here instead. `path` is still written as a full `/api/proxy/...` URL by callers
+   * and the prefix is stripped for `api`, which resolves it against the BFF itself.
+   */
   const mutate = async (path: string, init: RequestInit, okMessage: string) => {
-    const res = await fetch(path, { credentials: 'include', ...init });
-    if (!res.ok) {
-      let msg = tAdmin('drawer.requestFailed', {
-        status: res.status,
+    const url = path.replace(/^\/api\/proxy/, '');
+    const method = (init.method ?? 'POST').toUpperCase();
+    let body: unknown;
+    if (typeof init.body === 'string') {
+      try { body = JSON.parse(init.body); } catch { body = undefined; }
+    }
+    try {
+      if (method === 'PUT') await api.put(url, body ?? {});
+      else if (method === 'PATCH') await api.patch(url, body ?? {});
+      else if (method === 'DELETE') await api.delete(url);
+      else await api.post(url, body ?? {});
+    } catch (error) {
+      // `api` throws an Error carrying `status`/`body`, so the server's own message still
+      // reaches the operator rather than a generic failure.
+      const detail = (error as { body?: { message?: string }; message?: string });
+      const msg = detail?.body?.message ?? detail?.message ?? tAdmin('drawer.requestFailed', {
+        status: (error as { status?: number })?.status ?? '',
         default: 'Request failed ({status})',
       });
-      try {
-        msg = (await res.json())?.message ?? msg;
-      } catch {}
       toast({
         type: 'err',
         title: tAdmin('drawer.actionFailed', { default: 'Action failed' }),
@@ -547,11 +566,9 @@ export function LearnerDrawer({
                     icon={MonitorSmartphone}
                     variant="info"
                     onConfirm={async () => {
-                      const res = await fetch(`/api/proxy/admin/users/${userId}/impersonate`, {
-                        method: 'POST',
-                        credentials: 'include',
-                      });
-                      if (!res.ok) {
+                      try {
+                        await api.post(`/admin/users/${userId}/impersonate`);
+                      } catch {
                         toast({
                           type: 'err',
                           title: tAdmin('drawer.impersonationFailed', {

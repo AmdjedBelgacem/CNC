@@ -14,6 +14,7 @@ import {
   Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -100,16 +101,9 @@ export function CertificateDetailDialog({
     if (!cert) return;
     setRevoking(true);
     try {
-      const res = await fetch(`/api/proxy/admin/certifications/${cert.id}/revoke`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason.trim() || undefined }),
+      await api.post(`/admin/certifications/${cert.id}/revoke`, {
+        reason: reason.trim() || undefined,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Request failed (${res.status})`);
-      }
       onChanged(t('revoked', { default: 'Certificate revoked' }));
       setRevokeOpen(false);
       setReason('');
@@ -132,12 +126,9 @@ export function CertificateDetailDialog({
     }
     setReissuing(true);
     try {
-      const res = await fetch(`/api/proxy/admin/certifications/${cert.id}/reissue`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message ?? `Request failed (${res.status})`);
+      const data = await api.post<{ certificateNumber?: string }>(
+        `/admin/certifications/${cert.id}/reissue`,
+      );
       toast({
         type: 'ok',
         title: t('reissued', { default: 'Certificate reissued' }),

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { api } from '@/lib/api-client';
 import {
   AdminCommandBar,
   AdminPageHeader,
@@ -42,19 +43,7 @@ export default function NewProductPage() {
     setError(null);
     try {
       const body = productFormPayload(value);
-      const res = await fetch('/api/proxy/admin/products', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(
-          data?.message ?? t('createFailed', { status: res.status, default: 'Create failed ({status})' }),
-        );
-      }
-      const created = await res.json();
+      const created = await api.post<{ slug?: string }>('/admin/products', body);
       toast({ type: 'ok', title: t('created', { default: 'Product created' }) });
       /**
        * Hand over to the editor rather than staying on a form that cannot manage the
