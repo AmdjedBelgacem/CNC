@@ -1600,7 +1600,9 @@
         "inStock": "in stock",
         "lowStock": "left",
         "outOfStock": "Out of stock"
-      }
+      },
+      "actionNoSlug": "This product has no address",
+      "actionNoSlugHint": "It was saved with an empty slug, so it cannot be published, archived or deleted from the list. Open it and give it a title and slug first."
     },
     "certificatesPage": {
       "allCourses": "All courses",

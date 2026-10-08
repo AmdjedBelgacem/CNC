@@ -409,6 +409,28 @@ export default function AdminProductsPage() {
 
   const act = useCallback(
     async (slug: string, action: ProductAction) => {
+      /**
+       * A row with no slug cannot address any lifecycle route.
+       *
+       * Production still holds one blank product left behind by the original data-loss
+       * bug (`slug = ''`). Every action on it built a slugless URL, so delete collapsed to
+       * `DELETE /admin/products` and reported "Cannot DELETE /admin/products" — an error
+       * that reads like a missing route rather than a broken record. Lifecycle actions on
+       * that row fail the same way.
+       *
+       * Say what is actually wrong instead of sending a request that cannot succeed.
+       */
+      if (!slug || !slug.trim()) {
+        toast({
+          type: 'err',
+          title: t('actionNoSlug', { default: 'This product has no address' }),
+          description: t('actionNoSlugHint', {
+            default:
+              'It was saved with an empty slug, so it cannot be published, archived or deleted from the list. Open it and give it a title and slug first.',
+          }),
+        });
+        return;
+      }
       try {
         /**
          * Two bugs, both of which made every row action silently fail.
