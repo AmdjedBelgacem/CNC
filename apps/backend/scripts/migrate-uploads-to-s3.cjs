@@ -28,7 +28,7 @@ const APPLY = process.argv.includes('--apply');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const postgres = require('/repo/node_modules/postgres');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { S3Client, PutObjectCommand, HeadBucketCommand } = require('/repo/node_modules/aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, HeadBucketCommand } = require('/repo/node_modules/@aws-sdk/client-s3');
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 const PUBLIC_URL = (process.env.S3_PUBLIC_URL || '').replace(/\/+$/, '');
@@ -151,9 +151,10 @@ function walk(dir, base = dir) {
 
   console.log('\nrewriting database references:');
   for (const [table, column] of TARGETS) {
-    const { rows } = await sql.unsafe(
+    // postgres.js returns the row array directly; there is no `{ rows }` envelope.
+    const rows = await sql.unsafe(
       `select id, "${column}" as url from "${table}" where "${column}" like $1 or "${column}" like $2`,
-      ['/uploads/%', `%/uploads/%`],
+      ['/uploads/%', '%/uploads/%'],
     );
     if (!rows.length) {
       console.log(`  ${table}.${column}: 0 rows`);
