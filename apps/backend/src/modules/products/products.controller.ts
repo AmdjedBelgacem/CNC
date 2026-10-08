@@ -128,7 +128,7 @@ export class ProductsController {
     @Req() req: any,
   ) {
     if (!tenant) throw new NotFoundException('Tenant not resolved');
-    const product = await this.products.findBySlug(tenant.id, slug, req);
+    const product = await this.products.findBySlug(tenant.id, slug, { locale: req });
     /**
      * Public shape: the storefront needs the same gallery the admin manages, and
      * `ensureImagesFromLegacy` backfills it for products created before the gallery

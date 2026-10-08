@@ -76,7 +76,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     /**
      * The gallery is seeded from the legacy `thumbnailUrl` / `mediaUrls` shape on first
      * read, so an existing product gains gallery rows without a migration needing to
@@ -124,7 +124,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     const { expectedUpdatedAt, ...fields } = (body ?? {}) as { expectedUpdatedAt?: string } & Record<string, unknown>;
     const updated = await this.products.update(product.id, fields, expectedUpdatedAt ?? null);
     const images = await this.products.listImages(updated.id);
@@ -157,7 +157,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     const created = await this.products.addImage({
       tenantId: tid,
       productId: product.id,
@@ -180,7 +180,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.ensureImagesFromLegacy(product as never);
   }
 
@@ -195,7 +195,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.reorderImages({
       tenantId: tid,
       productId: product.id,
@@ -215,7 +215,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.updateImage({
       tenantId: tid,
       productId: product.id,
@@ -237,7 +237,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.deleteImage({ tenantId: tid, productId: product.id, imageId });
   }
 
@@ -251,7 +251,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.publish(product.id);
   }
 
@@ -265,7 +265,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.unpublish(product.id);
   }
 
@@ -279,7 +279,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.archive(product.id);
   }
 
@@ -293,7 +293,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.restore(product.id);
   }
 
@@ -307,7 +307,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    const product = await this.products.findBySlug(tid, slug);
+    const product = await this.products.findBySlug(tid, slug, { includeUnpublished: true });
     return this.products.remove(product.id);
   }
 }

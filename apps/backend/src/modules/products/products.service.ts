@@ -75,15 +75,34 @@ export class ProductsService {
     };
   }
 
-  async findBySlug(tenantId: string, slug: string, localeInput?: unknown) {
+  /**
+   * `includeUnpublished` is the ONLY way to read a draft.
+   *
+   * This used to filter on tenant + slug alone, so `GET /products/:slug` handed any
+   * anonymous caller a full unpublished product — description and all — while the list
+   * endpoint correctly hid the same rows. "Is this an admin read?" used to be inferred
+   * from whether a locale argument happened to be passed, which is why it slipped
+   * through; it is now an explicit flag set by the admin controller.
+   */
+  async findBySlug(
+    tenantId: string,
+    slug: string,
+    options: { locale?: unknown; includeUnpublished?: boolean } = {},
+  ) {
+    const filters = [eq(productsBundle.tenantId, tenantId), eq(productsBundle.slug, slug)];
+    if (!options.includeUnpublished) {
+      filters.push(eq(productsBundle.isPublished, true));
+      filters.push(eq(productsBundle.isArchived, false));
+    }
+
     const product = await this.q.products.findFirst({
-      where: and(eq(productsBundle.tenantId, tenantId), eq(productsBundle.slug, slug)),
+      where: and(...filters),
       with: { variants: { orderBy: asc(productVariants.sortOrder) } },
     });
     if (!product) throw new NotFoundException('Product not found');
-    // No locale argument means an internal/admin read: hand back the raw row.
-    if (localeInput === undefined) return product;
-    return localizeProductFields(product as Record<string, any>, resolveContentLocale(localeInput)).value;
+    // No locale means an internal/admin read: hand back the raw row.
+    if (options.locale === undefined) return product;
+    return localizeProductFields(product as Record<string, any>, resolveContentLocale(options.locale)).value;
   }
 
   async findById(id: string) {

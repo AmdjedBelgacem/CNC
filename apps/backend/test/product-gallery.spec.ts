@@ -310,8 +310,28 @@ describe('product gallery + partial save (integration)', () => {
     expect(after.slug).toBe(product.slug);
     expect(after.description).toBe(FULL.description);
     expect(after.thumbnailUrl).toBe(FULL.thumbnailUrl);
-    // still reachable by the slug the storefront uses
-    expect((await service.findBySlug(tenantId, product.slug)).id).toBe(product.id);
+    // Still reachable by the slug the admin works with. The fixture is a draft, so this
+    // is the explicit admin read — see the visibility tests below for the public rule.
+    expect((await service.findBySlug(tenantId, product.slug, { includeUnpublished: true })).id).toBe(product.id);
+  });
+
+  it('does not serve an unpublished product to a public reader', async () => {
+    const product = await makeProduct();
+
+    // Anonymous storefront read. This used to return the whole draft — description
+    // included — because findBySlug filtered on tenant + slug only, while the list
+    // endpoint correctly hid the same rows.
+    await expect(service.findBySlug(tenantId, product.slug)).rejects.toBeInstanceOf(NotFoundException);
+
+    // The admin keeps full access to its own drafts.
+    const asAdmin = await service.findBySlug(tenantId, product.slug, { includeUnpublished: true });
+    expect(asAdmin.id).toBe(product.id);
+
+    // Publishing makes it publicly readable again.
+    await service.publish(product.id);
+    const asPublic = await service.findBySlug(tenantId, product.slug);
+    expect(asPublic.id).toBe(product.id);
+    expect(asPublic.title).toBe(FULL.title);
   });
 
   it('still allows whitespace-trimmed-but-present values', async () => {
