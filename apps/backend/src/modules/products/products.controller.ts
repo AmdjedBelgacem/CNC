@@ -127,6 +127,9 @@ export class ProductsController {
       title?: string | null;
       thumbnailUrl?: string | null;
       mediaUrls?: string[] | null;
+      // Carried so a pre-gallery product's product-level markers move onto its primary
+      // image on first view instead of being invisible to shoppers.
+      pinpoints?: unknown;
     });
     const primary = images.find((i) => i.isPrimary) ?? images[0] ?? null;
     return {

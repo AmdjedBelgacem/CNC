@@ -148,6 +148,8 @@ export class DrizzleService implements OnModuleInit {
         await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "product_images_product_order_idx" ON "product_images" ("product_id", "sort_order")`);
         await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "product_images_tenant_idx" ON "product_images" ("tenant_id")`);
         await this.client.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "product_images_one_primary_idx" ON "product_images" ("product_id") WHERE "is_primary" = true`);
+        // Per-image hotspots, added after the table first shipped.
+        await this.client.unsafe(`ALTER TABLE "product_images" ADD COLUMN IF NOT EXISTS "hotspots" jsonb`);
       } catch (err) {
         console.warn('[DrizzleService] ensure product_images table failed (non-fatal)', err);
       }

@@ -73,6 +73,118 @@ describe('product gallery + partial save (integration)', () => {
     await drizzle.db.delete(products).where(inArray(products.id, [...created]));
   });
 
+  // ------------------------------------------------- per-image hotspots ---
+
+  it('stores hotspots on the image they annotate, not on the product', async () => {
+    const product = await makeProduct();
+    await service.ensureImagesFromLegacy(product as never);
+    const images = await service.listImages(product.id);
+    expect(images).toHaveLength(1);
+    const primary = images[0];
+
+    await service.updateImage({
+      tenantId,
+      productId: product.id,
+      imageId: primary.id,
+      hotspots: [{ id: 'h1', x: 25, y: 40, label: 'Spindle', detail: 'Ceramic bearings' }],
+    });
+
+    const after = await service.listImages(product.id);
+    expect(after[0].hotspots).toHaveLength(1);
+    expect(after[0].hotspots?.[0]).toMatchObject({ label: 'Spindle', x: 25, y: 40 });
+    // The product-level list is left alone: it stays the fallback for single-image
+    // products, and it must not shadow per-image markers.
+    expect((await service.findById(product.id)).pinpoints).toHaveLength(1);
+  });
+
+  it('keeps each image\'s hotspots independent', async () => {
+    const product = await makeProduct({ thumbnailUrl: '/uploads/covers/a.png' });
+    await service.ensureImagesFromLegacy(product as never);
+    const second = await service.addImage({ tenantId, productId: product.id, url: '/uploads/covers/b.png' });
+    const first = (await service.listImages(product.id)).find(
+      (i) => i.url === '/uploads/covers/a.png',
+    );
+
+    await service.updateImage({
+      tenantId, productId: product.id, imageId: first.id,
+      hotspots: [{ id: 'front', x: 10, y: 10, label: 'Front face' }],
+    });
+    await service.updateImage({
+      tenantId, productId: product.id, imageId: second.id,
+      hotspots: [{ id: 'side', x: 80, y: 60, label: 'Side port' }],
+    });
+
+    const images = await service.listImages(product.id);
+    const a = images.find((i) => i.url === '/uploads/covers/a.png');
+    const b = images.find((i) => i.url === '/uploads/covers/b.png');
+    expect(a?.hotspots?.[0].label).toBe('Front face');
+    expect(b?.hotspots?.[0].label).toBe('Side port');
+    // The bug this replaces: writing image 2's markers used to overwrite image 1's.
+    expect(a?.hotspots).toHaveLength(1);
+    expect(b?.hotspots).toHaveLength(1);
+  });
+
+  it('omitted hotspots are untouched, an empty list clears them', async () => {
+    const product = await makeProduct();
+    await service.ensureImagesFromLegacy(product as never);
+    const image = (await service.listImages(product.id))[0];
+    await service.updateImage({
+      tenantId, productId: product.id, imageId: image.id,
+      hotspots: [{ id: 'h1', x: 1, y: 2, label: 'Keep' }],
+    });
+
+    // alt only — hotspots must survive
+    await service.updateImage({ tenantId, productId: product.id, imageId: image.id, alt: 'New alt' });
+    let after = await service.listImages(product.id);
+    expect(after[0].hotspots).toHaveLength(1);
+    expect(after[0].alt).toBe('New alt');
+
+    await service.updateImage({ tenantId, productId: product.id, imageId: image.id, hotspots: [] });
+    after = await service.listImages(product.id);
+    expect(after[0].hotspots ?? []).toHaveLength(0);
+  });
+
+  it('rejects malformed and oversized hotspot lists', async () => {
+    const product = await makeProduct();
+    await service.ensureImagesFromLegacy(product as never);
+    const image = (await service.listImages(product.id))[0];
+    const call = (hotspots: unknown) =>
+      service.updateImage({ tenantId, productId: product.id, imageId: image.id, hotspots });
+
+    await expect(call('nope')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(call([{ x: 1, y: 2 }])).rejects.toBeInstanceOf(BadRequestException);
+    await expect(call([{ x: 'a', y: 2, label: 'x' }])).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      call(Array.from({ length: 21 }, (_, i) => ({ x: 1, y: 1, label: `p${i}` }))),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('clamps out-of-range coordinates instead of losing the whole save', async () => {
+    const product = await makeProduct();
+    await service.ensureImagesFromLegacy(product as never);
+    const image = (await service.listImages(product.id))[0];
+    await service.updateImage({
+      tenantId, productId: product.id, imageId: image.id,
+      hotspots: [{ id: 'edge', x: 180, y: -20, label: 'Edge' }],
+    });
+    const after = await service.listImages(product.id);
+    expect(after[0].hotspots?.[0]).toMatchObject({ x: 100, y: 0 });
+  });
+
+  it('moves legacy product pinpoints onto the primary image during backfill', async () => {
+    const product = await makeProduct({
+      thumbnailUrl: '/uploads/covers/legacy.png',
+      mediaUrls: ['/uploads/covers/second.png'],
+      pinpoints: [{ id: 'old', x: 33, y: 44, label: 'Legacy marker' }],
+    });
+    await service.ensureImagesFromLegacy(product as never);
+    const images = await service.listImages(product.id);
+    const primary = images.find((i) => i.isPrimary);
+    expect(primary?.hotspots?.[0]).toMatchObject({ label: 'Legacy marker', x: 33, y: 44 });
+    // Only the primary inherits them; the markers could not describe image 2.
+    expect(images.find((i) => !i.isPrimary)?.hotspots ?? []).toHaveLength(0);
+  });
+
   // ------------------------------------------------------------------ PATCH ---
 
   it('changes only the keys present in the body', async () => {

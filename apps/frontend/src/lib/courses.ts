@@ -1,8 +1,9 @@
 import type { ContentLocale, Course } from '@titan/shared';
 import { coerceLocale } from '@/i18n/config';
+import { serverApiUrl } from '@/lib/server-api-url';
 
 const API_BASE =
-  process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  serverApiUrl();
 const REVALIDATE = 60;
 
 function tenantHeaders(tenantSlug: string, locale?: ContentLocale): HeadersInit {

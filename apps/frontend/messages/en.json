@@ -1788,7 +1788,17 @@
       "uploadFailed": "Upload failed",
       "badType": "Unsupported image type",
       "tooLarge": "Image too large",
-      "limitReached": "Maximum {max} images reached."
+      "limitReached": "Maximum {max} images reached.",
+      "hotspotsTitle": "Hotspots",
+      "addHotspot": "Add hotspot",
+      "cancel": "Cancel",
+      "hotspotLabel": "Label",
+      "hotspotTooltip": "Tooltip on hover",
+      "hotspotDetail": "Shown in the popup when tapped",
+      "hotspotDefaultLabel": "Point {n}",
+      "hotspotsEmpty": "No hotspots on this image yet.",
+      "clickToPlaceHotspot": "Click to place hotspot",
+      "hotspotsFailed": "Could not save hotspots"
     }
   },
   "aiAssistant": {

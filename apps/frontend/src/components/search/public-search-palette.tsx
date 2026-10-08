@@ -127,7 +127,17 @@ export function GlobalSearchPalette() {
         size="2xl"
         hideClose
         title={t('title')}
-        className="!left-1/2 !top-4 !w-[calc(100vw-1.5rem)] !max-w-3xl !translate-x-[-50%] !translate-y-0 overflow-hidden rounded-3xl border-border/80 bg-card/95 p-0 shadow-2xl backdrop-blur-xl sm:!top-20 sm:!w-[calc(100vw-3rem)]"
+        /*
+         * No positioning overrides here on purpose.
+         *
+         * DialogContent is already centred (`fixed left-1/2 top-1/2` plus the
+         * `.dialog-pop` rule that carries `translate: -50% -50%`). This panel used to
+         * force `!top-4 !translate-y-0 sm:!top-20`, which cancelled that translate and
+         * pinned the palette to the top edge of the viewport — it opened under the
+         * header and the results ran off the bottom. Centring is the base behaviour, so
+         * only the width is overridden here.
+         */
+        className="!w-[calc(100vw-1.5rem)] !max-w-3xl overflow-hidden rounded-3xl border-border/80 bg-card/95 p-0 shadow-2xl backdrop-blur-xl sm:!w-[calc(100vw-3rem)]"
         overlayClassName="!bg-black/25 !backdrop-blur-0"
       >
         <DialogTitle className="sr-only">{t('title')}</DialogTitle>

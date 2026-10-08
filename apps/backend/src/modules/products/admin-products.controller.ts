@@ -153,7 +153,7 @@ export class AdminProductsController {
     @Req() req: any,
     @CurrentTenant() tenant: { id: string },
     @Param('slug') slug: string,
-    @Body() body: { url: string; alt?: string | null; makePrimary?: boolean },
+    @Body() body: { url: string; alt?: string | null; hotspots?: unknown; makePrimary?: boolean },
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
@@ -163,6 +163,7 @@ export class AdminProductsController {
       productId: product.id,
       url: body?.url ?? '',
       alt: body?.alt ?? null,
+      hotspots: body?.hotspots,
       makePrimary: body?.makePrimary === true,
       publicBase: this.config.get('S3_PUBLIC_URL'),
     });
@@ -204,13 +205,13 @@ export class AdminProductsController {
 
   @Patch(':slug/images/:imageId')
   @Roles('super_admin', 'admin')
-  @ApiOperation({ summary: 'Edit an image alt text, or set it as the primary' })
+  @ApiOperation({ summary: 'Edit an image alt text or hotspots, or set it as the primary' })
   async updateImage(
     @Req() req: any,
     @CurrentTenant() tenant: { id: string },
     @Param('slug') slug: string,
     @Param('imageId') imageId: string,
-    @Body() body: { alt?: string | null; setPrimary?: boolean },
+    @Body() body: { alt?: string | null; hotspots?: unknown; setPrimary?: boolean },
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
@@ -220,6 +221,7 @@ export class AdminProductsController {
       productId: product.id,
       imageId,
       alt: body?.alt,
+      hotspots: body?.hotspots,
       setPrimary: body?.setPrimary === true,
     });
   }

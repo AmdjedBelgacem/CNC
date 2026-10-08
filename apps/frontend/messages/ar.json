@@ -1788,7 +1788,17 @@
       "uploadFailed": "فشل الرفع",
       "badType": "نوع صورة غير مدعوم",
       "tooLarge": "الصورة كبيرة جدًا",
-      "limitReached": "تم بلوغ الحد الأقصى {max} صورة."
+      "limitReached": "تم بلوغ الحد الأقصى {max} صورة.",
+      "hotspotsTitle": "النقاط الساخنة",
+      "addHotspot": "إضافة نقطة ساخنة",
+      "cancel": "إلغاء",
+      "hotspotLabel": "التسمية",
+      "hotspotTooltip": "تلميح عند المرور",
+      "hotspotDetail": "يظهر في النافذة عند الضغط",
+      "hotspotDefaultLabel": "نقطة {n}",
+      "hotspotsEmpty": "لا توجد نقاط ساخنة على هذه الصورة بعد.",
+      "clickToPlaceHotspot": "اضغط لتحديد موضع النقطة",
+      "hotspotsFailed": "تعذّر حفظ النقاط الساخنة"
     }
   },
   "aiAssistant": {

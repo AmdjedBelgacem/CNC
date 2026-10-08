@@ -104,6 +104,16 @@ export const productImages = pgTable(
       .notNull(),
     url: varchar('url', { length: 500 }).notNull(),
     alt: varchar('alt', { length: 300 }),
+    /**
+     * Hotspots belong to ONE image. They used to live in a single `products.pinpoints`
+     * array shared by the whole product, which made them meaningless the moment a second
+     * image existed: a marker at 40%/30% means a different part of the part depending on
+     * which picture is showing.
+     *
+     * Reuses the course `InteractiveHotspot` shape ({ id, x, y, label, tooltip, detail })
+     * so the same renderer and the same mental model apply in lessons and in products.
+     */
+    hotspots: jsonb('hotspots').$type<InteractiveHotspot[]>(),
     sortOrder: integer('sort_order').notNull().default(0),
     isPrimary: boolean('is_primary').notNull().default(false),
     createdAt: timestamp('created_at').defaultNow().notNull(),

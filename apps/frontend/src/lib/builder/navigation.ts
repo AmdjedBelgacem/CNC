@@ -17,8 +17,9 @@ import { tenantHeaders } from '@/lib/builder/theme';
  * needed: build-time there is no binding, so the value is only present when actually serving.
  */
 const SERVER_API_BASE =
-  process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  serverApiUrl();
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
+import { serverApiUrl } from '@/lib/server-api-url';
 
 /**
  * The tenant's navigation tree, fetched on the server for a public layout.

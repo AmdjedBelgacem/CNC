@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { BadgeCheck, XCircle } from 'lucide-react';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
+import { serverApiUrl } from '@/lib/server-api-url';
 
 /**
  * Reads the tenant from a cookie, so this route cannot be statically generated. Same
@@ -15,7 +16,7 @@ type Props = { params: Promise<{ number: string }> };
 async function fetchCert(tenantSlug: string, number: string) {
   try {
     const res = await fetch(
-      `${process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/certifications/verify/${encodeURIComponent(number)}`,
+      `${serverApiUrl()}/certifications/verify/${encodeURIComponent(number)}`,
       { headers: { 'x-tenant-slug': tenantSlug }, next: { revalidate: 60 } },
     );
     if (res.status === 404) return null;

@@ -3,6 +3,7 @@ import { localizeProductFields, resolveContentLocale } from '../courses/lesson-c
 import { DrizzleService } from '../../database/drizzle.service';
 import { productsBundle, productVariants, productImages } from '../../database/schema/products';
 import { eq, and, asc, desc, like, count, inArray, sql } from 'drizzle-orm';
+import type { InteractiveHotspot } from '@titan/shared';
 import { SearchService } from '../search/search.service';
 import { StorageService } from '../storage/storage.service';
 import { ConfigService } from '../../config/config.service';
@@ -390,6 +391,41 @@ export class ProductsService {
   /** Gallery cap. Kept small so the storefront never ships a 40-image carousel. */
   static readonly MAX_IMAGES = 12;
 
+  /** Per image. A hotspot is a point plus a label, so a lot of them is noise, not detail. */
+  static readonly MAX_HOTSPOTS_PER_IMAGE = 20;
+
+  /** Validate and normalise a hotspot list submitted for one image. */
+  private normaliseHotspots(input: unknown): InteractiveHotspot[] | null {
+    if (input === null) return null;
+    if (!Array.isArray(input)) {
+      throw new BadRequestException('hotspots must be an array');
+    }
+    if (input.length > ProductsService.MAX_HOTSPOTS_PER_IMAGE) {
+      throw new BadRequestException(
+        `An image can have at most ${ProductsService.MAX_HOTSPOTS_PER_IMAGE} hotspots.`,
+      );
+    }
+    return input.map((raw: any) => {
+      const x = Number(raw?.x);
+      const y = Number(raw?.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new BadRequestException('Each hotspot needs numeric x and y coordinates');
+      }
+      const label = typeof raw?.label === 'string' ? raw.label.trim() : '';
+      if (!label) throw new BadRequestException('Each hotspot needs a label');
+      return {
+        id: typeof raw?.id === 'string' && raw.id ? raw.id : `pinpoint-${Math.random().toString(36).slice(2, 10)}`,
+        // Clamped rather than rejected: a marker dragged near the edge should still
+        // land on the image instead of failing the whole save.
+        x: Math.min(100, Math.max(0, x)),
+        y: Math.min(100, Math.max(0, y)),
+        label,
+        tooltip: typeof raw?.tooltip === 'string' ? raw.tooltip.trim() : null,
+        detail: typeof raw?.detail === 'string' ? raw.detail.trim() : null,
+      };
+    });
+  }
+
   /**
    * Only URLs this application produced are accepted as gallery images.
    *
@@ -436,6 +472,7 @@ export class ProductsService {
     title?: string | null;
     thumbnailUrl?: string | null;
     mediaUrls?: string[] | null;
+    pinpoints?: unknown;
   }) {
     const existing = await this.listImages(product.id);
     if (existing.length > 0) return existing;
@@ -449,6 +486,20 @@ export class ProductsService {
     }
     if (legacy.length === 0) return [];
 
+    const legacyHotspots = Array.isArray((product as { pinpoints?: unknown }).pinpoints)
+      ? ((product as { pinpoints?: unknown }).pinpoints as unknown[])
+          .filter((h) => h && typeof h === 'object' && typeof (h as any).x === 'number' && typeof (h as any).y === 'number')
+          .slice(0, ProductsService.MAX_HOTSPOTS_PER_IMAGE)
+          .map((h: any) => ({
+            id: typeof h.id === 'string' && h.id ? h.id : `pinpoint-${Math.random().toString(36).slice(2, 10)}`,
+            x: Math.min(100, Math.max(0, Number(h.x))),
+            y: Math.min(100, Math.max(0, Number(h.y))),
+            label: typeof h.label === 'string' && h.label ? h.label : 'Point',
+            tooltip: h.tooltip ?? null,
+            detail: h.detail ?? null,
+          }))
+      : [];
+
     return this.db.transaction(async (tx) => {
       const inserted = await tx
         .insert(productImages)
@@ -458,6 +509,10 @@ export class ProductsService {
             productId: product.id,
             url,
             alt: index === 0 ? (product.title ?? null) : null,
+            // Pre-gallery products kept one product-level hotspot list that could only
+            // have described the thumbnail, so it moves onto the primary image rather
+            // than being dropped.
+            hotspots: index === 0 && legacyHotspots.length > 0 ? legacyHotspots : null,
             sortOrder: index,
             isPrimary: index === 0,
           })),
@@ -486,11 +541,13 @@ export class ProductsService {
     productId: string;
     url: string;
     alt?: string | null;
+    hotspots?: unknown;
     publicBase?: string | null;
     makePrimary?: boolean;
   }) {
     await this.assertProductInTenant(params.tenantId, params.productId);
     const url = this.assertOwnImageUrl(params.url, params.publicBase);
+    const hotspots = params.hotspots === undefined ? [] : this.normaliseHotspots(params.hotspots);
     const current = await this.listImages(params.productId);
     if (current.length >= ProductsService.MAX_IMAGES) {
       throw new BadRequestException(`A product can have at most ${ProductsService.MAX_IMAGES} images.`);
@@ -506,6 +563,7 @@ export class ProductsService {
           productId: params.productId,
           url,
           alt: params.alt ?? null,
+          hotspots: hotspots && hotspots.length > 0 ? hotspots : null,
           sortOrder: nextOrder,
           isPrimary: makePrimary,
         })
@@ -533,6 +591,7 @@ export class ProductsService {
     productId: string;
     imageId: string;
     alt?: string | null;
+    hotspots?: unknown;
     setPrimary?: boolean;
   }) {
     await this.assertProductInTenant(params.tenantId, params.productId);
@@ -543,6 +602,11 @@ export class ProductsService {
     return this.db.transaction(async (tx) => {
       const values: Record<string, unknown> = { updatedAt: new Date() };
       if (params.alt !== undefined) values.alt = params.alt;
+      // Omitted hotspots leave the image untouched; `hotspots: []` clears them.
+      if (params.hotspots !== undefined) {
+        const hotspots = this.normaliseHotspots(params.hotspots);
+        values.hotspots = hotspots && hotspots.length > 0 ? hotspots : null;
+      }
       if (params.setPrimary === true) values.isPrimary = true;
       let updated;
       if (params.setPrimary === true) {

@@ -1,10 +1,11 @@
 import { LOCALE_COOKIE, coerceLocale, type Locale } from '@/i18n/config';
+import { serverApiUrl } from '@/lib/server-api-url';
 
 const isBrowser = typeof window !== 'undefined';
 const BROWSER_BASE = '/api/proxy';
 const API_BASE = isBrowser
   ? BROWSER_BASE
-  : process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  : serverApiUrl();
 let refreshPromise: Promise<boolean> | null = null;
 let csrfToken: string | null = null;
 

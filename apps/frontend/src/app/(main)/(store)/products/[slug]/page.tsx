@@ -31,6 +31,12 @@ import { cn } from '@/lib/utils';
 import { getImageSrc } from '@/lib/images';
 import type { Product, ProductVariant } from '@/lib/api/types';
 
+interface ProductGalleryEntry {
+  id: string;
+  url: string;
+  hotspots: InteractiveHotspot[];
+}
+
 export default function ProductDetailPage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
@@ -54,14 +60,6 @@ export default function ProductDetailPage() {
     setImageIndex(0);
   }, [slug]);
 
-  const pinpointList = useMemo(
-    () => ((product as unknown as { pinpoints?: InteractiveHotspot[] | null })?.pinpoints ?? []).filter(
-      (h) => typeof h?.x === 'number' && typeof h?.y === 'number' && Boolean(h.id),
-    ),
-    [product],
-  );
-  const hasPinpoints = pinpointList.length > 0;
-
   /**
    * Gallery comes from the ordered `images[]` the API now returns, primary first.
    *
@@ -71,20 +69,72 @@ export default function ProductDetailPage() {
    * product whose gallery has not been seeded yet.
    */
   const gallery = useMemo(() => {
-    if (!product) return [] as string[];
+    if (!product) return [] as ProductGalleryEntry[];
     const source = product as unknown as {
-      images?: Array<{ url?: string }> | null;
+      images?: Array<{ id?: string; url?: string; hotspots?: InteractiveHotspot[] | null }> | null;
       mediaUrls?: string[] | null;
     };
     const fromImages = (source.images ?? [])
-      .map((image) => (typeof image?.url === 'string' ? image.url.trim() : ''))
-      .filter(Boolean);
-    if (fromImages.length > 0) return Array.from(new Set(fromImages));
+      .map((image) => ({
+        id: image?.id ?? image?.url ?? '',
+        url: typeof image?.url === 'string' ? image.url.trim() : '',
+        hotspots: Array.isArray(image?.hotspots) ? image.hotspots : [],
+      }))
+      .filter((image) => image.url.length > 0)
+      // De-duplicate by URL, keeping the first (sorted) row's hotspots.
+      .filter((image, index, all) => all.findIndex((o) => o.url === image.url) === index);
+    if (fromImages.length > 0) return fromImages;
     const legacy = [product.thumbnailUrl, ...(source.mediaUrls ?? [])].filter(
       (u): u is string => typeof u === 'string' && u.length > 0,
     );
-    return Array.from(new Set(legacy));
+    return Array.from(new Set(legacy)).map((url) => ({ id: url, url, hotspots: [] }));
   }, [product]);
+
+  const galleryUrls = useMemo(() => gallery.map((image) => image.url), [gallery]);
+
+  /**
+   * Hotspots of the image currently on screen.
+   *
+   * They are read per image rather than from the product, because a marker at 40%/30%
+   * points at a different part of the part on every picture. `product.pinpoints` is only
+   * consulted as a fallback for a product with a single image, which is the one case
+   * where a product-level list is unambiguous.
+   */
+  const pinpointList = useMemo(() => {
+    const active = gallery[Math.min(imageIndex, Math.max(0, gallery.length - 1))];
+    const own = (active?.hotspots ?? []).filter(
+      (h) => typeof h?.x === 'number' && typeof h?.y === 'number' && Boolean(h.id),
+    );
+    if (own.length > 0 || gallery.length > 1) return own;
+    return ((product as unknown as { pinpoints?: InteractiveHotspot[] | null })?.pinpoints ?? []).filter(
+      (h) => typeof h?.x === 'number' && typeof h?.y === 'number' && Boolean(h.id),
+    );
+  }, [gallery, imageIndex, product]);
+  const hasPinpoints = pinpointList.length > 0;
+
+  // A popup belongs to the marker that opened it, so switching image or product closes it.
+  useEffect(() => {
+    setActiveHotspotId(null);
+  }, [imageIndex, slug]);
+
+  // Click anywhere outside the marker/popover closes it. `pointerdown` rather than
+  // `click` so the popup is already gone before the underlying element reacts.
+  useEffect(() => {
+    if (!activeHotspotId) return;
+    const close = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest?.('[data-hotspot-root]')) setActiveHotspotId(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setActiveHotspotId(null);
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [activeHotspotId]);
 
   if (isLoading) {
     return (
@@ -133,7 +183,8 @@ export default function ProductDetailPage() {
     pricePending ? null : convertMinorUnits(minor, currency, displayCurrency, rates);
   const showPrice = (minor: number | null | undefined) =>
     pricePending ? t('pricePending') : formatMinorUnits(inDisplay(minor), displayCurrency, locale);
-  const activeImage = gallery[Math.min(imageIndex, Math.max(0, gallery.length - 1))];
+  const activeEntry = gallery[Math.min(imageIndex, Math.max(0, gallery.length - 1))];
+  const activeImage = activeEntry?.url ?? '';
 
   const add = () => {
     if (displayPrice == null) return;
@@ -185,24 +236,72 @@ export default function ProductDetailPage() {
                 loading="eager"
               />
 
-              {pinpointList.map((h, index) => (
-                <button
-                  type="button"
-                  key={h.id}
-                  aria-label={h.label}
-                  aria-expanded={activeHotspotId === h.id}
-                  onClick={() => setActiveHotspotId(activeHotspotId === h.id ? null : h.id)}
-                  className={cn(
-                    'absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow-lg transition hover:scale-110',
-                    activeHotspotId === h.id
-                      ? 'bg-primary text-primary-foreground ring-4 ring-primary/30'
-                      : 'bg-primary/90 text-primary-foreground',
-                  )}
-                  style={{ left: `${h.x}%`, top: `${h.y}%` }}
-                >
-                  {index + 1}
-                </button>
-              ))}
+              {pinpointList.map((h, index) => {
+                const isOpen = activeHotspotId === h.id;
+                // The panel clips overflow, so the popup flips below the marker near the
+                // top edge and shifts sideways near the left/right edges. It stays
+                // attached to the marker in every case.
+                const below = h.y < 28;
+                const shiftRight = h.x < 30;
+                const shiftLeft = h.x > 70;
+                return (
+                  <span
+                    key={h.id}
+                    data-hotspot-root
+                    className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${h.x}%`, top: `${h.y}%` }}
+                  >
+                    <button
+                      type="button"
+                      aria-label={h.label}
+                      aria-expanded={isOpen}
+                      onClick={() => setActiveHotspotId(isOpen ? null : h.id)}
+                      className={cn(
+                        'relative flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow-lg transition hover:scale-110',
+                        isOpen
+                          ? 'z-10 bg-primary text-primary-foreground ring-4 ring-primary/30'
+                          : 'bg-primary/90 text-primary-foreground',
+                      )}
+                    >
+                      {index + 1}
+                    </button>
+
+                    {isOpen && (
+                      <span
+                        role="dialog"
+                        aria-label={h.label}
+                        className={cn(
+                          'absolute z-30 w-56 max-w-[min(16rem,72vw)] rounded-xl border border-primary/25 bg-card p-3 text-start shadow-2xl',
+                          below
+                            ? 'top-[calc(100%+0.85rem)]'
+                            : 'bottom-[calc(100%+0.85rem)]',
+                          shiftRight ? 'translate-x-4' : shiftLeft ? '-translate-x-[6.5rem]' : '-translate-x-1/2',
+                        )}
+                      >
+                        {/* Notch pointing back at the marker the popup belongs to. */}
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'absolute size-3 rotate-45 border-primary/25 bg-card',
+                            below ? '-top-1.5 border-t border-l' : '-bottom-1.5 border-b border-r',
+                            shiftRight ? 'right-3' : shiftLeft ? 'left-3' : 'left-1/2 -translate-x-1/2',
+                          )}
+                        />
+                        <span className="block text-2xs font-bold uppercase tracking-wider text-primary">
+                          {index + 1}
+                        </span>
+                        <span className="mt-0.5 block text-sm font-semibold text-foreground">{h.label}</span>
+                        {h.tooltip && (
+                          <span className="mt-1 block text-xs text-muted-foreground">{h.tooltip}</span>
+                        )}
+                        {h.detail && (
+                          <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground">{h.detail}</span>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
             </div>
 
             {gallery.length > 1 && (
@@ -243,7 +342,7 @@ export default function ProductDetailPage() {
                 setImageIndex((i) => (i + delta + gallery.length) % gallery.length);
               }}
             >
-              {gallery.map((url, i) => (
+              {galleryUrls.map((url, i) => (
                 <button
                   key={url}
                   type="button"
@@ -404,22 +503,6 @@ export default function ProductDetailPage() {
                   </li>
                 ))}
               </ul>
-            </section>
-          )}
-
-          {hasPinpoints && activeHotspotId && (
-            <section>
-              {(() => {
-                const h = pinpointList.find((x) => x.id === activeHotspotId);
-                if (!h) return null;
-                return (
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">
-                    <p className="font-semibold">{h.label}</p>
-                    {h.tooltip && <p className="mt-1 text-muted-foreground">{h.tooltip}</p>}
-                    {h.detail && <p className="mt-1 text-muted-foreground">{h.detail}</p>}
-                  </div>
-                );
-              })()}
             </section>
           )}
 

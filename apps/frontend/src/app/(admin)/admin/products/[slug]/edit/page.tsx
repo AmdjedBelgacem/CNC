@@ -21,6 +21,7 @@ import {
   useProductForm,
   type ProductFormValue,
 } from '../../product-form';
+import type { InteractiveHotspot } from '@titan/shared';
 import { ProductGalleryManager } from '../../product-gallery';
 
 export interface ProductImage {
@@ -28,6 +29,8 @@ export interface ProductImage {
   productId?: string;
   url: string;
   alt: string | null;
+  /** Hotspots belong to this single image, not to the product as a whole. */
+  hotspots?: InteractiveHotspot[] | null;
   sortOrder: number;
   isPrimary: boolean;
 }
