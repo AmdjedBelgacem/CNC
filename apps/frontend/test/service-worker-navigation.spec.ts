@@ -112,20 +112,14 @@ describe('service worker navigation handler', () => {
    * so offline it produced Next's "the app failed to start" boundary, with a Reload button
    * that cannot help while offline.
    */
-  it('prefers the offline page over stale cached HTML, which lacks its scripts', async () => {
+  it('serves a self-contained page when the network fails, even with a warm cache', async () => {
     const out = await runNavigation({ fetch: 'reject', cacheHit: true, offlineHit: true });
     const value = out.value as Response;
     expect(value).toBeInstanceOf(Response);
     const body = await value.text();
-    expect(body).toContain('offline');
+    expect(body).toContain('You are offline');
+    // Not the precached Next route: its scripts are not cached, so it renders the error boundary.
     expect(body).not.toContain('cached page');
-  });
-
-  it('falls back to the precached offline page when nothing matches', async () => {
-    const out = await runNavigation({ fetch: 'reject', cacheHit: false, offlineHit: true });
-    const value = out.value as Response;
-    expect(value).toBeInstanceOf(Response);
-    expect(await value.text()).toContain('offline');
   });
 
   /**
@@ -146,8 +140,8 @@ describe('service worker navigation handler', () => {
   it('never settles with a rejected promise', async () => {
     for (const opts of [
       { fetch: 'reject' as const, cacheHit: false, offlineHit: false },
-      { fetch: 'reject' as const, cacheHit: true, offlineHit: false },
-      { fetch: 'reject' as const, cacheHit: false, offlineHit: true },
+      { fetch: 'reject' as const, cacheHit: true, offlineHit: true },
+      { fetch: 'reject' as const, cacheHit: false, offlineHit: false },
     ]) {
       const out = await runNavigation(opts);
       expect(out.value).toBeInstanceOf(Response);
