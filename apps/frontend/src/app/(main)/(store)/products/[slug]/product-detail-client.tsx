@@ -213,10 +213,16 @@ export function ProductDetailClient({
     [p.price, ...variantPrices].filter((v): v is number => typeof v === 'number' && v > 0).length > 0
       ? Math.min(...[p.price, ...variantPrices].filter((v): v is number => typeof v === 'number' && v > 0))
       : null;
-  // Only 'from' uses `fromPrice`; 'fixed' keeps the exact figure, including zero-priced
-  // digital goods, which must not be mistaken for "no price".
-  const headlinePrice = pricingMode === 'from' ? fromPrice : displayPrice;
   const isQuoteOnly = pricingMode === 'request';
+  /**
+   * In `request` mode no figure is shown at all — not the stored price, not a
+   * "from". A price left on the row is kept for reference but publishing it would
+   * defeat the mode: the whole point is that the figure depends on the configuration.
+   *
+   * 'fixed' keeps the exact figure, including a legitimately zero-priced digital good,
+   * which must not be mistaken for "no price".
+   */
+  const headlinePrice = isQuoteOnly ? null : pricingMode === 'from' ? fromPrice : displayPrice;
   const [quoteOpen, setQuoteOpen] = useState(false);
 
   const add = () => {
@@ -440,7 +446,9 @@ export function ProductDetailClient({
                 {headlinePrice == null ? t('priceOnRequest') : showPrice(headlinePrice)}
               </span>
             )}
-            {displayPrice != null && !!p.compareAtPrice && p.compareAtPrice > (p.price ?? 0) && (
+            {/* Only meaningful in `fixed`: a struck-through figure beside "from X" or a
+                quote prompt would leak the very price the mode exists to withhold. */}
+            {pricingMode === 'fixed' && displayPrice != null && !!p.compareAtPrice && p.compareAtPrice > (p.price ?? 0) && (
               <span className="font-mono text-lg text-muted-foreground line-through">
                 {showPrice(p.compareAtPrice)}
               </span>
