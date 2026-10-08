@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { BadgeCheck, XCircle } from 'lucide-react';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serverApiUrl } from '@/lib/server-api-url';
@@ -33,15 +34,17 @@ async function fetchCert(tenantSlug: string, number: string) {
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
+  const t = await getTranslations('pages.certificateVerify');
   const { number } = await props.params;
   return {
-    title: `Verify ${number}`,
-    description: 'Verify a TITANS manufacturing certificate.',
+    title: t('metaTitle', { number }),
+    description: t('metaDescription'),
     alternates: { canonical: `/verify/${number}` },
   };
 }
 
 export default async function VerifyNumberPage(props: Props) {
+  const t = await getTranslations('pages.certificateVerify');
   const { number } = await props.params;
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
@@ -50,37 +53,38 @@ export default async function VerifyNumberPage(props: Props) {
   return (
     <div className="container mx-auto max-w-xl px-4 py-16">
       <Link href="/verify" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Verify another
+        {'← '}
+        {t('verifyAnother')}
       </Link>
       <div className="mt-6 rounded-3xl border bg-card p-8 text-center">
         {cert === undefined ? (
           <>
             <XCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
-            <h1 className="text-2xl font-bold">Verification unavailable</h1>
+            <h1 className="text-2xl font-bold">{t('unavailableTitle')}</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              The verification service did not respond. Make sure the backend is running.
+              {t('unavailableHint')}
             </p>
           </>
         ) : cert === null ? (
           <>
             <XCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-            <h1 className="text-2xl font-bold">Certificate not found</h1>
+            <h1 className="text-2xl font-bold">{t('notFoundTitle')}</h1>
             <p className="mt-2 font-mono text-sm text-muted-foreground">{number}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              No credential with this number exists. Check for typos.
+              {t('notFoundHint')}
             </p>
           </>
         ) : (
           <>
             <BadgeCheck className="mx-auto mb-4 h-12 w-12 text-success" />
-            <h1 className="text-2xl font-bold">Valid certificate</h1>
+            <h1 className="text-2xl font-bold">{t('validTitle')}</h1>
             <p className="mt-2 font-mono text-sm">{cert.certificateNumber}</p>
             {cert.user?.name && <p className="mt-3 text-lg font-semibold">{cert.user.name}</p>}
             {cert.course?.title && (
               <p className="text-sm text-muted-foreground">{cert.course.title}</p>
             )}
             <p className="mt-2 text-xs text-muted-foreground">
-              Issued {new Date(cert.issuedAt).toLocaleDateString()}
+              {t('issued', { date: new Date(cert.issuedAt).toLocaleDateString() })}
             </p>
           </>
         )}

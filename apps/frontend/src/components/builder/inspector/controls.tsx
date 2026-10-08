@@ -54,6 +54,7 @@ export function FieldRow({
   onReset,
   children,
 }: FieldRowProps) {
+  const tu = useTranslations('ui.builder');
   const text = useInspectorText();
   const shownLabel = text.label(labelKey, label);
   const shownHint = text.hint(hintKey, hint);
@@ -70,7 +71,7 @@ export function FieldRow({
           <button
             type="button"
             onClick={onReset}
-            title={dirty ? 'Reset to default' : 'At default'}
+            title={dirty ? tu('resetToDefault') : tu('atDefault')}
             disabled={!dirty}
             className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded text-muted-foreground/50 opacity-0 transition group-hover/row:opacity-100 focus-visible:opacity-100 disabled:pointer-events-none hover:bg-muted hover:text-foreground"
           >
@@ -305,6 +306,7 @@ export function ColorControl({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const tu = useTranslations('ui.builder');
   const hex = typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '';
   const text = useInspectorText();
   return (
@@ -330,7 +332,7 @@ export function ColorControl({
       </div>{' '}
       <label
         className="relative flex h-9 shrink-0 cursor-pointer items-center rounded-md border border-border bg-background px-2 transition hover:border-primary"
-        title="Open the system color picker"
+        title={tu('openColorPicker')}
       >
         {' '}
         <Palette className="size-3.5 text-muted-foreground" />{' '}
@@ -352,6 +354,7 @@ export function ColorControl({
   );
 } // ------------------------------------------------------------------ icon
 export function IconControl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const tu = useTranslations('ui.builder');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const list = useMemo(() => {
@@ -372,7 +375,7 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
         <Icon name={resolveIconName(value) || 'add'} className="text-base text-primary" />{' '}
         <span className="flex-1 truncate text-left text-xs font-medium text-foreground">
           {' '}
-          {value ? (ICON_LABELS[value as IconKey] ?? value) : 'Select an icon…'}{' '}
+          {value ? (ICON_LABELS[value as IconKey] ?? value) : tu('selectIcon')}{' '}
         </span>{' '}
         <ChevronDown
           className={cn(
@@ -391,7 +394,7 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search icons…"
+              placeholder={tu('searchIconsPlaceholder')}
               className={cn(inputClass, 'h-8 ps-7 text-xs')}
             />{' '}
           </div>{' '}
@@ -420,7 +423,7 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
             ))}{' '}
             {list.length === 0 && (
               <p className="col-span-5 py-3 text-center text-2xs text-muted-foreground">
-                No icons match “{query}”
+                {tu('noIconsMatch', { query })}
               </p>
             )}{' '}
           </div>{' '}

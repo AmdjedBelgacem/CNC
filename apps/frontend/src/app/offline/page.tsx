@@ -1,7 +1,9 @@
 'use client';
 import { WifiOff, RefreshCw, BookOpen, Layers, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 export default function OfflinePage() {
+  const t = useTranslations('offline');
   const [online, setOnline] = useState(true);
   useEffect(() => {
     const on = () => {
@@ -19,11 +21,10 @@ export default function OfflinePage() {
         {' '}
         <WifiOff className="size-8 text-muted-foreground" />{' '}
       </div>{' '}
-      <h1 className="mt-5 text-2xl font-bold tracking-tight">You&apos;re offline</h1>{' '}
+      <h1 className="mt-5 text-2xl font-bold tracking-tight">{t('title')}</h1>{' '}
       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
         {' '}
-        Your connection dropped — but you&apos;re not stuck. Previously opened pages and images are
-        still here. Anything that saves data needs to come back online.{' '}
+        {t('description')}{' '}
       </p>{' '}
       <div className="mt-7 flex flex-wrap justify-center gap-2">
         {' '}
@@ -32,14 +33,14 @@ export default function OfflinePage() {
           className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
         >
           {' '}
-          <RefreshCw className="size-4" /> {online ? 'Reload' : 'Retry when online'}{' '}
+          <RefreshCw className="size-4" /> {online ? t('reload') : t('retryWhenOnline')}{' '}
         </button>{' '}
         <a
           href="/"
           className="inline-flex items-center rounded-xl border bg-card px-5 py-2.5 text-sm font-medium shadow-sm hover:bg-muted"
         >
           {' '}
-          Go home{' '}
+          {t('goHome')}{' '}
         </a>{' '}
       </div>{' '}
       <div className="mt-10 grid w-full gap-3 text-left sm:grid-cols-3">
@@ -50,9 +51,9 @@ export default function OfflinePage() {
             {' '}
             <BookOpen className="size-4" />{' '}
           </div>{' '}
-          <p className="mt-3 text-sm font-semibold">Browse later</p>{' '}
+          <p className="mt-3 text-sm font-semibold">{t('browseLaterTitle')}</p>{' '}
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Visited course pages stay available for reading.
+            {t('browseLaterHint')}
           </p>{' '}
         </div>{' '}
         <div className="rounded-2xl border bg-card p-4">
@@ -61,9 +62,9 @@ export default function OfflinePage() {
             {' '}
             <Layers className="size-4" />{' '}
           </div>{' '}
-          <p className="mt-3 text-sm font-semibold">Cached assets</p>{' '}
+          <p className="mt-3 text-sm font-semibold">{t('cachedAssetsTitle')}</p>{' '}
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Images and styles from pages you&apos;ve already opened.
+            {t('cachedAssetsHint')}
           </p>{' '}
         </div>{' '}
         <div className="rounded-2xl border bg-card p-4">
@@ -72,9 +73,9 @@ export default function OfflinePage() {
             {' '}
             <Sparkles className="size-4" />{' '}
           </div>{' '}
-          <p className="mt-3 text-sm font-semibold">Live actions wait</p>{' '}
+          <p className="mt-3 text-sm font-semibold">{t('liveActionsTitle')}</p>{' '}
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Sign-in, checkout, saves and posts need a connection.
+            {t('liveActionsHint')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
@@ -84,22 +85,20 @@ export default function OfflinePage() {
           {' '}
           <div className="bg-card p-3">
             {' '}
-            <p className="font-semibold">Works offline</p>{' '}
+            <p className="font-semibold">{t('worksOfflineTitle')}</p>{' '}
             <p className="mt-1 leading-relaxed text-muted-foreground">
-              Previously visited pages · cached images/fonts · static chrome
+              {t('worksOfflineHint')}
             </p>{' '}
           </div>{' '}
           <div className="bg-muted/40 p-3">
             {' '}
-            <p className="font-semibold">Needs online</p>{' '}
-            <p className="mt-1 leading-relaxed text-muted-foreground">
-              Login, checkout, builder saves, feed writes
-            </p>{' '}
+            <p className="font-semibold">{t('needsOnlineTitle')}</p>{' '}
+            <p className="mt-1 leading-relaxed text-muted-foreground">{t('needsOnlineHint')}</p>{' '}
           </div>{' '}
         </div>{' '}
       </div>{' '}
       <p className="mt-6 text-xs text-muted-foreground">
-        We&apos;ll reload automatically when you come back online.
+        {t('autoReloadHint')}
       </p>{' '}
     </div>
   );

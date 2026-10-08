@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { ChevronRight, Moon, Search, Sun, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/theme-provider';
@@ -112,12 +113,13 @@ export function BarPrimaryButton({
 
 /** Sun/moon switch wired to the app color mode (persisted to localStorage). */
 export function ThemeToggle() {
+  const t = useTranslations('ui.adminChrome');
   const { colorMode, toggleColorMode } = useTheme();
   const dark = colorMode === 'dark';
   return (
     <BarIconButton
-      title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-      ariaLabel={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={dark ? t('switchToLight') : t('switchToDark')}
+      ariaLabel={dark ? t('switchToLight') : t('switchToDark')}
       onClick={toggleColorMode}
     >
       {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -133,7 +135,7 @@ export function ThemeToggle() {
 export function AdminCommandBar({
   trail,
   count,
-  live = 'Live',
+  live,
   search,
   actions,
   primary,
@@ -147,6 +149,9 @@ export function AdminCommandBar({
   primary?: ReactNode;
   themeToggle?: boolean;
 }) {
+  const t = useTranslations('ui.adminChrome');
+  const tc = useTranslations('common');
+  const liveLabel = live ?? t('live');
   const [scrolled, setScrolled] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -181,7 +186,7 @@ export function AdminCommandBar({
     <header className={cn(FUSED_BAR, scrolled && 'shadow-[0_12px_32px_-16px_rgba(15,23,42,0.25)]')}>
       <div className="flex w-full flex-col gap-2.5 px-4 py-3 sm:px-6 lg:h-16 lg:flex-row lg:items-center lg:gap-4 lg:py-0 lg:ps-20 lg:pe-8">
         <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-13">
+          <nav aria-label={t('breadcrumb')} className="flex min-w-0 items-center gap-1.5 text-13">
             {context.map((item) => (
               <span key={item.label} className="flex shrink-0 items-center gap-1.5">
                 {item.href ? (
@@ -209,12 +214,12 @@ export function AdminCommandBar({
           {live !== false && (
             <>
               <span className="hidden h-4 w-px bg-border sm:block" aria-hidden="true" />
-              <span className="hidden items-center gap-1.5 sm:flex" title="Sync status">
+              <span className="hidden items-center gap-1.5 sm:flex" title={t('syncStatus')}>
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
                 </span>
-                <span className="text-xs font-medium text-muted-foreground">{live}</span>
+                <span className="text-xs font-medium text-muted-foreground">{liveLabel}</span>
               </span>
             </>
           )}
@@ -228,8 +233,8 @@ export function AdminCommandBar({
                 ref={searchRef}
                 value={search.value}
                 onChange={(e) => search.onChange(e.target.value)}
-                placeholder={search.placeholder ?? 'Search…'}
-                aria-label={search.ariaLabel ?? 'Search'}
+                placeholder={search.placeholder ?? t('searchPlaceholder')}
+                aria-label={search.ariaLabel ?? tc('search')}
                 className="h-9 w-full rounded-md border border-border bg-muted/50 ps-9 pe-12 text-13 text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary/60 focus:bg-background focus:ring-4 focus:ring-primary/10"
               />
               <div className="absolute end-2.5 top-1/2 flex -translate-y-1/2 items-center">
@@ -237,7 +242,7 @@ export function AdminCommandBar({
                   <button
                     type="button"
                     onClick={() => search.onChange('')}
-                    aria-label="Clear search"
+                    aria-label={t('clearSearch')}
                     className="rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   >
                     <X className="size-3.5" />

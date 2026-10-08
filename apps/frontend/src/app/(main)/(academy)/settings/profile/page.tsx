@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ function readFileAsDataURL(file: File): Promise<string> {
   });
 }
 export default function EditProfilePage() {
+  const t = useTranslations('account');
   const { user, refreshProfile } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -103,12 +105,12 @@ export default function EditProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataUrl }),
       });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) throw new Error(t('profile.uploadFailed'));
       const data = await res.json();
       setAvatarPreview(data.avatarUrl);
       await refreshProfile();
     } catch {
-      setError('Failed to upload avatar');
+      setError(t('profile.avatarUploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -125,10 +127,10 @@ export default function EditProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataUrl }),
       });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) throw new Error(t('profile.uploadFailed'));
       await refreshProfile();
     } catch {
-      setError('Failed to upload cover');
+      setError(t('profile.coverUploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -146,13 +148,13 @@ export default function EditProfilePage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Failed to save');
+        throw new Error(data.message || t('profile.saveFailed'));
       }
       setSaved(true);
       await refreshProfile();
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      setError(err instanceof Error ? err.message : t('profile.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -193,13 +195,13 @@ export default function EditProfilePage() {
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
         throw new Error(
-          typeof detail?.message === 'string' ? detail.message : 'Failed to save portfolio item',
+          typeof detail?.message === 'string' ? detail.message : t('profile.savePortfolioFailed'),
         );
       }
       await loadPortfolio();
       resetPfForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save portfolio item');
+      setError(err instanceof Error ? err.message : t('profile.savePortfolioFailed'));
     } finally {
       setPfSaving(false);
     }
@@ -207,10 +209,10 @@ export default function EditProfilePage() {
   const handleDeletePortfolio = async (id: string) => {
     try {
       const res = await apiProxyFetch(`/api/proxy/portfolio/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
+      if (!res.ok) throw new Error(t('profile.deleteFailed'));
       await loadPortfolio();
     } catch {
-      setError('Failed to delete portfolio item');
+      setError(t('profile.deletePortfolioFailed'));
     }
   };
   const handleMovePortfolio = async (id: string, direction: 'up' | 'down') => {
@@ -260,9 +262,9 @@ export default function EditProfilePage() {
         </div>{' '}
         <div>
           {' '}
-          <h1 className="text-xl font-semibold tracking-tight">Edit Profile</h1>{' '}
+          <h1 className="text-xl font-semibold tracking-tight">{t('profile.pageTitle')}</h1>{' '}
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Your public presence across the platform — make it count.
+            {t('profile.pageSubtitle')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
@@ -273,7 +275,7 @@ export default function EditProfilePage() {
       )}{' '}
       {saved && (
         <div className="flex gap-3 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success dark:border-success/30 dark:bg-success/10 dark:text-success">
-          <Check className="size-4 shrink-0 mt-0.5" /> Profile updated successfully.
+          <Check className="size-4 shrink-0 mt-0.5" /> {t('profile.savedToast')}
         </div>
       )}{' '}
       {/* Cover & Avatar */}{' '}
@@ -282,7 +284,7 @@ export default function EditProfilePage() {
         <div className="relative h-40 sm:h-48 bg-muted">
           {' '}
           {coverPreview ? (
-            <img src={coverPreview} alt="Cover" className="h-full w-full object-cover" />
+            <img src={coverPreview} alt={t('profile.coverAlt')} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-primary/10">
               {' '}
@@ -295,7 +297,7 @@ export default function EditProfilePage() {
             className="absolute bottom-3 end-3 flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-card transition"
           >
             {' '}
-            <Camera className="size-3.5" /> Change cover{' '}
+            <Camera className="size-3.5" /> {t('profile.changeCover')}{' '}
           </button>{' '}
           <input
             ref={coverInputRef}
@@ -335,9 +337,9 @@ export default function EditProfilePage() {
         </div>{' '}
         <div className="px-6 pb-6 pt-12">
           {' '}
-          <h3 className="font-semibold">{user?.name || 'Your Name'}</h3>{' '}
+          <h3 className="font-semibold">{user?.name || t('profile.yourName')}</h3>{' '}
           <p className="text-sm text-muted-foreground">
-            {user?.headline || 'Add a headline to stand out'}
+            {user?.headline || t('profile.addHeadline')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
@@ -350,11 +352,9 @@ export default function EditProfilePage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
               <FileText className="size-3.5" />
             </span>{' '}
-            Profile Information
+            {t('profile.infoTitle')}
           </h2>{' '}
-          <p className="mt-1 text-xs text-muted-foreground">
-            This information will appear on your public profile.
-          </p>{' '}
+          <p className="mt-1 text-xs text-muted-foreground">{t('profile.infoDesc')}</p>{' '}
         </div>{' '}
         <div className="p-6">
           {' '}
@@ -364,7 +364,7 @@ export default function EditProfilePage() {
               {' '}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Display Name
+                  {t('profile.displayName')}
                 </label>
                 <Input
                   value={form.name}
@@ -374,7 +374,7 @@ export default function EditProfilePage() {
               </div>{' '}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Username
+                  {t('profile.username')}
                 </label>
                 <div className="relative">
                   <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -390,35 +390,35 @@ export default function EditProfilePage() {
             </div>{' '}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Headline
+                {t('profile.headline')}
               </label>
               <Input
                 value={form.headline}
                 onChange={(e) => setForm({ ...form, headline: e.target.value })}
-                placeholder="e.g. CNC Machinist | Manufacturing Engineer"
+                placeholder={t('profile.headlinePlaceholder')}
                 className="h-10 rounded-xl bg-muted/20"
               />
             </div>{' '}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Bio
+                {t('profile.bio')}
               </label>
               <textarea
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 rows={4}
                 className="flex w-full rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
-                placeholder="Tell us about yourself..."
+                placeholder={t('profile.bioPlaceholder')}
               />
             </div>{' '}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <MapPin className="size-3.5" /> Location
+                <MapPin className="size-3.5" /> {t('profile.location')}
               </label>
               <Input
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="e.g. Detroit, MI"
+                placeholder={t('profile.locationPlaceholder')}
                 className="h-10 rounded-xl bg-muted/20"
               />
             </div>{' '}
@@ -428,7 +428,7 @@ export default function EditProfilePage() {
                 disabled={saving || uploading}
                 className="h-9 rounded-full px-6 shadow-md"
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? t('account.saving') : t('account.saveChanges')}
               </Button>
             </div>{' '}
           </form>{' '}
@@ -445,11 +445,9 @@ export default function EditProfilePage() {
               <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
                 <Briefcase className="size-3.5" />
               </span>{' '}
-              Portfolio
+              {t('profile.portfolio')}
             </h2>{' '}
-            <p className="mt-1 text-xs text-muted-foreground">
-              Showcase your projects and work.
-            </p>{' '}
+            <p className="mt-1 text-xs text-muted-foreground">{t('profile.portfolioDesc')}</p>{' '}
           </div>{' '}
           <Button
             size="sm"
@@ -460,7 +458,7 @@ export default function EditProfilePage() {
             }}
             className="h-8 rounded-full gap-1.5"
           >
-            <Plus className="size-3.5" /> Add
+            <Plus className="size-3.5" /> {t('profile.portfolioAdd')}
           </Button>{' '}
         </div>{' '}
         <div className="p-6 space-y-4">
@@ -473,7 +471,7 @@ export default function EditProfilePage() {
               {' '}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Title *
+                  {t('profile.titleRequired')}
                 </label>
                 <Input
                   value={pfForm.title}
@@ -484,7 +482,7 @@ export default function EditProfilePage() {
               </div>{' '}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Description
+                  {t('profile.description')}
                 </label>
                 <textarea
                   value={pfForm.description}
@@ -497,7 +495,7 @@ export default function EditProfilePage() {
                 {' '}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Project URL
+                    {t('profile.projectUrl')}
                   </label>
                   <div className="relative">
                     <Link2 className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -511,7 +509,7 @@ export default function EditProfilePage() {
                 </div>{' '}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Tags
+                    {t('profile.tags')}
                   </label>
                   <Input
                     value={pfForm.tags}
@@ -523,13 +521,13 @@ export default function EditProfilePage() {
               </div>{' '}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Image
+                  {t('profile.image')}
                 </label>
                 {pfForm.image ? (
                   <div className="relative inline-block">
                     <img
                       src={pfForm.image}
-                      alt="Preview"
+                      alt={t('profile.imageAlt')}
                       className="h-24 w-36 rounded-xl object-cover border shadow-sm"
                     />
                     <button
@@ -543,7 +541,7 @@ export default function EditProfilePage() {
                 ) : (
                   <label className="flex h-24 w-36 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed bg-muted/20 hover:bg-muted/40 transition">
                     <ImageIcon className="size-5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Upload image</span>
+                    <span className="text-xs text-muted-foreground">{t('profile.uploadImage')}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -559,7 +557,11 @@ export default function EditProfilePage() {
                   disabled={pfSaving || !pfForm.title.trim()}
                   className="rounded-full"
                 >
-                  {pfSaving ? 'Saving...' : editingPortfolioId ? 'Update' : 'Add Project'}
+                  {pfSaving
+                    ? t('account.saving')
+                    : editingPortfolioId
+                      ? t('profile.update')
+                      : t('profile.addProject')}
                 </Button>
                 <Button
                   type="button"
@@ -571,22 +573,24 @@ export default function EditProfilePage() {
                   }}
                   className="rounded-full"
                 >
-                  Cancel
+                  {t('account.cancel')}
                 </Button>
               </div>{' '}
             </form>
           )}{' '}
           {portfolioLoading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Loading portfolio...</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {t('profile.loadingPortfolio')}
+            </p>
           ) : portfolio.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed bg-muted/10 px-8 py-12 text-center">
               {' '}
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
                 <ImageIcon className="size-6 text-muted-foreground" />
               </div>{' '}
-              <p className="mt-3 text-sm font-medium">No portfolio items yet</p>{' '}
+              <p className="mt-3 text-sm font-medium">{t('profile.noPortfolioItems')}</p>{' '}
               <p className="text-xs text-muted-foreground">
-                Add a project to showcase your work.
+                {t('profile.noPortfolioItemsHint')}
               </p>{' '}
             </div>
           ) : (
@@ -653,7 +657,7 @@ export default function EditProfilePage() {
                       rel="noopener noreferrer"
                       className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                     >
-                      <ExternalLink className="size-3.5" /> View Project
+                      <ExternalLink className="size-3.5" /> {t('profile.viewProject')}
                     </a>
                   )}{' '}
                 </div>

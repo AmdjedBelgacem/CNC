@@ -30,6 +30,8 @@ import { cn } from '@/lib/utils';
 
 export function FeedStream({ embedded = false }: { embedded?: boolean }) {
   const t = useTranslations('feed');
+  const tu = useTranslations('ui.feed');
+  const tc = useTranslations('common');
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [scope, setScope] = useState<'discover' | 'following'>('discover');
@@ -95,11 +97,11 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
         <div className="flex items-center gap-2.5">
           <span className="inline-flex items-center gap-1.5 rounded-sm bg-primary px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-primary-foreground">
             <Radio className="size-3" />
-            Live
+            {tu('live')}
           </span>
           <div className="hidden sm:block">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Community wire
+              {tu('communityWire')}
             </p>
             <p className="font-display text-sm font-semibold tracking-tight text-foreground">
               {scope === 'discover' ? t('discover') : t('myFeed')}
@@ -239,7 +241,7 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
           {t('subtitle')}
         </p>
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          {!isLoading && !isError ? `${posts.length} on wire` : ' '}
+          {!isLoading && !isError ? tu('onWireCount', { count: posts.length }) : ' '}
         </p>
       </div>
 
@@ -357,7 +359,7 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
           </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setComposerOpen(false)}>
-              Cancel
+              {tc('cancel')}
             </Button>
             <Button onClick={() => void submit()} disabled={!draft.trim()} loading={createPost.isPending}>
               {createPost.isPending ? <Loader2 /> : <PenLine />}

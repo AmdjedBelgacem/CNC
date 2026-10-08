@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,22 +28,22 @@ interface AcademyOption {
 const templates = [
   {
     id: 'blank',
-    name: 'Start from scratch',
-    description: 'A clean course with a flexible curriculum.',
+    nameKey: 'templates.blank.name',
+    descriptionKey: 'templates.blank.description',
     icon: Sparkles,
     tone: 'from-primary/20 to-primary/5 text-primary',
   },
   {
     id: 'workshop',
-    name: 'Workshop blueprint',
-    description: 'A practical, lesson-first structure for makers.',
+    nameKey: 'templates.workshop.name',
+    descriptionKey: 'templates.workshop.description',
     icon: Wrench,
     tone: 'from-warning/20 to-warning/5 text-warning',
   },
   {
     id: 'academy',
-    name: 'Academy pathway',
-    description: 'A polished pathway for an academy catalog.',
+    nameKey: 'templates.academy.name',
+    descriptionKey: 'templates.academy.description',
     icon: GraduationCap,
     tone: 'from-info/20 to-info/5 text-info',
   },
@@ -50,6 +51,10 @@ const templates = [
 
 export default function NewCoursePage() {
   const router = useRouter();
+  const t = useTranslations('admin.coursesNew');
+  const tCommon = useTranslations('common');
+  const tCourses = useTranslations('admin.coursesPage');
+  const tStudio = useTranslations('courses.studio');
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
@@ -96,11 +101,11 @@ export default function NewCoursePage() {
     event.preventDefault();
     setError(null);
     if (!title.trim()) {
-      setError('Add a course title to continue.');
+      setError(t('errTitleRequired'));
       return;
     }
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedSlug)) {
-      setError('Use a lowercase URL slug made of letters, numbers, and hyphens.');
+      setError(t('errInvalidSlug'));
       return;
     }
     setSubmitting(true);
@@ -111,12 +116,12 @@ export default function NewCoursePage() {
         academyId: academyId || undefined,
         metadata: template === 'blank' ? undefined : { template },
       });
-      toast({ type: 'ok', title: 'Course draft created' });
+      toast({ type: 'ok', title: t('draftCreated') });
       router.push(`/admin/courses/${created.slug}/edit?step=basics`);
     } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : 'Could not create course';
+      const message = submitError instanceof Error ? submitError.message : t('createFailedFallback');
       setError(message);
-      toast({ type: 'err', title: 'Course creation failed', description: message });
+      toast({ type: 'err', title: t('createFailed'), description: message });
     } finally {
       setSubmitting(false);
     }
@@ -131,7 +136,7 @@ export default function NewCoursePage() {
           className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
         >
           <ArrowLeft className="size-4 rtl:rotate-180" />
-          Back to courses
+          {tStudio('backToCourses')}
         </button>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
@@ -141,17 +146,17 @@ export default function NewCoursePage() {
                 <BookOpen className="size-6" />
               </span>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Course Studio</p>
-                <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">Create a course</h1>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{tStudio('title')}</p>
+                <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">{t('createTitle')}</h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  Start with the essentials. You can shape the curriculum, media, pricing, and publishing checklist in the studio.
+                  {t('subtitle')}
                 </p>
               </div>
             </div>
 
             <div className="mt-8 space-y-6">
               <div className="space-y-2">
-                <label htmlFor="course-title" className="text-sm font-semibold text-foreground">Course title <span className="text-destructive">*</span></label>
+                <label htmlFor="course-title" className="text-sm font-semibold text-foreground">{t('titleLabel')} <span className="text-destructive">*</span></label>
                 <input
                   id="course-title"
                   autoFocus
@@ -160,14 +165,14 @@ export default function NewCoursePage() {
                     setTitle(event.target.value);
                     if (!slugTouched) setSlug(slugify(event.target.value));
                   }}
-                  placeholder="e.g. CNC Milling Fundamentals"
+                  placeholder={tStudio('titlePlaceholder')}
                   className="h-12 w-full rounded-xl border border-input bg-background px-4 text-base text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-4 focus:ring-primary/10"
                 />
-                <p className="text-xs text-muted-foreground">Use a clear promise learners can recognize in the catalog.</p>
+                <p className="text-xs text-muted-foreground">{t('titleHint')}</p>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="course-slug" className="text-sm font-semibold text-foreground">URL slug <span className="text-destructive">*</span></label>
+                <label htmlFor="course-slug" className="text-sm font-semibold text-foreground">{t('slugLabel')} <span className="text-destructive">*</span></label>
                 <div className="flex h-12 items-center rounded-xl border border-input bg-background px-4 transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
                   <span className="shrink-0 text-sm text-muted-foreground">/courses/</span>
                   <input
@@ -181,11 +186,11 @@ export default function NewCoursePage() {
                     placeholder="cnc-milling-fundamentals"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">This becomes the public course address.</p>
+                <p className="text-xs text-muted-foreground">{t('slugHint')}</p>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="course-academy" className="text-sm font-semibold text-foreground">Academy</label>
+                <label htmlFor="course-academy" className="text-sm font-semibold text-foreground">{tCourses('academyLabel')}</label>
                 <select
                   id="course-academy"
                   value={academyId}
@@ -193,18 +198,18 @@ export default function NewCoursePage() {
                   disabled={loadingAcademies}
                   className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:opacity-60"
                 >
-                  <option value="">{loadingAcademies ? 'Loading academies…' : 'No academy — tenant library'}</option>
+                  <option value="">{loadingAcademies ? t('loadingAcademies') : t('noAcademyOption')}</option>
                   {academies.map((academy) => (
                     <option key={academy.id} value={academy.id}>{academy.title}</option>
                   ))}
                 </select>
-                <p className="text-xs text-muted-foreground">Assigning an academy makes this course available in its catalog after publishing.</p>
+                <p className="text-xs text-muted-foreground">{t('academyHint')}</p>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <LayoutTemplate className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">Choose a starting point</span>
+                  <span className="text-sm font-semibold text-foreground">{t('chooseTemplate')}</span>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {templates.map((item) => {
@@ -222,8 +227,8 @@ export default function NewCoursePage() {
                       >
                         {active && <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3.5" /></span>}
                         <span className={cn('mb-3 flex size-9 items-center justify-center rounded-lg bg-gradient-to-br', item.tone)}><Icon className="size-4" /></span>
-                        <span className="block text-sm font-semibold text-foreground">{item.name}</span>
-                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{item.description}</span>
+                        <span className="block text-sm font-semibold text-foreground">{t(item.nameKey)}</span>
+                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{t(item.descriptionKey)}</span>
                       </button>
                     );
                   })}
@@ -238,22 +243,22 @@ export default function NewCoursePage() {
             )}
 
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => router.push('/admin/courses')} className="h-11 rounded-xl px-5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">Cancel</button>
+              <button type="button" onClick={() => router.push('/admin/courses')} className="h-11 rounded-xl px-5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">{tCommon('cancel')}</button>
               <button type="submit" disabled={!canSubmit} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4 rtl:rotate-180" />}
-                {submitting ? 'Creating course…' : 'Create and open Studio'}
+                {submitting ? t('creating') : t('submitLabel')}
               </button>
             </div>
           </form>
 
           <aside className="space-y-4 lg:sticky lg:top-8">
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">What happens next</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('nextTitle')}</p>
               <ol className="mt-5 space-y-5">
                 {[
-                  ['01', 'Basics', 'Name your course and choose its academy.'],
-                  ['02', 'Curriculum', 'Shape sections, lessons, and rich learning blocks.'],
-                  ['03', 'Publish', 'Review blockers, localize, and go live.'],
+                  ['01', tStudio('steps.basics'), t('steps.basics.body')],
+                  ['02', tStudio('steps.curriculum'), t('steps.curriculum.body')],
+                  ['03', tStudio('steps.publish'), t('steps.publish.body')],
                 ].map(([number, titleText, body]) => (
                   <li key={number} className="flex gap-3">
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted font-mono text-xs font-semibold text-primary">{number}</span>
@@ -266,8 +271,8 @@ export default function NewCoursePage() {
               </ol>
             </div>
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm text-primary">
-              <p className="font-semibold">A guided flow, not a blank canvas.</p>
-              <p className="mt-1 text-xs leading-relaxed text-primary/80">You can always change the template, reorder content, and add Arabic translations later.</p>
+              <p className="font-semibold">{t('guidedTitle')}</p>
+              <p className="mt-1 text-xs leading-relaxed text-primary/80">{t('guidedBody')}</p>
             </div>
           </aside>
         </div>

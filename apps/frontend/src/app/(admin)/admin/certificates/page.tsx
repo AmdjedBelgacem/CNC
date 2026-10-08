@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate as formatDateLocalized } from '@/lib/format';
 import {
   Award,
   BadgeCheck,
@@ -85,11 +86,11 @@ function expiresSoon(c: CertificateRow): boolean {
   return at > Date.now() && at - Date.now() <= EXPIRY_WINDOW_MS;
 }
 
-function formatDate(iso?: string | null): string {
+function formatDate(iso: string | null | undefined, locale = 'en'): string {
   if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return (
+    formatDateLocalized(iso, locale, { month: 'short', day: 'numeric', year: 'numeric' }) || '—'
+  );
 }
 
 interface CourseOption {
@@ -110,6 +111,7 @@ function CertificateCard({
   t: (key: string, values?: Record<string, string | number | Date>) => string;
 }) {
   const st = certStatus(cert);
+  const locale = useLocale();
   const soon = expiresSoon(cert);
   const [regenerating, setRegenerating] = useState<string | null>(null);
 
@@ -198,11 +200,11 @@ function CertificateCard({
 
           <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-2xs text-muted-foreground">
             <span>
-              {t('issued', { default: 'Issued' })} {formatDate(cert.issuedAt)}
+              {t('issued', { default: 'Issued' })} {formatDate(cert.issuedAt, locale)}
             </span>
             {cert.expiresAt && (
               <span>
-                {t('expires', { default: 'Expires' })} {formatDate(cert.expiresAt)}
+                {t('expires', { default: 'Expires' })} {formatDate(cert.expiresAt, locale)}
               </span>
             )}
           </div>
@@ -344,6 +346,7 @@ export default function AdminCertificatesPage() {
   const t = useTranslations('admin.certificatesPage');
   const tCommon = useTranslations('common');
   const tAdmin = useTranslations('admin');
+  const locale = useLocale();
   const params = useSearchParams();
   const router = useRouter();
 
@@ -818,7 +821,7 @@ export default function AdminCertificatesPage() {
                               </p>
                             </td>
                             <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                              {formatDate(c.issuedAt)}
+                              {formatDate(c.issuedAt, locale)}
                             </td>
                             <td className="px-4 py-3.5">
                               <StatusPill

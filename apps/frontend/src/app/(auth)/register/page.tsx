@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 // OAuth: fetch a CSRF state from the backend, then redirect with redirect=1
 import { trackSignUp } from '@/lib/analytics';
@@ -18,6 +19,7 @@ async function oauthRedirect(provider: 'google') {
   } catch {} // Fallback: direct navigation (backend may still accept, or shows error) window.location.href = `/api/auth/oauth/${provider}?redirect=1`;
 }
 export default function RegisterPage() {
+  const t = useTranslations('auth');
   const { register } = useAuth();
   const [form, setForm] = useState({
     name: '',
@@ -36,11 +38,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('passwordsDoNotMatch'));
       return;
     }
     if (form.password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('passwordMinLength'));
       return;
     }
     setLoading(true);
@@ -54,7 +56,7 @@ await register({
       trackSignUp('password');
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      setError(err instanceof Error ? err.message : t('registrationFailed'));
     } finally {
       setLoading(false);
     }
@@ -78,21 +80,20 @@ await register({
         </div>{' '}
         <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
-          Check Your Email{' '}
+          {t('checkYourEmail')}{' '}
         </h1>{' '}
         <p className="mx-auto mb-6 mt-3 max-w-[360px] text-sm leading-relaxed text-muted-foreground">
           {' '}
-          We&apos;ve sent a verification link to{' '}
-          <strong className="text-foreground">{form.email}</strong>.{' '}
+          {t('verification.linkSentTo')} <strong className="text-foreground">{form.email}</strong>.{' '}
         </p>{' '}
         <div className="w-full rounded-xl border border-border bg-background/50 p-3.5 text-xs text-muted-foreground">
           {' '}
-          Didn&apos;t receive it? Check your spam folder or{' '}
+          {t('didntReceiveIt')}{' '}
           <Link
             href="/resend-verification"
             className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
           >
-            request a new link
+            {t('requestNewLink')}
           </Link>{' '}
         </div>{' '}
         <p className="mt-6 text-sm text-muted-foreground">
@@ -101,7 +102,7 @@ await register({
             href="/login"
             className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
           >
-            Go to Sign In
+            {t('goToSignIn')}
           </Link>{' '}
         </p>{' '}
       </div>
@@ -114,15 +115,15 @@ await register({
         {' '}
         <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
-          New Operator{' '}
+          {t('register.eyebrow')}{' '}
         </p>{' '}
         <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
-          Create Account{' '}
+          {t('createAccount')}{' '}
         </h1>{' '}
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           {' '}
-          Join the CNC manufacturing community{' '}
+          {t('register.subtitle')}{' '}
         </p>{' '}
       </div>{' '}
       <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -142,7 +143,7 @@ await register({
               className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
             >
               {' '}
-              Full Name{' '}
+              {t('fullName')}{' '}
             </label>{' '}
             <input
               id="name"
@@ -161,9 +162,9 @@ await register({
               className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
             >
               {' '}
-              Username{' '}
+              {t('username')}{' '}
               <span className="font-medium normal-case tracking-normal text-muted-foreground">
-                (opt)
+                {t('optional')}
               </span>{' '}
             </label>{' '}
             <input
@@ -182,12 +183,12 @@ await register({
             className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
-            Email{' '}
+            {t('email')}{' '}
           </label>{' '}
           <input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t('emailPlaceholder')}
             value={form.email}
             onChange={handleChange('email')}
             required
@@ -202,12 +203,12 @@ await register({
             className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
-            Password{' '}
+            {t('password')}{' '}
           </label>{' '}
           <input
             id="password"
             type="password"
-            placeholder="Min. 8 characters — uppercase, lowercase, number"
+            placeholder={t('passwordRequirementsPlaceholder')}
             value={form.password}
             onChange={handleChange('password')}
             required
@@ -222,12 +223,12 @@ await register({
             className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
-            Confirm Password{' '}
+            {t('confirmPassword')}{' '}
           </label>{' '}
           <input
             id="confirmPassword"
             type="password"
-            placeholder="Repeat your password"
+            placeholder={t('confirmPasswordPlaceholder')}
             value={form.confirmPassword}
             onChange={handleChange('confirmPassword')}
             required
@@ -241,7 +242,7 @@ await register({
           className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {' '}
-          {loading ? 'Creating account...' : 'Create Account'}{' '}
+          {loading ? t('creatingAccount') : t('createAccount')}{' '}
         </button>{' '}
       </form>{' '}
       <div className="relative my-8">
@@ -254,7 +255,7 @@ await register({
           {' '}
           <span className="bg-card px-3 text-2xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
             {' '}
-            Or sign up with{' '}
+            {t('orSignUpWith')}{' '}
           </span>{' '}
         </div>{' '}
       </div>{' '}
@@ -295,12 +296,12 @@ await register({
               </div>{' '}
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {' '}
-        Already have an account?{' '}
+        {t('alreadyHaveAccount')}{' '}
         <Link
           href="/login"
           className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
         >
-          Sign in
+          {t('signIn')}
         </Link>{' '}
       </p>{' '}
     </div>

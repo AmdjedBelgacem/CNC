@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 function VerifyEmailContent() {
+  const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
@@ -15,7 +17,7 @@ function VerifyEmailContent() {
     calledRef.current = true;
     if (!token) {
       setStatus('error');
-      setMessage('Invalid verification link. No token provided.');
+      setMessage(t('verifyEmail.invalidLink'));
       return;
     }
     verifyEmail(token)
@@ -25,7 +27,7 @@ function VerifyEmailContent() {
       })
       .catch((err) => {
         setStatus('error');
-        setMessage(err instanceof Error ? err.message : 'Verification failed');
+        setMessage(err instanceof Error ? err.message : t('verifyEmail.failed'));
       });
   }, [token, verifyEmail, router]);
   return (
@@ -55,11 +57,11 @@ function VerifyEmailContent() {
           </div>{' '}
           <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
             {' '}
-            Verifying...{' '}
+            {t('verifyEmail.verifying')}{' '}
           </h1>{' '}
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {' '}
-            Please wait while we verify your email{' '}
+            {t('verifyEmail.verifyingHint')}{' '}
           </p>{' '}
         </>
       )}{' '}
@@ -81,18 +83,18 @@ function VerifyEmailContent() {
           </div>{' '}
           <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
             {' '}
-            Email Verified!{' '}
+            {t('verifyEmail.successTitle')}{' '}
           </h1>{' '}
           <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">
             {' '}
-            Your email has been verified. Redirecting to sign in...{' '}
+            {t('verifyEmail.successHint')}{' '}
           </p>{' '}
           <button
             onClick={() => router.push('/login')}
             className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
           >
             {' '}
-            Go to Sign In{' '}
+            {t('goToSignIn')}{' '}
           </button>{' '}
         </>
       )}{' '}
@@ -114,7 +116,7 @@ function VerifyEmailContent() {
           </div>{' '}
           <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
             {' '}
-            Verification Failed{' '}
+            {t('verifyEmail.failedTitle')}{' '}
           </h1>{' '}
           <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">{message}</p>{' '}
           <div className="w-full space-y-2.5">
@@ -124,14 +126,14 @@ function VerifyEmailContent() {
               className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
             >
               {' '}
-              Go to Sign In{' '}
+              {t('goToSignIn')}{' '}
             </button>{' '}
             <button
               onClick={() => router.push('/resend-verification')}
               className="h-[44px] w-full rounded-xl border border-border bg-transparent text-13 font-semibold text-muted-foreground transition-all duration-200 hover:border-primary/40 hover:text-primary"
             >
               {' '}
-              Resend Verification{' '}
+              {t('verification.resend')}{' '}
             </button>{' '}
           </div>{' '}
         </>
@@ -140,12 +142,13 @@ function VerifyEmailContent() {
   );
 }
 export default function VerifyEmailPage() {
+  const tCommon = useTranslations('common');
   return (
     <Suspense
       fallback={
         <div className="flex h-full flex-col items-center justify-center">
           {' '}
-          <p className="text-sm text-muted-foreground">Loading...</p>{' '}
+          <p className="text-sm text-muted-foreground">{tCommon('loading')}</p>{' '}
         </div>
       }
     >

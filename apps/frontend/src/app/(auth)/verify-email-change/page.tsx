@@ -2,10 +2,12 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 function VerifyEmailChangeInner() {
+  const t = useTranslations('auth');
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -13,7 +15,7 @@ function VerifyEmailChangeInner() {
   useEffect(() => {
     if (!token) {
       setStatus('error');
-      setMessage('No verification token provided.');
+      setMessage(t('emailChange.missingToken'));
       return;
     }
     fetch('/api/proxy/auth/change-email/confirm', { credentials: 'include',
@@ -25,15 +27,15 @@ function VerifyEmailChangeInner() {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setStatus('success');
-          setMessage(data.message || 'Email address changed successfully.');
+          setMessage(data.message || t('emailChange.success'));
         } else {
           setStatus('error');
-          setMessage(data.message || 'Failed to verify email change.');
+          setMessage(data.message || t('emailChange.failed'));
         }
       })
       .catch(() => {
         setStatus('error');
-        setMessage('Network error. Please try again.');
+        setMessage(t('emailChange.networkError'));
       });
   }, [token]);
   return (
@@ -41,8 +43,8 @@ function VerifyEmailChangeInner() {
       {' '}
       <CardHeader className="text-center">
         {' '}
-        <CardTitle className="text-xl text-white">Email Change Verification</CardTitle>{' '}
-        <CardDescription>Confirming your new email address</CardDescription>{' '}
+        <CardTitle className="text-xl text-white">{t('emailChange.title')}</CardTitle>{' '}
+        <CardDescription>{t('emailChange.description')}</CardDescription>{' '}
       </CardHeader>{' '}
       <CardContent className="flex flex-col items-center gap-4 pb-8 text-center">
         {' '}
@@ -50,7 +52,7 @@ function VerifyEmailChangeInner() {
           <>
             {' '}
             <Loader2 className="h-12 w-12 animate-spin text-primary" />{' '}
-            <p className="text-sm text-muted-foreground">Verifying your email change...</p>{' '}
+            <p className="text-sm text-muted-foreground">{t('emailChange.verifying')}</p>{' '}
           </>
         )}{' '}
         {status === 'success' && (
@@ -60,7 +62,7 @@ function VerifyEmailChangeInner() {
             <p className="text-sm text-muted-foreground">{message}</p>{' '}
             <Button asChild className="mt-2 bg-primary text-black hover:bg-primary/90">
               {' '}
-              <Link href="/login">Sign In</Link>{' '}
+              <Link href="/login">{t('signIn')}</Link>{' '}
             </Button>{' '}
           </>
         )}{' '}
@@ -71,7 +73,7 @@ function VerifyEmailChangeInner() {
             <p className="text-sm text-muted-foreground">{message}</p>{' '}
             <Button asChild variant="outline" className="mt-2">
               {' '}
-              <Link href="/settings/account/security">Back to Security Settings</Link>{' '}
+              <Link href="/settings/account/security">{t('emailChange.backToSecurity')}</Link>{' '}
             </Button>{' '}
           </>
         )}{' '}

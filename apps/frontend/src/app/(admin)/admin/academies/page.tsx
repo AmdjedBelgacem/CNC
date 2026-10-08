@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import {
     BadgeCheck,
   BookOpen,
@@ -109,6 +110,7 @@ function hueFor(id: string): number {
 function timeAgo(
   iso: string,
   tCommon: (key: string, values?: Record<string, string | number | Date>) => string,
+  locale = 'en',
 ): string {
   const tm = new Date(iso).getTime();
   if (Number.isNaN(tm)) return '—';
@@ -120,7 +122,7 @@ function timeAgo(
   if (hours < 24) return tCommon('hoursAgo', { n: hours, default: '{n}h ago' });
   const days = Math.floor(hours / 24);
   if (days < 30) return tCommon('daysAgo', { n: days, default: '{n}d ago' });
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return formatDate(iso, locale, { month: 'short', year: 'numeric' });
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,6 +142,7 @@ function AcademyCard({
   tCommon: (key: string, values?: Record<string, string | number | Date>) => string;
 }) {
   const t = useTranslations('admin.academiesPage');
+  const locale = useLocale();
   const st = statusOf(academy);
   const accent = safeAccent(academy.accentColor);
   const hue = hueFor(academy.id);
@@ -252,7 +255,9 @@ function AcademyCard({
               }).replace(/^[\d\s]+/, '')}
             </span>
           </span>
-          <span className="text-2xs text-muted-foreground">{timeAgo(academy.updatedAt, tCommon)}</span>
+          <span className="text-2xs text-muted-foreground">
+            {timeAgo(academy.updatedAt, tCommon, locale)}
+          </span>
         </div>
       </div>
 
@@ -302,6 +307,7 @@ export default function AdminAcademiesPage() {
   const t = useTranslations('admin.academiesPage');
   const tAdmin = useTranslations('admin');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
   const status = params.get('status') ?? '';
@@ -785,13 +791,13 @@ export default function AdminAcademiesPage() {
                         </td>
                         <td className="px-4 py-3.5 text-end">
                           <p className="font-medium text-foreground">
-                            {new Date(a.updatedAt).toLocaleDateString('en-US', {
+                            {formatDate(a.updatedAt, locale, {
                               month: 'short',
                               day: 'numeric',
                             })}
                           </p>
                           <p className="text-2xs text-muted-foreground">
-                            {timeAgo(a.updatedAt, tCommon)}
+                            {timeAgo(a.updatedAt, tCommon, locale)}
                           </p>
                         </td>
                         <td className="py-3.5 pe-6 ps-4" onClick={(e) => e.stopPropagation()}>

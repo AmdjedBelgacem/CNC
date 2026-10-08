@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Palette, Sun, Moon, Monitor, Check, Paintbrush, LayoutGrid } from 'lucide-react';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 export default function AppearancePage() {
+  const t = useTranslations('account');
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>('system');
   const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [saving, setSaving] = useState(false);
@@ -35,15 +37,19 @@ export default function AppearancePage() {
       const applied = res.ok ? await res.json().catch(() => null) : null;
       if (!applied) {
         const detail = await res.json().catch(() => null);
-        throw new Error(typeof detail?.message === 'string' ? detail.message : 'Could not save appearance');
+        throw new Error(
+          typeof detail?.message === 'string' ? detail.message : t('appearance.saveFailed'),
+        );
       }
       if (applied.theme !== theme || applied.density !== density) {
-        throw new Error('Appearance settings were not applied. Please try again.');
+        throw new Error(
+          t('appearance.notApplied', { default: 'Appearance settings were not applied.' }),
+        );
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save appearance');
+      setError(e instanceof Error ? e.message : t('appearance.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -59,15 +65,15 @@ export default function AppearancePage() {
         </div>{' '}
         <div>
           {' '}
-          <h1 className="text-xl font-semibold tracking-tight">Appearance</h1>{' '}
+          <h1 className="text-xl font-semibold tracking-tight">{t('appearance.pageTitle')}</h1>{' '}
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Customize how the app looks and feels.
+            {t('appearance.pageSubtitle')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
       {saved && (
         <div className="flex gap-2 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success">
-          <Check className="size-4 shrink-0 mt-0.5" /> Appearance saved.
+          <Check className="size-4 shrink-0 mt-0.5" /> {t('appearance.savedToast')}
         </div>
       )}{' '}
       {error && (
@@ -86,18 +92,31 @@ export default function AppearancePage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
               <Paintbrush className="size-3.5" />
             </span>{' '}
-            Theme
+            {t('appearance.themeTitle')}
           </h2>{' '}
-          <p className="mt-1 text-xs text-muted-foreground">
-            Choose your preferred color scheme.
-          </p>{' '}
+          <p className="mt-1 text-xs text-muted-foreground">{t('appearance.themeDesc')}</p>{' '}
         </div>{' '}
         <div className="grid gap-3 p-6 sm:grid-cols-3">
           {' '}
           {[
-            { id: 'system', label: 'System', desc: 'Follow OS', icon: Monitor },
-            { id: 'light', label: 'Light', desc: 'Bright & clean', icon: Sun },
-            { id: 'dark', label: 'Dark', desc: 'Easy on eyes', icon: Moon },
+            {
+              id: 'system',
+              label: t('appearance.themeSystem'),
+              desc: t('appearance.themeSystemDesc'),
+              icon: Monitor,
+            },
+            {
+              id: 'light',
+              label: t('appearance.themeLight'),
+              desc: t('appearance.themeLightDesc'),
+              icon: Sun,
+            },
+            {
+              id: 'dark',
+              label: t('appearance.themeDark'),
+              desc: t('appearance.themeDarkDesc'),
+              icon: Moon,
+            },
           ].map((opt) => {
             const active = theme === opt.id;
             return (
@@ -144,15 +163,25 @@ export default function AppearancePage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
               <LayoutGrid className="size-3.5" />
             </span>{' '}
-            Density
+            {t('appearance.densityTitle')}
           </h2>{' '}
-          <p className="mt-1 text-xs text-muted-foreground">Adjust spacing and sizing.</p>{' '}
+          <p className="mt-1 text-xs text-muted-foreground">{t('appearance.densityDesc')}</p>{' '}
         </div>{' '}
         <div className="grid gap-3 p-6 sm:grid-cols-2">
           {' '}
           {[
-            { id: 'comfortable', label: 'Comfortable', desc: 'Spacious, breathable', pad: 'p-4' },
-            { id: 'compact', label: 'Compact', desc: 'Dense, information-rich', pad: 'p-2' },
+            {
+              id: 'comfortable',
+              label: t('appearance.densityComfortable'),
+              desc: t('appearance.densityComfortableDesc'),
+              pad: 'p-4',
+            },
+            {
+              id: 'compact',
+              label: t('appearance.densityCompact'),
+              desc: t('appearance.densityCompactDesc'),
+              pad: 'p-2',
+            },
           ].map((opt) => {
             const active = density === opt.id;
             return (
@@ -177,7 +206,7 @@ export default function AppearancePage() {
       <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-card px-4 py-3 shadow-lg">
         {' '}
         <Button onClick={handleSave} disabled={saving} className="h-9 rounded-full px-6 shadow-md">
-          {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Changes'}
+          {saving ? t('account.saving') : saved ? t('account.savedOk') : t('account.saveChanges')}
         </Button>{' '}
       </div>{' '}
     </div>

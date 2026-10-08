@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
@@ -19,6 +20,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 export default function SecuritySettingsPage() {
+  const tSecurity = useTranslations('account');
   const auth = useAuth();
   const {
     user,
@@ -88,16 +90,16 @@ export default function SecuritySettingsPage() {
     setPwError('');
     setPwSuccess('');
     if (pwForm.newPassword !== pwForm.confirmPassword) {
-      setPwError('Passwords do not match');
+      setPwError(tSecurity('security.pwMismatch'));
       return;
     }
     setPwLoading(true);
     try {
       await changePassword(pwForm.currentPassword, pwForm.newPassword);
-      setPwSuccess('Password changed. You have been logged out of all devices.');
+      setPwSuccess(tSecurity('security.pwChangedShort'));
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setPwError(err instanceof Error ? err.message : 'Failed to change password');
+      setPwError(err instanceof Error ? err.message : tSecurity('security.pwChangeFailed'));
     } finally {
       setPwLoading(false);
     }
@@ -107,7 +109,7 @@ export default function SecuritySettingsPage() {
     setEmailError('');
     setEmailSuccess('');
     if (!emailForm.newEmail) {
-      setEmailError('Enter a new email address');
+      setEmailError(tSecurity('security.newEmailRequired'));
       return;
     }
     setReauthAction('email');
@@ -119,10 +121,10 @@ export default function SecuritySettingsPage() {
       // Must forward the password the reauth modal already verified. Sending ''
       // made every email change fail with 400 "Password is incorrect".
       await changeEmail(emailForm.newEmail, verifiedPassword);
-      setEmailSuccess('Verification email sent. Check your inbox.');
+      setEmailSuccess(tSecurity('security.emailVerificationSentShort'));
       setEmailForm({ newEmail: '', password: '' });
     } catch (err) {
-      setEmailError(err instanceof Error ? err.message : 'Failed');
+      setEmailError(err instanceof Error ? err.message : tSecurity('account.unknownError'));
     } finally {
       setEmailLoading(false);
     }
@@ -135,7 +137,7 @@ export default function SecuritySettingsPage() {
       setTwoFactorSecret(result.secret);
       setTwoFactorQr(result.qrCode);
     } catch {
-      setTwoFactorError('Failed to setup 2FA');
+      setTwoFactorError(tSecurity('security.twoFactorSetupFailed'));
     } finally {
       setTwoFactorLoading(false);
     }
@@ -148,7 +150,7 @@ export default function SecuritySettingsPage() {
       setTwoFactorBackupCodes(result.backupCodes);
       setTwoFactorStatus('verify');
     } catch (err) {
-      setTwoFactorError(err instanceof Error ? err.message : 'Failed to enable 2FA');
+      setTwoFactorError(err instanceof Error ? err.message : tSecurity('security.twoFactorEnableFailed'));
     } finally {
       setTwoFactorLoading(false);
     }
@@ -164,9 +166,9 @@ export default function SecuritySettingsPage() {
         </div>{' '}
         <div>
           {' '}
-          <h1 className="text-xl font-semibold tracking-tight">Security</h1>{' '}
+          <h1 className="text-xl font-semibold tracking-tight">{tSecurity('security.pageTitleSimple')}</h1>{' '}
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Manage your password, email, and advanced security controls.
+            {tSecurity('security.pageSubtitleAdvanced')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
@@ -179,10 +181,10 @@ export default function SecuritySettingsPage() {
           <div>
             {' '}
             <p className="text-sm font-semibold text-success dark:text-success">
-              Two-factor authentication is active
+              {tSecurity('security.twoFactorActive')}
             </p>{' '}
             <p className="text-xs leading-relaxed text-success/80 dark:text-success">
-              You&apos;ll need a code from your authenticator app to sign in.
+              {tSecurity('security.twoFactorActiveHint')}
             </p>{' '}
           </div>{' '}
         </div>
@@ -192,9 +194,9 @@ export default function SecuritySettingsPage() {
         {' '}
         {(
           [
-            ['password', 'Password & Email'],
-            ['sessions', 'Sessions'],
-            ['history', 'History'],
+            ['password', tSecurity('security.tabPasswordEmail')],
+            ['sessions', tSecurity('security.tabSessions')],
+            ['history', tSecurity('security.tabHistory')],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -218,10 +220,10 @@ export default function SecuritySettingsPage() {
                 <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
                   <KeyRound className="size-3.5" />
                 </span>{' '}
-                Change Password
+                {tSecurity('security.changePassword')}
               </h2>{' '}
               <p className="mt-1 text-xs text-muted-foreground">
-                You&apos;ll be logged out of all devices after changing.
+                {tSecurity('security.changePasswordDescAfter')}
               </p>{' '}
             </div>{' '}
             <div className="p-6">
@@ -241,7 +243,7 @@ export default function SecuritySettingsPage() {
                 <div className="space-y-2">
                   {' '}
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Current Password
+                    {tSecurity('security.currentPassword')}
                   </label>{' '}
                   <div className="relative">
                     {' '}
@@ -265,7 +267,7 @@ export default function SecuritySettingsPage() {
                   {' '}
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      New Password
+                      {tSecurity('security.newPassword')}
                     </label>
                     <Input
                       type="password"
@@ -277,7 +279,7 @@ export default function SecuritySettingsPage() {
                   </div>{' '}
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Confirm
+                      {tSecurity('security.confirm')}
                     </label>
                     <Input
                       type="password"
@@ -289,7 +291,7 @@ export default function SecuritySettingsPage() {
                   </div>{' '}
                 </div>{' '}
                 <Button type="submit" disabled={pwLoading} className="h-9 rounded-full px-5">
-                  {pwLoading ? 'Changing...' : 'Change Password'}
+                  {pwLoading ? tSecurity('security.changing') : tSecurity('security.changePassword')}
                 </Button>{' '}
               </form>{' '}
             </div>{' '}
@@ -302,10 +304,10 @@ export default function SecuritySettingsPage() {
                 <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
                   <Mail className="size-3.5" />
                 </span>{' '}
-                Change Email
+                {tSecurity('security.changeEmail')}
               </h2>{' '}
               <p className="mt-1 text-xs text-muted-foreground">
-                You&apos;ll need to verify the new address.
+                {tSecurity('security.changeEmailDescVerify')}
               </p>{' '}
             </div>{' '}
             <div className="p-6">
@@ -324,7 +326,7 @@ export default function SecuritySettingsPage() {
                 )}{' '}
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    New Email
+                    {tSecurity('security.newEmail')}
                   </label>
                   <Input
                     type="email"
@@ -336,7 +338,7 @@ export default function SecuritySettingsPage() {
                   />
                 </div>{' '}
                 <Button type="submit" disabled={emailLoading} className="h-9 rounded-full px-5">
-                  {emailLoading ? 'Sending...' : 'Send Verification'}
+                  {emailLoading ? tSecurity('security.sending') : tSecurity('security.sendVerification')}
                 </Button>{' '}
               </form>{' '}
             </div>{' '}
@@ -351,15 +353,15 @@ export default function SecuritySettingsPage() {
                   <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
                     <Smartphone className="size-3.5" />
                   </span>{' '}
-                  Two-Factor Authentication
+                  {tSecurity('security.twoFactorTitle')}
                 </h2>{' '}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Add an extra layer of security.
+                  {tSecurity('security.twoFactorDescShort')}
                 </p>{' '}
               </div>{' '}
               {user?.twoFactorEnabled && (
                 <span className="rounded-full bg-success/10 px-2.5 py-1 text-2xs font-bold uppercase tracking-wider text-success">
-                  Enabled
+                  {tSecurity('security.twoFactorEnabledBadge')}
                 </span>
               )}{' '}
             </div>{' '}
@@ -371,7 +373,7 @@ export default function SecuritySettingsPage() {
                   disabled={twoFactorLoading}
                   className="rounded-full"
                 >
-                  Enable Two-Factor Authentication
+                  {tSecurity('security.enableTwoFactor')}
                 </Button>
               )}{' '}
               {twoFactorStatus === 'idle' && user?.twoFactorEnabled && (
@@ -383,24 +385,22 @@ export default function SecuritySettingsPage() {
                   }}
                   className="rounded-full border-destructive text-destructive hover:bg-destructive/10"
                 >
-                  Disable Two-Factor Authentication
+                  {tSecurity('security.disableTwoFactor')}
                 </Button>
               )}{' '}
               {twoFactorStatus === 'setup' && (
                 <div className="space-y-4">
                   {' '}
-                  <p className="text-sm text-muted-foreground">
-                    Scan this QR code with your authenticator app.
-                  </p>{' '}
+                  <p className="text-sm text-muted-foreground">{tSecurity('security.scanQrHintShort')}</p>{' '}
                   {twoFactorQr && (
                     <div className="flex justify-center rounded-2xl border bg-card p-4">
-                      <img src={twoFactorQr} alt="2FA QR Code" className="rounded-xl" />
+                      <img src={twoFactorQr} alt={tSecurity('security.qrAlt')} className="rounded-xl" />
                     </div>
                   )}{' '}
                   <div className="space-y-2">
                     {' '}
                     <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Enter the 6-digit code
+                      {tSecurity('security.enterCode')}
                     </label>{' '}
                     <Input
                       type="text"
@@ -422,7 +422,7 @@ export default function SecuritySettingsPage() {
                     disabled={twoFactorLoading || twoFactorToken.length !== 6}
                     className="rounded-full px-6"
                   >
-                    Enable 2FA
+                    {tSecurity('security.enable2faShort')}
                   </Button>{' '}
                 </div>
               )}{' '}
@@ -430,13 +430,13 @@ export default function SecuritySettingsPage() {
                 <div className="space-y-4">
                   {' '}
                   <div className="rounded-xl border border-success bg-success/10 px-4 py-3 text-sm text-success">
-                    Two-factor authentication is now enabled!
+                    {tSecurity('security.twoFactorEnabledToast')}
                   </div>{' '}
                   <div className="rounded-2xl border border-warning/30 bg-warning p-4">
                     {' '}
-                    <p className="text-sm font-semibold">Save these recovery codes</p>{' '}
+                    <p className="text-sm font-semibold">{tSecurity('security.saveRecoveryCodes')}</p>{' '}
                     <p className="text-xs text-muted-foreground mb-3">
-                      Each code can be used only once. Store them safely.
+                      {tSecurity('security.recoveryCodesHintShort')}
                     </p>{' '}
                     <div className="grid grid-cols-2 gap-2">
                       {twoFactorBackupCodes.map((code, i) => (
@@ -456,7 +456,7 @@ export default function SecuritySettingsPage() {
                     </div>{' '}
                   </div>{' '}
                   <Button onClick={() => setTwoFactorStatus('idle')} className="rounded-full">
-                    Done
+                    {tSecurity('security.done')}
                   </Button>{' '}
                 </div>
               )}{' '}
@@ -473,18 +473,18 @@ export default function SecuritySettingsPage() {
               <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
                 <Monitor className="size-3.5" />
               </span>{' '}
-              Active Sessions
+              {tSecurity('security.activeSessions')}
             </h2>{' '}
             <p className="mt-1 text-xs text-muted-foreground">
-              Manage devices where you&apos;re logged in.
+              {tSecurity('security.activeSessionsDesc')}
             </p>{' '}
           </div>{' '}
           <div className="p-6 space-y-4">
             {' '}
             {sessionsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading sessions...</p>
+              <p className="text-sm text-muted-foreground">{tSecurity('security.loadingSessions')}</p>
             ) : sessions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No active sessions.</p>
+              <p className="text-sm text-muted-foreground">{tSecurity('security.noSessionsShort')}</p>
             ) : (
               <div className="space-y-2">
                 {sessions.map((session: any) => (
@@ -502,15 +502,16 @@ export default function SecuritySettingsPage() {
                       <div>
                         {' '}
                         <p className="text-sm font-medium flex items-center gap-2">
-                          {session.deviceInfo || 'Unknown device'}
+                          {session.deviceInfo || tSecurity('account.unknownDevice')}
                           {session.isCurrent && (
                             <span className="rounded-full bg-primary px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-primary-foreground">
-                              Current
+                              {tSecurity('account.currentBadge')}
                             </span>
                           )}
                         </p>{' '}
                         <p className="text-xs text-muted-foreground">
-                          {session.ip && `${session.ip} · `}Last active:{' '}
+                          {session.ip && `${session.ip} · `}
+                          {tSecurity('account.lastActive')}{' '}
                           {new Date(session.lastActiveAt).toLocaleDateString()}
                         </p>{' '}
                       </div>{' '}
@@ -525,7 +526,7 @@ export default function SecuritySettingsPage() {
                         }}
                         className="rounded-full"
                       >
-                        Revoke
+                        {tSecurity('security.revoke')}
                       </Button>
                     )}{' '}
                   </div>
@@ -535,18 +536,20 @@ export default function SecuritySettingsPage() {
             <div className="flex items-center justify-between rounded-2xl border border-warning/30 bg-warning px-4 py-3 /30 dark:bg-warning/10">
               {' '}
               <div>
-                <p className="text-sm font-semibold">Logout everywhere</p>
-                <p className="text-xs text-muted-foreground">Sign out of all devices</p>
+                <p className="text-sm font-semibold">{tSecurity('security.logoutEverywhere')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {tSecurity('security.logoutEverywhereDesc')}
+                </p>
               </div>{' '}
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={async () => {
-                  if (confirm('Log out of all devices?')) await logoutEverywhere();
+                  if (confirm(tSecurity('security.logoutAllConfirm'))) await logoutEverywhere();
                 }}
                 className="rounded-full"
               >
-                Logout All
+                {tSecurity('security.logoutAll')}
               </Button>{' '}
             </div>{' '}
           </div>{' '}
@@ -561,18 +564,18 @@ export default function SecuritySettingsPage() {
               <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
                 <History className="size-3.5" />
               </span>{' '}
-              Login History
+              {tSecurity('security.loginHistoryTitle')}
             </h2>{' '}
             <p className="mt-1 text-xs text-muted-foreground">
-              Recent sign-in activity on your account.
+              {tSecurity('security.loginHistoryDesc')}
             </p>{' '}
           </div>{' '}
           <div className="p-6">
             {' '}
             {loginHistoryLoading ? (
-              <p className="text-sm text-muted-foreground">Loading...</p>
+              <p className="text-sm text-muted-foreground">{tSecurity('account.loading')}</p>
             ) : loginHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No login history available.</p>
+              <p className="text-sm text-muted-foreground">{tSecurity('security.noLoginHistory')}</p>
             ) : (
               <div className="space-y-2 max-h-[520px] overflow-auto pe-2">
                 {loginHistory.slice(0, 15).map((entry: any) => {
@@ -609,14 +612,16 @@ export default function SecuritySettingsPage() {
                         {' '}
                         <p className="text-sm font-medium">
                           {' '}
-                          {isFailed ? 'Failed login attempt' : 'Successful login'}{' '}
+                          {isFailed
+                            ? tSecurity('security.loginFailedAttempt')
+                            : tSecurity('security.loginSuccessAttempt')}{' '}
                           {browser && (
                             <span className="ms-1 text-xs text-muted-foreground">· {browser}</span>
                           )}{' '}
                         </p>{' '}
                         <p className="text-xs text-muted-foreground truncate">
                           {' '}
-                          {entry.ip && `${entry.ip}`} {!entry.ip && 'Unknown IP'} ·{' '}
+                          {entry.ip && `${entry.ip}`} {!entry.ip && tSecurity('security.unknownIp')} ·{' '}
                           {new Date(entry.createdAt).toLocaleString()}{' '}
                         </p>{' '}
                       </div>{' '}
@@ -624,7 +629,9 @@ export default function SecuritySettingsPage() {
                         className={`shrink-0 rounded-full px-2.5 py-1 text-2xs font-bold uppercase tracking-wider ${isFailed ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}
                       >
                         {' '}
-                        {isFailed ? 'Failed' : 'Success'}{' '}
+                        {isFailed
+                          ? tSecurity('security.loginFailedBadge')
+                          : tSecurity('security.loginSuccessBadge')}{' '}
                       </span>{' '}
                     </div>
                   );
@@ -648,7 +655,9 @@ export default function SecuritySettingsPage() {
               setTwoFactorLoading(true);
               disable2fa(t)
                 .then(() => setTwoFactorStatus('idle'))
-                .catch((e) => alert(e instanceof Error ? e.message : 'Failed'))
+                .catch((e) =>
+                  alert(e instanceof Error ? e.message : tSecurity('account.unknownError')),
+                )
                 .finally(() => setTwoFactorLoading(false));
             }
           }
@@ -656,19 +665,21 @@ export default function SecuritySettingsPage() {
         }}
         title={
           reauthAction === 'email'
-            ? 'Change Email'
+            ? tSecurity('security.changeEmail')
             : reauthAction === 'disable2fa'
-              ? 'Disable 2FA'
-              : 'Verify Identity'
+              ? tSecurity('security.disable2faShort')
+              : tSecurity('security.verifyIdentity')
         }
-        description="Enter your current password to continue."
+        description={tSecurity('security.verifyPasswordDesc')}
       />{' '}
       {/* Disable 2FA inline dialog */}{' '}
       {reauthAction === 'disable2fa' && !reauthOpen && (
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           {' '}
-          <h3 className="text-sm font-semibold">Disable Two-Factor</h3>{' '}
-          <p className="mt-1 text-xs text-muted-foreground">Enter your 6-digit code to confirm.</p>{' '}
+          <h3 className="text-sm font-semibold">{tSecurity('security.disableTwoFactorShort')}</h3>{' '}
+          <p className="mt-1 text-xs text-muted-foreground">
+            {tSecurity('security.confirmCodeDesc')}
+          </p>{' '}
           <div className="mt-4 flex gap-3">
             {' '}
             <Input
@@ -685,7 +696,7 @@ export default function SecuritySettingsPage() {
               }}
               className="rounded-full"
             >
-              Verify
+              {tSecurity('security.verify')}
             </Button>{' '}
           </div>{' '}
         </div>

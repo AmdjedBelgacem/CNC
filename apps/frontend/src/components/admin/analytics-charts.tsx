@@ -9,6 +9,8 @@ import {
   YAxis,
 } from 'recharts';
 import type { LucideIcon } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { PanelCard, Skeleton } from './admin-ui';
 
@@ -38,13 +40,14 @@ function ChartTooltip({
   label?: string;
   formatter: (v: number) => string;
 }) {
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   const d = label ? new Date(label) : null;
   return (
     <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-md">
       {d && !Number.isNaN(d.getTime()) && (
         <p className="mb-1 font-semibold text-popover-foreground">
-          {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {formatDate(d, locale, { month: 'short', day: 'numeric' })}
         </p>
       )}
       {payload.map((p, i) => (
@@ -93,9 +96,10 @@ export function TrendChart({
   loading?: boolean;
   footer?: React.ReactNode;
 }) {
+  const locale = useLocale();
   const stroke = CHART_COLORS[color] ?? CHART_COLORS.primary;
   const gradId = `grad-${color}-${valueKey}`;
-  const fmt = formatValue ?? ((v: number) => v.toLocaleString());
+  const fmt = formatValue ?? ((v: number) => v.toLocaleString(locale));
   const hasData = data.length > 0;
 
   return (
@@ -132,9 +136,7 @@ export function TrendChart({
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey="date"
-                tickFormatter={(v) =>
-                  new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                }
+                tickFormatter={(v) => formatDate(v, locale, { month: 'short', day: 'numeric' })}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}

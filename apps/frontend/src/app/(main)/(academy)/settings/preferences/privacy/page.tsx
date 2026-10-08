@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Eye, Users, MessageSquare, UserPlus, Check, Shield, Lock } from 'lucide-react';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 export default function PrivacyPage() {
+  const t = useTranslations('account');
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public');
   const [messages, setMessages] = useState<'everyone' | 'followers' | 'none'>('everyone');
   const [follows, setFollows] = useState<'everyone' | 'approval'>('everyone');
@@ -40,18 +42,20 @@ export default function PrivacyPage() {
       // The endpoint returns 200 with the full row, so a "success" that did not
       // actually apply the values is impossible to spot without re-reading it.
       const saved_ = res.ok ? await res.json().catch(() => null) : null;
-      if (!saved_) throw new Error('Privacy settings could not be saved');
+      if (!saved_) throw new Error(t('privacy.saveFailed'));
       if (
         saved_.profileVisibility !== visibility ||
         saved_.whoCanMessage !== messages ||
         saved_.whoCanFollow !== follows
       ) {
-        throw new Error('Privacy settings were not applied. Please try again.');
+        throw new Error(
+          t('privacy.notApplied', { default: 'Privacy settings were not applied.' }),
+        );
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Privacy settings could not be saved');
+      setError(e instanceof Error ? e.message : t('privacy.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -88,15 +92,15 @@ export default function PrivacyPage() {
         </div>{' '}
         <div>
           {' '}
-          <h1 className="text-xl font-semibold tracking-tight">Privacy</h1>{' '}
+          <h1 className="text-xl font-semibold tracking-tight">{t('privacy.pageTitle')}</h1>{' '}
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Control who can see and interact with you.
+            {t('privacy.pageSubtitle')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
       {saved && (
         <div className="flex gap-2 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success">
-          <Check className="size-4 shrink-0 mt-0.5" /> Privacy settings saved.
+          <Check className="size-4 shrink-0 mt-0.5" /> {t('privacy.savedToast')}
         </div>
       )}{' '}
       {error && (
@@ -115,7 +119,7 @@ export default function PrivacyPage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
               <Eye className="size-3.5" />
             </span>{' '}
-            Profile Visibility
+            {t('privacy.visibilityTitle')}
           </h2>{' '}
         </div>{' '}
         <div className="grid gap-3 p-6 sm:grid-cols-3">
@@ -124,22 +128,22 @@ export default function PrivacyPage() {
             active={visibility === 'public'}
             onClick={() => setVisibility('public')}
             icon={Users}
-            title="Public"
-            desc="Anyone can view your profile"
+            title={t('privacy.visibilityPublic')}
+            desc={t('privacy.visibilityPublicDesc')}
           />{' '}
           <Card
             active={visibility === 'followers'}
             onClick={() => setVisibility('followers')}
             icon={Shield}
-            title="Followers"
-            desc="Only followers can view"
+            title={t('privacy.visibilityFollowers')}
+            desc={t('privacy.visibilityFollowersDesc')}
           />{' '}
           <Card
             active={visibility === 'private'}
             onClick={() => setVisibility('private')}
             icon={Lock}
-            title="Private"
-            desc="Only you can view"
+            title={t('privacy.visibilityPrivate')}
+            desc={t('privacy.visibilityPrivateDesc')}
           />{' '}
         </div>{' '}
       </div>{' '}
@@ -151,7 +155,7 @@ export default function PrivacyPage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
               <MessageSquare className="size-3.5" />
             </span>{' '}
-            Who Can Message You
+            {t('privacy.messagesTitle')}
           </h2>{' '}
         </div>{' '}
         <div className="grid gap-3 p-6 sm:grid-cols-3">
@@ -160,22 +164,22 @@ export default function PrivacyPage() {
             active={messages === 'everyone'}
             onClick={() => setMessages('everyone')}
             icon={MessageSquare}
-            title="Everyone"
-            desc="Open inbox"
+            title={t('privacy.everyone')}
+            desc={t('privacy.messagesEveryoneDesc')}
           />{' '}
           <Card
             active={messages === 'followers'}
             onClick={() => setMessages('followers')}
             icon={Users}
-            title="Followers"
-            desc="Followers only"
+            title={t('privacy.visibilityFollowers')}
+            desc={t('privacy.messagesFollowersDesc')}
           />{' '}
           <Card
             active={messages === 'none'}
             onClick={() => setMessages('none')}
             icon={Eye}
-            title="No one"
-            desc="Closed inbox"
+            title={t('privacy.noOne')}
+            desc={t('privacy.messagesNoneDesc')}
           />{' '}
         </div>{' '}
       </div>{' '}
@@ -187,7 +191,7 @@ export default function PrivacyPage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
               <UserPlus className="size-3.5" />
             </span>{' '}
-            Who Can Follow You
+            {t('privacy.followsTitle')}
           </h2>{' '}
         </div>{' '}
         <div className="grid gap-3 p-6 sm:grid-cols-2">
@@ -196,22 +200,22 @@ export default function PrivacyPage() {
             active={follows === 'everyone'}
             onClick={() => setFollows('everyone')}
             icon={Users}
-            title="Everyone"
-            desc="Instant follow, no approval"
+            title={t('privacy.everyone')}
+            desc={t('privacy.followsEveryoneDesc')}
           />{' '}
           <Card
             active={follows === 'approval'}
             onClick={() => setFollows('approval')}
             icon={Shield}
-            title="Approval"
-            desc="Requests need your OK"
+            title={t('privacy.approval')}
+            desc={t('privacy.followsApprovalDesc')}
           />{' '}
         </div>{' '}
       </div>{' '}
       <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-card px-4 py-3 shadow-lg">
         {' '}
         <Button onClick={handleSave} disabled={saving} className="h-9 rounded-full px-6 shadow-md">
-          {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Preferences'}
+          {saving ? t('account.saving') : saved ? t('account.savedOk') : t('privacy.savePreferences')}
         </Button>{' '}
       </div>{' '}
     </div>

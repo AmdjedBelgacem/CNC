@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
 export default function SecuritySettingsPage() {
+  const t = useTranslations('account');
   const auth = useAuth();
   const {
     user,
@@ -58,16 +60,16 @@ export default function SecuritySettingsPage() {
     setPwError('');
     setPwSuccess('');
     if (pwForm.newPassword !== pwForm.confirmPassword) {
-      setPwError('Passwords do not match');
+      setPwError(t('security.pwMismatch'));
       return;
     }
     setPwLoading(true);
     try {
       await changePassword(pwForm.currentPassword, pwForm.newPassword);
-      setPwSuccess('Password changed successfully. You have been logged out of all devices.');
+      setPwSuccess(t('security.pwChanged'));
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setPwError(err instanceof Error ? err.message : 'Failed to change password');
+      setPwError(err instanceof Error ? err.message : t('security.pwChangeFailed'));
     } finally {
       setPwLoading(false);
     }
@@ -79,10 +81,10 @@ export default function SecuritySettingsPage() {
     setEmailLoading(true);
     try {
       await changeEmail(emailForm.newEmail, emailForm.password);
-      setEmailSuccess('Verification email sent to your new address. Please check your inbox.');
+      setEmailSuccess(t('security.emailVerificationSent'));
       setEmailForm({ newEmail: '', password: '' });
     } catch (err) {
-      setEmailError(err instanceof Error ? err.message : 'Failed to change email');
+      setEmailError(err instanceof Error ? err.message : t('security.emailChangeFailed'));
     } finally {
       setEmailLoading(false);
     }
@@ -95,7 +97,7 @@ export default function SecuritySettingsPage() {
       setTwoFactorSecret(result.secret);
       setTwoFactorQr(result.qrCode);
     } catch {
-      setTwoFactorError('Failed to setup 2FA');
+      setTwoFactorError(t('security.twoFactorSetupFailed'));
     } finally {
       setTwoFactorLoading(false);
     }
@@ -108,21 +110,21 @@ export default function SecuritySettingsPage() {
       setTwoFactorBackupCodes(result.backupCodes);
       setTwoFactorStatus('verify');
     } catch (err) {
-      setTwoFactorError(err instanceof Error ? err.message : 'Failed to enable 2FA');
+      setTwoFactorError(err instanceof Error ? err.message : t('security.twoFactorEnableFailed'));
     } finally {
       setTwoFactorLoading(false);
     }
   };
   const handleDisable2fa = async () => {
-    if (!confirm('Are you sure you want to disable two-factor authentication?')) return;
+    if (!confirm(t('security.disableConfirm'))) return;
     setTwoFactorLoading(true);
     try {
-      const token = prompt('Enter your current 2FA code to disable:');
+      const token = prompt(t('security.disablePrompt'));
       if (!token) return;
       await disable2fa(token);
       setTwoFactorStatus('idle');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to disable 2FA');
+      alert(err instanceof Error ? err.message : t('security.twoFactorDisableFailed'));
     } finally {
       setTwoFactorLoading(false);
     }
@@ -132,7 +134,7 @@ export default function SecuritySettingsPage() {
       await revokeSession(sessionId);
       loadSessions();
     } catch {
-      alert('Failed to revoke session');
+      alert(t('security.revokeFailed'));
     }
   };
   return (
@@ -140,26 +142,22 @@ export default function SecuritySettingsPage() {
       {' '}
       <div>
         {' '}
-        <h1 className="text-3xl font-bold tracking-tight">Account Security</h1>{' '}
-        <p className="text-muted-foreground mt-1">
-          Manage your password, email, and security settings.
-        </p>{' '}
+        <h1 className="text-3xl font-bold tracking-tight">{t('security.pageTitle')}</h1>{' '}
+        <p className="text-muted-foreground mt-1">{t('security.pageSubtitle')}</p>{' '}
       </div>{' '}
       {user?.twoFactorEnabled && (
         <div className="rounded-md bg-warning/10 border border-warning/25 p-4 text-sm">
           {' '}
-          <strong>Two-factor authentication is enabled.</strong> You&apos;ll need a code from your
-          authenticator app to sign in.{' '}
+          <strong>{t('security.twoFactorEnabledBanner')}</strong>{' '}
+          {t('security.twoFactorActiveHint')}{' '}
         </div>
       )}{' '}
       <Card>
         {' '}
         <CardHeader>
           {' '}
-          <CardTitle>Change Password</CardTitle>{' '}
-          <CardDescription>
-            Update your password. You&apos;ll be logged out of all devices.
-          </CardDescription>{' '}
+          <CardTitle>{t('security.changePassword')}</CardTitle>{' '}
+          <CardDescription>{t('security.changePasswordDesc')}</CardDescription>{' '}
         </CardHeader>{' '}
         <CardContent>
           {' '}
@@ -177,7 +175,7 @@ export default function SecuritySettingsPage() {
             )}{' '}
             <div className="space-y-2">
               {' '}
-              <Label htmlFor="currentPassword">Current Password</Label>{' '}
+              <Label htmlFor="currentPassword">{t('security.currentPassword')}</Label>{' '}
               <Input
                 id="currentPassword"
                 type="password"
@@ -188,7 +186,7 @@ export default function SecuritySettingsPage() {
             </div>{' '}
             <div className="space-y-2">
               {' '}
-              <Label htmlFor="newPassword">New Password</Label>{' '}
+              <Label htmlFor="newPassword">{t('security.newPassword')}</Label>{' '}
               <Input
                 id="newPassword"
                 type="password"
@@ -199,7 +197,7 @@ export default function SecuritySettingsPage() {
             </div>{' '}
             <div className="space-y-2">
               {' '}
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>{' '}
+              <Label htmlFor="confirmPassword">{t('security.confirmNewPassword')}</Label>{' '}
               <Input
                 id="confirmPassword"
                 type="password"
@@ -209,7 +207,7 @@ export default function SecuritySettingsPage() {
               />{' '}
             </div>{' '}
             <Button type="submit" disabled={pwLoading}>
-              {pwLoading ? 'Changing...' : 'Change Password'}
+              {pwLoading ? t('security.changing') : t('security.changePassword')}
             </Button>{' '}
           </form>{' '}
         </CardContent>{' '}
@@ -218,10 +216,8 @@ export default function SecuritySettingsPage() {
         {' '}
         <CardHeader>
           {' '}
-          <CardTitle>Change Email</CardTitle>{' '}
-          <CardDescription>
-            Update your email address. You&apos;ll need to verify the new address.
-          </CardDescription>{' '}
+          <CardTitle>{t('security.changeEmail')}</CardTitle>{' '}
+          <CardDescription>{t('security.changeEmailDesc')}</CardDescription>{' '}
         </CardHeader>{' '}
         <CardContent>
           {' '}
@@ -239,7 +235,7 @@ export default function SecuritySettingsPage() {
             )}{' '}
             <div className="space-y-2">
               {' '}
-              <Label htmlFor="newEmail">New Email</Label>{' '}
+              <Label htmlFor="newEmail">{t('security.newEmail')}</Label>{' '}
               <Input
                 id="newEmail"
                 type="email"
@@ -250,7 +246,7 @@ export default function SecuritySettingsPage() {
             </div>{' '}
             <div className="space-y-2">
               {' '}
-              <Label htmlFor="emailPassword">Current Password</Label>{' '}
+              <Label htmlFor="emailPassword">{t('security.currentPassword')}</Label>{' '}
               <Input
                 id="emailPassword"
                 type="password"
@@ -260,7 +256,7 @@ export default function SecuritySettingsPage() {
               />{' '}
             </div>{' '}
             <Button type="submit" disabled={emailLoading}>
-              {emailLoading ? 'Sending...' : 'Send Verification'}
+              {emailLoading ? t('security.sending') : t('security.sendVerification')}
             </Button>{' '}
           </form>{' '}
         </CardContent>{' '}
@@ -269,40 +265,36 @@ export default function SecuritySettingsPage() {
         {' '}
         <CardHeader>
           {' '}
-          <CardTitle>Two-Factor Authentication</CardTitle>{' '}
-          <CardDescription>Add an extra layer of security to your account.</CardDescription>{' '}
+          <CardTitle>{t('security.twoFactorTitle')}</CardTitle>{' '}
+          <CardDescription>{t('security.twoFactorDesc')}</CardDescription>{' '}
         </CardHeader>{' '}
         <CardContent className="space-y-4">
           {' '}
           {twoFactorStatus === 'idle' && !user?.twoFactorEnabled && (
             <Button onClick={handleSetup2fa} disabled={twoFactorLoading}>
               {' '}
-              Enable Two-Factor Authentication{' '}
+              {t('security.enableTwoFactor')}{' '}
             </Button>
           )}{' '}
           {twoFactorStatus === 'idle' && user?.twoFactorEnabled && (
             <Button variant="destructive" onClick={handleDisable2fa} disabled={twoFactorLoading}>
               {' '}
-              Disable Two-Factor Authentication{' '}
+              {t('security.disableTwoFactor')}{' '}
             </Button>
           )}{' '}
           {twoFactorStatus === 'setup' && (
             <div className="space-y-4">
               {' '}
-              <p className="text-sm text-muted-foreground">
-                {' '}
-                Scan this QR code with your authenticator app (e.g. Google Authenticator,
-                Authy).{' '}
-              </p>{' '}
+              <p className="text-sm text-muted-foreground">{t('security.scanQrHint')}</p>{' '}
               {twoFactorQr && (
                 <div className="flex justify-center">
                   {' '}
-                  <img src={twoFactorQr} alt="2FA QR Code" className="rounded-lg border" />{' '}
+                  <img src={twoFactorQr} alt={t('security.qrAlt')} className="rounded-lg border" />{' '}
                 </div>
               )}{' '}
               <div className="space-y-2">
                 {' '}
-                <Label htmlFor="twoFactorToken">Enter the 6-digit code from your app</Label>{' '}
+                <Label htmlFor="twoFactorToken">{t('security.enterCodeFromApp')}</Label>{' '}
                 <Input
                   id="twoFactorToken"
                   type="text"
@@ -324,7 +316,7 @@ export default function SecuritySettingsPage() {
                 disabled={twoFactorLoading || twoFactorToken.length !== 6}
               >
                 {' '}
-                {twoFactorLoading ? 'Verifying...' : 'Enable 2FA'}{' '}
+                {twoFactorLoading ? t('security.verifying') : t('security.enable2faShort')}{' '}
               </Button>{' '}
             </div>
           )}{' '}
@@ -333,16 +325,14 @@ export default function SecuritySettingsPage() {
               {' '}
               <div className="rounded-md bg-success/10 p-4 text-sm">
                 {' '}
-                <strong className="text-green-600">
-                  Two-factor authentication is now enabled!
-                </strong>{' '}
+                <strong className="text-green-600">{t('security.twoFactorEnabledToast')}</strong>{' '}
               </div>{' '}
               <div className="rounded-md bg-warning/10 p-4 border border-warning/25">
                 {' '}
-                <p className="text-sm font-medium mb-2">Save these recovery codes</p>{' '}
+                <p className="text-sm font-medium mb-2">{t('security.saveRecoveryCodes')}</p>{' '}
                 <p className="text-xs text-muted-foreground mb-3">
                   {' '}
-                  Each code can be used only once. Store them somewhere safe.{' '}
+                  {t('security.recoveryCodesHint')}{' '}
                 </p>{' '}
                 <div className="grid grid-cols-2 gap-2">
                   {' '}
@@ -353,7 +343,7 @@ export default function SecuritySettingsPage() {
                   ))}{' '}
                 </div>{' '}
               </div>{' '}
-              <Button onClick={() => setTwoFactorStatus('idle')}>Done</Button>{' '}
+              <Button onClick={() => setTwoFactorStatus('idle')}>{t('security.done')}</Button>{' '}
             </div>
           )}{' '}
         </CardContent>{' '}
@@ -362,15 +352,15 @@ export default function SecuritySettingsPage() {
         {' '}
         <CardHeader>
           {' '}
-          <CardTitle>Active Sessions</CardTitle>{' '}
-          <CardDescription>Manage devices where you&apos;re logged in.</CardDescription>{' '}
+          <CardTitle>{t('security.activeSessions')}</CardTitle>{' '}
+          <CardDescription>{t('security.activeSessionsDesc')}</CardDescription>{' '}
         </CardHeader>{' '}
         <CardContent className="space-y-4">
           {' '}
           {sessionsLoading ? (
-            <p className="text-sm text-muted-foreground">Loading sessions...</p>
+            <p className="text-sm text-muted-foreground">{t('security.loadingSessions')}</p>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No active sessions found.</p>
+            <p className="text-sm text-muted-foreground">{t('security.noSessions')}</p>
           ) : (
             <div className="space-y-3">
               {' '}
@@ -384,17 +374,17 @@ export default function SecuritySettingsPage() {
                     {' '}
                     <p className="text-sm font-medium">
                       {' '}
-                      {session.deviceInfo || 'Unknown device'}{' '}
+                      {session.deviceInfo || t('account.unknownDevice')}{' '}
                       {session.isCurrent && (
                         <span className="ms-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                           {' '}
-                          Current{' '}
+                          {t('account.currentBadge')}{' '}
                         </span>
                       )}{' '}
                     </p>{' '}
                     <p className="text-xs text-muted-foreground">
                       {' '}
-                      {session.ip && `${session.ip} \u00b7 `} Last active:{' '}
+                      {session.ip && `${session.ip} \u00b7 `} {t('account.lastActive')}{' '}
                       {new Date(session.lastActiveAt).toLocaleDateString()}{' '}
                     </p>{' '}
                   </div>{' '}
@@ -405,7 +395,7 @@ export default function SecuritySettingsPage() {
                       onClick={() => handleRevokeSession(session.id)}
                     >
                       {' '}
-                      Revoke{' '}
+                      {t('security.revoke')}{' '}
                     </Button>
                   )}{' '}
                 </div>
@@ -417,20 +407,22 @@ export default function SecuritySettingsPage() {
             {' '}
             <div>
               {' '}
-              <p className="text-sm font-medium">Logout everywhere</p>{' '}
-              <p className="text-xs text-muted-foreground">Sign out of all active sessions</p>{' '}
+              <p className="text-sm font-medium">{t('security.logoutEverywhere')}</p>{' '}
+              <p className="text-xs text-muted-foreground">
+                {t('security.logoutEverywhereDescActive')}
+              </p>{' '}
             </div>{' '}
             <Button
               variant="destructive"
               size="sm"
               onClick={async () => {
-                if (confirm('Log out of all devices?')) {
+                if (confirm(t('security.logoutAllConfirm'))) {
                   await logoutEverywhere();
                 }
               }}
             >
               {' '}
-              Logout All{' '}
+              {t('security.logoutAll')}{' '}
             </Button>{' '}
           </div>{' '}
         </CardContent>{' '}

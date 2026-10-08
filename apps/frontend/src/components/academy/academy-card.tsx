@@ -1,10 +1,14 @@
+'use client';
+
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import type { AcademySummary } from '@/lib/academies';
 import { cn } from '@/lib/utils';
 import { getImageSrc } from '@/lib/images';
 
 export function AcademyCard({ academy }: { academy: AcademySummary }) {
+  const t = useTranslations('pages.academyCard');
   // Tenant brand color is real per-academy data; when absent we fall back to
   // design tokens rather than a hardcoded hex.
   const accent = academy.accentColor || undefined;
@@ -74,7 +78,7 @@ export function AcademyCard({ academy }: { academy: AcademySummary }) {
               )}
               style={accent ? { color: accent } : undefined}
             >
-              View academy
+              {t('viewAcademy')}
               <ArrowRight className="size-3 rtl:rotate-180" />
             </span>
           </div>

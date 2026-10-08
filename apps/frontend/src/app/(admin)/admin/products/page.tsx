@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import {
   ExternalLink,
   Globe,
@@ -107,6 +108,7 @@ function stockState(p: ProductRow): { tone: Tone; key: string; value: number } |
 function timeAgo(
   iso: string,
   tCommon: (key: string, values?: Record<string, string | number | Date>) => string,
+  locale = 'en',
 ): string {
   const tm = new Date(iso).getTime();
   if (Number.isNaN(tm)) return '—';
@@ -118,7 +120,7 @@ function timeAgo(
   if (hours < 24) return tCommon('hoursAgo', { n: hours, default: '{n}h ago' });
   const days = Math.floor(hours / 24);
   if (days < 30) return tCommon('daysAgo', { n: days, default: '{n}d ago' });
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return formatDate(iso, locale, { month: 'short', year: 'numeric' });
 }
 
 /* ------------------------------------------------------------------ */
@@ -145,6 +147,7 @@ function ProductCard({
   tCommon: (key: string, values?: Record<string, string | number | Date>) => string;
 }) {
   const t = useTranslations('admin.productsPage');
+  const locale = useLocale();
   const st = statusOf(product);
   const style = categoryStyle(product.category);
   const CategoryIcon = style.icon;
@@ -274,7 +277,7 @@ function ProductCard({
                 <span className="truncate">{product.course.title}</span>
               </span>
             )}
-            <span className="ms-auto shrink-0">{timeAgo(product.updatedAt, tCommon)}</span>
+            <span className="ms-auto shrink-0">{timeAgo(product.updatedAt, tCommon, locale)}</span>
           </div>
         </div>
       </div>

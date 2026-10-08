@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import type { AcademySummary } from '@/lib/academies';
 import { getImageSrc } from '@/lib/images';
@@ -10,9 +11,14 @@ import { getImageSrc } from '@/lib/images';
 function PathwayRow({
   academy,
   index,
+  courseLabel,
+  enterLabel,
 }: {
   academy: AcademySummary;
   index: number;
+  /** Resolved by the async parent; a hook cannot be used inside this child. */
+  courseLabel: string;
+  enterLabel: string;
 }) {
   const accent = academy.accentColor || 'var(--color-primary)';
   const image = academy.heroImageUrl || academy.logoUrl || academy.seoImageUrl;
@@ -61,13 +67,13 @@ function PathwayRow({
         <div className="flex items-center justify-between gap-4 sm:w-48 sm:shrink-0 sm:flex-col sm:items-end sm:justify-center sm:gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
             <BookOpen className="size-3" style={{ color: accent }} />
-            {academy.courseCount} {academy.courseCount === 1 ? 'course' : 'courses'}
+            {academy.courseCount} {courseLabel}
           </span>
           <span
             className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em]"
             style={{ color: accent }}
           >
-            Enter academy
+            {enterLabel}
             <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180" />
           </span>
         </div>
@@ -76,7 +82,8 @@ function PathwayRow({
   );
 }
 
-export function AcademyPathways({ academies }: { academies: AcademySummary[] }) {
+export async function AcademyPathways({ academies }: { academies: AcademySummary[] }) {
+  const t = await getTranslations('pages.academyPathways');
   return (
     <section
       id="pathways"
@@ -85,28 +92,34 @@ export function AcademyPathways({ academies }: { academies: AcademySummary[] }) 
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-            Directory
+            {t('directory')}
           </p>
           <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Choose your academy
+            {t('chooseAcademy')}
           </h2>
         </div>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Each pathway is a full curriculum — start anywhere, switch anytime, keep your progress.
+          {t('directoryBlurb')}
         </p>
       </div>
 
       {academies.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
-          <p className="font-semibold text-foreground">No academies published yet</p>
+          <p className="font-semibold text-foreground">{t('emptyTitle')}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Published academies will appear here automatically.
+            {t('emptyBody')}
           </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
           {academies.map((academy, i) => (
-            <PathwayRow key={academy.id} academy={academy} index={i} />
+            <PathwayRow
+              key={academy.id}
+              academy={academy}
+              index={i}
+              courseLabel={t('courseCount', { count: academy.courseCount })}
+              enterLabel={t('enterAcademy')}
+            />
           ))}
         </div>
       )}

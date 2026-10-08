@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,6 +39,9 @@ const categories = [
   'Service & Calibration',
 ];
 export default function RepairPage() {
+  const t = useTranslations('pages.socialRepair');
+  const tCommon = useTranslations('common');
+  const tSettings = useTranslations('settings');
   const [shops, setShops] = useState<RepairShop[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('All');
@@ -55,13 +59,24 @@ export default function RepairPage() {
       .finally(() => setLoading(false));
   }, [category, search]);
   const hasMapData = shops.some((s) => s.lat && s.lng);
+  // `categories` doubles as the API filter value and as the button label, so the
+  // literals stay untouched: they are what `?category=` is compared against. Only
+  // the rendered label is localized, keyed by the same value.
+  const categoryLabels: Record<string, string> = {
+    All: tCommon('all'),
+    'CNC Repair': t('catCncRepair'),
+    Electrical: t('catElectrical'),
+    Mechanical: t('catMechanical'),
+    Hydraulics: t('catHydraulics'),
+    'Service & Calibration': t('catServiceCalibration'),
+  };
   return (
     <div className="container mx-auto px-4 py-8">
       {' '}
       <div className="mb-6">
         {' '}
-        <h1 className="text-3xl font-bold">Machine Repair Directory</h1>{' '}
-        <p className="text-muted-foreground mt-1">Find CNC repair services near you.</p>{' '}
+        <h1 className="text-3xl font-bold">{t('title')}</h1>{' '}
+        <p className="text-muted-foreground mt-1">{t('subtitle')}</p>{' '}
       </div>{' '}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {' '}
@@ -74,13 +89,13 @@ export default function RepairPage() {
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${category === cat ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/80'}`}
             >
               {' '}
-              {cat}{' '}
+              {categoryLabels[cat] ?? cat}{' '}
             </button>
           ))}{' '}
         </div>{' '}
         <input
           type="search"
-          placeholder="Search by name or city..."
+          placeholder={t('searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="ms-auto px-4 py-2 rounded-lg border bg-background text-sm w-full sm:w-64"
@@ -105,7 +120,7 @@ export default function RepairPage() {
             <div className="text-center py-12 text-muted-foreground">
               {' '}
               <Wrench className="mx-auto h-10 w-10 mb-2 opacity-50" />{' '}
-              <p>No repair shops found.</p>{' '}
+              <p>{t('noShops')}</p>{' '}
             </div>
           ) : (
             shops.map((shop) => (
@@ -129,7 +144,7 @@ export default function RepairPage() {
                             variant="outline"
                             className="text-2xs px-1 text-green-600 border-green-400"
                           >
-                            Verified
+                            {tSettings('verified')}
                           </Badge>
                         )}{' '}
                       </h3>{' '}
@@ -209,7 +224,7 @@ export default function RepairPage() {
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground">
                 {' '}
-                <MapPin className="size-8 me-2 opacity-50" /> No map data available{' '}
+                <MapPin className="size-8 me-2 opacity-50" /> {t('noMapData')}{' '}
               </div>
             )}{' '}
           </div>{' '}

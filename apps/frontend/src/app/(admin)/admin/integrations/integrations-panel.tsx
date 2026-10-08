@@ -55,6 +55,7 @@ const TONE: Record<Status, string> = {
 
 export function IntegrationsPanel() {
   const t = useTranslations('integrations');
+  const tAdmin = useTranslations('admin.integrations');
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const searchParams = useSearchParams();
@@ -145,14 +146,12 @@ export function IntegrationsPanel() {
           <Input
             value={csrf}
             onChange={(event) => setCsrf(event.target.value)}
-            placeholder="CSRF token"
-            aria-label="CSRF token"
+            placeholder={tAdmin('csrfToken')}
+            aria-label={tAdmin('csrfToken')}
             className="h-8 max-w-xs font-mono text-xs"
           />
           <p className="text-2xs text-muted-foreground">
-            {platform?.oauthConfigured
-              ? 'OAuth client configured'
-              : t('platformMissing')}
+            {platform?.oauthConfigured ? tAdmin('oauthConfigured') : t('platformMissing')}
           </p>
         </div>
       </header>
@@ -160,7 +159,7 @@ export function IntegrationsPanel() {
       {query.isPending ? (
         <LoadingState rows={3} />
       ) : query.isError ? (
-        <ErrorState title="Could not load integrations" onRetry={() => void query.refetch()} />
+        <ErrorState title={tAdmin('loadFailed')} onRetry={() => void query.refetch()} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {services.map((service) => (

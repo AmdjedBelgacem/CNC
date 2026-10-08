@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
 import { HomeBuilder } from '@/components/home/home-builder';
 import {
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ProductsPage() {
+  const tProducts = await getTranslations('pages.products');
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, products] = await Promise.all([
@@ -79,7 +81,7 @@ export default async function ProductsPage() {
       />
       <HomeBuilder
         layout={layout}
-        heroStats={productsHeroStats(products, categories)}
+        heroStats={productsHeroStats(tProducts, products, categories)}
         islands={{
           'products-featured': <ProductsFeatured products={products} />,
           'products-inventory': <ProductsInventory categories={categories} />,

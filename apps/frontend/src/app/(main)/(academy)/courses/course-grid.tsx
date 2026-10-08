@@ -1,7 +1,7 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { BookOpen, X } from 'lucide-react';
 import { CourseCard } from '@/components/academy/course-card';
@@ -56,6 +56,9 @@ export interface CourseGridProps {
 }
 
 export function CourseGrid({ initialCourses }: CourseGridProps) {
+  const t = useTranslations('pages.courseGrid');
+  const tc = useTranslations('courses');
+  const tCommon = useTranslations('common');
   const searchParams = useSearchParams();
   const locale = coerceLocale(useLocale());
   const academySlug = searchParams.get('academy')?.trim() || '';
@@ -116,8 +119,8 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
   if (error) {
     return (
       <ErrorState
-        title="Unable to load courses"
-        description="Please make sure the backend server is running."
+        title={t('loadFailedTitle')}
+        description={t('loadFailedHint')}
         onRetry={() => void coursesQuery.refetch()}
       />
     );
@@ -139,7 +142,7 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
               />
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Academy
+                  {tc('academyLabel')}
                 </p>
                 <h2 className="truncate font-display text-xl font-semibold tracking-tight text-foreground">
                   {academy.title}
@@ -152,12 +155,12 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/academy/${academy.slug}`}>View academy</Link>
+                  <Link href={`/academy/${academy.slug}`}>{t('viewAcademy')}</Link>
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/courses">
                     <X />
-                    Clear
+                    {tCommon('clear')}
                   </Link>
                 </Button>
               </div>
@@ -166,10 +169,10 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
         ) : academyMissing ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
             <p className="text-sm text-foreground">
-              No such academy “{academySlug}” — showing all courses.
+              {t('academyNotFound', { slug: academySlug })}
             </p>
             <Button variant="outline" size="xs" asChild>
-              <Link href="/courses">Clear filter</Link>
+              <Link href="/courses">{t('clearFilter')}</Link>
             </Button>
           </div>
         ) : null
@@ -178,16 +181,14 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
       {courses.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title={academySlug ? 'No courses in this academy yet' : 'No courses yet'}
+          title={academySlug ? t('emptyAcademyTitle') : t('emptyTitle')}
           description={
-            academySlug
-              ? 'Courses will appear here once they are assigned and published.'
-              : 'Courses will appear here once they are published.'
+            academySlug ? t('emptyAcademyHint') : t('emptyHint')
           }
           action={
             academySlug ? (
               <Button variant="outline" size="sm" asChild>
-                <Link href="/courses">Browse all courses</Link>
+                <Link href="/courses">{t('browseAll')}</Link>
               </Button>
             ) : undefined
           }

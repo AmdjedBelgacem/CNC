@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { AlertTriangle, Download, Trash2, ShieldAlert, KeyRound, CheckCircle2 } from 'lucide-react';
 export default function DangerZonePage() {
+  const t = useTranslations('account');
   useAuth(); // keep hook for auth check
   const [exportLoading, setExportLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -17,7 +19,7 @@ export default function DangerZonePage() {
     setMessage(null);
     try {
       const res = await apiProxyFetch('/api/proxy/auth/me/data');
-      if (!res.ok) throw new Error('Export failed');
+      if (!res.ok) throw new Error(t('danger.exportFailed'));
       const data = await res.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -28,19 +30,22 @@ export default function DangerZonePage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      setMessage({ type: 'ok', text: 'Your data has been downloaded.' });
+      setMessage({ type: 'ok', text: t('danger.exportDone') });
     } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Export failed' });
+      setMessage({
+        type: 'err',
+        text: err instanceof Error ? err.message : t('danger.exportFailed'),
+      });
     } finally {
       setExportLoading(false);
     }
   };
   const handleDelete = async () => {
     if (deleteConfirm !== 'DELETE') {
-      setMessage({ type: 'err', text: 'Type DELETE to confirm.' });
+      setMessage({ type: 'err', text: t('danger.typeDeleteToConfirm') });
       return;
     }
-    if (!confirm('Permanently delete your account? This cannot be undone.')) return;
+    if (!confirm(t('danger.deleteConfirm'))) return;
     setDeleteLoading(true);
     try {
       // The server now enforces both the typed confirmation and the password, so
@@ -53,13 +58,16 @@ export default function DangerZonePage() {
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
         throw new Error(
-          typeof detail?.message === 'string' ? detail.message : 'Delete failed',
+          typeof detail?.message === 'string' ? detail.message : t('danger.deleteFailed'),
         );
       }
-      setMessage({ type: 'ok', text: 'Your account has been deleted.' });
+      setMessage({ type: 'ok', text: t('danger.deleteDone') });
       window.location.href = '/';
     } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Delete failed' });
+      setMessage({
+        type: 'err',
+        text: err instanceof Error ? err.message : t('danger.deleteFailed'),
+      });
     } finally {
       setDeleteLoading(false);
     }
@@ -75,9 +83,9 @@ export default function DangerZonePage() {
         </div>{' '}
         <div>
           {' '}
-          <h1 className="text-xl font-semibold tracking-tight">Danger Zone</h1>{' '}
+          <h1 className="text-xl font-semibold tracking-tight">{t('danger.pageTitle')}</h1>{' '}
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Irreversible actions for your account. Proceed with care.
+            {t('danger.pageSubtitle')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
@@ -103,10 +111,8 @@ export default function DangerZonePage() {
           </div>{' '}
           <div>
             {' '}
-            <h2 className="text-sm font-semibold">Export your data</h2>{' '}
-            <p className="text-xs text-muted-foreground">
-              Download a copy of your account data.
-            </p>{' '}
+            <h2 className="text-sm font-semibold">{t('danger.exportTitle')}</h2>{' '}
+            <p className="text-xs text-muted-foreground">{t('danger.exportDesc')}</p>{' '}
           </div>{' '}
         </div>{' '}
         <div className="p-6">
@@ -122,9 +128,9 @@ export default function DangerZonePage() {
                 </div>{' '}
                 <div>
                   {' '}
-                  <p className="text-sm font-medium">Your personal data</p>{' '}
+                  <p className="text-sm font-medium">{t('danger.personalData')}</p>{' '}
                   <p className="text-xs text-muted-foreground">
-                    Profile, enrollments, orders, and preferences as JSON.
+                    {t('danger.personalDataDesc')}
                   </p>{' '}
                 </div>{' '}
               </div>{' '}
@@ -134,7 +140,7 @@ export default function DangerZonePage() {
                 className="h-9 rounded-full px-5"
               >
                 {' '}
-                {exportLoading ? 'Exporting...' : 'Download JSON'}{' '}
+                {exportLoading ? t('danger.exporting') : t('danger.downloadJson')}{' '}
               </Button>{' '}
             </div>{' '}
           </div>{' '}
@@ -149,10 +155,10 @@ export default function DangerZonePage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-destructive text-destructive-foreground">
               <Trash2 className="size-3.5" />
             </span>{' '}
-            Delete account{' '}
+            {t('danger.deleteTitle')}{' '}
           </h2>{' '}
           <p className="mt-1 text-xs leading-relaxed text-destructive/80 dark:text-destructive">
-            Permanently delete your account and all associated data. This cannot be undone.
+            {t('danger.deleteDesc')}
           </p>{' '}
         </div>{' '}
         <div className="p-6 space-y-4">
@@ -160,19 +166,21 @@ export default function DangerZonePage() {
           <div className="rounded-xl border border-warning/30 bg-warning px-4 py-3 /30 dark:bg-warning/10">
             {' '}
             <p className="text-xs font-semibold text-warning">
-              Consequences:
+              {t('danger.consequences')}{' '}
             </p>{' '}
             <ul className="mt-1.5 list-disc space-y-1 ps-4 text-xs leading-relaxed text-warning ">
               {' '}
-              <li>All enrollments, progress, and certificates will be lost.</li>{' '}
-              <li>Your username will be released.</li>{' '}
-              <li>You will be logged out immediately.</li>{' '}
+              <li>{t('danger.consequenceEnrollments')}</li>{' '}
+              <li>{t('danger.consequenceUsername')}</li>{' '}
+              <li>{t('danger.consequenceLogout')}</li>{' '}
             </ul>{' '}
           </div>{' '}
           <div className="space-y-2">
             {' '}
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Type <span className="font-mono text-destructive">DELETE</span> to confirm
+              {t('danger.typeDelete')}{' '}
+              <span className="font-mono text-destructive">DELETE</span>{' '}
+              {t('danger.toConfirm')}
             </label>{' '}
             <Input
               value={deleteConfirm}
@@ -184,19 +192,17 @@ export default function DangerZonePage() {
           <div className="space-y-2">
             {' '}
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Confirm your password
-            </label>{' '}
+{t('danger.confirmPassword')}
+            </label>
             <Input
               type="password"
               value={deletePassword}
               onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder="Your account password"
+              placeholder={t('danger.passwordPlaceholder')}
               autoComplete="current-password"
               className="h-10 rounded-xl bg-muted/20"
             />{' '}
-            <p className="text-xs text-muted-foreground">
-              Required for accounts with a password. OAuth-only accounts can leave this blank.
-            </p>{' '}
+            <p className="text-xs text-muted-foreground">{t('danger.passwordHint')}</p>{' '}
           </div>{' '}
           <div className="flex flex-wrap items-center gap-3">
             {' '}
@@ -207,10 +213,10 @@ export default function DangerZonePage() {
               className="h-9 rounded-full px-6"
             >
               {' '}
-              {deleteLoading ? 'Deleting...' : 'Permanently delete account'}{' '}
+              {deleteLoading ? t('danger.deleting') : t('danger.deletePermanently')}{' '}
             </Button>{' '}
             <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <KeyRound className="size-3.5" /> Requires re-authentication
+              <KeyRound className="size-3.5" /> {t('danger.requiresReauth')}
             </span>{' '}
           </div>{' '}
         </div>{' '}

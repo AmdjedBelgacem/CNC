@@ -10,6 +10,7 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { ErrorView } from '@/components/ui/error-view';
 
 export default function Error({
@@ -19,5 +20,6 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorView error={error} reset={reset} title="The admin console hit an error" />;
+  const t = useTranslations('admin.error');
+  return <ErrorView error={error} reset={reset} title={t('consoleTitle')} />;
 }

@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Loader2, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -48,6 +49,7 @@ function UploadPick({
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
+  const t = useTranslations('admin.academiesNew.upload');
   return (
     <div className="space-y-2">
       <span className="text-xs font-semibold text-muted-foreground">{label}</span>
@@ -84,7 +86,7 @@ function UploadPick({
         <div className="relative z-10 flex flex-col items-center gap-1.5">
           {pending ? (
             <span className="flex items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-2xs font-bold text-success-foreground shadow">
-              <ImageIcon className="size-3.5" /> Selected — visible here
+              <ImageIcon className="size-3.5" /> {t('selected')}
             </span>
           ) : (
             <Upload className="size-5 text-muted-foreground/70" />
@@ -97,12 +99,10 @@ function UploadPick({
             />
           ) : null}
           <p className="font-sans font-medium text-foreground">
-            {pending ? pending.file.name : drag ? 'Drop to add' : 'Drag & drop or click to upload'}
+            {pending ? pending.file.name : drag ? t('dropToAdd') : t('dragDropOrClick')}
           </p>
           <p className="max-w-[36ch] text-2xs leading-4 text-muted-foreground/70">{hint}</p>
-          <p className="text-2xs text-muted-foreground/50">
-            Only file upload — pasting a URL is disabled.
-          </p>
+          <p className="text-2xs text-muted-foreground/50">{t('urlDisabled')}</p>
         </div>
       </div>
       <input
@@ -139,7 +139,7 @@ function UploadPick({
           </button>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No file selected.</p>
+        <p className="text-xs text-muted-foreground">{t('noFileSelected')}</p>
       )}
     </div>
   );
@@ -147,6 +147,11 @@ function UploadPick({
 
 export default function NewAcademyPage() {
   const router = useRouter();
+  const t = useTranslations('admin.academiesNew');
+  const tAdmin = useTranslations('admin');
+  const tAcademiesPage = useTranslations('admin.academiesPage');
+  const tEditor = useTranslations('admin.academiesPage.editor');
+  const tCommon = useTranslations('common');
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [description, setDescription] = useState('');
@@ -160,11 +165,15 @@ export default function NewAcademyPage() {
 
   const makePreview = async (f: File, setter: (v: PendingFile) => void) => {
     if (!f.type.startsWith('image/')) {
-      toast({ type: 'err', title: 'Not an image' });
+      toast({ type: 'err', title: tEditor('notAnImage') });
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
-      toast({ type: 'err', title: 'File too large', description: 'Max 5 MB' });
+      toast({
+        type: 'err',
+        title: tEditor('fileTooLarge'),
+        description: t('fileTooLargeHint'),
+      });
       return;
     }
     const preview = await readFileAsDataUrl(f);
@@ -173,7 +182,7 @@ export default function NewAcademyPage() {
 
   const submit = async () => {
     if (!title.trim()) {
-      toast({ type: 'err', title: 'Title required' });
+      toast({ type: 'err', title: t('titleRequired') });
       return;
     }
     setBusy(true);
@@ -195,7 +204,7 @@ export default function NewAcademyPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Create failed (${res.status})`);
+        throw new Error(data?.message ?? t('createFailedStatus', { status: res.status }));
       }
       const created = await res.json();
       const newSlug: string = created.slug;
@@ -216,14 +225,14 @@ export default function NewAcademyPage() {
         });
         if (!r.ok) {
           const d = await r.json().catch(() => null);
-          toast({ type: 'err', title: `${u.kind} upload failed`, description: d?.message });
+          toast({ type: 'err', title: t('uploadFailedFor', { label: t(u.kind) }), description: d?.message });
         }
       }
 
-      toast({ type: 'ok', title: 'Academy created' });
+      toast({ type: 'ok', title: t('created') });
       router.replace(`/admin/academies/${newSlug}/edit`);
     } catch (e: any) {
-      toast({ type: 'err', title: 'Create failed', description: e?.message });
+      toast({ type: 'err', title: t('createFailed'), description: e?.message });
     } finally {
       setBusy(false);
     }
@@ -232,28 +241,33 @@ export default function NewAcademyPage() {
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Academies', href: '/admin/academies' }, { label: 'New academy' }]}
-        live="Live"
-        actions={<BarButton onClick={() => router.push('/admin/academies')}>Cancel</BarButton>}
+        trail={[
+          { label: tAdmin('academies'), href: '/admin/academies' },
+          { label: tAcademiesPage('newAcademy') },
+        ]}
+        live={tAdmin('live')}
+        actions={
+          <BarButton onClick={() => router.push('/admin/academies')}>{tCommon('cancel')}</BarButton>
+        }
         primary={
           <BarPrimaryButton
             icon={busy ? <Loader2 className="size-4 animate-spin" /> : undefined}
             disabled={busy || !title.trim()}
             onClick={() => void submit()}
           >
-            {busy ? 'Creating…' : 'Create academy'}
+            {busy ? t('creating') : t('createAcademy')}
           </BarPrimaryButton>
         }
       />
 
       <div className="mx-auto w-full max-w-5xl space-y-6 pt-6">
         <AdminPageHeader
-          title="New academy"
-          description="Create a branded destination — images are upload-only, no URL pasting."
+          title={tAcademiesPage('newAcademy')}
+          description={t('description')}
           badge={
             <span className="flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground md:self-auto">
               <ImageIcon className="size-4" />
-              Upload-only media
+              {t('uploadOnlyMedia')}
             </span>
           }
         />
@@ -261,30 +275,34 @@ export default function NewAcademyPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="space-y-4 rounded-lg border border-border bg-card p-5 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Basics
+              {tEditor('basics')}
             </h2>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Title *</span>
+              <span className="text-xs font-semibold text-muted-foreground">{t('titleLabel')}</span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. CNC Milling Academy"
+                placeholder={t('titlePlaceholder')}
                 className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Slug</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {tEditor('slug')}
+              </span>
               <input
                 value={slugify(title)}
                 readOnly
                 className="h-9 w-full rounded-xl border border-border bg-muted px-3 font-mono text-sm text-muted-foreground outline-none"
               />
               <span className="text-2xs text-muted-foreground">
-                Auto-generated from title — /academy/{slugify(title)}
+                {t('slugHint', { slug: slugify(title) })}
               </span>
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Subtitle</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {tEditor('subtitle')}
+              </span>
               <input
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
@@ -292,7 +310,9 @@ export default function NewAcademyPage() {
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Description</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {tEditor('description')}
+              </span>
               <textarea
                 rows={5}
                 value={description}
@@ -304,24 +324,26 @@ export default function NewAcademyPage() {
 
           <section className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Branding & SEO — upload only
+              {t('brandingSeo')}
             </h2>
             <UploadPick
-              label="Hero banner"
-              hint="1920×1080 · JPG/PNG/WebP/AVIF · ≤5 MB"
+              label={tEditor('heroBanner')}
+              hint={t('heroHint')}
               pending={hero}
               onPick={(f) => void makePreview(f, setHero)}
               onClear={() => setHero(null)}
             />
             <UploadPick
-              label="Logo / mark"
-              hint="Square transparent PNG/WebP · ≤5 MB"
+              label={tEditor('logo')}
+              hint={t('logoHint')}
               pending={logo}
               onPick={(f) => void makePreview(f, setLogo)}
               onClear={() => setLogo(null)}
             />
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">Accent color</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {t('accentColor')}
+              </span>
               <div className="flex gap-2">
                 <input
                   type="color"
@@ -338,16 +360,20 @@ export default function NewAcademyPage() {
             </label>
             <div className="h-px bg-border" />
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">SEO title</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {tEditor('seoTitle')}
+              </span>
               <input
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
-                placeholder="Custom <title> for search"
+                placeholder={t('seoTitlePlaceholder')}
                 className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">SEO description</span>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {tEditor('seoDescription')}
+              </span>
               <textarea
                 rows={3}
                 value={seoDescription}
@@ -356,8 +382,8 @@ export default function NewAcademyPage() {
               />
             </label>
             <UploadPick
-              label="Social preview image (og:image)"
-              hint="1200×630 · ≤5 MB · for link unfurls"
+              label={t('socialImageLabel')}
+              hint={t('socialImageHint')}
               pending={seoImg}
               onPick={(f) => void makePreview(f, setSeoImg)}
               onClear={() => setSeoImg(null)}
@@ -371,7 +397,7 @@ export default function NewAcademyPage() {
             onClick={() => router.push('/admin/academies')}
             className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
-            Cancel
+            {tCommon('cancel')}
           </button>
           <button
             type="button"
@@ -385,13 +411,10 @@ export default function NewAcademyPage() {
             )}
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {busy ? 'Creating…' : 'Create academy'}
+            {busy ? t('creating') : t('createAcademy')}
           </button>
         </div>
-        <p className="text-center text-xs text-muted-foreground">
-          All images are stored tenant-scoped on the server (or S3 if configured). External image
-          URLs are rejected by the API.
-        </p>
+        <p className="text-center text-xs text-muted-foreground">{t('storageNote')}</p>
       </div>
     </div>
   );

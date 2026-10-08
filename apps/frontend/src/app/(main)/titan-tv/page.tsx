@@ -1,5 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { Play, Clock, Film, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getImageSrc } from '@/lib/images';
@@ -62,6 +63,8 @@ function VideoCard({ video }: { video: Video }) {
   );
 }
 export default function TitanTvPage() {
+  const t = useTranslations('pages.titanTv');
+  const tCommon = useTranslations('common');
   const { data, isLoading, error } = useQuery<{ data: Series[] }>({
     queryKey: ['titan-tv'],
     queryFn: () =>
@@ -82,11 +85,10 @@ export default function TitanTvPage() {
             {' '}
             <Film className="size-4" /> TITAN TV{' '}
           </div>{' '}
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Video Library</h1>{' '}
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t('title')}</h1>{' '}
           <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
             {' '}
-            Machine builds, tooling demos, shop tours, and educational series from Baroot CNC Solutions
-            team.{' '}
+            {t('subtitle')}{' '}
           </p>{' '}
         </div>{' '}
       </section>{' '}
@@ -115,9 +117,9 @@ export default function TitanTvPage() {
             <div className="flex flex-col items-center justify-center py-24 text-center">
               {' '}
               <Film className="mb-4 h-12 w-12 text-muted-foreground/50" />{' '}
-              <h3 className="text-lg font-semibold">Unable to load video library</h3>{' '}
+              <h3 className="text-lg font-semibold">{t('loadFailedTitle')}</h3>{' '}
               <p className="text-sm text-muted-foreground mt-1">
-                Please make sure the backend server is running.
+                {t('loadFailedHint')}
               </p>{' '}
             </div>
           )}{' '}
@@ -125,9 +127,9 @@ export default function TitanTvPage() {
             <div className="flex flex-col items-center justify-center py-24 text-center">
               {' '}
               <Film className="mb-4 h-12 w-12 text-muted-foreground/50" />{' '}
-              <h3 className="text-lg font-semibold">No video series yet</h3>{' '}
+              <h3 className="text-lg font-semibold">{t('emptyTitle')}</h3>{' '}
               <p className="text-sm text-muted-foreground mt-1">
-                Video content will appear here once published.
+                {t('emptyHint')}
               </p>{' '}
             </div>
           )}{' '}
@@ -145,7 +147,7 @@ export default function TitanTvPage() {
                       className="flex items-center gap-1 text-sm text-primary hover:underline"
                     >
                       {' '}
-                      View all <ChevronRight className="flip-rtl size-4" />{' '}
+                      {tCommon('viewAll')} <ChevronRight className="flip-rtl size-4" />{' '}
                     </a>{' '}
                   </div>{' '}
                   {series.description && (

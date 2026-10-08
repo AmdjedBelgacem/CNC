@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +19,10 @@ interface EventItem {
   maxAttendees: number | null;
 }
 export function UpcomingEvents() {
+  const te = useTranslations('events');
+  const tc = useTranslations('common');
+  const tu = useTranslations('ui.events');
+  const locale = useLocale();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -36,13 +42,13 @@ export function UpcomingEvents() {
           {' '}
           <div>
             {' '}
-            <h2 className="text-3xl font-bold">Upcoming Events</h2>{' '}
-            <p className="text-muted-foreground mt-1">Workshops, webinars, and conferences.</p>{' '}
+            <h2 className="text-3xl font-bold">{tu('upcomingEventsTitle')}</h2>{' '}
+            <p className="text-muted-foreground mt-1">{tu('upcomingEventsHint')}</p>{' '}
           </div>{' '}
           <Button variant="ghost" asChild>
             {' '}
             <Link href="/events">
-              View All <ArrowRight className="flip-rtl ms-2 size-4" />
+              {tc('viewAll')} <ArrowRight className="flip-rtl ms-2 size-4" />
             </Link>{' '}
           </Button>{' '}
         </div>{' '}
@@ -66,7 +72,7 @@ export function UpcomingEvents() {
                         <div className="flex items-center gap-2">
                           {' '}
                           <Calendar className="size-4 shrink-0" />{' '}
-                          {new Date(event.startDate).toLocaleDateString('en-US', {
+                          {formatDate(event.startDate, locale, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
@@ -76,16 +82,19 @@ export function UpcomingEvents() {
                           {' '}
                           <MapPin className="size-4 shrink-0" />{' '}
                           {event.isVirtual
-                            ? 'Online'
+                            ? te('online')
                             : loc?.city
                               ? `${loc.city}${loc.state ? `, ${loc.state}` : ''}`
-                              : 'TBD'}{' '}
+                              : tu('tbd')}{' '}
                         </div>{' '}
                       </div>{' '}
                       {event.maxAttendees && (
                         <p className="text-xs text-muted-foreground">
                           {' '}
-                          {event.registeredCount}/{event.maxAttendees} registered{' '}
+                          {tu('registeredCount', {
+                            count: event.registeredCount,
+                            total: event.maxAttendees,
+                          })}{' '}
                         </p>
                       )}{' '}
                     </div>{' '}

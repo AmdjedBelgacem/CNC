@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { ArrowRight } from 'lucide-react';
 import type { Product } from '@/components/store/product-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getImageSrc } from '@/lib/images';
+import { coerceCurrency, formatMinorUnits } from '@/lib/money';
 
 export function CourseProductsSidebar({
   tags,
@@ -15,6 +17,8 @@ export function CourseProductsSidebar({
   courseId?: string;
   academyId?: string;
 }) {
+  const t = useTranslations('ui.courseProductsSidebar');
+  const locale = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   useEffect(() => {
     let url: string;
@@ -39,9 +43,9 @@ export function CourseProductsSidebar({
     <Card>
       <CardHeader className="pb-3">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          Store
+          {t('storeEyebrow')}
         </p>
-        <CardTitle className="font-display text-base">Recommended Products</CardTitle>
+        <CardTitle className="font-display text-base">{t('recommendedTitle')}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-3">
@@ -60,10 +64,7 @@ export function CourseProductsSidebar({
                   {p.title}
                 </p>
                 <p className="font-mono text-xs text-muted-foreground">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: p.currency || 'USD',
-                  }).format(p.price / 100)}
+                  {formatMinorUnits(p.price, coerceCurrency(p.currency, 'USD'), locale)}
                 </p>
               </div>
             </Link>
@@ -73,7 +74,7 @@ export function CourseProductsSidebar({
           href="/products"
           className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
         >
-          View all tools
+          {t('viewAllTools')}
           <ArrowRight className="size-3.5 rtl:rotate-180" />
         </Link>
       </CardContent>

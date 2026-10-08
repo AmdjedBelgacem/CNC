@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import {
   LoadingShell,
   Skeleton,
@@ -138,8 +139,9 @@ function TabRow({ count = 4 }: { count?: number }) {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function LandingSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="py-0">
+    <LoadingShell label={tc('loading')} containerClassName="py-0">
       <section className="mx-auto flex max-w-3xl flex-col items-center gap-5 py-20 text-center">
         <Skeleton className="h-6 w-44 rounded-full" />
         <Skeleton className="h-12 w-full" />
@@ -175,8 +177,9 @@ export function DetailPageSkeleton({
   breadcrumbs?: boolean;
   withSidebar?: boolean;
 }) {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         {breadcrumbs && (
           <div className="flex items-center gap-2">
@@ -220,8 +223,9 @@ export function DetailPageSkeleton({
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function GridIndexSkeleton({ cards = 6, title = '60%' }: { cards?: number; title?: string }) {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <SkeletonHeading titleWidth={title} />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -241,8 +245,9 @@ export function ListIndexSkeleton({
   rows?: number;
   avatars?: boolean;
 }) {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <SkeletonHeading lines={1} titleWidth="38%" />
         <SkeletonList count={rows} avatar={avatars} lines={2} />
@@ -258,8 +263,9 @@ export function TableIndexSkeleton({
   rows?: number;
   columns?: string[];
 }) {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <SkeletonHeading lines={1} titleWidth="32%" />
         <SkeletonTable rows={rows} columns={columns} />
@@ -273,12 +279,13 @@ export function TableIndexSkeleton({
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function AuthSkeleton({ fields = 2, note }: { fields?: number; note?: boolean }) {
+  const tc = useTranslations('common');
   // No card, no gutters, no centring: `(auth)/layout.tsx` renders a bordered
   // panel with its own p-8 inside a min-h-screen flex container. Anything added
   // here nests a second card inside the first.
   return (
-    <div role="status" aria-busy="true" aria-live="polite" aria-label="Loading">
-      <span className="sr-only">Loading</span>
+    <div role="status" aria-busy="true" aria-live="polite" aria-label={tc('loading')}>
+      <span className="sr-only">{tc('loading')}</span>
       <div className="mx-auto flex min-h-[520px] max-w-md flex-col justify-center py-4">
         <div className="mb-8 text-center">
           <Skeleton className="mx-auto mb-4 size-12 rounded-xl" />
@@ -298,10 +305,11 @@ export function AuthSkeleton({ fields = 2, note }: { fields?: number; note?: boo
 
 /** Verification / callback pages: a spinner-free "working on it" card. */
 export function VerifyingSkeleton() {
+  const t = useTranslations('ui.routeSkeletons');
   // Frameless for the same reason as AuthSkeleton — the auth layout owns it.
   return (
-    <div role="status" aria-busy="true" aria-live="polite" aria-label="Verifying">
-      <span className="sr-only">Verifying</span>
+    <div role="status" aria-busy="true" aria-live="polite" aria-label={t('verifying')}>
+      <span className="sr-only">{t('verifying')}</span>
       <div className="mx-auto flex min-h-[520px] max-w-md flex-col items-center justify-center space-y-5 py-4 text-center">
         <SkeletonCircle className="size-12" />
         <Skeleton className="h-5 w-56" />
@@ -318,8 +326,9 @@ export function VerifyingSkeleton() {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function SettingsSkeleton({ fields = 5 }: { fields?: number }) {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <SkeletonSplit
         content={
           <div className="space-y-8">
@@ -333,8 +342,9 @@ export function SettingsSkeleton({ fields = 5 }: { fields?: number }) {
 }
 
 export function FormPageSkeleton({ fields = 5 }: { fields?: number }) {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="mx-auto max-w-3xl space-y-8">
         <SkeletonHeading lines={1} titleWidth="30%" />
         <FormPanel fields={fields} />
@@ -348,8 +358,9 @@ export function FormPageSkeleton({ fields = 5 }: { fields?: number }) {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function StoreSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-7xl">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-7xl">
       <div className="space-y-8">
         <SkeletonHeading titleWidth="46%" />
         <SkeletonProducts count={8} />
@@ -359,8 +370,9 @@ export function StoreSkeleton() {
 }
 
 export function CartSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <SkeletonHeading lines={1} titleWidth="26%" />
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -373,8 +385,9 @@ export function CartSkeleton() {
 }
 
 export function CheckoutSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="mx-auto max-w-5xl space-y-8">
         <SkeletonHeading lines={1} titleWidth="30%" />
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -407,8 +420,9 @@ export function CheckoutSkeleton() {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function FeedSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-6xl">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-6xl">
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
           <div className="flex gap-3 rounded-xl border border-border bg-card p-5">
@@ -429,8 +443,9 @@ export function FeedSkeleton() {
 }
 
 export function NotificationListSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="mx-auto max-w-3xl space-y-8">
         <SkeletonHeading lines={1} titleWidth="30%" />
         <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
@@ -451,8 +466,9 @@ export function NotificationListSkeleton() {
 }
 
 export function ProfileSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <Skeleton className="h-32 w-full rounded-xl" />
         {/* Overlapping identity block: the avatar hangs below the cover by half
@@ -496,8 +512,9 @@ export function ProfileSkeleton() {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function EventsSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <SkeletonHeading titleWidth="40%" />
         <ChipRow count={5} />
@@ -508,8 +525,9 @@ export function EventsSkeleton() {
 }
 
 export function LearningSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-6xl">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-6xl">
       <div className="space-y-8">
         <SkeletonHeading titleWidth="44%" />
         <SkeletonStats count={3} />
@@ -524,8 +542,9 @@ export function LearningSkeleton() {
 }
 
 export function CoursesSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-7xl">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-7xl">
       <div className="space-y-8">
         <SkeletonHeading titleWidth="38%" />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -543,8 +562,9 @@ export function CoursesSkeleton() {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function MediaPageSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <SkeletonHeading titleWidth="30%" />
         <Skeleton className="aspect-video w-full rounded-xl" />
@@ -561,8 +581,9 @@ export function MediaPageSkeleton() {
 }
 
 export function MapPageSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="space-y-8">
         <SkeletonHeading titleWidth="36%" />
         <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
@@ -575,8 +596,9 @@ export function MapPageSkeleton() {
 }
 
 export function SearchSkeleton() {
+  const ts = useTranslations('search');
   return (
-    <LoadingShell label="Searching">
+    <LoadingShell label={ts('searching')}>
       <div className="mx-auto max-w-4xl space-y-8">
         <Skeleton className="h-12 w-full rounded-lg" />
         <div className="flex items-center justify-between">
@@ -606,8 +628,9 @@ export function SearchSkeleton() {
 
 /** Certificate verification (`/verify`, `/verify/[number]`). */
 export function VerifySkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-xl py-16">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-xl py-16">
       <div className="space-y-6 text-center">
         <Skeleton className="mx-auto size-12 rounded-xl" />
         <Skeleton className="mx-auto h-6 w-64" />
@@ -622,8 +645,9 @@ export function VerifySkeleton() {
 
 /** Offline page: a status card with two actions. */
 export function OfflineSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="flex min-h-[64vh] items-center justify-center py-12">
+    <LoadingShell label={tc('loading')} containerClassName="flex min-h-[64vh] items-center justify-center py-12">
       <div className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-8 text-center">
         <SkeletonCircle className="size-14" />
         <Skeleton className="mx-auto h-5 w-52" />
@@ -641,8 +665,9 @@ export function OfflineSkeleton() {
 
 /** Standalone account overview (`/account`). */
 export function AccountOverviewSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-4xl py-12">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-4xl py-12">
       <div className="space-y-8">
         <SkeletonHeading lines={1} titleWidth="32%" />
         <div className="grid gap-4 sm:grid-cols-3">
@@ -664,8 +689,9 @@ export function AccountOverviewSkeleton() {
 
 /** Lesson player: video stage then a transcript. */
 export function LessonSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="py-6">
+    <LoadingShell label={tc('loading')} containerClassName="py-6">
       <div className="space-y-6">
         <Skeleton className="aspect-video w-full rounded-xl" />
         <div className="mx-auto max-w-3xl space-y-4">
@@ -698,8 +724,9 @@ export function LessonSkeleton() {
  * would cause exactly the reflow this is meant to prevent.
  */
 export function CmsBlockPageSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="py-0">
+    <LoadingShell label={tc('loading')} containerClassName="py-0">
       <div className="border-b border-border bg-muted/30">
         <div className="mx-auto max-w-container-max px-margin-mobile py-20 md:px-margin-desktop">
           <div className="mx-auto max-w-3xl space-y-4 text-center">
@@ -727,8 +754,9 @@ export function CmsBlockPageSkeleton() {
 
 /** Static prose (about/terms fallbacks rendered without a CMS layout). */
 export function ProseSkeleton({ paragraphs = 6 }: { paragraphs?: number }) {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading">
+    <LoadingShell label={tc('loading')}>
       <div className="mx-auto max-w-3xl space-y-8">
         <SkeletonHeading lines={1} titleWidth="44%" />
         <div className="space-y-8">
@@ -754,10 +782,11 @@ export function CmsPageSkeleton() {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function ChatSkeleton() {
+  const tc = useTranslations('common');
   return (
     // Full-bleed: AiChatWorkspace is h-[calc(100dvh-4rem)] with its own rail, so
     // page gutters here would inset it inside a second set of gutters.
-    <LoadingShell label="Loading" containerClassName="px-0 py-0">
+    <LoadingShell label={tc('loading')} containerClassName="px-0 py-0">
       <div className="flex h-[calc(100dvh-4rem)] w-full">
         <aside className="hidden w-72 shrink-0 flex-col gap-4 border-e border-border p-4 lg:flex">
           <Skeleton className="h-9 w-full rounded-md" />
@@ -797,8 +826,9 @@ export function ChatSkeleton() {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function TagIndexSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-5xl">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-5xl">
       <div className="space-y-8">
         <SkeletonHeading titleWidth="30%" />
         <ChipRow count={12} width="w-28" />
@@ -808,8 +838,9 @@ export function TagIndexSkeleton() {
 }
 
 export function TagFeedSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <LoadingShell label="Loading" containerClassName="mx-auto max-w-3xl">
+    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-3xl">
       <div className="space-y-6">
         <Skeleton className="h-5 w-40" />
         {Array.from({ length: 4 }).map((_, i) => (
@@ -855,9 +886,10 @@ function AdminHeader() {
  * adding padding here would double it.
  */
 function AdminFrame({ children }: { children: React.ReactNode }) {
+  const tc = useTranslations('common');
   return (
-    <div role="status" aria-busy="true" aria-live="polite" aria-label="Loading">
-      <span className="sr-only">Loading</span>
+    <div role="status" aria-busy="true" aria-live="polite" aria-label={tc('loading')}>
+      <span className="sr-only">{tc('loading')}</span>
       <div className="space-y-6">
         <AdminHeader />
         {children}
@@ -867,9 +899,10 @@ function AdminFrame({ children }: { children: React.ReactNode }) {
 }
 
 export function AdminSkeleton() {
+  const t = useTranslations('ui.routeSkeletons');
   return (
-    <div role="status" aria-busy="true" aria-live="polite" aria-label="Loading admin console">
-      <span className="sr-only">Loading admin console</span>
+    <div role="status" aria-busy="true" aria-live="polite" aria-label={t('loadingAdminConsole')}>
+      <span className="sr-only">{t('loadingAdminConsole')}</span>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-2">

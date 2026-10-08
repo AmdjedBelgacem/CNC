@@ -1,5 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import type {
   AcademyGridProps,
   CatalogHeroProps,
@@ -29,27 +30,32 @@ import { getImageSrc } from '@/lib/images';
 
 const noopPuck: PuckBridge = { renderSlot: () => null, getSlotData: () => [] };
 
-function courseLevel(difficulty: number): { level: string; levelTone: 'primary' | 'secondary' | 'accent' } {
-  if (difficulty <= 1) return { level: 'BEGINNER', levelTone: 'primary' };
-  if (difficulty <= 3) return { level: 'INTERMEDIATE', levelTone: 'secondary' };
-  return { level: 'ADVANCED', levelTone: 'accent' };
+type Translate = ReturnType<typeof useTranslations>;
+
+function courseLevel(
+  difficulty: number,
+  t: Translate,
+): { level: string; levelTone: 'primary' | 'secondary' | 'accent' } {
+  if (difficulty <= 1) return { level: t('levelBeginner'), levelTone: 'primary' };
+  if (difficulty <= 3) return { level: t('levelIntermediate'), levelTone: 'secondary' };
+  return { level: t('levelAdvanced'), levelTone: 'accent' };
 }
 
-function courseToCardProps(course: CourseListItem): ProgramCardProps {
-  const { level, levelTone } = courseLevel(course.difficulty);
+function courseToCardProps(course: CourseListItem, t: Translate): ProgramCardProps {
+  const { level, levelTone } = courseLevel(course.difficulty, t);
   const tags = course.metadata?.tags?.filter(Boolean).join(', ') || undefined;
   return {
     id: `course-card-${course.id}`,
     level,
     levelTone,
-    duration: course.estimatedHours ? `${course.estimatedHours} Hrs` : undefined,
-    metaLabel: course.academy?.title || 'Published Course',
+    duration: course.estimatedHours ? t('durationHours', { hours: course.estimatedHours }) : undefined,
+    metaLabel: course.academy?.title || t('publishedCourse'),
     title: course.title,
     description: course.description || course.subtitle || undefined,
     tags,
     imageUrl: getImageSrc(course.thumbnailUrl, 'course'),
     imageAlt: course.title,
-    ctaLabel: 'View Course',
+    ctaLabel: t('viewCourse'),
     href: `/courses/${course.slug}`,
   };
 }
@@ -97,6 +103,7 @@ export function HomeBuilder({
   /** Live stats injected into every `catalog-hero` node (public site only). */
   heroStats?: CatalogHeroStat[];
 }) {
+  const t = useTranslations('ui.homeBuilder');
   const nodes = layout.content ?? [];
   const zones = (layout as { zones?: Record<string, PuckNode[]> }).zones ?? {};
   if (!nodes.length) return null;
@@ -187,7 +194,7 @@ export function HomeBuilder({
           return courses.map((course) => (
             <ProgramCardBlock
               key={course.id}
-              props={courseToCardProps(course)}
+              props={courseToCardProps(course, t)}
               puck={noopPuck}
             />
           ));
@@ -221,10 +228,8 @@ export function HomeBuilder({
         if (visibleAcademies.length === 0) {
           return (
             <div className="col-span-full rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
-              <p className="font-semibold text-foreground">No academies published yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Published academies will appear here automatically.
-              </p>
+              <p className="font-semibold text-foreground">{t('noAcademies')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('noAcademiesHint')}</p>
             </div>
           );
         }

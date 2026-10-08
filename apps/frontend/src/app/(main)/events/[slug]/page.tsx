@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate as formatDateInLocale } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +39,9 @@ interface EventDetail {
   userRegistration: { id: string; status: string; registeredAt: string } | null;
 }
 export default function EventDetailPage() {
+  const t = useTranslations('events');
+  const td = useTranslations('pages.eventDetail');
+  const locale = useLocale();
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [event, setEvent] = useState<EventDetail | null>(null);
@@ -91,28 +96,28 @@ export default function EventDetailPage() {
     return (
       <div className="container mx-auto px-4 py-24 text-center text-muted-foreground">
         {' '}
-        Event not found.{' '}
+        {td('notFound')}{' '}
       </div>
     );
   }
   const loc = event.location as Record<string, string> | null;
   const isRegistered = !!event.userRegistration;
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-US', {
+    formatDateInLocale(d, locale, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
       year: 'numeric',
     });
   const formatTime = (d: string) =>
-    new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    formatDateInLocale(d, locale, { hour: 'numeric', minute: '2-digit' });
   return (
     <div className="container mx-auto max-w-4xl px-4 py-12">
       {' '}
       <Button variant="ghost" size="sm" className="mb-6" asChild>
         {' '}
         <Link href="/events">
-          <ArrowLeft className="flip-rtl size-4 me-1" /> All Events
+          <ArrowLeft className="flip-rtl size-4 me-1" /> {t('all')}
         </Link>{' '}
       </Button>{' '}
       <div className="grid gap-8 lg:grid-cols-3">
@@ -132,12 +137,12 @@ export default function EventDetailPage() {
             <div className="flex items-center gap-2 mb-2">
               {' '}
               <Badge className="capitalize">{event.eventType}</Badge>{' '}
-              {event.isVirtual && <Badge variant="secondary">Virtual</Badge>}{' '}
-              {event.isFull && <Badge variant="destructive">Full</Badge>}{' '}
+              {event.isVirtual && <Badge variant="secondary">{td('virtual')}</Badge>}{' '}
+              {event.isFull && <Badge variant="destructive">{td('full')}</Badge>}{' '}
               {isRegistered && (
                 <Badge variant="outline" className="text-green-600 border-green-400">
                   <CheckCircle className="size-3.5 me-1" />
-                  Registered
+                  {t('registered')}
                 </Badge>
               )}{' '}
             </div>{' '}
@@ -154,7 +159,7 @@ export default function EventDetailPage() {
           {' '}
           <div className="rounded-xl border bg-card p-5 space-y-4">
             {' '}
-            <h2 className="font-semibold">Event Details</h2>{' '}
+            <h2 className="font-semibold">{td('details')}</h2>{' '}
             <div className="space-y-3 text-sm">
               {' '}
               <div className="flex items-start gap-3">
@@ -178,7 +183,7 @@ export default function EventDetailPage() {
                   {' '}
                   <p className="font-medium">
                     {' '}
-                    {event.isVirtual ? 'Online' : loc?.venue || loc?.city || 'TBD'}{' '}
+                    {event.isVirtual ? t('online') : loc?.venue || loc?.city || td('tbd')}{' '}
                   </p>{' '}
                   {loc?.address && <p className="text-muted-foreground">{loc.address}</p>}{' '}
                   {loc?.city && (
@@ -197,8 +202,12 @@ export default function EventDetailPage() {
                     {' '}
                     <div className="flex justify-between text-sm mb-1">
                       {' '}
-                      <span className="font-medium">{event.registeredCount} registered</span>{' '}
-                      <span className="text-muted-foreground">of {event.maxAttendees}</span>{' '}
+                      <span className="font-medium">
+                        {td('registeredCount', { count: event.registeredCount })}
+                      </span>{' '}
+                      <span className="text-muted-foreground">
+                        {td('ofCapacity', { max: event.maxAttendees })}
+                      </span>{' '}
                     </div>{' '}
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
                       {' '}
@@ -224,7 +233,7 @@ export default function EventDetailPage() {
                   {' '}
                   <Monitor className="size-4 text-primary shrink-0" />{' '}
                   <span className="text-muted-foreground">
-                    Link provided after registration
+                    {td('linkAfterRegistration')}
                   </span>{' '}
                 </div>
               )}{' '}
@@ -242,22 +251,22 @@ export default function EventDetailPage() {
               <Loader2 className="size-4 animate-spin me-2" />
             ) : isRegistered ? (
               <>
-                <XCircle className="size-4 me-2" /> Cancel Registration
+                <XCircle className="size-4 me-2" /> {td('cancelRegistration')}
               </>
             ) : event.isFull ? (
-              'Event Full'
+              td('eventFull')
             ) : (
               <>
-                <CheckCircle className="size-4 me-2" /> Register Now
+                <CheckCircle className="size-4 me-2" /> {td('registerNow')}
               </>
             )}{' '}
           </Button>{' '}
           {isRegistered && event.isVirtual && (
             <div className="rounded-lg border bg-primary/5 p-4 text-sm">
               {' '}
-              <p className="font-medium mb-1">Virtual Access</p>{' '}
+              <p className="font-medium mb-1">{td('virtualAccess')}</p>{' '}
               <p className="text-muted-foreground">
-                Login details will be emailed before the event.
+                {td('virtualAccessHint')}
               </p>{' '}
             </div>
           )}{' '}

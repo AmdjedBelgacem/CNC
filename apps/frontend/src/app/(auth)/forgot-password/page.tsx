@@ -1,8 +1,10 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 export default function ForgotPasswordPage() {
+  const t = useTranslations('auth');
   const { forgotPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -16,7 +18,7 @@ export default function ForgotPasswordPage() {
       await forgotPassword(email);
       setSent(true);
     } catch {
-      setError('Failed to send reset email. Please try again.');
+      setError(t('forgot.sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -44,21 +46,21 @@ export default function ForgotPasswordPage() {
         </div>{' '}
         <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
-          Check Your Email{' '}
+          {t('checkYourEmail')}{' '}
         </h1>{' '}
         <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">
           {' '}
-          If an account exists for <strong className="text-foreground">{email}</strong>, we&apos;ve
-          sent a password reset link.{' '}
+          {t('forgot.sentPrefix')} <strong className="text-foreground">{email}</strong>
+          {t('forgot.sentSuffix')}{' '}
         </p>{' '}
         <div className="w-full rounded-xl border border-border bg-background/50 p-3.5 text-xs text-muted-foreground">
           {' '}
-          Didn&apos;t receive it? Check your spam folder or{' '}
+          {t('didntReceiveIt')}{' '}
           <button
             onClick={() => setSent(false)}
             className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
           >
-            try again
+            {t('tryAgain')}
           </button>{' '}
         </div>{' '}
         <p className="mt-6 text-sm text-muted-foreground">
@@ -67,7 +69,7 @@ export default function ForgotPasswordPage() {
             href="/login"
             className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
           >
-            Back to Sign In
+            {t('backToSignIn')}
           </Link>{' '}
         </p>{' '}
       </div>
@@ -80,15 +82,15 @@ export default function ForgotPasswordPage() {
         {' '}
         <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
-          Password Reset{' '}
+          {t('forgot.eyebrow')}{' '}
         </p>{' '}
         <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
-          Forgot Password?{' '}
+          {t('forgotPassword')}{' '}
         </h1>{' '}
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           {' '}
-          Enter your email and we&apos;ll send you a reset link{' '}
+          {t('forgot.hint')}{' '}
         </p>{' '}
       </div>{' '}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -106,12 +108,12 @@ export default function ForgotPasswordPage() {
             className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
-            Email{' '}
+            {t('email')}{' '}
           </label>{' '}
           <input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -125,17 +127,17 @@ export default function ForgotPasswordPage() {
           className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {' '}
-          {loading ? 'Sending...' : 'Send Reset Link'}{' '}
+          {loading ? t('sending') : t('sendResetLink')}{' '}
         </button>{' '}
       </form>{' '}
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {' '}
-        Remember your password?{' '}
+        {t('rememberPassword')}{' '}
         <Link
           href="/login"
           className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
         >
-          Sign in
+          {t('signIn')}
         </Link>{' '}
       </p>{' '}
     </div>

@@ -2,6 +2,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { trackLogin } from '@/lib/analytics';
 
@@ -25,6 +26,7 @@ async function oauthRedirect(provider: 'google') {
   } catch {} // Fallback: direct navigation (backend may still accept, or shows error) window.location.href = `/api/proxy/auth/oauth/${provider}?redirect=1`;
 }
 function LoginForm() {
+  const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl') || '/';
@@ -52,7 +54,7 @@ const result = await login(email, password, rememberDevice);
       trackLogin('password');
       router.push(returnUrl);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Login failed';
+      const msg = err instanceof Error ? err.message : t('loginFailed');
       setError(msg);
       if (msg === 'Please verify your email address before logging in.') {
         setNeedsVerification(true);
@@ -67,7 +69,7 @@ const result = await login(email, password, rememberDevice);
       await resendVerification(email);
       setVerificationSent(true);
     } catch {
-      setError('Failed to send verification email. Try again later.');
+      setError(t('verification.sendFailed'));
     } finally {
       setResending(false);
     }
@@ -79,15 +81,15 @@ const result = await login(email, password, rememberDevice);
         {' '}
         <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
-          Operator Sign In{' '}
+          {t('login.eyebrow')}{' '}
         </p>{' '}
         <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
-          Sign In{' '}
+          {t('signIn')}{' '}
         </h1>{' '}
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           {' '}
-          Access your CNC manufacturing academy{' '}
+          {t('login.subtitle')}{' '}
         </p>{' '}
       </div>{' '}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -104,11 +106,11 @@ const result = await login(email, password, rememberDevice);
                 className="ms-1.5 font-bold text-primary underline underline-offset-2 transition-all duration-200 hover:text-primary/80"
               >
                 {' '}
-                {resending ? 'Sending...' : 'Resend verification email'}{' '}
+                {resending ? t('sending') : t('verification.resendEmail')}{' '}
               </button>
             )}{' '}
             {verificationSent && (
-              <span className="ms-1.5 font-bold text-success"> Verification email sent! </span>
+              <span className="ms-1.5 font-bold text-success"> {t('verification.sent')} </span>
             )}{' '}
           </div>
         )}{' '}
@@ -119,12 +121,12 @@ const result = await login(email, password, rememberDevice);
             className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
-            Email{' '}
+            {t('email')}{' '}
           </label>{' '}
           <input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -142,20 +144,20 @@ const result = await login(email, password, rememberDevice);
               className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
             >
               {' '}
-              Password{' '}
+              {t('password')}{' '}
             </label>{' '}
             <Link
               href="/forgot-password"
               className="text-2xs font-medium text-primary transition-all duration-200 hover:text-primary/80"
             >
               {' '}
-              Forgot?{' '}
+              {t('forgotLink')}{' '}
             </Link>{' '}
           </div>{' '}
           <input
             id="password"
             type="password"
-            placeholder="Enter your password"
+            placeholder={t('passwordPlaceholder')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -172,7 +174,7 @@ const result = await login(email, password, rememberDevice);
             className="size-4 rounded border-border bg-background text-primary accent-primary"
           />{' '}
           <span className="text-xs font-medium text-muted-foreground">
-            Remember this device for 30 days
+            {t('rememberDevice')}
           </span>{' '}
         </label>{' '}
         <button
@@ -181,7 +183,7 @@ const result = await login(email, password, rememberDevice);
           className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {' '}
-          {loading ? 'Signing in...' : 'Sign In'}{' '}
+          {loading ? t('signingIn') : t('signIn')}{' '}
         </button>{' '}
       </form>{' '}
       <div className="relative my-8">
@@ -194,7 +196,7 @@ const result = await login(email, password, rememberDevice);
           {' '}
           <span className="bg-card px-3 text-2xs font-bold uppercase tracking-[0.15em] text-muted-foreground">
             {' '}
-            Or continue with{' '}
+            {t('orContinueWith')}{' '}
           </span>{' '}
         </div>{' '}
       </div>{' '}
@@ -235,21 +237,22 @@ const result = await login(email, password, rememberDevice);
       </div>{' '}
       <p className="mt-6 text-center text-sm text-muted-foreground">
         {' '}
-        Don&apos;t have an account?{' '}
+        {t('dontHaveAccount')}{' '}
         <Link
           href="/register"
           className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
         >
           {' '}
-          Sign up{' '}
+          {t('signUp')}{' '}
         </Link>{' '}
       </p>{' '}
     </div>
   );
 }
 export default function LoginPage() {
+  const tCommon = useTranslations('common');
   return (
-    <Suspense fallback={<div className="text-sm text-muted-foreground">Loading...</div>}>
+    <Suspense fallback={<div className="text-sm text-muted-foreground">{tCommon('loading')}</div>}>
       {' '}
       <LoginForm />{' '}
     </Suspense>

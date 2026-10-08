@@ -52,6 +52,8 @@ function useSiblingLessons(courseSlug: string, locale: ContentLocale) {
 export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
   const t = useTranslations('lesson');
   const tc = useTranslations('courses');
+  const tp = useTranslations('pages.lessonPlayer');
+  const tCommon = useTranslations('common');
   const locale = coerceLocale(useLocale());
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -198,7 +200,7 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
                   )}
                   <p className="mt-3 text-base font-semibold text-foreground">
                     {playbackStatus === 401
-                      ? 'Please sign in to watch this lesson'
+                      ? tp('signInToWatch')
                       : playbackStatus === 403
                         ? tc('enrollToStart')
                         : hasVideo
@@ -208,7 +210,7 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
                   {gated && (
                     <Button asChild size="sm" className="mt-3">
                       <Link href={playbackStatus === 401 ? '/login' : `/courses/${courseSlug}`}>
-                        {playbackStatus === 401 ? 'Sign in' : tc('enroll')}
+                        {playbackStatus === 401 ? tCommon('signIn') : tc('enroll')}
                       </Link>
                     </Button>
                   )}
@@ -260,7 +262,7 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
               {completed
                 ? t('completed')
                 : requiredQuizPending
-                  ? 'Pass the required quiz to continue'
+                  ? tp('passQuizRequired')
                   : t('markComplete')}
             </Button>
             <div className="ms-auto flex items-center gap-2">
@@ -275,7 +277,7 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
               {next &&
                 (requiredQuizPending ? (
                   <Button size="sm" disabled>
-                    Pass the quiz to continue
+                    {tp('passQuizToContinue')}
                   </Button>
                 ) : (
                   <Button size="sm" asChild>
@@ -315,7 +317,7 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">
-                  This lesson does not have published content yet.
+                  {tp('noPublishedContent')}
                 </p>
               </CardContent>
             </Card>
@@ -392,7 +394,7 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
                       <span className="min-w-0 flex-1 truncate">{item.title}</span>
                       {item.freePreview && (
                         <Badge variant="soft" className="shrink-0 text-[10px]">
-                          Preview
+                          {tc('videoPreview')}
                         </Badge>
                       )}
                       {!!item.videoDuration && (

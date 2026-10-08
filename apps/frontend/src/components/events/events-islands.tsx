@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import {
   ArrowRight,
   Clock,
@@ -6,38 +7,52 @@ import {
   Monitor,
   Users,
 } from 'lucide-react';
+import { getLocale } from 'next-intl/server';
 import { EventsBoard } from '@/components/events/events-board';
 import { getImageSrc } from '@/lib/images';
 import type { CatalogEvent } from '@/lib/events';
+import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-function dayParts(iso: string) {
+function dayParts(iso: string, locale = 'en') {
   const d = new Date(iso);
   return {
-    month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+    month: formatDate(d, locale, { month: 'short' }).toUpperCase(),
     day: String(d.getDate()).padStart(2, '0'),
-    weekday: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+    weekday: formatDate(d, locale, { weekday: 'short' }).toUpperCase(),
     year: d.getFullYear(),
   };
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+function formatTime(iso: string, locale = 'en') {
+  return formatDate(iso, locale, { hour: 'numeric', minute: '2-digit' });
 }
 
-function placeLabel(event: CatalogEvent) {
-  if (event.isVirtual) return 'Online';
+function placeLabel(event: CatalogEvent, t: Translator) {
+  if (event.isVirtual) return t('online');
   const loc = event.location;
-  if (!loc) return 'TBD';
+  if (!loc) return t('tbd');
   if (loc.city) return `${loc.city}${loc.state ? `, ${loc.state}` : ''}`;
-  return loc.venue || 'TBD';
+  return loc.venue || t('tbd');
 }
 
-function seatsLabel(event: CatalogEvent) {
-  if (!event.maxAttendees) return 'Open seats';
+/**
+ * Loose translator shape: the concrete next-intl translator is generic per key and its
+ * value type is narrower, so a plain `(key, values) => string` would reject it.
+ */
+type Translator = (key: string, values?: Record<string, string | number | Date>) => any;
+
+/**
+ * `full` is derived from the counts, never from the rendered label.
+ *
+ * It used to be `seats === 'Full'`, which meant translating the label silently turned
+ * every sold-out event back into an open one. Data decides, the string is display only.
+ */
+function seatsInfo(event: CatalogEvent, t: Translator) {
+  if (!event.maxAttendees) return { full: false, label: t('openSeats') };
   const left = Math.max(0, event.maxAttendees - event.registeredCount);
-  if (left === 0) return 'Full';
-  return `${left} seats left`;
+  if (left === 0) return { full: true, label: t('full') };
+  return { full: false, label: t('seatsLeft', { count: left }) };
 }
 
 function groupKey(iso: string) {
@@ -47,12 +62,12 @@ function groupKey(iso: string) {
   ).padStart(2, '0')}`;
 }
 
-function monthLabel(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+function monthLabel(iso: string, locale = 'en') {
+  return formatDate(iso, locale, { month: 'long', year: 'numeric' });
 }
 
-function EventDateBlock({ iso }: { iso: string }) {
-  const p = dayParts(iso);
+function EventDateBlock({ iso, locale }: { iso: string; locale: string }) {
+  const p = dayParts(iso, locale);
   return (
     <div
       aria-hidden
@@ -71,16 +86,15 @@ function EventDateBlock({ iso }: { iso: string }) {
   );
 }
 
-function ScheduleRow({ event }: { event: CatalogEvent }) {
-  const seats = seatsLabel(event);
-  const full = seats === 'Full';
+function ScheduleRow({ event, locale, t }: { event: CatalogEvent; locale: string; t: Translator }) {
+  const { full, label: seats } = seatsInfo(event, t);
 
   return (
     <Link
       href={`/events/${event.slug}`}
       className="group flex items-start gap-4 border-b border-border px-3 py-4 transition-colors last:border-b-0 hover:bg-surface-sunken/60 sm:gap-5 sm:px-5"
     >
-      <EventDateBlock iso={event.startDate} />
+      <EventDateBlock iso={event.startDate} locale={locale} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-primary capitalize">
@@ -99,7 +113,7 @@ function ScheduleRow({ event }: { event: CatalogEvent }) {
         <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Clock className="size-3.5 shrink-0 text-primary" />
-            {formatTime(event.startDate)}
+            {formatTime(event.startDate, locale)}
           </span>
           <span className="inline-flex items-center gap-1.5">
             {event.isVirtual ? (
@@ -107,7 +121,7 @@ function ScheduleRow({ event }: { event: CatalogEvent }) {
             ) : (
               <MapPin className="size-3.5 shrink-0 text-primary" />
             )}
-            {placeLabel(event)}
+            {placeLabel(event, t)}
           </span>
           <span
             className={cn('inline-flex items-center gap-1.5', full && 'text-destructive')}
@@ -125,10 +139,9 @@ function ScheduleRow({ event }: { event: CatalogEvent }) {
   );
 }
 
-function NextUpCard({ event }: { event: CatalogEvent }) {
-  const p = dayParts(event.startDate);
-  const seats = seatsLabel(event);
-  const full = seats === 'Full';
+function NextUpCard({ event, locale, t }: { event: CatalogEvent; locale: string; t: Translator }) {
+  const p = dayParts(event.startDate, locale);
+  const { full, label: seats } = seatsInfo(event, t);
 
   return (
     <Link
@@ -172,7 +185,7 @@ function NextUpCard({ event }: { event: CatalogEvent }) {
         <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Clock className="size-4 text-primary" />
-            {formatTime(event.startDate)}
+            {formatTime(event.startDate, locale)}
           </span>
           <span className="inline-flex items-center gap-1.5">
             {event.isVirtual ? (
@@ -180,7 +193,7 @@ function NextUpCard({ event }: { event: CatalogEvent }) {
             ) : (
               <MapPin className="size-4 text-primary" />
             )}
-            {placeLabel(event)}
+            {placeLabel(event, t)}
           </span>
           <span className={cn('inline-flex items-center gap-1.5', full && 'text-destructive')}>
             <Users className="size-4" />
@@ -202,18 +215,19 @@ function upcomingList(events: CatalogEvent[], upcoming: CatalogEvent[]) {
 }
 
 /** Format ticker — the `events-ticker` island. */
-export function EventsFormatTicker({
+export async function EventsFormatTicker({
   events,
 }: {
   events: CatalogEvent[];
 }) {
+  const t = await getTranslations('pages.events');
   if (events.length === 0) return null;
   return (
     <div className="relative border-y border-border bg-overlay text-white">
       <div className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto flex items-stretch overflow-hidden">
         <div className="flex shrink-0 items-center gap-2 border-e border-white/10 py-2.5 pe-4 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
           <span className="size-1.5 animate-pulse rounded-full bg-primary" />
-          On the board
+          {t('tickerHeading')}
         </div>
         <div className="relative flex-1 overflow-hidden">
           <div className="flex w-max gap-8 py-2.5 ps-4 [animation:marquee_45s_linear_infinite] hover:[animation-play-state:paused]">
@@ -235,13 +249,15 @@ export function EventsFormatTicker({
 }
 
 /** Next event spotlight — the `events-next-up` island. */
-export function EventsNextUp({
+export async function EventsNextUp({
   events,
   upcoming,
 }: {
   events: CatalogEvent[];
   upcoming: CatalogEvent[];
 }) {
+  const locale = await getLocale();
+  const t = await getTranslations('pages.events');
   const list = upcomingList(events, upcoming);
   const nextEvent = list[0] ?? null;
   if (!nextEvent) return null;
@@ -255,7 +271,7 @@ export function EventsNextUp({
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Next on the board
+              {t('nextUpHeading')}
             </p>
             <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
               Don&apos;t miss the next one
@@ -269,20 +285,22 @@ export function EventsNextUp({
             <ArrowRight className="flip-rtl size-3.5" />
           </a>
         </div>
-        <NextUpCard event={nextEvent} />
+        <NextUpCard event={nextEvent} locale={locale} t={t} />
       </div>
     </section>
   );
 }
 
 /** Chronological schedule rail + side rail — the `events-schedule` island. */
-export function EventsSchedule({
+export async function EventsSchedule({
   events,
   upcoming,
 }: {
   events: CatalogEvent[];
   upcoming: CatalogEvent[];
 }) {
+  const locale = await getLocale();
+  const t = await getTranslations('pages.events');
   const now = Date.now();
   const list = upcomingList(events, upcoming);
   const past = events
@@ -300,7 +318,7 @@ export function EventsSchedule({
     if (last && last.key === key) {
       last.items.push(event);
     } else {
-      groups.push({ key, label: monthLabel(event.startDate), items: [event] });
+      groups.push({ key, label: monthLabel(event.startDate, locale), items: [event] });
     }
   }
 
@@ -341,7 +359,7 @@ export function EventsSchedule({
                     </span>
                   </div>
                   {group.items.map((event) => (
-                    <ScheduleRow key={event.id} event={event} />
+                    <ScheduleRow key={event.id} event={event} locale={locale} t={t} />
                   ))}
                 </div>
               ))}
@@ -391,7 +409,7 @@ export function EventsSchedule({
                           {event.title}
                         </span>
                         <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
-                          {new Date(event.startDate).toLocaleDateString('en-US', {
+                          {formatDate(event.startDate, locale, {
                             month: 'short',
                             day: 'numeric',
                           })}{' '}
@@ -461,7 +479,12 @@ export function EventsBrowse() {
 }
 
 /** Hero stats helper shared by the events route (live counters). */
+/**
+ * Labels come from the caller: this runs in the async route page, so the translator is
+ * passed in rather than pulled from a hook.
+ */
 export function eventsHeroStats(
+  t: Translator,
   events: CatalogEvent[],
   upcoming: CatalogEvent[],
 ): { label: string; value: string }[] {
@@ -475,9 +498,9 @@ export function eventsHeroStats(
   ).size;
   const freeCount = events.filter((e) => !e.price || e.price === 0).length;
   return [
-    { label: 'Upcoming', value: String(list.length) },
-    { label: 'Formats', value: String(typeCount || '—') },
-    { label: 'Cities', value: String(cityCount || 'Online') },
-    { label: 'Free seats', value: String(freeCount) },
+    { label: t('statUpcoming'), value: String(list.length) },
+    { label: t('statFormats'), value: String(typeCount || '—') },
+    { label: t('statCities'), value: String(cityCount || t('online')) },
+    { label: t('statFreeSeats'), value: String(freeCount) },
   ];
 }

@@ -647,6 +647,7 @@ function BlockFields({
   readOnly?: boolean;
 }) {
   const t = useTranslations('admin.email');
+  const te = useTranslations('ui.emailTemplateEditor');
   const p = block.props as Record<string, unknown>;
   const align = () => (
     <Select value={String(p.align ?? 'left')} onValueChange={(x) => onChange({ align: x })} disabled={readOnly}>
@@ -716,9 +717,7 @@ function BlockFields({
                 rows={4}
                 className="w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
               />
-              <p className="text-[11px] text-muted-foreground">
-                &lt;b&gt; &lt;i&gt; &lt;u&gt; &lt;a&gt; &lt;span&gt; &lt;br&gt; only — anything else is stripped.
-              </p>
+              <p className="text-[11px] text-muted-foreground">{te('allowedHtmlHint')}</p>
             </div>
           </>
         )}
@@ -732,7 +731,7 @@ function BlockFields({
             <div className="space-y-1.5">
               {label(t('labelUrl'))}
               <Input value={String(p.url ?? '')} disabled={readOnly} onChange={(e) => onChange({ url: e.target.value })} className="font-mono text-xs" />
-              <p className="text-[11px] text-muted-foreground">https:// only. A non-https link is dropped.</p>
+              <p className="text-[11px] text-muted-foreground">{te('httpsOnlyHint')}</p>
             </div>
             <div className="space-y-1.5">
               {label(t('labelVariant'))}
@@ -761,7 +760,7 @@ function BlockFields({
             <div className="space-y-1.5">
               {label(t('labelAlt'))}
               <Input value={String(p.alt ?? '')} disabled={readOnly} onChange={(e) => onChange({ alt: e.target.value })} />
-              <p className="text-[11px] text-muted-foreground">Shown when images are blocked. Keep the logo non-essential.</p>
+              <p className="text-[11px] text-muted-foreground">{te('imageAltHint')}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -821,7 +820,7 @@ function BlockFields({
                 className="font-mono text-xs"
                 placeholder="order.items"
               />
-              <p className="text-[11px] text-muted-foreground">A payload path, expanded per send.</p>
+              <p className="text-[11px] text-muted-foreground">{te('payloadPathHint')}</p>
             </div>
             <div className="space-y-1.5">
               {label(t('type'))}
@@ -893,11 +892,9 @@ function BlockFields({
         {block.type === 'columns' && (
           <div className="space-y-2">
             {label(t('labelColumns'))}
-            <p className="text-[11px] text-muted-foreground">
-              Two-up columns render as a table and stack on narrow screens. Nest text or image blocks.
-            </p>
+            <p className="text-[11px] text-muted-foreground">{te('twoUpColumnsHint')}</p>
             <Input
-              placeholder="widths, comma separated"
+              placeholder={te('widthsPlaceholder')}
               className="font-mono text-xs"
               value={((p.columns as Array<{ width: number }>) ?? []).map((c) => c.width).join(', ')}
               onChange={(e) => {
@@ -936,9 +933,7 @@ function BlockFields({
               />
               {t('showUnsubscribe')}
             </label>
-            <p className="text-[11px] text-muted-foreground">
-              Transactional mail (receipts, certificates, resets) should not carry one.
-            </p>
+            <p className="text-[11px] text-muted-foreground">{te('unsubscribeHint')}</p>
           </>
         )}
       </div>

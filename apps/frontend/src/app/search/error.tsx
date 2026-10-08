@@ -10,6 +10,8 @@
  */
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { ErrorView } from '@/components/ui/error-view';
 
 export default function Error({
@@ -19,5 +21,6 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <ErrorView error={error} reset={reset} title="Search is unavailable" />;
+  const t = useTranslations('searchError');
+  return <ErrorView error={error} reset={reset} title={t('title')} />;
 }

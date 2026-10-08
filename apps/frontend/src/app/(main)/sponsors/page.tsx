@@ -1,5 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { ExternalLink, Crown, Shield, Medal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ const tierConfig: Record<string, { icon: typeof Crown; className: string }> = {
   Silver: { icon: Medal, className: 'border-border bg-muted/40' },
 };
 export default function SponsorsPage() {
+  const t = useTranslations('pages.sponsors');
   const { data, isLoading, error } = useQuery<{ data: Sponsor[] }>({
     queryKey: ['sponsors'],
     queryFn: () =>
@@ -36,6 +38,14 @@ export default function SponsorsPage() {
     grouped[tier].push(s);
   }
   const tierOrder = ['Platinum', 'Gold', 'Silver', 'General'];
+  // `tier` is a taxonomy key from the API — it stays English so the grouping and
+  // `tierConfig` lookups keep matching; only the rendered label is localized.
+  const tierLabels: Record<string, string> = {
+    Platinum: t('tierPlatinum'),
+    Gold: t('tierGold'),
+    Silver: t('tierSilver'),
+    General: t('tierGeneral'),
+  };
   return (
     <div>
       {' '}
@@ -43,15 +53,14 @@ export default function SponsorsPage() {
         {' '}
         <div className="container mx-auto px-4">
           {' '}
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-4">Our Partners</h1>{' '}
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-4">{t('title')}</h1>{' '}
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             {' '}
-            Free manufacturing education is made possible by the generous support of our industry
-            partners.{' '}
+            {t('subtitle')}{' '}
           </p>{' '}
           <Button asChild size="lg">
             {' '}
-            <Link href="/contact">Become a Partner</Link>{' '}
+            <Link href="/contact">{t('becomePartner')}</Link>{' '}
           </Button>{' '}
         </div>{' '}
       </section>{' '}
@@ -71,16 +80,16 @@ export default function SponsorsPage() {
             <div className="flex flex-col items-center justify-center py-24 text-center">
               {' '}
               <p className="text-muted-foreground">
-                Unable to load partners. Make sure the backend is running.
+                {t('loadFailed')}
               </p>{' '}
             </div>
           )}{' '}
           {!isLoading && !error && sponsors.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               {' '}
-              <h3 className="text-lg font-semibold">No partners yet</h3>{' '}
+              <h3 className="text-lg font-semibold">{t('emptyTitle')}</h3>{' '}
               <p className="text-sm text-muted-foreground mt-1">
-                Partner listings will appear once published.
+                {t('emptyHint')}
               </p>{' '}
             </div>
           )}{' '}
@@ -95,7 +104,7 @@ export default function SponsorsPage() {
                 <div className="flex items-center gap-3 mb-6">
                   {' '}
                   <Icon className="size-5 text-primary" />{' '}
-                  <h2 className="text-2xl font-bold">{tier} Partners</h2>{' '}
+                  <h2 className="text-2xl font-bold">{t('tierHeading', { tier: tierLabels[tier] ?? tier })}</h2>{' '}
                 </div>{' '}
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {' '}
@@ -117,7 +126,7 @@ export default function SponsorsPage() {
                         </div>{' '}
                         {s.tier && (
                           <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
-                            {s.tier}
+                            {tierLabels[s.tier] ?? s.tier}
                           </span>
                         )}{' '}
                       </div>{' '}
@@ -135,7 +144,7 @@ export default function SponsorsPage() {
                           className="inline-flex items-center gap-1 text-sm text-primary mt-3 hover:underline"
                         >
                           {' '}
-                          Visit website <ExternalLink className="size-3.5" />{' '}
+                          {t('visitWebsite')} <ExternalLink className="size-3.5" />{' '}
                         </a>
                       )}{' '}
                     </div>

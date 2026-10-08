@@ -1,7 +1,9 @@
 'use client';
 import { CreditCard, Check, Zap, Crown, ArrowRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 export default function BillingPage() {
+  const t = useTranslations('account');
   return (
     <div className="space-y-6">
       {' '}
@@ -13,9 +15,9 @@ export default function BillingPage() {
         </div>{' '}
         <div>
           {' '}
-          <h1 className="text-xl font-semibold tracking-tight">Billing</h1>{' '}
+          <h1 className="text-xl font-semibold tracking-tight">{t('billing.pageTitle')}</h1>{' '}
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Manage your subscription, invoices, and payment methods.
+            {t('billing.pageSubtitle')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
@@ -27,32 +29,36 @@ export default function BillingPage() {
             {' '}
             <Crown className="size-5" />{' '}
           </div>{' '}
-          <h2 className="mt-4 text-lg font-semibold">Upgrade to Pro</h2>{' '}
+          <h2 className="mt-4 text-lg font-semibold">{t('billing.upgradeToPro')}</h2>{' '}
           <p className="mt-1 max-w-md text-sm leading-relaxed text-white/80">
-            Unlock unlimited courses, certificates, and priority support. Cancel anytime.
+            {t('billing.proSubtitle')}
           </p>{' '}
         </div>{' '}
         <div className="grid gap-4 p-6 sm:grid-cols-2">
           {' '}
           {[
             {
-              name: 'Starter',
-              price: 'Free',
-              features: ['3 courses', 'Community access', 'Basic certificates'],
-              cta: 'Current plan',
+              name: t('billing.planStarter'),
+              price: t('billing.planFree'),
+              features: [
+                t('billing.featureThreeCourses'),
+                t('billing.featureCommunityAccess'),
+                t('billing.featureBasicCertificates'),
+              ],
+              cta: t('billing.currentPlan'),
               active: true,
             },
             {
-              name: 'Pro',
+              name: t('billing.planPro'),
               price: '$29',
-              suffix: '/mo',
+              suffix: t('billing.perMonth'),
               features: [
-                'Unlimited courses',
-                'Verified certificates',
-                '1:1 mentorship',
-                'Priority support',
+                t('billing.featureUnlimitedCourses'),
+                t('billing.featureVerifiedCertificates'),
+                t('billing.featureMentorship'),
+                t('billing.featurePrioritySupport'),
               ],
-              cta: 'Upgrade to Pro',
+              cta: t('billing.upgradeToPro'),
               highlight: true,
             },
           ].map((plan) => (
@@ -63,7 +69,7 @@ export default function BillingPage() {
               {' '}
               {plan.highlight && (
                 <div className="absolute end-3 top-3 rounded-full bg-primary px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-primary-foreground">
-                  Popular
+                  {t('billing.popular')}
                 </div>
               )}{' '}
               <h3 className="text-sm font-semibold">{plan.name}</h3>{' '}
@@ -98,8 +104,7 @@ export default function BillingPage() {
         <div className="border-t border-border/60 bg-muted/20 px-6 py-4">
           {' '}
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Zap className="size-3.5 text-primary" /> Billing is managed securely via Stripe.
-            Invoices are emailed monthly.
+            <Zap className="size-3.5 text-primary" /> {t('billing.stripeNote')}
           </p>{' '}
         </div>{' '}
       </div>{' '}
@@ -111,7 +116,7 @@ export default function BillingPage() {
             <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
               <CreditCard className="size-3.5" />
             </span>{' '}
-            Invoices
+            {t('billing.invoices')}
           </h2>{' '}
         </div>{' '}
         <div className="p-8 text-center">
@@ -119,10 +124,8 @@ export default function BillingPage() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
             <CreditCard className="size-6 text-muted-foreground" />
           </div>{' '}
-          <p className="mt-3 text-sm font-medium">No invoices yet</p>{' '}
-          <p className="text-xs text-muted-foreground">
-            Your payment history will appear here.
-          </p>{' '}
+          <p className="mt-3 text-sm font-medium">{t('billing.noInvoices')}</p>{' '}
+          <p className="text-xs text-muted-foreground">{t('billing.noInvoicesHint')}</p>{' '}
         </div>{' '}
       </div>{' '}
     </div>

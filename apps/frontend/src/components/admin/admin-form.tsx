@@ -1,5 +1,6 @@
 'use client';
 import { useId, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -337,9 +338,9 @@ export function FormActions({
   onSave,
   onReset,
   onCancel,
-  saveLabel = 'Save changes',
-  resetLabel = 'Discard',
-  cancelLabel = 'Cancel',
+  saveLabel,
+  resetLabel,
+  cancelLabel,
   extra,
   children,
 }: {
@@ -354,16 +355,18 @@ export function FormActions({
   extra?: ReactNode;
   children?: ReactNode;
 }) {
+  const t = useTranslations('ui.adminForm');
+  const tc = useTranslations('common');
   return (
     <div className="sticky bottom-0 z-20 -mx-4 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         {dirty ? (
           <span className="inline-flex items-center gap-1.5 font-semibold text-warning">
             <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
-            Unsaved changes
+            {t('unsavedChanges')}
           </span>
         ) : (
-          <span>All changes saved</span>
+          <span>{t('allChangesSaved')}</span>
         )}
         {extra}
       </div>
@@ -375,7 +378,7 @@ export function FormActions({
             disabled={saving}
             className="rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-50"
           >
-            {cancelLabel}
+            {cancelLabel ?? tc('cancel')}
           </button>
         )}
         {onReset && (
@@ -385,7 +388,7 @@ export function FormActions({
             disabled={saving || !dirty}
             className="rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-40"
           >
-            {resetLabel}
+            {resetLabel ?? t('discard')}
           </button>
         )}
         {onSave && (
@@ -395,7 +398,7 @@ export function FormActions({
             disabled={saving || !dirty}
             className="rounded-xl bg-primary px-4 py-2 text-13 font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98] disabled:opacity-40"
           >
-            {saving ? 'Saving…' : saveLabel}
+            {saving ? tc('saving') : (saveLabel ?? tc('saveChanges'))}
           </button>
         )}
         {children}

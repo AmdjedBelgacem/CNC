@@ -86,6 +86,7 @@ const STATUS_TONE: Record<string, string> = {
  */
 export function PaymentSettingsPanel() {
   const t = useTranslations('paymentsAdmin');
+  const tAdmin = useTranslations('admin.paymentSettings');
   const queryClient = useQueryClient();
   const [publishableKey, setPublishableKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -206,14 +207,13 @@ export function PaymentSettingsPanel() {
           {config.isPending ? (
             <LoadingState />
           ) : config.isError ? (
-            <ErrorState title="Could not load payment settings" onRetry={() => void config.refetch()} />
+            <ErrorState title={tAdmin('loadFailed')} onRetry={() => void config.refetch()} />
           ) : (
             <>
               {!data?.health.webhookSecretPresent && data?.health.enabled && (
                 <p className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 p-2 text-xs text-warning">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  Without a webhook secret every inbound webhook is rejected, so a payment can
-                  only be confirmed by the payer returning to the callback URL.
+                  {tAdmin('webhookSecretWarning')}
                 </p>
               )}
 

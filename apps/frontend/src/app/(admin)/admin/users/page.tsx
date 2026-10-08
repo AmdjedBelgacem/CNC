@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import {
   CalendarDays,
   Eye,
@@ -57,7 +58,7 @@ const STATUS_FALLBACK_LABEL: Record<StatusKey, string> = {
 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
-function timeAgo(iso: string, t: Translator): string {
+function timeAgo(iso: string, t: Translator, locale = 'en'): string {
   const ts = new Date(iso).getTime();
   if (Number.isNaN(ts)) return '—';
   const diff = Date.now() - ts;
@@ -68,7 +69,7 @@ function timeAgo(iso: string, t: Translator): string {
   if (hours < 24) return t('hoursAgo', { n: hours });
   const days = Math.floor(hours / 24);
   if (days < 30) return t('daysAgo', { n: days });
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return formatDate(iso, locale, { month: 'short', year: 'numeric' });
 }
 
 export default function AdminUsersPage() {
@@ -76,6 +77,7 @@ export default function AdminUsersPage() {
   const params = useSearchParams();
   const tAdmin = useTranslations('admin');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const q = params.get('q') ?? '';
   const status = params.get('status') ?? '';
   const from = params.get('from') ?? '';
@@ -433,14 +435,14 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-4 py-4">
                           <p className="font-medium text-foreground">
-                            {new Date(u.createdAt).toLocaleDateString('en-US', {
+                            {formatDate(u.createdAt, locale, {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric',
                             })}
                           </p>
                           <p className="text-2xs text-muted-foreground">
-                            {timeAgo(u.createdAt, tCommon)}
+                            {timeAgo(u.createdAt, tCommon, locale)}
                           </p>
                         </td>
                         <td className="py-4 pe-6 ps-4 text-end">

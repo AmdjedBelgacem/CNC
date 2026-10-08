@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Content, Data } from '@measured/puck';
 import { getBlockDefinition, isNodeArray, slotNamesFor } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
@@ -12,6 +13,7 @@ import {
   TriangleAlert,
 } from 'lucide-react'; /** * JSON Inspector — a coder-grade view of the selected node. * * Shows the node's raw props as JSON, validates them against the block's * zod schema (linter-style), and applies the result back into the live tree. */
 export function JsonInspectorSection() {
+  const t = useTranslations('ui.builder');
   const selected = useBuilderPuck((s) => s.selectedItem) as { type: string; props: Record<string, unknown> } | null;
   const data = useBuilderPuck((s) => s.appState.data) as unknown as Data;
   const dispatch = useBuilderPuck((s) => s.dispatch);
@@ -38,7 +40,7 @@ export function JsonInspectorSection() {
     try {
       parsed = JSON.parse(draftRef.current) as Record<string, unknown>;
     } catch (err) {
-      setIssues([{ path: 'JSON', message: err instanceof Error ? err.message : 'Invalid JSON' }]);
+      setIssues([{ path: 'JSON', message: err instanceof Error ? err.message : t('invalidJson') }]);
       return;
     }
     const result = def?.schema.safeParse(parsed);
@@ -81,7 +83,7 @@ export function JsonInspectorSection() {
         {applied && (
           <span className="ms-auto flex items-center gap-1 font-semibold normal-case text-green-600">
             {' '}
-            <Check className="size-3.5" /> Applied{' '}
+            <Check className="size-3.5" /> {t('applied')}{' '}
           </span>
         )}{' '}
       </button>{' '}
@@ -93,15 +95,19 @@ export function JsonInspectorSection() {
             <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono font-bold text-primary">
               {selected.type}
             </span>{' '}
-            {zoneNames.length > 0 && <span>zones: {zoneNames.join(', ')}</span>}{' '}
+            {zoneNames.length > 0 && (
+              <span>
+                {t('zonesLabel')} {zoneNames.join(', ')}
+              </span>
+            )}{' '}
             <button
               type="button"
               onClick={() => void handleCopy()}
               className="ms-auto flex items-center gap-1 rounded-md border border-border px-2 py-1 font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              title="Copy the whole node (type + props + id) as JSON"
+              title={t('copyNodeJsonHint')}
             >
               {' '}
-              <Copy className="size-3.5" /> Copy node JSON{' '}
+              <Copy className="size-3.5" /> {t('copyNodeJson')}{' '}
             </button>{' '}
           </div>{' '}
           <textarea
@@ -137,7 +143,7 @@ export function JsonInspectorSection() {
             className="mt-2 w-full rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90"
           >
             {' '}
-            Apply props (validated){' '}
+            {t('applyProps')}{' '}
           </button>{' '}
         </div>
       )}{' '}

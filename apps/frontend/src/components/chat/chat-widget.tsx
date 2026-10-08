@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, X, Send, Loader2, User, Bot } from 'lucide-react';
 import { skipSocket, socketOptions } from '@/lib/realtime';
@@ -14,6 +15,7 @@ interface ChatMessage {
 }
 
 export function ChatWidget() {
+  const t = useTranslations('ui.chatWidget');
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -117,8 +119,8 @@ export function ChatWidget() {
                 <MessageCircle className="size-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold leading-tight">TITANS Support</p>
-                <p className="text-2xs opacity-80">Typically replies in minutes</p>
+                <p className="text-sm font-semibold leading-tight">{t('title')}</p>
+                <p className="text-2xs opacity-80">{t('replyTime')}</p>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="rounded-full p-1 hover:bg-card transition-colors">
@@ -130,12 +132,12 @@ export function ChatWidget() {
               // No REST fallback exists for chat, so say it plainly instead of leaving a
               // composer that silently swallows messages.
               <div role="status" className="rounded-xl border border-border bg-muted/30 p-3.5 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">Live chat is unavailable</p>
+                <p className="font-medium text-foreground">{t('unavailableTitle')}</p>
                 <p className="mt-1 text-xs leading-relaxed">
                   {skipSocket()
-                    ? 'Realtime is disabled for this deployment (NEXT_PUBLIC_REALTIME_MODE=polling).'
-                    : 'The realtime connection could not be established.'}{' '}
-                  Use the AI assistant or email us instead.
+                    ? t('unavailablePolling')
+                    : t('unavailableConnection')}{' '}
+                  {t('unavailableAlternative')}
                 </p>
               </div>
             )}
@@ -145,8 +147,8 @@ export function ChatWidget() {
                   <Bot className="size-3.5 text-primary" />
                 </div>
                 <div className="rounded-2xl rounded-tl-sm bg-secondary/50 px-3.5 py-2.5 text-sm max-w-[85%]">
-                  <p className="font-medium">Hi there! 👋</p>
-                  <p className="mt-1 text-muted-foreground">I&apos;m here to help with courses, products, or anything about our CNC education platform. How can I assist you today?</p>
+                  <p className="font-medium">{t('greeting')}</p>
+                  <p className="mt-1 text-muted-foreground">{t('greetingBody')}</p>
                 </div>
               </div>
             )}
@@ -167,15 +169,15 @@ export function ChatWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
+                placeholder={t('messagePlaceholder')}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
-                aria-label="Chat message input"
+                aria-label={t('messageInputLabel')}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || connecting}
                 className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40 transition-opacity"
-                aria-label="Send message"
+                aria-label={t('sendMessage')}
               >
                 {connecting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               </button>
@@ -187,7 +189,7 @@ export function ChatWidget() {
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:scale-105 hover:shadow-sm hover:shadow-primary/40 active:scale-95"
-        aria-label={open ? 'Close chat' : 'Open chat'}
+        aria-label={open ? t('closeChat') : t('openChat')}
       >
         {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}
       </button>

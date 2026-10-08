@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, Home, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { spring, transition } from '@/lib/motion';
@@ -57,9 +58,11 @@ export function ErrorView({
   error,
   reset,
   showHome = true,
-  title = 'Something went wrong',
+  title,
   className,
 }: ErrorViewProps) {
+  const t = useTranslations('ui.errorView');
+  const heading = title ?? t('defaultTitle');
   const router = useRouter();
   const [reloading, setReloading] = React.useState(false);
   const [attempt, setAttempt] = React.useState(0);
@@ -99,12 +102,11 @@ export function ErrorView({
         </m.div>
 
         <h1 className="font-display text-headline-md font-semibold tracking-[-0.02em] text-foreground">
-          {title}
+          {heading}
         </h1>
 
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
-          This part of the page failed to load. Retrying usually fixes it — if it keeps failing, the
-          data may be temporarily unavailable.
+          {t('description')}
         </p>
 
         <AnimatePresence initial={false}>
@@ -132,14 +134,14 @@ export function ErrorView({
             ) : (
               <RefreshCw className="size-4" />
             )}
-            {reloading ? 'Retrying' : 'Try again'}
+            {reloading ? t('retrying') : t('tryAgain')}
           </Button>
 
           {showHome && (
             <Button variant="outline" asChild>
               <a href="/">
                 <Home className="size-4" />
-                Go home
+                {t('goHome')}
               </a>
             </Button>
           )}
@@ -147,7 +149,7 @@ export function ErrorView({
 
         {error.digest && (
           <p className="mt-6 font-mono text-2xs text-muted-foreground/70">
-            Reference: {error.digest}
+            {t('reference')}: {error.digest}
           </p>
         )}
       </m.div>
@@ -163,14 +165,15 @@ export function ErrorView({
  * finding another way to the content, not retrying.
  */
 export function NotFoundView({
-  title = 'Page not found',
-  description = "The page you're looking for doesn't exist, was moved, or has been retired.",
+  title,
+  description,
   className,
 }: {
   title?: string;
   description?: string;
   className?: string;
 }) {
+  const t = useTranslations('ui.errorView');
   return (
     <div className={cn('flex min-h-[60vh] items-center justify-center px-4 py-16', className)}>
       <m.div
@@ -185,22 +188,22 @@ export function NotFoundView({
           404
         </p>
         <h1 className="mt-2 font-display text-headline-md font-semibold tracking-[-0.02em] text-foreground">
-          {title}
+          {title ?? t('notFoundTitle')}
         </h1>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
-          {description}
+          {description ?? t('notFoundDescription')}
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button asChild>
             <a href="/">
               <Home className="size-4" />
-              Go home
+              {t('goHome')}
             </a>
           </Button>
           <Button variant="outline" asChild>
             <a href="/search">
               <RotateCcw className="size-4" />
-              Search the site
+              {t('searchSite')}
             </a>
           </Button>
         </div>

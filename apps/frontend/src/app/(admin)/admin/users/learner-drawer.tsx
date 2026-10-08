@@ -23,7 +23,8 @@ import {
   Fingerprint,
   X,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
@@ -250,6 +251,7 @@ export function LearnerDrawer({
   const me = useAuthStore((s) => s.user);
   const tAdmin = useTranslations('admin');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const myId = me?.id ?? '';
   const canSuspend = useCanAny(['users:suspend', 'staff:suspend']);
   const canForcePw = useCan('users:force_password_reset');
@@ -369,13 +371,13 @@ export function LearnerDrawer({
   );
 
   const fmt = (cents: number, cur = 'usd') =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: cur.toUpperCase() }).format(
+    new Intl.NumberFormat(locale, { style: 'currency', currency: cur.toUpperCase() }).format(
       cents / 100,
     );
 
   const statusMeta = user ? (STATUS_META[user.accountStatus] ?? STATUS_META.active!) : null;
   const joined = user
-    ? new Date(user.createdAt).toLocaleDateString('en-US', {
+    ? formatDate(user.createdAt, locale, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',

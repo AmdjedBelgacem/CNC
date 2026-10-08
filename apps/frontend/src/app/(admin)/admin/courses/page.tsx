@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import {
   difficultyKey,
   difficultyTone,
@@ -101,6 +102,7 @@ const STATUS_LABEL_DEFAULTS: Record<StatusKey, string> = {
 function timeAgo(
   iso: string,
   tCommon: (key: string, values?: Record<string, string | number | Date>) => string,
+  locale = 'en',
 ): string {
   const tm = new Date(iso).getTime();
   if (Number.isNaN(tm)) return '—';
@@ -112,7 +114,7 @@ function timeAgo(
   if (hours < 24) return tCommon('hoursAgo', { n: hours, default: '{n}h ago' });
   const days = Math.floor(hours / 24);
   if (days < 30) return tCommon('daysAgo', { n: days, default: '{n}d ago' });
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return formatDate(iso, locale, { month: 'short', year: 'numeric' });
 }
 
 /** Deterministic hue so a course with no thumbnail is still distinguishable. */
@@ -140,6 +142,7 @@ function CourseCard({
 }) {
   const t = useTranslations('admin.coursesPage');
   const tDifficulty = useTranslations('admin');
+  const locale = useLocale();
   const st = statusOf(course);
   const hue = hueFor(course.id);
   const noEnrollments = course.enrollments === 0;
@@ -261,7 +264,7 @@ function CourseCard({
                 <span className="truncate">{course.academyTitle}</span>
               </span>
             )}
-            <span className="ms-auto shrink-0">{timeAgo(course.updatedAt, tCommon)}</span>
+            <span className="ms-auto shrink-0">{timeAgo(course.updatedAt, tCommon, locale)}</span>
           </div>
         </div>
       </div>
@@ -312,6 +315,7 @@ export default function AdminCoursesPage() {
   const t = useTranslations('admin.coursesPage');
   const tDifficulty = useTranslations('admin');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
   const status = params.get('status') ?? '';
@@ -819,7 +823,7 @@ export default function AdminCoursesPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                          {timeAgo(c.updatedAt, tCommon)}
+                          {timeAgo(c.updatedAt, tCommon, locale)}
                         </td>
                         <td className="py-3.5 pe-6 ps-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">

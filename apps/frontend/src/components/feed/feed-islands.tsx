@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { ArrowRight, Hash } from 'lucide-react';
 import { FeedStream } from '@/components/feed/feed-stream';
 import type { WireSnapshot } from '@/lib/feed';
@@ -9,7 +10,8 @@ function snippet(content: string, max = 140) {
 }
 
 /** Hero traffic ticker — the `feed-ticker` island. */
-export function FeedTicker({ snapshot }: { snapshot: WireSnapshot }) {
+export async function FeedTicker({ snapshot }: { snapshot: WireSnapshot }) {
+  const t = await getTranslations('pages.feed');
   const ticker = snapshot.posts.slice(0, 8);
   if (ticker.length === 0) return null;
 
@@ -18,7 +20,7 @@ export function FeedTicker({ snapshot }: { snapshot: WireSnapshot }) {
       <div className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto flex items-stretch gap-0 overflow-hidden">
         <div className="flex shrink-0 items-center gap-2 border-e border-white/10 py-2.5 pe-4 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
           <span className="size-1.5 animate-pulse rounded-full bg-primary" />
-          On air
+          {t('onAir')}
         </div>
         <div className="relative flex-1 overflow-hidden">
           <div className="flex w-max animate-none gap-8 py-2.5 ps-4 [animation:marquee_40s_linear_infinite] hover:[animation-play-state:paused]">
@@ -39,7 +41,8 @@ export function FeedTicker({ snapshot }: { snapshot: WireSnapshot }) {
 }
 
 /** Topic index island — the `feed-topics` island. */
-export function FeedTopics({ snapshot }: { snapshot: WireSnapshot }) {
+export async function FeedTopics({ snapshot }: { snapshot: WireSnapshot }) {
+  const t = await getTranslations('pages.feed');
   return (
     <section
       id="topics"
@@ -49,20 +52,20 @@ export function FeedTopics({ snapshot }: { snapshot: WireSnapshot }) {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Topics on the wire
+              {t('topicsTitle')}
             </p>
             <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-              What the shop is tagging
+              {t('topicsBlurb')}
             </h2>
           </div>
           <p className="max-w-sm text-sm text-muted-foreground">
-            Tags pulled from live posts — scroll the wire below for full context.
+            {t('topicsHint')}
           </p>
         </div>
 
         {snapshot.topics.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
-            No tagged posts yet — start the wire with a setup photo.
+            {t('topicsEmpty')}
           </p>
         ) : (
           <ul className="flex flex-wrap gap-2">
@@ -94,7 +97,8 @@ export function FeedTopics({ snapshot }: { snapshot: WireSnapshot }) {
 }
 
 /** Live wire + side rail — the `feed-wire` island. */
-export function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
+export async function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
+  const t = await getTranslations('pages.feed');
   return (
     <section
       id="live-wire"
@@ -104,13 +108,13 @@ export function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
         <div className="min-w-0">
           <div className="mb-6 max-w-2xl">
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Live wire
+              {t('wireTitle')}
             </p>
             <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              The feed, unfiltered
+              {t('wireBlurb')}
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Discover public posts from the floor — like, comment, or drop your own setup.
+              {t('wireHint')}
             </p>
           </div>
           <FeedStream embedded />
@@ -119,14 +123,14 @@ export function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
         <aside className="space-y-4 lg:sticky lg:top-24">
           <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-              Wire status
+              {t('wireStatus')}
             </p>
             <ul className="mt-3 space-y-2.5">
               {[
-                { label: 'Public posts', value: snapshot.postCount },
-                { label: 'Authors', value: snapshot.activeAuthors },
-                { label: 'Topic tags', value: snapshot.topics.length },
-                { label: 'Engagements', value: snapshot.likeCount + snapshot.commentCount },
+                { label: t('publicPosts'), value: snapshot.postCount },
+                { label: t('authors'), value: snapshot.activeAuthors },
+                { label: t('topicTags'), value: snapshot.topics.length },
+                { label: t('engagements'), value: snapshot.likeCount + snapshot.commentCount },
               ].map((row) => (
                 <li
                   key={row.label}
@@ -143,7 +147,7 @@ export function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
 
           <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
             <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-              Take it further
+              {t('takeFurther')}
             </p>
             <ul className="mt-3 space-y-2">
               {[
@@ -170,12 +174,18 @@ export function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
   );
 }
 
-/** Hero stats helper shared by the feed route (live counters). */
-export function feedHeroStats(snapshot: WireSnapshot): { label: string; value: string }[] {
+/**
+ * Labels come from the caller: this runs in the async route page, and taking a
+ * translator keeps the numbers locale-aware instead of hardcoded English.
+ */
+export function feedHeroStats(
+  snapshot: WireSnapshot,
+  t: (key: string) => string,
+): { label: string; value: string }[] {
   return [
-    { label: 'Posts on wire', value: String(snapshot.postCount) },
-    { label: 'Topics', value: String(snapshot.topics.length) },
-    { label: 'Active authors', value: String(snapshot.activeAuthors) },
-    { label: 'Reactions', value: String(snapshot.likeCount + snapshot.commentCount) },
+    { label: t('postsOnWire'), value: String(snapshot.postCount) },
+    { label: t('topics'), value: String(snapshot.topics.length) },
+    { label: t('activeAuthors'), value: String(snapshot.activeAuthors) },
+    { label: t('reactions'), value: String(snapshot.likeCount + snapshot.commentCount) },
   ];
 }

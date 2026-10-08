@@ -1,8 +1,10 @@
 'use client';
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 function Verify2faForm() {
+  const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId') || '';
@@ -19,7 +21,7 @@ function Verify2faForm() {
       await verify2fa(userId, token);
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid verification code');
+      setError(err instanceof Error ? err.message : t('twoFactor.invalidCode'));
     } finally {
       setLoading(false);
     }
@@ -48,13 +50,11 @@ function Verify2faForm() {
         </div>{' '}
         <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
-          Security Authentication{' '}
+          {t('twoFactor.eyebrow')}{' '}
         </p>{' '}
         <p className="text-sm leading-relaxed text-muted-foreground">
           {' '}
-          {useRecovery
-            ? 'Enter one of your recovery codes'
-            : 'Enter the code from your authenticator app'}{' '}
+          {useRecovery ? t('twoFactor.recoveryHint') : t('twoFactor.codeHint')}{' '}
         </p>{' '}
       </div>{' '}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,7 +72,7 @@ function Verify2faForm() {
             className="block text-center text-2xs font-bold uppercase tracking-[0.15em] text-primary"
           >
             {' '}
-            {useRecovery ? 'Recovery Code' : 'Authentication Code'}{' '}
+            {useRecovery ? t('twoFactor.recoveryLabel') : t('twoFactor.codeLabel')}{' '}
           </label>{' '}
           <input
             id="token"
@@ -93,7 +93,7 @@ function Verify2faForm() {
           className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
         >
           {' '}
-          {loading ? 'Verifying...' : 'Verify'}{' '}
+          {loading ? t('twoFactor.verifying') : t('twoFactor.verify')}{' '}
         </button>{' '}
         <button
           type="button"
@@ -105,19 +105,20 @@ function Verify2faForm() {
           className="w-full text-center text-2xs font-medium text-primary transition-all duration-200 hover:text-primary/80"
         >
           {' '}
-          {useRecovery ? 'Use authenticator code instead' : 'Use a recovery code instead'}{' '}
+          {useRecovery ? t('twoFactor.useAuthenticator') : t('twoFactor.useRecovery')}{' '}
         </button>{' '}
       </form>{' '}
     </div>
   );
 }
 export default function Verify2faPage() {
+  const tCommon = useTranslations('common');
   return (
     <Suspense
       fallback={
         <div className="flex h-full flex-col items-center justify-center">
           {' '}
-          <p className="text-sm text-muted-foreground">Loading...</p>{' '}
+          <p className="text-sm text-muted-foreground">{tCommon('loading')}</p>{' '}
         </div>
       }
     >

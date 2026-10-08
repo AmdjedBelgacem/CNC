@@ -1,21 +1,25 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { AdminPageHeader } from '@/components/admin/admin-chrome';
 import { IntegrationsPanel } from './integrations-panel';
 import { SkeletonCard } from '@/components/ui/skeleton';
 
-export const metadata: Metadata = {
-  title: 'Google Integrations | Baroot CNC Solutions',
-  description: 'Connect Google Ads, Merchant Center, Tag Manager and Search Console.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('integrations');
+  const tAdmin = await getTranslations('admin.integrations');
+  return {
+    title: `${t('title')} | Baroot CNC Solutions`,
+    description: tAdmin('metaDescription'),
+  };
+}
 
-export default function AdminIntegrationsPage() {
+export default async function AdminIntegrationsPage() {
+  const t = await getTranslations('integrations');
+  const tAdmin = await getTranslations('admin.integrations');
   return (
     <div className="space-y-6 p-6">
-      <AdminPageHeader
-        title="Google integrations"
-        description="Platform-level connections. Super admin only."
-      />
+      <AdminPageHeader title={t('title')} description={tAdmin('description')} />
       {/* Was `fallback={null}`: the panel is the entire page body, so a null
           fallback left the user looking at a header above an empty void. */}
       <Suspense fallback={<IntegrationsSkeleton />}>
@@ -26,15 +30,16 @@ export default function AdminIntegrationsPage() {
 }
 
 /** One placeholder card per integration surface the panel can render. */
-function IntegrationsSkeleton() {
+async function IntegrationsSkeleton() {
+  const t = await getTranslations('admin.integrations');
   return (
     <div
       className="grid gap-4 sm:grid-cols-2"
       role="status"
       aria-busy="true"
-      aria-label="Loading integrations"
+      aria-label={t('loading')}
     >
-      <span className="sr-only">Loading integrations</span>
+      <span className="sr-only">{t('loading')}</span>
       {Array.from({ length: 4 }).map((_, i) => (
         <SkeletonCard key={i} media={false} lines={3} />
       ))}

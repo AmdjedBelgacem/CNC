@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   User,
   Shield,
@@ -18,75 +19,86 @@ import {
   Settings,
   Sparkles,
 } from 'lucide-react';
-const sidebarSections = [
-  {
-    label: 'Account',
-    items: [
-      { href: '/settings/account', icon: User, label: 'General', desc: 'Name, email, language' },
-      {
-        href: '/settings/account/security',
-        icon: Shield,
-        label: 'Security',
-        desc: 'Password, 2FA, sessions',
-      },
-      {
-        href: '/settings/account/danger',
-        icon: AlertTriangle,
-        label: 'Danger Zone',
-        desc: 'Export & delete',
-      },
-    ],
-  },
-  {
-    label: 'Profile',
-    items: [
-      {
-        href: '/settings/profile',
-        icon: UserCircle,
-        label: 'Edit Profile',
-        desc: 'Avatar, bio, portfolio',
-      },
-    ],
-  },
-  {
-    label: 'Preferences',
-    items: [
-      {
-        href: '/settings/preferences/notifications',
-        icon: Bell,
-        label: 'Notifications',
-        desc: 'Email & in-app',
-      },
-      {
-        href: '/settings/preferences/appearance',
-        icon: Palette,
-        label: 'Appearance',
-        desc: 'Theme & density',
-      },
-      {
-        href: '/settings/preferences/privacy',
-        icon: Eye,
-        label: 'Privacy',
-        desc: 'Visibility & follows',
-      },
-    ],
-  },
-  {
-    label: 'Connections',
-    items: [
-      {
-        href: '/settings/connected-accounts',
-        icon: Link2,
-        label: 'Connected Accounts',
-        desc: 'OAuth links',
-      },
-      { href: '/settings/billing', icon: CreditCard, label: 'Billing', desc: 'Plans & invoices' },
-    ],
-  },
-];
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('account');
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarSections = [
+    {
+      label: t('nav.accountSection'),
+      items: [
+        {
+          href: '/settings/account',
+          icon: User,
+          label: t('nav.general'),
+          desc: t('nav.generalDesc'),
+        },
+        {
+          href: '/settings/account/security',
+          icon: Shield,
+          label: t('nav.security'),
+          desc: t('nav.securityDesc'),
+        },
+        {
+          href: '/settings/account/danger',
+          icon: AlertTriangle,
+          label: t('nav.dangerZone'),
+          desc: t('nav.dangerZoneDesc'),
+        },
+      ],
+    },
+    {
+      label: t('nav.profileSection'),
+      items: [
+        {
+          href: '/settings/profile',
+          icon: UserCircle,
+          label: t('nav.editProfile'),
+          desc: t('nav.editProfileDesc'),
+        },
+      ],
+    },
+    {
+      label: t('nav.preferencesSection'),
+      items: [
+        {
+          href: '/settings/preferences/notifications',
+          icon: Bell,
+          label: t('nav.notifications'),
+          desc: t('nav.notificationsDesc'),
+        },
+        {
+          href: '/settings/preferences/appearance',
+          icon: Palette,
+          label: t('nav.appearance'),
+          desc: t('nav.appearanceDesc'),
+        },
+        {
+          href: '/settings/preferences/privacy',
+          icon: Eye,
+          label: t('nav.privacy'),
+          desc: t('nav.privacyDesc'),
+        },
+      ],
+    },
+    {
+      label: t('nav.connectionsSection'),
+      items: [
+        {
+          href: '/settings/connected-accounts',
+          icon: Link2,
+          label: t('nav.connectedAccounts'),
+          desc: t('nav.connectedAccountsDesc'),
+        },
+        {
+          href: '/settings/billing',
+          icon: CreditCard,
+          label: t('nav.billing'),
+          desc: t('nav.billingDesc'),
+        },
+      ],
+    },
+  ];
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
   const activeSection = sidebarSections.flatMap((s) => s.items).find((i) => isActive(i.href));
   return (
@@ -102,7 +114,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             className="hidden items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-card hover:text-foreground hover:shadow-sm sm:flex"
           >
             {' '}
-            <ChevronLeft className="flip-rtl size-3.5" /> Dashboard{' '}
+            <ChevronLeft className="flip-rtl size-3.5" /> {t('nav.dashboard')}{' '}
           </Link>{' '}
           <div className="flex items-center gap-2.5">
             {' '}
@@ -112,11 +124,13 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             </div>{' '}
             <div>
               {' '}
-              <h1 className="text-sm font-semibold leading-none tracking-tight">Settings</h1>{' '}
+              <h1 className="text-sm font-semibold leading-none tracking-tight">
+                {t('nav.settingsTitle')}
+              </h1>{' '}
               <p className="hidden text-xs text-muted-foreground sm:block">
                 {activeSection
                   ? activeSection.label + ' · ' + activeSection.desc
-                  : 'Manage your account & preferences'}
+                  : t('nav.subtitleFallback')}
               </p>{' '}
             </div>{' '}
           </div>{' '}
@@ -187,16 +201,16 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 {' '}
                 <Sparkles className="size-4" />{' '}
               </div>{' '}
-              <p className="mt-3 text-sm font-semibold leading-tight">Need help?</p>{' '}
+              <p className="mt-3 text-sm font-semibold leading-tight">{t('nav.needHelp')}</p>{' '}
               <p className="mt-1 text-xs leading-relaxed text-white/70">
-                Check our docs or contact support for account assistance.
+                {t('nav.helpHint')}
               </p>{' '}
               <Link
                 href="/feed"
                 className="mt-3 inline-flex rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-card"
               >
                 {' '}
-                Visit help center{' '}
+                {t('nav.visitHelpCenter')}{' '}
               </Link>{' '}
             </div>{' '}
           </div>{' '}
@@ -216,7 +230,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           <div className="flex items-center justify-between border-b px-4 py-3">
             {' '}
             <span className="flex items-center gap-2 text-sm font-semibold">
-              <Settings className="size-4 text-primary" /> Settings
+              <Settings className="size-4 text-primary" /> {t('nav.settingsTitle')}
             </span>{' '}
             <button
               onClick={() => setSidebarOpen(false)}

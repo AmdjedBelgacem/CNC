@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { MapPin, Users, Calendar, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,8 @@ interface StudyGroup {
   coverUrl: string | null;
 }
 export default function GroupsPage() {
+  const t = useTranslations('pages.groups');
+  const tCommon = useTranslations('common');
   const [activeAcademy, setActiveAcademy] = useState('All');
   // Filter options are derived from real row values (study_groups.academy is a
   // legacy taxonomy key, not an academy slug — see study-groups.service).
@@ -64,15 +67,14 @@ export default function GroupsPage() {
         {' '}
         <div className="container mx-auto px-4">
           {' '}
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-4">Study Groups</h1>{' '}
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-4">{t('title')}</h1>{' '}
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             {' '}
-            Learn together. Connect with CNC machinists in your area for hands-on study
-            sessions.{' '}
+            {t('subtitle')}{' '}
           </p>{' '}
           <Button>
             {' '}
-            <Plus className="me-2 size-4" /> Start a Group{' '}
+            <Plus className="me-2 size-4" /> {t('startGroup')} {' '}
           </Button>{' '}
         </div>{' '}
       </section>{' '}
@@ -96,7 +98,7 @@ export default function GroupsPage() {
                 className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${activeAcademy === a ? 'bg-primary text-primary-foreground border-primary' : 'hover:border-primary/50'}`}
               >
                 {' '}
-                {a}{' '}
+                {a === 'All' ? tCommon('all') : a}{' '}
               </button>
             ))}{' '}
           </div>{' '}
@@ -112,7 +114,7 @@ export default function GroupsPage() {
             <div className="flex flex-col items-center justify-center py-24 text-center">
               {' '}
               <p className="text-muted-foreground">
-                Unable to load study groups. Make sure the backend is running.
+                {t('loadFailed')}
               </p>{' '}
             </div>
           )}{' '}
@@ -120,9 +122,9 @@ export default function GroupsPage() {
             <div className="flex flex-col items-center justify-center py-24 text-center">
               {' '}
               <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />{' '}
-              <h3 className="text-lg font-semibold">No study groups yet</h3>{' '}
+              <h3 className="text-lg font-semibold">{t('emptyTitle')}</h3>{' '}
               <p className="text-sm text-muted-foreground mt-1">
-                Be the first to start a group in your area.
+                {t('emptyHint')}
               </p>{' '}
             </div>
           )}{' '}

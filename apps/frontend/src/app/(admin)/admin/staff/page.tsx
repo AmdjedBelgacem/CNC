@@ -18,7 +18,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/toast';
 import {
@@ -170,7 +171,7 @@ const statusStyle: Record<string, { pill: string; dot: string; label: string }> 
 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
-function timeAgo(iso: string, t: Translator): string {
+function timeAgo(iso: string, t: Translator, locale = 'en'): string {
   const ts = new Date(iso).getTime();
   if (Number.isNaN(ts)) return '—';
   const diff = Date.now() - ts;
@@ -180,7 +181,7 @@ function timeAgo(iso: string, t: Translator): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return t('hoursAgo', { n: hours });
   if (hours < 48) return t('yesterday');
-  return new Date(iso).toLocaleDateString('en-US', {
+  return formatDate(iso, locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -214,6 +215,7 @@ export default function AdminStaffPage() {
   const params = useSearchParams();
   const tAdmin = useTranslations('admin');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const q = params.get('q') ?? '';
   const role = params.get('role') ?? '';
   const status = params.get('status') ?? '';
@@ -885,7 +887,7 @@ export default function AdminStaffPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-xs text-muted-foreground">
-                          {timeAgo(u.createdAt, tCommon)}
+                          {timeAgo(u.createdAt, tCommon, locale)}
                         </td>
                         <td className="py-4 pe-6 ps-4 text-end">
                           <div className="flex items-center justify-end gap-1">
@@ -953,7 +955,7 @@ export default function AdminStaffPage() {
                     />
                     <span className="ms-auto text-2xs text-muted-foreground">
                       {tAdmin('access.joined', { default: 'Joined' })}{' '}
-                      {new Date(u.createdAt).toLocaleDateString('en-US', {
+                      {formatDate(u.createdAt, locale, {
                         month: 'short',
                         year: 'numeric',
                       })}

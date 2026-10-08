@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,8 @@ import { useFxRates } from '@/hooks/use-fx-rates';
 import { convertMinorUnits, formatMinorUnits } from '@/lib/money';
 
 export default function CartPage() {
+  const t = useTranslations('pages.cart');
+  const tp = useTranslations('products');
   // Shallow-compared: a whole-store read re-rendered the cart on every cart
   // write, including ones that only touched an unrelated field.
   const { items, removeItem, updateQuantity, itemCount } = useCartStore(
@@ -44,11 +46,11 @@ export default function CartPage() {
       <div className="container mx-auto px-4 py-24">
         <EmptyState
           icon={ShoppingBag}
-          title="Your cart is empty"
-          description="Add some tools to get started."
+          title={tp('cartEmpty')}
+          description={t('emptyHint')}
           action={
             <Button asChild>
-              <Link href="/products">Browse Store</Link>
+              <Link href="/products">{t('browseStore')}</Link>
             </Button>
           }
         />
@@ -60,12 +62,12 @@ export default function CartPage() {
     <div className="container mx-auto px-4 py-12">
       <header className="mb-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          Cart
+          {tp('cart')}
         </p>
         <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-foreground">
-          Shopping Cart
+          {t('title')}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{itemCount()} items</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('items', { count: itemCount() })}</p>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -88,7 +90,7 @@ export default function CartPage() {
                   <Button
                     variant="outline"
                     size="icon-xs"
-                    aria-label="Decrease quantity"
+                    aria-label={t('decreaseQuantity')}
                     onClick={() => updateQuantity(item.productId, Math.max(0, item.quantity - 1))}
                   >
                     <Minus />
@@ -99,7 +101,7 @@ export default function CartPage() {
                   <Button
                     variant="outline"
                     size="icon-xs"
-                    aria-label="Increase quantity"
+                    aria-label={t('increaseQuantity')}
                     onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                   >
                     <Plus />
@@ -112,7 +114,7 @@ export default function CartPage() {
                   variant="ghost"
                   size="icon-xs"
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  aria-label={`Remove ${item.title}`}
+                  aria-label={t('removeItem', { title: item.title })}
                   onClick={() => removeItem(item.productId)}
                 >
                   <Trash2 />
@@ -126,26 +128,26 @@ export default function CartPage() {
           <Card>
             <CardHeader>
               <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                Summary
+                {t('summary')}
               </p>
-              <CardTitle className="font-display">Order Summary</CardTitle>
+              <CardTitle className="font-display">{t('orderSummary')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                  Subtotal
+                  {tp('subtotal')}
                 </span>
                 <span className="font-mono tabular-nums text-foreground">{money(total)}</span>
               </div>
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                  Shipping
+                  {t('shipping')}
                 </span>
-                <span className="text-muted-foreground">Calculated at checkout</span>
+                <span className="text-muted-foreground">{t('shippingHint')}</span>
               </div>
               <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3">
                 <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                  Total
+                  {tp('total')}
                 </span>
                 <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
                   {money(total)}
@@ -154,7 +156,7 @@ export default function CartPage() {
             </CardContent>
             <CardFooter>
               <Button className="w-full" size="lg" asChild>
-                <Link href="/checkout">Proceed to Checkout</Link>
+                <Link href="/checkout">{t('proceedToCheckout')}</Link>
               </Button>
             </CardFooter>
           </Card>

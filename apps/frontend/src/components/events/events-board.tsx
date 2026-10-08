@@ -58,6 +58,7 @@ function seatLabel(event: CatalogEvent) {
 export function EventsBoard({ locale = 'en' }: { locale?: string }) {
   const t = useTranslations('events');
   const tc = useTranslations('common');
+  const tu = useTranslations('ui.events');
   const [events, setEvents] = useState<CatalogEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +108,7 @@ export function EventsBoard({ locale = 'en' }: { locale?: string }) {
       <div className="flex flex-col gap-4 border-b border-border px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="me-1 hidden font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:inline">
-            Type
+            {tu('typeLabel')}
           </span>
           {EVENT_TYPES.map((et) => {
             const active = type === et;
@@ -147,13 +148,13 @@ export function EventsBoard({ locale = 'en' }: { locale?: string }) {
               onChange={(e) => setUpcoming(e.target.checked)}
               className="size-3.5 rounded accent-[var(--color-primary)]"
             />
-            {t('upcoming')} only
+            {tu('upcomingOnly', { label: t('upcoming') })}
           </label>
           <div className="relative w-full md:w-56">
             <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search events…"
+              placeholder={tu('searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
@@ -171,13 +172,13 @@ export function EventsBoard({ locale = 'en' }: { locale?: string }) {
       {/* Result meta */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-sunken/40 px-4 py-2.5 md:px-5">
         <p className="font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-          {!loading && !error ? `${events.length} result${events.length === 1 ? '' : 's'}` : ' '}
+          {!loading && !error ? tu('resultCount', { count: events.length }) : ' '}
           {type !== 'All' ? ` · ${type}` : ''}
           {search ? ` · “${search}”` : ''}
         </p>
         <p className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
           <CalendarDays className="size-3 text-primary" />
-          Live from events API
+          {tu('liveFromApi')}
         </p>
       </div>
 

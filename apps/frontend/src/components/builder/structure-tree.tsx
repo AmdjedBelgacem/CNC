@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Data } from '@measured/puck';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -76,6 +77,7 @@ function buildTree(data: Data): TreeData {
 } /**
  * Lightweight structure tree — replaces Puck's expensive layer tree. * One component subscribes to the store (no per-node subscriptions), so it * stays cheap even with hundreds of nodes. Click a row to select that node. */
 export function StructureTree() {
+  const t = useTranslations('ui.builder');
   const data = useBuilderPuck((s) => s.appState.data);
   const selectedItem = useBuilderPuck((s) => s.selectedItem);
   const dispatch = useBuilderPuck((s) => s.dispatch);
@@ -144,7 +146,7 @@ export function StructureTree() {
             <span
               role="button"
               tabIndex={-1}
-              aria-label={isExpanded ? 'Collapse' : 'Expand'}
+              aria-label={isExpanded ? t('collapse') : t('expand')}
               onClick={(e) => {
                 e.stopPropagation();
                 toggle(node.id);
@@ -177,10 +179,10 @@ export function StructureTree() {
     return (
       <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
         {' '}
-        <p className="text-sm font-semibold text-foreground">The page is empty</p>{' '}
+        <p className="text-sm font-semibold text-foreground">{t('pageEmpty')}</p>{' '}
         <p className="max-w-[200px] text-xs leading-relaxed text-muted-foreground">
           {' '}
-          Use Add Block to insert your first component.{' '}
+          {t('pageEmptyHint')}{' '}
         </p>{' '}
       </div>
     );

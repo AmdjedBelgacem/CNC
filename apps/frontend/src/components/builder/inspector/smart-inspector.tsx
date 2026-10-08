@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { getBlockDefinition } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import { ChevronDown, MousePointerClick, Settings2 } from 'lucide-react';
@@ -31,6 +32,7 @@ export function SmartInspector() {
   // added a hook and deselecting removed one — a rules-of-hooks violation, and on
   // the short-circuit path the intl provider was never reached.
   const groupText = useInspectorText();
+  const t = useTranslations('ui.builder');
   const selected = useBuilderPuck((s) => s.selectedItem) as unknown as SelectedNode | null;
   const getSelectorForId = useBuilderPuck((s) => s.getSelectorForId);
   const dispatch = useBuilderPuck((s) => s.dispatch);
@@ -67,11 +69,10 @@ if (!def) {
             {' '}
             <Settings2 className="size-4" />{' '}
           </span>{' '}
-          <p className="text-sm font-medium text-foreground">No properties for this block</p>{' '}
+          <p className="text-sm font-medium text-foreground">{t('noProperties')}</p>{' '}
           <p className="max-w-[220px] text-xs leading-relaxed text-muted-foreground">
             {' '}
-            This block is configured automatically. Use the JSON view below for advanced
-            changes.{' '}
+            {t('noPropertiesHint')}{' '}
           </p>{' '}
         </div>{' '}
         <JsonInspectorSection />{' '}
@@ -99,6 +100,7 @@ if (!def) {
   );
 } /** Rendered in the sidebar when nothing is selected yet. */
 export function EmptyInspectorState() {
+  const t = useTranslations('ui.builder');
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {' '}
@@ -106,7 +108,7 @@ export function EmptyInspectorState() {
         {' '}
         <Settings2 className="size-3.5 text-muted-foreground" />{' '}
         <span className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
-          Inspector
+          {t('inspector')}
         </span>{' '}
       </div>{' '}
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
@@ -115,11 +117,10 @@ export function EmptyInspectorState() {
           {' '}
           <MousePointerClick className="size-5" />{' '}
         </span>{' '}
-        <p className="text-sm font-bold text-foreground">Select a component</p>{' '}
+        <p className="text-sm font-bold text-foreground">{t('selectComponent')}</p>{' '}
         <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground">
           {' '}
-          Click any element on the canvas — or use the Layers view — to edit its properties
-          here.{' '}
+          {t('selectComponentHint')}{' '}
         </p>{' '}
       </div>{' '}
     </div>

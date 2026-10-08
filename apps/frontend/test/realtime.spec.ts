@@ -99,7 +99,7 @@ describe('surfaces degrade consistently', () => {
   it('chat surfaces an unavailable state instead of a silently dead composer', () => {
     const src = read('src/components/chat/chat-widget.tsx');
     expect(src).toMatch(/unavailable/);
-    expect(src).toMatch(/Live chat is unavailable/);
+    expect(src).toMatch(/t\('unavailableTitle'\)/);
     // The composer must be hidden, otherwise messages vanish with no explanation.
     expect(src).toMatch(/\{!unavailable && \(/);
   });

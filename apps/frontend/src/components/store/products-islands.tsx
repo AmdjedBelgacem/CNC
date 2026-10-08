@@ -8,7 +8,8 @@ import { coerceCurrency, formatMinorUnits } from '@/lib/money';
 import type { Product as ApiProduct } from '@/lib/api/types';
 
 /** Live featured strip — the `products-featured` island (On the bench). */
-export function ProductsFeatured({ products }: { products: ApiProduct[] }) {
+export async function ProductsFeatured({ products }: { products: ApiProduct[] }) {
+  const t = await getTranslations('pages.products');
   const featured = products.filter((p) => p.featured).slice(0, 6);
   if (featured.length === 0) return null;
 
@@ -25,7 +26,7 @@ export function ProductsFeatured({ products }: { products: ApiProduct[] }) {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              On the bench
+              {t('featuredHeading')}
             </p>
             <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
               Featured this week
@@ -72,7 +73,7 @@ export function ProductsFeatured({ products }: { products: ApiProduct[] }) {
                     {money(product.price, product.currency || 'USD')}
                   </span>
                   <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-                    View
+                    {t('view')}
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
                   </span>
                 </div>
@@ -179,7 +180,12 @@ export async function ProductsDepartments({ categories }: { categories: { name: 
 }
 
 /** Hero stats helper shared by the products route (live counters). */
+/**
+ * Labels come from the caller (the async route page) so they can be translated without
+ * this helper having to become a component.
+ */
 export function productsHeroStats(
+  t: (key: string) => string,
   products: ApiProduct[],
   categories: { name: string; count: number }[],
 ): { label: string; value: string }[] {
@@ -197,9 +203,9 @@ export function productsHeroStats(
       ? `${money(minPrice)} – ${money(maxPrice)}`
       : '—';
   return [
-    { label: 'SKUs', value: String(products.length) },
-    { label: 'Departments', value: String(categories.length) },
-    { label: 'Price range', value: range },
-    { label: 'Free ship', value: 'over $99' },
+    { label: t('statSkus'), value: String(products.length) },
+    { label: t('statDepartments'), value: String(categories.length) },
+    { label: t('statPriceRange'), value: range },
+    { label: t('statFreeShipping'), value: t('freeShippingThreshold') },
   ];
 }

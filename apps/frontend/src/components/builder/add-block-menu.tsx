@@ -84,6 +84,7 @@ const BLOCK_ICONS: Record<string, LucideIcon> = {
 }; /** * Header dropdown replacing Puck's left sidebar palette: click a block type to * insert it after the current selection (or at the end of the root zone). * Includes search and keyboard navigation (↑/↓/Enter). */
 export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
   const tb = useTranslations('builder');
+  const t = useTranslations('ui.builder');
   const appState = useBuilderPuck((s) => s.appState);
   const dispatch = useBuilderPuck((s) => s.dispatch);
   const [open, setOpen] = useState(false);
@@ -166,12 +167,12 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
           className="flex w-full flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 text-xs font-medium transition hover:bg-muted active:scale-95"
         >
           {' '}
-          <Plus className="size-5" /> Add Block{' '}
+          <Plus className="size-5" /> {t('addBlock')}{' '}
         </button>
       ) : (
         <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => setOpen((v) => !v)}>
           {' '}
-          <Plus className="size-3.5" /> Add Block{' '}
+          <Plus className="size-3.5" /> {t('addBlock')}{' '}
         </Button>
       )}{' '}
       {open && (
@@ -189,7 +190,7 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search blocks…"
+                placeholder={t('searchBlocksPlaceholder')}
                 className="h-8 w-full rounded-lg border border-border bg-background ps-8 pe-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
               />{' '}
             </div>{' '}
@@ -198,7 +199,7 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
             {' '}
             {rows.length === 0 ? (
               <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                No blocks match “{query}”
+                {t('noBlocksMatch', { query })}
               </p>
             ) : (
               rows.map((row, i) => {
@@ -231,11 +232,11 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
             {' '}
             <p className="text-2xs text-muted-foreground/70">
               {' '}
-              Inserts after the selected block — or at the end of the page.{' '}
+              {t('insertHint')}{' '}
               <kbd className="rounded border border-border bg-muted px-1 font-mono">↑↓</kbd>{' '}
-              navigate,{' '}
+              {t('navigateHint')}{' '}
               <kbd className="rounded border border-border bg-muted px-1 font-mono">↵</kbd>{' '}
-              insert{' '}
+              {t('insertVerb')}{' '}
             </p>{' '}
           </div>{' '}
         </div>

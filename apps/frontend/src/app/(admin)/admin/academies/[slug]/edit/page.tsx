@@ -105,6 +105,7 @@ export default function AcademyEditorPage() {
   const router = useRouter();
   const t = useTranslations('admin.academiesPage.editor');
   const tAdmin = useTranslations('admin');
+  const tEditor = useTranslations('admin.academiesEditor');
   const tCommon = useTranslations('common');
   const tDifficulty = useTranslations('admin');
   const [academy, setAcademy] = useState<AcademyDetail | null>(null);
@@ -128,7 +129,7 @@ export default function AcademyEditorPage() {
     setError(null);
     try {
       const res = await fetch(`/api/proxy/admin/academies/${slug}`, { credentials: 'include' });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      if (!res.ok) throw new Error(tAdmin('drawer.requestFailed', { status: res.status }));
       const data: AcademyDetail = await res.json();
       setAcademy(data);
       setForm({
@@ -140,7 +141,7 @@ export default function AcademyEditorPage() {
         seoDescription: data.seoDescription ?? '',
       });
     } catch (e: any) {
-      setError(e?.message || 'Failed to load academy');
+      setError(e?.message || tEditor('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -155,7 +156,7 @@ export default function AcademyEditorPage() {
       void (async () => {
         try {
           const res = await fetch('/api/proxy/admin/courses?limit=100', { credentials: 'include' });
-          if (!res.ok) throw new Error(`Request failed (${res.status})`);
+          if (!res.ok) throw new Error(tAdmin('drawer.requestFailed', { status: res.status }));
           const data = await res.json();
           setCourseOptions(Array.isArray(data?.items) ? data.items : []);
         } catch {
@@ -183,7 +184,7 @@ export default function AcademyEditorPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Request failed (${res.status})`);
+        throw new Error(data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
       }
       const updated = await res.json();
       toast({ type: 'ok', title: t('saved', { default: 'Academy saved' }) });
@@ -222,7 +223,7 @@ export default function AcademyEditorPage() {
         const details =
           Array.isArray(data?.reasons) && data.reasons.length
             ? data.reasons.join('; ')
-            : (data?.message ?? `Request failed (${res.status})`);
+            : (data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
         throw new Error(details);
       }
       const publishedData = await res.json().catch(() => null);
@@ -283,7 +284,7 @@ export default function AcademyEditorPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Request failed (${res.status})`);
+        throw new Error(data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
       }
       const data = await res.json();
       toast({
@@ -314,7 +315,7 @@ export default function AcademyEditorPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Request failed (${res.status})`);
+        throw new Error(data?.message ?? tAdmin('drawer.requestFailed', { status: res.status }));
       }
       toast({ type: 'ok', title: t('courseRemoved', { default: 'Course removed from academy' }) });
       void load();
@@ -358,13 +359,13 @@ export default function AcademyEditorPage() {
   if (error || !academy) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <p className="text-base text-foreground">{error || 'Academy not found'}</p>
+        <p className="text-base text-foreground">{error || tEditor('notFound')}</p>
         <button
           type="button"
           onClick={() => router.push('/admin/academies')}
           className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
         >
-          Back to academies
+          {tEditor('backToAcademies')}
         </button>
       </div>
     );

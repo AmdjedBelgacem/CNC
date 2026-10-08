@@ -1,5 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@/stores/auth-store';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ interface Enrollment {
   };
 }
 export default function AccountPage() {
+  const t = useTranslations('account');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { data: enrollments, isLoading } = useQuery<Enrollment[]>({
     queryKey: ['my-enrollments'],
@@ -37,11 +39,11 @@ export default function AccountPage() {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
         {' '}
-        <h1 className="text-3xl font-bold mb-4">My Learning</h1>{' '}
-        <p className="text-muted-foreground mb-6">Sign in to track your progress.</p>{' '}
+        <h1 className="text-3xl font-bold mb-4">{t('learning.myLearning')}</h1>{' '}
+        <p className="text-muted-foreground mb-6">{t('learning.signInHint')}</p>{' '}
         <Button asChild>
           {' '}
-          <Link href="/login">Sign In</Link>{' '}
+          <Link href="/login">{t('learning.signIn')}</Link>{' '}
         </Button>{' '}
       </div>
     );
@@ -51,12 +53,12 @@ export default function AccountPage() {
       {' '}
       <div className="flex items-center justify-between mb-8">
         {' '}
-        <h1 className="text-3xl font-bold">My Learning</h1>{' '}
+        <h1 className="text-3xl font-bold">{t('learning.myLearning')}</h1>{' '}
         <Button variant="outline" size="sm" asChild>
           {' '}
           <Link href="/settings/account/security">
             {' '}
-            <Shield className="me-2 size-4" /> Security Settings{' '}
+            <Shield className="me-2 size-4" /> {t('learning.securitySettings')}{' '}
           </Link>{' '}
         </Button>{' '}
       </div>{' '}
@@ -66,7 +68,7 @@ export default function AccountPage() {
           {' '}
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             {' '}
-            <BookOpen className="size-5 text-primary" /> Enrolled Courses{' '}
+            <BookOpen className="size-5 text-primary" /> {t('learning.enrolledCourses')}{' '}
           </h2>{' '}
           {isLoading ? (
             <div className="space-y-4">
@@ -104,7 +106,7 @@ export default function AccountPage() {
                         </div>{' '}
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           {' '}
-                          <Award className="size-4" /> {lessonCount} series{' '}
+                          <Award className="size-4" /> {t('learning.seriesCount', { count: lessonCount })}{' '}
                         </div>{' '}
                       </div>{' '}
                     </CardHeader>{' '}
@@ -114,7 +116,7 @@ export default function AccountPage() {
                         {' '}
                         <Link href={`/courses/${enrollment.course.slug}`}>
                           {' '}
-                          {enrollment.status === 'completed' ? 'Review' : 'Continue'}{' '}
+                          {enrollment.status === 'completed' ? t('learning.review') : t('learning.continue')}{' '}
                           <ArrowRight className="flip-rtl ms-1 size-3.5" />{' '}
                         </Link>{' '}
                       </Button>{' '}
@@ -127,13 +129,13 @@ export default function AccountPage() {
             <div className="rounded-lg border bg-card p-8 text-center">
               {' '}
               <BookOpen className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />{' '}
-              <h3 className="font-semibold mb-1">No enrollments yet</h3>{' '}
+              <h3 className="font-semibold mb-1">{t('learning.noEnrollments')}</h3>{' '}
               <p className="text-sm text-muted-foreground mb-4">
-                Browse courses and start learning.
+                {t('learning.noEnrollmentsHint')}
               </p>{' '}
               <Button asChild>
                 {' '}
-                <Link href="/courses">Browse Courses</Link>{' '}
+                <Link href="/courses">{t('learning.browseCourses')}</Link>{' '}
               </Button>{' '}
             </div>
           )}{' '}
@@ -142,7 +144,7 @@ export default function AccountPage() {
       <section className="mt-10">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
           {' '}
-          <Award className="size-5 text-primary" /> Certifications{' '}
+          <Award className="size-5 text-primary" /> {t('learning.certifications')}{' '}
         </h2>{' '}
         <CertificateList />
       </section>{' '}

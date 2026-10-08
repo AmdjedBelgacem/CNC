@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, MessageCircle, Heart } from 'lucide-react';
@@ -14,6 +15,7 @@ interface FeedPost {
   user: { id: string; name: string | null; avatarUrl: string | null };
 }
 export function CommunityFeedPreview() {
+  const t = useTranslations('ui.feed');
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -33,15 +35,13 @@ export function CommunityFeedPreview() {
           {' '}
           <div>
             {' '}
-            <h2 className="text-3xl font-bold">From the Community</h2>{' '}
-            <p className="text-muted-foreground mt-1">
-              What machinists are sharing right now.
-            </p>{' '}
+            <h2 className="text-3xl font-bold">{t('previewTitle')}</h2>{' '}
+            <p className="text-muted-foreground mt-1">{t('previewHint')}</p>{' '}
           </div>{' '}
           <Button variant="ghost" asChild>
             {' '}
             <Link href="/feed">
-              View Feed <ArrowRight className="flip-rtl ms-2 size-4" />
+              {t('viewFeed')} <ArrowRight className="flip-rtl ms-2 size-4" />
             </Link>{' '}
           </Button>{' '}
         </div>{' '}
@@ -78,7 +78,9 @@ export function CommunityFeedPreview() {
                     </div>{' '}
                     <div>
                       {' '}
-                      <p className="text-sm font-medium">{post.user.name || 'Unknown'}</p>{' '}
+                      <p className="text-sm font-medium">
+                        {post.user.name || t('unknownAuthor')}
+                      </p>{' '}
                       <p className="text-xs text-muted-foreground">
                         {timeAgo(post.createdAt)}
                       </p>{' '}

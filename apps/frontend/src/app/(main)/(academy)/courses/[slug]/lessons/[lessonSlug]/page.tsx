@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { LessonPlayer } from './lesson-player';
 
 export default async function LessonPage(props: {
   params: Promise<{ slug: string; lessonSlug: string }>;
 }) {
+  const t = await getTranslations('pages.lessonPlayer');
   const { slug, lessonSlug } = await props.params;
   return (
     <div className="min-h-screen">
@@ -14,7 +16,7 @@ export default async function LessonPage(props: {
             href={`/courses/${slug}`}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
           >
-            <ArrowLeft className="size-4 rtl:rotate-180" /> Back to course
+            <ArrowLeft className="size-4 rtl:rotate-180" /> {t('backToCourse')}
           </Link>
         </div>
       </div>

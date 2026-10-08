@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ChevronDown } from 'lucide-react';
 import { AnimatePresence, m } from 'framer-motion';
 import { Stagger, StaggerItem } from '@/components/ui/motion';
@@ -31,6 +32,8 @@ const OFFLINE_FALLBACK: AcademyOption[] = [
 ];
 
 export function AcademiesDropdown() {
+  const tn = useTranslations('nav');
+  const t = useTranslations('ui.academiesDropdown');
   const [open, setOpen] = useState(false);
   /** null = still loading (render nothing rather than fake rows) */
   const [academies, setAcademies] = useState<AcademyOption[] | null>(null);
@@ -86,7 +89,7 @@ export function AcademiesDropdown() {
       onMouseLeave={() => setOpen(false)}
     >
       <button className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-        Academies{' '}
+        {tn('academies')}{' '}
         <m.span
           className="flex"
           animate={{ rotate: open ? 180 : 0 }}
@@ -117,7 +120,7 @@ export function AcademiesDropdown() {
                 ))}
               </div>
             ) : items.length === 0 ? (
-              <p className="px-3 py-4 text-xs text-muted-foreground">No academies published yet.</p>
+              <p className="px-3 py-4 text-xs text-muted-foreground">{t('empty')}</p>
             ) : (
               <Stagger gap={0.03} maxDelay={0.2}>
                 {items.map((a, i) => {

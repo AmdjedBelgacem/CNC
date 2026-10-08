@@ -13,7 +13,8 @@ import type { ContentLocale } from '@titan/shared';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('courses');
-  const title = `${t('title')} | CNC Machining Courses`;
+  const tl = await getTranslations('pages.courseLibrary');
+  const title = `${t('title')} | ${tl('seoSuffix')}`;
   const description = t('subtitle');
   return {
     title,
@@ -36,17 +37,17 @@ export async function generateMetadata(): Promise<Metadata> {
  * course cards instead of a skeleton grid.
  */
 export default async function CoursesPage() {
+  const t = await getTranslations('pages.courseLibrary');
   const locale = (await getLocale()) as ContentLocale;
   const courses = await fetchPublishedCourses(DEFAULT_TENANT_SLUG, 60, locale).catch(() => []);
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 border-b border-border pb-8">
         <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Course Library
+          {t('title')}
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Project-based CNC courses from beginner to master. Each course includes video lessons,
-          downloadable CAD files, process sheets, and a certificate of completion.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -80,15 +81,16 @@ export default async function CoursesPage() {
  * Placeholder for `<CategoryFilter>`: the filter bar's own height, so the
  * heading above it doesn't shift when the real control resolves.
  */
-function CategoryFilterSkeleton() {
+async function CategoryFilterSkeleton() {
+  const t = await getTranslations('pages.courseLibrary');
   return (
     <div
       className="flex flex-wrap gap-2"
       role="status"
       aria-busy="true"
-      aria-label="Loading filters"
+      aria-label={t('loadingFilters')}
     >
-      <span className="sr-only">Loading filters</span>
+      <span className="sr-only">{t('loadingFilters')}</span>
       {Array.from({ length: 6 }).map((_, i) => (
         <Skeleton key={i} className="h-8 w-28 rounded-full" />
       ))}
@@ -103,15 +105,16 @@ function CategoryFilterSkeleton() {
  * server is still working, and a short list that grows reads as "more is
  * arriving" whereas a long one that disappears and reappears reads as a glitch.
  */
-function CourseGridSkeleton() {
+async function CourseGridSkeleton() {
+  const t = await getTranslations('pages.courseLibrary');
   return (
     <div
       className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
       role="status"
       aria-busy="true"
-      aria-label="Loading courses"
+      aria-label={t('loadingCourses')}
     >
-      <span className="sr-only">Loading courses</span>
+      <span className="sr-only">{t('loadingCourses')}</span>
       {Array.from({ length: 6 }).map((_, i) => (
         <SkeletonCourseCard key={i} />
       ))}

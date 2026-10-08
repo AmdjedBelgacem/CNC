@@ -1,8 +1,10 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 export default function ResendVerificationPage() {
+  const t = useTranslations('auth');
   const { resendVerification } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,17 +26,15 @@ export default function ResendVerificationPage() {
         {' '}
         <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
           {' '}
-          Verification{' '}
+          {t('resend.eyebrow')}{' '}
         </p>{' '}
         <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
           {' '}
-          Resend Verification{' '}
+          {t('verification.resend')}{' '}
         </h1>{' '}
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           {' '}
-          {sent
-            ? 'If the email exists, a new verification link has been sent.'
-            : 'Enter your email to receive a new verification link.'}{' '}
+          {sent ? t('resend.sent') : t('resend.hint')}{' '}
         </p>{' '}
       </div>{' '}
       {!sent && (
@@ -47,12 +47,12 @@ export default function ResendVerificationPage() {
               className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
             >
               {' '}
-              Email{' '}
+              {t('email')}{' '}
             </label>{' '}
             <input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -66,7 +66,7 @@ export default function ResendVerificationPage() {
             className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 disabled:opacity-50"
           >
             {' '}
-            {loading ? 'Sending...' : 'Send Verification Link'}{' '}
+            {loading ? t('sending') : t('resend.sendLink')}{' '}
           </button>{' '}
         </form>
       )}{' '}
@@ -76,7 +76,7 @@ export default function ResendVerificationPage() {
           className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
         >
           {' '}
-          Back to Sign In{' '}
+          {t('backToSignIn')}{' '}
         </button>
       )}{' '}
       {!sent && (
@@ -86,7 +86,7 @@ export default function ResendVerificationPage() {
             href="/login"
             className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
           >
-            Back to Sign In
+            {t('backToSignIn')}
           </Link>{' '}
         </p>
       )}{' '}

@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar, MapPin, Users } from 'lucide-react';
 import { getImageSrc } from '@/lib/images';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDate } from '@/lib/format';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 
 interface EventData {
@@ -32,6 +33,7 @@ const PAGE_SIZE = 9;
 export function EventsDirectory() {
   const t = useTranslations('events');
   const tc = useTranslations('common');
+  const locale = useLocale();
   const [events, setEvents] = useState<EventData[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -138,14 +140,14 @@ export function EventsDirectory() {
                       <div className="space-y-1.5 mt-2">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="size-4 shrink-0" />
-                          {new Date(event.startDate).toLocaleDateString('en-US', {
+                          {formatDate(event.startDate, locale, {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
                           })}
                           {event.endDate &&
-                            ` — ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                            ` — ${formatDate(event.endDate, locale, { month: 'short', day: 'numeric' })}`}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <MapPin className="size-4 shrink-0" />

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -67,24 +68,27 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 function CoverImage({ coverUrl }: { coverUrl: string | null }) {
+  const tp = useTranslations('pages.publicProfile');
   return (
     <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden bg-card">
-      <img src={getImageSrc(coverUrl, 'user')} alt="Cover" className="w-full h-full object-cover" />
+      <img src={getImageSrc(coverUrl, 'user')} alt={tp('coverAlt')} className="w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
     </div>
   );
 }
 function StatsBar({ stats }: { stats: ProfileStats }) {
+  const tp = useTranslations('pages.publicProfile');
+  const tProfile = useTranslations('profile');
   const items = [
-    { label: 'Followers', value: stats.followers ?? stats.followersCount ?? 0, icon: Users },
-    { label: 'Following', value: stats.following ?? stats.followingCount ?? 0, icon: Users },
-    { label: 'Courses', value: stats.enrollments ?? stats.coursesCount ?? 0, icon: BookOpen },
+    { label: tProfile('followers'), value: stats.followers ?? stats.followersCount ?? 0, icon: Users },
+    { label: tProfile('following'), value: stats.following ?? stats.followingCount ?? 0, icon: Users },
+    { label: tp('statCourses'), value: stats.enrollments ?? stats.coursesCount ?? 0, icon: BookOpen },
     {
-      label: 'Certifications',
+      label: tp('statCertifications'),
       value: stats.certifications ?? stats.certificationsCount ?? 0,
       icon: Award,
     },
-    { label: 'Posts', value: stats.posts ?? stats.postsCount ?? 0, icon: MessageSquare },
+    { label: tProfile('statPosts'), value: stats.posts ?? stats.postsCount ?? 0, icon: MessageSquare },
   ];
   return (
     <div className="flex flex-wrap gap-1">
@@ -104,6 +108,7 @@ function StatsBar({ stats }: { stats: ProfileStats }) {
   );
 }
 function ProjectCard({ project }: { project: ProfileProject }) {
+  const tp = useTranslations('pages.publicProfile');
   return (
     <Card className="overflow-hidden border-border bg-card hover:border-warning/40 transition-colors">
       {' '}
@@ -139,7 +144,7 @@ function ProjectCard({ project }: { project: ProfileProject }) {
             className="inline-flex items-center gap-1 text-xs text-warning hover:text-warning"
           >
             {' '}
-            <ExternalLink className="size-3.5" /> View project{' '}
+            <ExternalLink className="size-3.5" /> {tp('viewProject')}{' '}
           </a>
         )}{' '}
       </CardContent>{' '}
@@ -147,12 +152,13 @@ function ProjectCard({ project }: { project: ProfileProject }) {
   );
 }
 function PortfolioGrid({ projects }: { projects: ProfileProject[] }) {
+  const tp = useTranslations('pages.publicProfile');
   if (projects.length === 0) {
     return (
       <div className="text-center py-16">
         {' '}
         <Grid className="mx-auto h-12 w-12 text-muted-foreground mb-3" />{' '}
-        <p className="text-muted-foreground text-sm">No portfolio items yet</p>{' '}
+        <p className="text-muted-foreground text-sm">{tp('noPortfolioItems')}</p>{' '}
       </div>
     );
   }
@@ -166,13 +172,14 @@ function PortfolioGrid({ projects }: { projects: ProfileProject[] }) {
   );
 }
 function ActivityTabPlaceholder() {
+  const tp = useTranslations('pages.publicProfile');
   // `Placeholder` rather than `EmptyState`: nothing failed and nothing is
   // missing — the tab just has no content yet. EmptyState's icon-and-copy
   // pattern over-promises here.
   return (
     <Placeholder
       className="flex-col gap-3 py-16"
-      label="Activity feed coming soon"
+      label={tp('activityComingSoon')}
     />
   );
 }
@@ -204,6 +211,8 @@ function LoadingSkeleton() {
   );
 }
 export default function ProfilePage() {
+  const tp = useTranslations('pages.publicProfile');
+  const tProfile = useTranslations('profile');
   const params = useParams();
   const username = params.username as string;
   const { user, isAuthenticated } = useAuth();
@@ -282,8 +291,8 @@ export default function ProfilePage() {
         {' '}
         <div className="text-center">
           {' '}
-          <h1 className="text-2xl font-bold text-white mb-2">Profile not found</h1>{' '}
-          <p className="text-muted-foreground">The user @{username} does not exist.</p>{' '}
+          <h1 className="text-2xl font-bold text-white mb-2">{tProfile('notFoundTitle')}</h1>{' '}
+          <p className="text-muted-foreground">{tp('notFoundHint', { username })}</p>{' '}
         </div>{' '}
       </div>
     );
@@ -341,7 +350,7 @@ export default function ProfilePage() {
                 >
                   {' '}
                   {followLoading && <Loader2 className="size-4 animate-spin me-1" />}{' '}
-                  {followStatus.isFollowing ? 'Following' : 'Follow'}{' '}
+                  {followStatus.isFollowing ? tProfile('following') : tProfile('follow')}{' '}
                 </Button>
               )}{' '}
               <Button
@@ -349,7 +358,7 @@ export default function ProfilePage() {
                 className="border-border-strong text-muted-foreground hover:bg-muted"
               >
                 {' '}
-                <MessageSquare className="size-4 me-1" /> Message{' '}
+                <MessageSquare className="size-4 me-1" /> {tp('message')}{' '}
               </Button>{' '}
             </div>
           )}{' '}
@@ -365,14 +374,14 @@ export default function ProfilePage() {
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'portfolio' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-muted-foreground'}`}
           >
             {' '}
-            <Grid className="size-4" /> Portfolio{' '}
+            <Grid className="size-4" /> {tProfile('tabPortfolio')}{' '}
           </button>{' '}
           <button
             onClick={() => setActiveTab('activity')}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-muted-foreground'}`}
           >
             {' '}
-            <Activity className="size-4" /> Activity{' '}
+            <Activity className="size-4" /> {tProfile('tabActivity')}{' '}
           </button>{' '}
         </div>{' '}
         {activeTab === 'portfolio' ? (
