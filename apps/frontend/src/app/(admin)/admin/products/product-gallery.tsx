@@ -4,6 +4,7 @@ import type { MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { Crosshair, ImageOff, Star, Trash2, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { uploadImage } from '@/lib/upload';
 import { toast } from '@/components/ui/toast';
 import type { ProductImage } from './[slug]/edit/page';
 import type { InteractiveHotspot } from '@titan/shared';
@@ -75,23 +76,19 @@ export function ProductGalleryManager({
           toast({ type: 'err', title: t('tooLarge', { default: 'Image too large' }), description: file.name });
           continue;
         }
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result ?? ''));
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const upload = await fetch('/api/proxy/admin/products/upload', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ file: dataUrl, folder: 'covers', name: file.name }),
-        });
-        if (!upload.ok) {
-          toast({ type: 'err', title: t('uploadFailed', { default: 'Upload failed' }), description: file.name });
+        // Direct to storage: a gallery photo is routinely over the 2 MB JSON ceiling,
+        // and base64 made the wire payload a third bigger than the file for no reason.
+        let url: string;
+        try {
+          ({ url } = await uploadImage(file, 'covers'));
+        } catch (error) {
+          toast({
+            type: 'err',
+            title: t('uploadFailed', { default: 'Upload failed' }),
+            description: error instanceof Error ? error.message : file.name,
+          });
           continue;
         }
-        const { url } = await upload.json();
         const created = await call('', {
           method: 'POST',
           body: JSON.stringify({ url, alt: null }),

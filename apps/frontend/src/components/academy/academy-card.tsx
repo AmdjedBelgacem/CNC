@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, BookOpen } from 'lucide-react';
@@ -22,17 +23,16 @@ export function AcademyCard({ academy }: { academy: AcademySummary }) {
     <Link href={href} className="group block h-full">
       <article className="card-hover flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-xs transition-colors duration-200 group-hover:border-border-strong group-hover:shadow-sm">
         <div className="relative aspect-[16/10] overflow-hidden border-b border-border bg-surface-sunken">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={getImageSrc(image, 'academy')}
             alt={academy.title}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
+            fill
+            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
           />
           {academy.logoUrl && image !== academy.logoUrl ? (
             <div className="absolute start-3 top-3 size-11 overflow-hidden rounded-md border border-border bg-card shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={academy.logoUrl} alt="" className="h-full w-full object-cover" />
+              <Image src={academy.logoUrl} alt="" fill sizes="44px" className="object-cover" />
             </div>
           ) : null}
           <div className="absolute end-3 top-3 inline-flex items-center gap-1.5 rounded-sm bg-overlay/70 px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-white">

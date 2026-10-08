@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -359,8 +360,7 @@ export default function ProductDetailPage() {
                     i === imageIndex ? 'border-primary' : 'border-border hover:border-border-strong',
                   )}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getImageSrc(url, 'product')} alt="" className="size-full object-cover" loading="lazy" />
+                  <Image src={getImageSrc(url, 'product')} alt="" fill sizes="64px" className="object-cover" />
                 </button>
               ))}
             </div>

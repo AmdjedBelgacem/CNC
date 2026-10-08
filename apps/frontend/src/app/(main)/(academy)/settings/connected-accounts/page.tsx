@@ -44,7 +44,7 @@ export default function ConnectedAccountsPage() {
       }
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('account.unknownError'));
+      setError(err instanceof Error ? err.message : t('unknownError'));
     }
   };
 
@@ -131,7 +131,7 @@ export default function ConnectedAccountsPage() {
         <div className="p-6 space-y-3">
           {' '}
           {loading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t('account.loading')}</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">{t('loading')}</p>
           ) : (
             providers.map((p) => {
               const linked = accounts.find((a) => a.provider === p.id);

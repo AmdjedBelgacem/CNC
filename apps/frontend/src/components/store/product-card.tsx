@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { DEFAULT_CURRENCY } from '@titan/shared';
@@ -79,12 +80,17 @@ export function ProductCard({ product }: { product: Product }) {
           href={href}
           className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          {/*
+           * Optimized rather than a raw <img>: a card is displayed around 200-400 px, but
+           * the original is a multi-megabyte photo. `sizes` tells the optimizer what width
+           * to produce, and it re-encodes to AVIF/WebP for the request.
+           */}
+          <Image
             src={getImageSrc(product.thumbnailUrl, 'product')}
             alt={product.title}
-            loading="lazy"
-            className="h-full w-full object-cover"
+            fill
+            sizes="(min-width: 1280px) 20vw, (min-width: 768px) 30vw, 50vw"
+            className="object-cover"
           />
           <div className="absolute start-3 top-3 flex flex-col items-start gap-1.5">
             {product.featured && <Badge>{t('featured')}</Badge>}

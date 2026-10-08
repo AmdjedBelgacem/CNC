@@ -59,7 +59,20 @@ export class UploadService {
       ContentType: contentType,
     });
     const url = await getSignedUrl(this.s3, command, { expiresIn: 900 });
-    return { url, key: objectKey, expiresIn: 900, contentType, maxBytes: maxBytes ?? MAX_UPLOAD_BYTES };
+    /**
+     * `publicUrl` is the URL the object will be readable at once uploaded, so the caller
+     * never has to reconstruct it from the key. Making the browser do that would mean
+     * baking the storage host into the client build and getting it wrong silently.
+     */
+    const publicBase = (this.config.get('S3_PUBLIC_URL') || '').replace(/\/+$/, '');
+    return {
+      url,
+      key: objectKey,
+      publicUrl: publicBase ? `${publicBase}/${objectKey}` : '',
+      expiresIn: 900,
+      contentType,
+      maxBytes: maxBytes ?? MAX_UPLOAD_BYTES,
+    };
   }
 
   async getPresignedDownloadUrl(key: string) {

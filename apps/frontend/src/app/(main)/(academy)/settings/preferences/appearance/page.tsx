@@ -206,7 +206,7 @@ export default function AppearancePage() {
       <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-card px-4 py-3 shadow-lg">
         {' '}
         <Button onClick={handleSave} disabled={saving} className="h-9 rounded-full px-6 shadow-md">
-          {saving ? t('account.saving') : saved ? t('account.savedOk') : t('account.saveChanges')}
+          {saving ? t('saving') : saved ? t('savedOk') : t('saveChanges')}
         </Button>{' '}
       </div>{' '}
     </div>

@@ -428,7 +428,7 @@ export default function EditProfilePage() {
                 disabled={saving || uploading}
                 className="h-9 rounded-full px-6 shadow-md"
               >
-                {saving ? t('account.saving') : t('account.saveChanges')}
+                {saving ? t('saving') : t('saveChanges')}
               </Button>
             </div>{' '}
           </form>{' '}
@@ -558,7 +558,7 @@ export default function EditProfilePage() {
                   className="rounded-full"
                 >
                   {pfSaving
-                    ? t('account.saving')
+                    ? t('saving')
                     : editingPortfolioId
                       ? t('profile.update')
                       : t('profile.addProject')}
@@ -573,7 +573,7 @@ export default function EditProfilePage() {
                   }}
                   className="rounded-full"
                 >
-                  {t('account.cancel')}
+                  {t('cancel')}
                 </Button>
               </div>{' '}
             </form>

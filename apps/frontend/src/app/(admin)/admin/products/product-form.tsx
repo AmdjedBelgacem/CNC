@@ -15,6 +15,7 @@ import {
 } from '@/components/admin/admin-form';
 import { ErrorBanner } from '@/components/admin/admin-ui';
 import { makeId } from '@/lib/lesson-blocks';
+import { uploadFileToStorage, uploadImage } from '@/lib/upload';
 import { toast } from '@/components/ui/toast';
 
 /* The create and edit screens collect the same ~20 fields. They are defined
@@ -178,12 +179,12 @@ export function ImageUploadField({
   previewUrl,
   onSelect,
   onClear,
-  maxBytes = 10 * 1024 * 1024,
+  maxBytes = 25 * 1024 * 1024,
 }: {
   label: string;
   hint: string;
   previewUrl: string | null;
-  onSelect: (dataUrl: string) => void;
+  onSelect: (file: File) => void;
   onClear: () => void;
   maxBytes?: number;
 }) {
@@ -204,11 +205,10 @@ export function ImageUploadField({
       });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => onSelect(String(reader.result ?? ''));
-    reader.onerror = () =>
-      toast({ type: 'err', title: t('unreadable', { default: 'Could not read file' }) });
-    reader.readAsDataURL(file);
+    // Pass the File through untouched. The previous FileReader step produced a base64
+    // data URL that then had to be POSTed as JSON — a third larger than the file, and
+    // rejected outright past ~1.5 MB by the API's JSON body limit.
+    onSelect(file);
   };
 
   return (
@@ -516,11 +516,11 @@ export function ProductFormSections({
       >
         <ImageUploadField
           label={t('fieldThumbnail', { default: 'Product thumbnail' })}
-          hint={t('thumbnailHint', { default: 'Square recommended · JPG, PNG, WebP, AVIF · up to 10 MB' })}
+          hint={t('thumbnailHint', { default: 'Square recommended · JPG, PNG, WebP, AVIF · up to 25 MB' })}
           previewUrl={value.thumbnailUrl}
-          onSelect={(dataUrl) => {
-            uploadProductFile(dataUrl, 'covers')
-              .then((url) => set('thumbnailUrl', url))
+          onSelect={(file) => {
+            uploadImage(file, 'covers')
+              .then(({ url }) => set('thumbnailUrl', url))
               .catch((e) =>
                 toast({ type: 'err', title: 'Upload failed', description: e instanceof Error ? e.message : undefined }),
               );
@@ -579,21 +579,6 @@ function TextInputMono({
 }
 
 export { ErrorBanner, isCurrencyCode };
-
-async function uploadProductFile(dataUrl: string, folder: string): Promise<string> {
-  const res = await fetch('/api/proxy/admin/products/upload', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ file: dataUrl, folder }),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    throw new Error(data?.message || `Upload failed (${res.status})`);
-  }
-  const data = await res.json();
-  return data.url as string;
-}
 
 export function ProductHotspotsEditor({
   imageUrl,
@@ -730,20 +715,8 @@ export function ProductDocumentsField({
     }
     setUploading(true);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result ?? ''));
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch('/api/proxy/admin/products/upload', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: dataUrl, folder: 'attachments', name: file.name }),
-      });
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-      const data = await res.json();
+      // A manual is often several MB; the base64 JSON path could not carry one.
+      const data = await uploadFileToStorage(file, 'attachments');
       onChange([...documents, { title: file.name, url: data.url, name: file.name, size: file.size }]);
       toast({ type: 'ok', title: t('pdfAttached', { default: 'PDF attached' }) });
     } catch (e) {

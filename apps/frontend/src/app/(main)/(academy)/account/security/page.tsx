@@ -374,17 +374,17 @@ export default function SecuritySettingsPage() {
                     {' '}
                     <p className="text-sm font-medium">
                       {' '}
-                      {session.deviceInfo || t('account.unknownDevice')}{' '}
+                      {session.deviceInfo || t('unknownDevice')}{' '}
                       {session.isCurrent && (
                         <span className="ms-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                           {' '}
-                          {t('account.currentBadge')}{' '}
+                          {t('currentBadge')}{' '}
                         </span>
                       )}{' '}
                     </p>{' '}
                     <p className="text-xs text-muted-foreground">
                       {' '}
-                      {session.ip && `${session.ip} \u00b7 `} {t('account.lastActive')}{' '}
+                      {session.ip && `${session.ip} \u00b7 `} {t('lastActive')}{' '}
                       {new Date(session.lastActiveAt).toLocaleDateString()}{' '}
                     </p>{' '}
                   </div>{' '}

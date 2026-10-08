@@ -40,6 +40,22 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'localhost', pathname: '/**' },
       { protocol: 'http', hostname: '127.0.0.1', pathname: '/**' },
     ],
+
+    /**
+     * Modern encodings, negotiated by `Accept`.
+     *
+     * Every image on the site was a raw `<img>` pointing at the original — a 1.4 MB JPEG
+     * for a product photo, delivered at full size to a phone. Through the optimizer the
+     * same asset is re-encoded to AVIF or WebP and served at the width actually requested,
+     * so a 200 px card stops downloading 1.4 MB.
+     *
+     * `qualities` is pinned because Next 16 requires an explicit allow-list for any quality
+     * other than 75; without it, requesting one returns a 400.
+     */
+    formats: ['image/avif', 'image/webp'],
+    qualities: [60, 75, 85],
+    // Cap the optimizer's own output so a pathological request cannot pin CPU on the host.
+    minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   async rewrites() {
     // Same resolver as the /api/proxy BFF. They must agree: if the BFF talks to

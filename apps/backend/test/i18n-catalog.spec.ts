@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -229,5 +231,63 @@ describe('dynamically addressed keys resolve to strings', () => {
     for (const { path, key } of pairs) {
       expect(leaf.has(`admin.${key}`), `admin.${key} (for ${path}) is not a string leaf`).toBe(true);
     }
+  });
+  /**
+   * Every `t()` a component can actually call must resolve.
+   *
+   * Parity between `en` and `ar` is not enough: both catalogs can be missing the same key,
+   * and it still balances. That is exactly how `admin.productForm.unpublish` and six
+   * siblings shipped — they fell back to a `{ default: ... }` so the English page looked
+   * fine, while Arabic had nothing to fall back to and the console filled with
+   * MISSING_MESSAGE on every render.
+   *
+   * Both literal `t('key')` and the dynamic `t(cond ? 'a' : 'b')` form are checked, because
+   * the publish/unpublish toggle is written the dynamic way.
+   */
+  it('resolves every t() key a component calls, in both locales', () => {
+    const resolve = (catalog: Record<string, unknown>, path: string): string | null => {
+      let node: unknown = catalog;
+      for (const part of path.split('.')) {
+        if (!node || typeof node !== 'object' || !(part in (node as Record<string, unknown>))) return null;
+        node = (node as Record<string, unknown>)[part];
+      }
+      return typeof node === 'string' ? node : null;
+    };
+
+    const roots = ['src', '../frontend/src'];
+    const root = roots.find((r) => existsSync(join(process.cwd(), r, 'app'))) ?? 'src';
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.name.endsWith('.tsx')) files.push(full);
+      }
+    };
+    walk(join(process.cwd(), root));
+
+    const problems: string[] = [];
+    for (const file of files) {
+      const src = readFileSync(file, 'utf8');
+      const namespaces = [...src.matchAll(/useTranslations\(\s*'([^']+)'\s*\)/g)].map((m) => m[1]);
+      if (!namespaces.length) continue;
+
+      const keys = new Set<string>();
+      for (const m of src.matchAll(/\bt\(\s*'([A-Za-z0-9_.]+)'\s*[,)]/g)) keys.add(m[1]);
+      // Dynamic: t(cond ? 'a' : 'b', …)
+      for (const m of src.matchAll(/\bt\(\s*[^,()]*?\?\s*'([A-Za-z0-9_.]+)'\s*:\s*'([A-Za-z0-9_.]+)'/g)) {
+        keys.add(m[1]);
+        keys.add(m[2]);
+      }
+
+      // A file may hold several `useTranslations` handles (`admin`, `account`, …), and a
+      // key belongs to whichever one resolves it. Only a key that resolves under NONE of
+      // them is genuinely missing.
+      for (const key of keys) {
+        if (namespaces.some((ns) => resolve(en, `${ns}.${key}`) !== null)) continue;
+        problems.push(`${namespaces.join('|')}.${key} (${relative(process.cwd(), file)})`);
+      }
+    }
+    expect(problems, problems.slice(0, 40).join('\n')).toEqual([]);
   });
 });
