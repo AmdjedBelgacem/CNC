@@ -8,6 +8,7 @@ import { Throttle } from '@nestjs/throttler';
 import { DrizzleService } from '../../database/drizzle.service';
 import { tenants } from '../../database/schema/tenants';
 import { users } from '../../database/schema/users';
+import { emailEquals } from '../../database/email-match';
 import { oauthStates } from '../../database/schema/oauth-states';
 import { eq } from 'drizzle-orm';
 import { AuthService } from './services/auth.service';
@@ -243,7 +244,7 @@ export class AuthController {
       }
 
       const linked = await this.drizzle.db.query.users.findFirst({
-        where: eq(users.email, body.email),
+        where: emailEquals(users.email, body.email),
       });
       if (!linked?.authUserId || linked.authUserId !== session.userId) {
         throw new UnauthorizedException('No application account is linked to this identity');

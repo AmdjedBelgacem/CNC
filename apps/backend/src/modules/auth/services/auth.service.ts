@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, InternalServerErrorException, Optional, UnauthorizedException } from '@nestjs/common';
 import { DrizzleService } from '../../../database/drizzle.service';
 import { users } from '../../../database/schema/users';
+import { emailEquals } from '../../../database/email-match';
 import { userTenantRoles, verificationTokens as vt, refreshTokens as rt, userSessions as us, impersonationSessions } from '../../../database/schema/auth';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
@@ -165,7 +166,7 @@ export class AuthService {
     }
 
     const existing = await this.drizzle.db.query.users.findFirst({
-      where: and(eq(users.email, params.email), eq(users.tenantId, params.tenantId)),
+      where: and(emailEquals(users.email, params.email), eq(users.tenantId, params.tenantId)),
     });
 
     if (existing) {
@@ -260,7 +261,7 @@ export class AuthService {
     verificationEmailSent: boolean;
   }> {
     const existing = await this.drizzle.db.query.users.findFirst({
-      where: and(eq(users.email, params.email), eq(users.tenantId, params.tenantId)),
+      where: and(emailEquals(users.email, params.email), eq(users.tenantId, params.tenantId)),
     });
     if (existing && existing.accountStatus !== 'deleted') {
       throw new ConflictException(
@@ -438,7 +439,7 @@ export class AuthService {
     rememberDevice?: boolean;
   }) {
     const user = await this.drizzle.db.query.users.findFirst({
-      where: and(eq(users.email, params.email), eq(users.tenantId, params.tenantId)),
+      where: and(emailEquals(users.email, params.email), eq(users.tenantId, params.tenantId)),
     });
 
     if (!user) {
@@ -539,7 +540,7 @@ export class AuthService {
 
     if (!oauthResult) {
       user = await this.drizzle.db.query.users.findFirst({
-        where: and(eq(users.email, params.email), eq(users.tenantId, params.tenantId)),
+        where: and(emailEquals(users.email, params.email), eq(users.tenantId, params.tenantId)),
       });
 
       if (!user) {
@@ -709,7 +710,7 @@ export class AuthService {
       if (!valid) throw new BadRequestException('Password is incorrect');
     }
     const existing = await this.drizzle.db.query.users.findFirst({
-      where: and(eq(users.email, newEmail), eq(users.tenantId, tenantId)),
+      where: and(emailEquals(users.email, newEmail), eq(users.tenantId, tenantId)),
     });
     if (existing) throw new ConflictException('Email is already in use');
     if (user.email === newEmail) throw new BadRequestException('New email is the same as current email');

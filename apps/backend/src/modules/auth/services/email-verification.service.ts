@@ -2,6 +2,7 @@ import { Injectable, ConflictException, BadRequestException, Logger } from '@nes
 import { DrizzleService } from '../../../database/drizzle.service';
 import { verificationTokens } from '../../../database/schema/auth';
 import { users } from '../../../database/schema/users';
+import { emailEquals } from '../../../database/email-match';
 import { TokenService } from './token.service';
 import { AuditService } from './audit.service';
 import { EmailService } from '../../email/email.service';
@@ -111,7 +112,7 @@ export class EmailVerificationService {
 
   async resendVerification(email: string, tenantId: string, tenantSlug?: string): Promise<void> {
     const user = await this.drizzle.db.query.users.findFirst({
-      where: and(eq(users.email, email), eq(users.tenantId, tenantId)),
+      where: and(emailEquals(users.email, email), eq(users.tenantId, tenantId)),
     });
 
     if (!user) return;
@@ -123,7 +124,7 @@ export class EmailVerificationService {
 
   async createPasswordResetToken(email: string, tenantId: string, tenantSlug?: string): Promise<string | null> {
     const user = await this.drizzle.db.query.users.findFirst({
-      where: and(eq(users.email, email), eq(users.tenantId, tenantId)),
+      where: and(emailEquals(users.email, email), eq(users.tenantId, tenantId)),
     });
 
     if (!user || user.accountStatus === 'deleted') return null;

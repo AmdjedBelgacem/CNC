@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DrizzleService } from '../../database/drizzle.service';
 import { users } from '../../database/schema/users';
+import { emailEquals } from '../../database/email-match';
 import { courses } from '../../database/schema/courses';
 import { posts } from '../../database/schema/posts';
 import { events } from '../../database/schema/events';
@@ -663,7 +664,7 @@ export class AdminService {
     const [existing] = await this.drizzle.db
       .select()
       .from(users)
-      .where(and(eq(users.tenantId, tenantId), eq(users.email, data.email)));
+      .where(and(eq(users.tenantId, tenantId), emailEquals(users.email, data.email)));
     if (existing) throw new NotFoundException('User already exists in this tenant');
 
     const tempPassword = Math.random().toString(36).slice(-10);

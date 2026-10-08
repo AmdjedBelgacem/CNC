@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DrizzleService } from '../../../database/drizzle.service';
 import { users } from '../../../database/schema/users';
+import { emailEquals } from '../../../database/email-match';
 import { failedLoginAttempts } from '../../../database/schema/auth';
 import { eq, lte } from 'drizzle-orm';
 
@@ -20,7 +21,7 @@ export class LockoutService {
     });
 
     const user = await this.drizzle.db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: emailEquals(users.email, email),
     });
 
     if (user) {
@@ -52,7 +53,7 @@ export class LockoutService {
 
   async isLocked(email: string): Promise<{ locked: boolean; lockedUntil: Date | null }> {
     const user = await this.drizzle.db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: emailEquals(users.email, email),
     });
 
     if (!user || !user.lockedUntil) {

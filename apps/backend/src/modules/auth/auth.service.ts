@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DrizzleService } from '../../database/drizzle.service';
 import { users } from '../../database/schema/users';
-import { eq } from 'drizzle-orm';
+import { emailEquals } from '../../database/email-match';
 
 @Injectable()
 export class AuthService {
@@ -13,7 +13,7 @@ export class AuthService {
 
   async validateUser(email: string, _password: string) {
     const user = await this.drizzle.db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: emailEquals(users.email, email),
     });
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Invalid credentials');
