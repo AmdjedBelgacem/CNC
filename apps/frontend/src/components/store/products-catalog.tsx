@@ -76,7 +76,10 @@ export function ProductsCatalog({
   useEffect(() => {
     if (initialProducts) setProducts(initialProducts);
   }, [initialProducts]);
-  const [loading, setLoading] = useState(true);
+  // Server-supplied products mean there is nothing to wait for. Starting this `true`
+  // rendered skeletons over an already-populated list until the client fetch resolved —
+  // which is exactly the "blank until refresh" symptom, just behind a shimmer.
+  const [loading, setLoading] = useState(!initialProducts || initialProducts.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -101,8 +104,13 @@ export function ProductsCatalog({
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     setError(null);
+    /**
+     * Only show skeletons when there is genuinely nothing on screen. Revalidating over an
+     * already-rendered list would blank it back to a shimmer on every visit — the same
+     * perceived "blank page" problem, wearing a loading state.
+     */
+    setLoading(products.length === 0);
 
     fetch('/api/proxy/products?limit=200')
       .then((res) => {
@@ -147,7 +155,6 @@ export function ProductsCatalog({
     };
     window.addEventListener('catalog:category', onCategory);
     return () => window.removeEventListener('catalog:category', onCategory);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, requestedCategory]);
 
   const applyCategory = useCallback(
