@@ -1,6 +1,11 @@
-# Pending deploy — 5 commits not yet on the server
+# Deploy log — completed 2026-10-10
 
-**Status: blocked — second attempt 2026-10-10.** SSH to `13.206.178.25:22` is refused
+**Status: DEPLOYED 2026-10-10.** Third attempt got in on an unbanned egress
+(`41.201.115.218`) and completed. Live frontend is
+`baroot/frontend:qa-202610080725`; the backend image was rebuilt on the host.
+Post-deploy verification is at the bottom of this file.
+
+History — **Status at the time of the second attempt:** SSH to `13.206.178.25:22` is refused
 (TCP filtered) while ports 80 and 443 answer and the site serves 200. Only SSH is
 filtered, which is a fail2ban ban rather than a host outage.
 
@@ -95,3 +100,31 @@ suite, which sets `SKIP_SCHEMA_DDL=1`.
    it is absent from SSR HTML for every product.
 3. Confirm the Arabic navbar renders all 10 items.
 4. Confirm `GET /products/<draft-slug>` returns 404 anonymously and 200 with an admin token.
+
+## Post-deploy verification (2026-10-10)
+
+| Check | Result |
+|---|---|
+| `GET /` `/products` `/login` | 200 |
+| 47 routes x en/ar | all 200, or 307 to `/login?returnUrl=…` for `/admin/*` and `/account` |
+| `MISSING_MESSAGE` in any Arabic page | none |
+| Arabic navbar, server-rendered | **10/10** items present (was 1/10) |
+| `>GitHub<` on `/login` | 0 occurrences (Google retained) |
+| `GET /products/check-availability` anon, no params / bad uuid | 400, 400 (was 500) |
+| `product_images.hotspots` column on prod | present |
+| `navigation_items` rows | 10 |
+| deployed backend bundle contains create guards, `includeUnpublished`, `mapWithConcurrency`, hotspots DDL | all present |
+| deployed frontend bundle contains `data-hotspot-root` + `pointerdown` handler | present |
+
+Two notes for the record:
+
+* **Authenticated endpoints could not be smoke-tested from outside.** The production JWT
+  secret differs from the local dev one, so a locally minted token is rejected with
+  `Unknown token signing key` — correct behaviour. The deployed-code checks above are
+  string assertions against the shipped `dist/`, which is why they were used instead.
+* The remaining `!top-4` hits in the bundle are Tailwind's generated `.!top-4` utility CSS
+  (it appears because Tailwind scans source text, including the comment explaining why
+  those classes were removed). The component itself no longer passes them.
+
+Still to do visually, per `API_SWEEP_QA.md`: confirm the hotspot click-to-open popover in a
+browser. Product data is client-fetched, so it cannot be asserted from server HTML.
