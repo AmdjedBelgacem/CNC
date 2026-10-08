@@ -86,3 +86,53 @@ describe('paid video is never served from the public base URL', () => {
     expect(src).toMatch(/return `\$\{this\.publicUrl\}\/\$\{objectKey\}`/);
   });
 });
+
+describe('generic image uploads go to S3, not the container', () => {
+  /**
+   * `uploadGeneric` backs every product cover, course image and lesson file. It wrote to
+   * `UPLOAD_DIR` — a Docker *named volume* — and ignored S3 entirely, even though S3 was
+   * configured and already serving avatars. That put images on infrastructure that is not
+   * a backup: `docker compose down -v` or a volume prune deletes every one of them.
+   */
+  it('uploadGeneric writes to the bucket rather than only to disk', () => {
+    const src = upload();
+    const generic = src.slice(src.indexOf('async uploadGeneric'), src.indexOf('private async saveImage'));
+    expect(generic).toContain('this.s3.send');
+    expect(generic).toContain('PutObjectCommand');
+  });
+
+  it('uploadGeneric returns a URL on the public S3 host', () => {
+    const src = upload();
+    const generic = src.slice(src.indexOf('async uploadGeneric'), src.indexOf('private async saveImage'));
+    expect(generic).toMatch(/return \{ url: `\$\{this\.publicUrl\}\/\$\{objectKey\}`/);
+  });
+
+  /**
+   * The key must keep the `uploads/` prefix. `ProductsService` refuses to delete any
+   * object key outside `uploads/` or `tenants/`, so a bare `covers/<file>.png` key would
+   * make every gallery image undeletable and silently orphan the object.
+   */
+  it('keys uploads under the uploads/ prefix the delete guard allows', () => {
+    const src = upload();
+    expect(src).toContain("const objectKey = `uploads/${safeFolder}/${filename}`");
+  });
+
+  it('deleteFile removes S3 objects, not just files on disk', () => {
+    const src = upload();
+    expect(src).toContain('DeleteObjectCommand');
+    const del = src.slice(src.indexOf('async deleteFile'));
+    expect(del).toMatch(/new DeleteObjectCommand\(\{ Bucket: this\.bucket, Key: key \}\)/);
+  });
+
+  it('deleteFile refuses keys outside the uploads prefix', () => {
+    const del = upload().slice(upload().indexOf('async deleteFile'));
+    expect(del).toContain('outside the uploads prefix');
+  });
+
+  it('still falls back to disk when S3 is not configured', () => {
+    const src = upload();
+    const generic = src.slice(src.indexOf('async uploadGeneric'), src.indexOf('private async saveImage'));
+    // The fallback must remain, or a developer machine with no credentials loses uploads.
+    expect(generic).toContain('writeFile');
+  });
+});

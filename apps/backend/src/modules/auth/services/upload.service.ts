@@ -3,7 +3,7 @@ import { writeFile, mkdir, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -103,12 +103,40 @@ export class UploadService {
 
     const ext = (mimeType.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 12) || 'bin';
     const filename = `${randomUUID()}.${ext}`;
+    const name = originalName?.trim() || filename;
+
+    /**
+     * Object key keeps the `uploads/` prefix the on-disk layout already used, so the only
+     * thing that changes for an existing row is the host.
+     *
+     * That matters in two places: `ProductsService.assertOwnImageUrl` accepts
+     * `/uploads/...`, and its delete path refuses any key outside `uploads/` or
+     * `tenants/`. A bare `covers/<file>.png` key would be rejected on delete, leaving
+     * the object behind forever.
+     */
+    const objectKey = `uploads/${safeFolder}/${filename}`;
+
+    if (this.s3) {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: objectKey,
+          Body: buffer,
+          ContentType: mimeType,
+          // Filenames carry a UUID, so the bytes at a URL never change and can be
+          // cached indefinitely. Matches what `saveImage` already does for avatars.
+          CacheControl: 'public, max-age=31536000, immutable',
+        }),
+      );
+      this.logger.log(`Stored ${objectKey} in ${this.bucket} (${buffer.length} bytes)`);
+      return { url: `${this.publicUrl}/${objectKey}`, name, type: mimeType, size: buffer.length };
+    }
+
     const dirPath = join(this.uploadDir, safeFolder);
     if (!existsSync(dirPath)) await mkdir(dirPath, { recursive: true });
     await writeFile(join(dirPath, filename), buffer);
 
-    const name = originalName?.trim() || filename;
-    this.logger.log(`Saved ${safeFolder}/${filename} (${buffer.length} bytes)`);
+    this.logger.log(`Saved ${safeFolder}/${filename} on local disk (${buffer.length} bytes)`);
     return { url: `/uploads/${safeFolder}/${filename}`, name, type: mimeType, size: buffer.length };
   }
 
@@ -159,7 +187,32 @@ export class UploadService {
     return `${this.baseUrl}/${objectKey}`;
   }
 
+  /**
+   * Delete a stored object, wherever it lives.
+   *
+   * This used to unlink from `UPLOAD_DIR` only, so every image already written to S3 was
+   * unremovable — the row went away and the object stayed, publicly readable by URL.
+   */
   async deleteFile(url: string): Promise<void> {
+    const publicBase = this.publicUrl.replace(/\/+$/, '');
+    if (publicBase && url.startsWith(`${publicBase}/`)) {
+      const key = url.slice(publicBase.length + 1);
+      // Never touch anything outside our own uploads prefix, even if a caller hands us
+      // an arbitrary URL on the same host.
+      if (!/^uploads\//.test(key)) {
+        this.logger.warn(`Refusing to delete ${key}: outside the uploads prefix`);
+        return;
+      }
+      if (!this.s3) return;
+      try {
+        await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+        this.logger.log(`Deleted ${key} from ${this.bucket}`);
+      } catch (err) {
+        this.logger.warn(`Failed to delete ${key} from S3`, err);
+      }
+      return;
+    }
+
     try {
       const pathPart = url.replace(/^https?:\/\/[^/]+/, '').replace(/^\/+/, '');
       if (!pathPart.startsWith('uploads/')) return;
