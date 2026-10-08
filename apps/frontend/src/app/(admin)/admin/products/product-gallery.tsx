@@ -1,19 +1,14 @@
 'use client';
 import { useRef, useState } from 'react';
-import type { MouseEvent } from 'react';
 import { useTranslations } from 'next-intl';
-import { Crosshair, ImageOff, Star, Trash2, Upload, X } from 'lucide-react';
+import { Crosshair, ImageOff, Star, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HotspotStudio } from '@/components/hotspot/hotspot-studio';
 import { api } from '@/lib/api-client';
 import { uploadImage } from '@/lib/upload';
 import { toast } from '@/components/ui/toast';
 import type { ProductImage } from './[slug]/edit/page';
 import type { InteractiveHotspot } from '@titan/shared';
-
-const MAX_HOTSPOTS = 20;
-
-const hotspotId = () =>
-  `pinpoint-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 const MAX_IMAGES = 12;
 
@@ -41,6 +36,7 @@ export function ProductGalleryManager({
   const t = useTranslations('admin.productGallery');
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [studioImage, setStudioImage] = useState<ProductImage | null>(null);
 
   /**
    * Every gallery mutation goes through `api`.
@@ -308,168 +304,50 @@ export function ProductGalleryManager({
                   </div>
                 </div>
               </div>
-              {/* One editor per image: markers are stored and saved against this row. */}
-              <ImageHotspotEditor
-                image={image}
+              {/*
+                The tile stays a summary; editing opens the studio. Embedding the editor
+                inline meant a 192px preview inside a grid cell, which is too small to place
+                a marker accurately — and on a machine, a marker a few percent off points at
+                the wrong feature.
+              */}
+              <button
+                type="button"
+                onClick={() => setStudioImage(image)}
                 disabled={busy}
-                onChange={(hotspots) =>
-                  onChange(images.map((i) => (i.id === image.id ? { ...i, hotspots } : i)))
-                }
-                onSave={(hotspots) => setHotspots(image, hotspots)}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-
-/**
- * Hotspots for ONE image.
- *
- * Hotspots used to be one product-level list, which was ambiguous as soon as a second
- * image existed — the same 40%/30% describes a different part of the part depending on
- * which picture is showing. They now belong to the image they annotate.
- *
- * Placement is a click on the image; the marker list below edits label/tooltip/detail.
- * Each change is saved on its own PATCH so a hotspot edit can never be part of a broader
- * product save (that conflation is what caused the earlier data loss).
- */
-export function ImageHotspotEditor({
-  image,
-  onChange,
-  onSave,
-  disabled,
-}: {
-  image: ProductImage;
-  onChange: (hotspots: InteractiveHotspot[]) => void;
-  onSave: (hotspots: InteractiveHotspot[]) => Promise<void>;
-  disabled?: boolean;
-}) {
-  const t = useTranslations('admin.productGallery');
-  const [placing, setPlacing] = useState(false);
-  const hotspots = image.hotspots ?? [];
-
-  const place = (event: MouseEvent<HTMLButtonElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-    const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
-    const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100));
-    onChange([
-      ...hotspots,
-      {
-        id: hotspotId(),
-        x: Number(x.toFixed(2)),
-        y: Number(y.toFixed(2)),
-        label: t('hotspotDefaultLabel', { n: hotspots.length + 1, default: 'Point {n}' }),
-        tooltip: null,
-        detail: null,
-      },
-    ]);
-    setPlacing(false);
-  };
-
-  const update = (id: string, patch: Partial<InteractiveHotspot>) =>
-    onChange(hotspots.map((h) => (h.id === id ? { ...h, ...patch } : h)));
-
-  return (
-    <div className="space-y-2 border-t border-border pt-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground">
-          <Crosshair className="size-3.5" />
-          {t('hotspotsTitle', { default: 'Hotspots' })}
-          {hotspots.length > 0 ? ` (${hotspots.length})` : ''}
-        </span>
-        <button
-          type="button"
-          disabled={disabled || hotspots.length >= MAX_HOTSPOTS}
-          onClick={() => setPlacing((v) => !v)}
-          className={cn(
-            'rounded-lg border px-2 py-1 text-2xs font-semibold transition disabled:opacity-40',
-            placing ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground hover:bg-primary/8',
-          )}
-        >
-          {placing ? t('cancel', { default: 'Cancel' }) : t('addHotspot', { default: 'Add hotspot' })}
-        </button>
-      </div>
-
-      <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image.url} alt={image.alt ?? ''} className="block max-h-48 w-full object-contain" />
-        {placing && (
-          <button
-            type="button"
-            aria-label={t('clickToPlaceHotspot', { default: 'Click to place hotspot' })}
-            onClick={place}
-            className="absolute inset-0 cursor-crosshair bg-primary/10"
-          />
-        )}
-        {hotspots.map((h, index) => (
-          <span
-            key={h.id}
-            aria-hidden
-            className="pointer-events-none absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-primary text-[10px] font-bold text-primary-foreground shadow"
-            style={{ left: `${h.x}%`, top: `${h.y}%` }}
-          >
-            {index + 1}
-          </span>
-        ))}
-      </div>
-
-      {hotspots.length === 0 ? (
-        <p className="text-2xs text-muted-foreground">
-          {t('hotspotsEmpty', { default: 'No hotspots on this image yet.' })}
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {hotspots.map((h, index) => (
-            <li key={h.id} className="space-y-1.5 rounded-lg border border-border bg-background p-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-2xs text-muted-foreground">
-                  {index + 1} · {Math.round(h.x)}%, {Math.round(h.y)}%
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-start transition hover:border-primary/40 disabled:opacity-50"
+              >
+                <span className="inline-flex items-center gap-2 text-2xs font-semibold text-muted-foreground">
+                  <Crosshair className="size-3.5" />
+                  {t('hotspotsTitle', { default: 'Hotspots' })}
+                  {(image.hotspots ?? []).length > 0 ? (
+                    <span className="rounded-full bg-primary/10 px-1.5 text-[10px] text-primary">
+                      {(image.hotspots ?? []).length}
+                    </span>
+                  ) : null}
                 </span>
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={async () => {
-                    const next = hotspots.filter((x) => x.id !== h.id);
-                    onChange(next);
-                    await onSave(next);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-2xs font-semibold text-destructive transition hover:bg-destructive/8 disabled:opacity-40"
-                >
-                  <Trash2 className="size-3" />
-                  {t('remove', { default: 'Remove' })}
-                </button>
-              </div>
-              <input
-                value={h.label}
-                onChange={(e) => update(h.id, { label: e.target.value })}
-                onBlur={() => void onSave(hotspots)}
-                placeholder={t('hotspotLabel', { default: 'Label' })}
-                className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-xs outline-none focus:border-primary/60"
-              />
-              <input
-                value={h.tooltip ?? ''}
-                onChange={(e) => update(h.id, { tooltip: e.target.value || null })}
-                onBlur={() => void onSave(hotspots)}
-                placeholder={t('hotspotTooltip', { default: 'Tooltip on hover' })}
-                className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-xs outline-none focus:border-primary/60"
-              />
-              <textarea
-                value={h.detail ?? ''}
-                rows={2}
-                onChange={(e) => update(h.id, { detail: e.target.value || null })}
-                onBlur={() => void onSave(hotspots)}
-                placeholder={t('hotspotDetail', { default: 'Shown in the popup when tapped' })}
-                className="w-full rounded-md border border-border bg-muted px-2 py-1.5 text-xs outline-none focus:border-primary/60"
-              />
+                <span className="text-2xs font-semibold text-primary">
+                  {t('edit', { default: 'Edit' })}
+                </span>
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      <HotspotStudio
+        image={studioImage}
+        open={studioImage !== null}
+        onOpenChange={(next) => {
+          if (!next) setStudioImage(null);
+        }}
+        disabled={busy}
+        onSave={async (hotspots) => {
+          if (!studioImage) return;
+          await setHotspots(studioImage, hotspots);
+          // Reflect the studio's own copy so reopening shows what was just saved.
+          setStudioImage({ ...studioImage, hotspots });
+        }}
+      />
     </div>
   );
 }

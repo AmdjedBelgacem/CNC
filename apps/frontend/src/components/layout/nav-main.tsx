@@ -21,6 +21,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCartStore } from '@/stores/cart-store';
 import { api } from '@/lib/api-client';
+import { toast } from '@/components/ui/toast';
 import { NavbarSearch } from '@/components/search/navbar-search';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
@@ -44,6 +45,7 @@ export function NavMain({ items }: { items: NavItemView[] }) {
   const router = useRouter();
   const t = useTranslations('nav');
   const tp = useTranslations('products');
+  const tEndImpersonation = useTranslations('nav.impersonation');
   // Shallow-compared rather than a whole-store read: the navbar sits in every
   // public layout, so re-rendering it on unrelated auth writes is the most
   // visible instance of the `` `set` is expensive `` problem.
@@ -159,10 +161,28 @@ export function NavMain({ items }: { items: NavItemView[] }) {
               </Link>
             </Button>
 
+            {/*
+              The badge told you that you were impersonating but gave you no way out:
+              `/admin/impersonate/end` existed on the server and nothing in the UI called
+              it, so the session had to be cleared by hand. It is now the control.
+            */}
             {impersonating && (
-              <span className="hidden rounded-sm bg-warning/15 px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-warning sm:inline-flex">
-                Impersonating
-              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await api.post('/admin/impersonate/end');
+                    window.location.href = '/admin';
+                  } catch {
+                    toast({ type: 'err', title: tEndImpersonation('failed') });
+                  }
+                }}
+                title={tEndImpersonation('title')}
+                className="hidden items-center gap-1.5 rounded-sm bg-warning/15 px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-warning transition hover:bg-warning/25 sm:inline-flex"
+              >
+                {tEndImpersonation('badge')}
+                <X className="size-3" />
+              </button>
             )}
 
             {showAuthenticated ? (

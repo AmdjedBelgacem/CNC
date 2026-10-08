@@ -20,7 +20,15 @@ import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 @ApiTags('quotes')
-@Controller('quotes')
+/**
+ * Mounted at both `/quotes` and `/admin/quotes`.
+ *
+ * The public submit is `/quotes`, but the admin inbox lives at `/admin/quotes` alongside
+ * every other admin screen — and a single-segment controller would have made it
+ * unreachable. The GET and PATCH handlers carry admin guards regardless of which prefix
+ * they are reached through, so the extra mount exposes nothing.
+ */
+@Controller(['quotes', 'admin/quotes'])
 export class QuotesController {
   constructor(private quotes: QuotesService) {}
 

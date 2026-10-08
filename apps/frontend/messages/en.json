@@ -177,7 +177,12 @@
     "community": "Community",
     "toggleTheme": "Toggle theme",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "impersonation": {
+      "title": "End impersonation and return to the admin account",
+      "badge": "Impersonating",
+      "failed": "Could not end the impersonation"
+    }
   },
   "auth": {
     "signIn": "Sign in",
@@ -1917,7 +1922,14 @@
       "hotspotDefaultLabel": "Point {n}",
       "hotspotsEmpty": "No hotspots on this image yet.",
       "clickToPlaceHotspot": "Click to place hotspot",
-      "hotspotsFailed": "Could not save hotspots"
+      "hotspotsFailed": "Could not save hotspots",
+      "studioTitle": "Hotspots",
+      "studioDescription": "Click the image to drop a numbered marker, then give it a label. Markers belong to this image only.",
+      "selected": "Selected marker",
+      "preview": "Storefront preview",
+      "save": "Save hotspots",
+      "edit": "Edit",
+      "selectHint": "Select a marker to edit it, or add one."
     },
     "error": {
       "consoleTitle": "The admin console hit an error"
