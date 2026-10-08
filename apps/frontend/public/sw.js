@@ -135,9 +135,18 @@ self.addEventListener('fetch', (event) => {
           return res;
         })
         .catch(async () => {
+          /**
+           * The precached offline page is preferred over the cached copy of this URL.
+           *
+           * Serving the cached HTML looked more useful, but its scripts are not reliably
+           * cached alongside it — a first visit happens before this worker takes control, so
+           * those chunks never entered the static cache. Offline, the browser got HTML whose
+           * bundles were missing and rendered Next's "Something went wrong / the app failed to
+           * start" boundary, with a Reload button that cannot help while offline. An honest
+           * "you are offline" page is strictly better than a broken one, and the page cache
+           * costs nothing online because this strategy is network-first.
+           */
           try {
-            const hit = await caches.match(req);
-            if (hit) return hit;
             const offline = await caches.match('/offline');
             if (offline) return offline;
           } catch {

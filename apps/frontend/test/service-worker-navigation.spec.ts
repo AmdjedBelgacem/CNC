@@ -106,11 +106,19 @@ describe('service worker navigation handler', () => {
     expect(value.status).toBe(200);
   });
 
-  it('serves the cached page when the network fails and the page was cached', async () => {
-    const out = await runNavigation({ fetch: 'reject', cacheHit: true, offlineHit: false });
+  /**
+   * The cached copy of the URL is deliberately not used as the offline fallback. Its scripts
+   * are not reliably cached with it — a first visit runs before this worker takes control —
+   * so offline it produced Next's "the app failed to start" boundary, with a Reload button
+   * that cannot help while offline.
+   */
+  it('prefers the offline page over stale cached HTML, which lacks its scripts', async () => {
+    const out = await runNavigation({ fetch: 'reject', cacheHit: true, offlineHit: true });
     const value = out.value as Response;
     expect(value).toBeInstanceOf(Response);
-    expect(await value.text()).toContain('cached page');
+    const body = await value.text();
+    expect(body).toContain('offline');
+    expect(body).not.toContain('cached page');
   });
 
   it('falls back to the precached offline page when nothing matches', async () => {
