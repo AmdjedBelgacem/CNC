@@ -73,6 +73,45 @@ describe('product gallery + partial save (integration)', () => {
     await drizzle.db.delete(products).where(inArray(products.id, [...created]));
   });
 
+  // ------------------------------------------------------------------ CREATE ---
+
+  it('refuses a blank title or slug on create', async () => {
+    // The regression this guards: `create(data: any)` inserted the request body as sent,
+    // so `title: ''` produced a real, blank product in the catalog — the same class of
+    // damage PATCH was hardened against.
+    await expect(service.create({ title: '', slug: 'blank-title-qa' }, tenantId)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create({ title: 'Blank slug QA', slug: '  ' }, tenantId)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create({ slug: 'no-title-qa' }, tenantId)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.create({ title: '   ', slug: 'whitespace-title-qa' }, tenantId)).rejects.toBeInstanceOf(BadRequestException);
+
+    const junk = await drizzle.db.select({ slug: products.slug }).from(products)
+      .where(inArray(products.slug, ['blank-title-qa', 'no-title-qa', 'whitespace-title-qa']));
+    expect(junk).toHaveLength(0);
+  });
+
+  it('ignores tenant, publish and role keys sent on create', async () => {
+    // `row`, not `created`: the suite-level `created` array tracks ids for cleanup.
+    const row = await service.create({
+      title: 'QA Mass Assign', slug: `mass-assign-${Date.now().toString(36)}`,
+      isPublished: true, status: 'published', role: 'super_admin',
+      tenantId: '00000000-0000-4000-8000-000000000000',
+    }, tenantId);
+    created.push(row.id);
+    expect(row.tenantId).toBe(tenantId);
+    expect(row.isPublished).toBe(false);
+    expect(row.status).toBe('draft');
+  });
+
+  it('normalises the slug and keeps a legal draft status', async () => {
+    const row = await service.create(
+      { title: 'QA Normalised', slug: '  QA-Normalised-Slug  ', status: 'draft' },
+      tenantId,
+    );
+    created.push(row.id);
+    expect(row.slug).toBe('qa-normalised-slug');
+    expect(row.status).toBe('draft');
+  });
+
   // ------------------------------------------------- per-image hotspots ---
 
   it('stores hotspots on the image they annotate, not on the product', async () => {

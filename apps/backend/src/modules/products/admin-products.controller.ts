@@ -104,7 +104,7 @@ export class AdminProductsController {
     @Query('tenantId') tenantIdOverride?: string,
   ) {
     const tid = this.effectiveTenant(req, tenantIdOverride) || tenant.id;
-    return this.products.create({ ...body, tenantId: tid });
+    return this.products.create(body, tid);
   }
 
   @Patch(':slug')

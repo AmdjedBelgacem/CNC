@@ -439,7 +439,20 @@ export class CoursesService {
   }
 
   async createCourse(tenantId: string, data: CreateCourseDto) {
+    /**
+     * Blank title/slug were stored as sent, producing an unopenable course in the
+     * catalog — the same defect class the product create path was hardened against.
+     * `isPublished`/`isArchived` were already forced false below and the tenant comes
+     * from the argument, so only identity needs checking here.
+     */
+    const title = typeof data?.title === 'string' ? data.title.trim() : '';
+    if (!title) throw new BadRequestException('Title cannot be empty.');
+    const slug = typeof data?.slug === 'string' ? data.slug.trim().toLowerCase() : '';
+    if (!slug) throw new BadRequestException('Slug cannot be empty.');
+
     const input = this.withoutLifecycle(data as unknown as Record<string, unknown>);
+    input.title = title;
+    input.slug = slug;
     const { academyId, translations: rawTranslations, ...rest } = input as unknown as CreateCourseDto;
     const resolvedAcademyId = academyId ? await this.assertAcademyInTenant(tenantId, academyId) : null;
     const translations = parseCourseTranslations(rawTranslations);

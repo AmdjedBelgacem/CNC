@@ -269,8 +269,38 @@ export class ProductsService {
     };
   }
 
-  async create(data: any) {
-    const [product] = await this.db.insert(productsBundle).values(data).returning();
+  /**
+   * Columns a client may write through POST: exactly the PATCH allowlist, no more.
+   *
+   * Create used to take the raw request body (`create(data: any)`), so it had none of the
+   * protections PATCH had — `title: ''` and `slug: ''` were stored as sent, producing a
+   * blank product in the catalog, which is the same class of damage the PATCH allowlist
+   * was built to prevent. `tenantId`, `isPublished`, `status` and `role` could also be
+   * injected to file a record under another tenant or publish it on arrival.
+   *
+   * `status` is deliberately NOT writable here even though PATCH lists it: a new product
+   * always starts as a draft, and publishing goes through the publish endpoint so the
+   * lifecycle stays auditable. The admin "new product" form never sent `status` anyway.
+   */
+  async create(data: Record<string, unknown>, tenantId: string) {
+    const title = typeof data?.title === 'string' ? data.title.trim() : '';
+    if (!title) throw new BadRequestException('Title cannot be empty.');
+    const slug = typeof data?.slug === 'string' ? data.slug.trim().toLowerCase() : '';
+    if (!slug) throw new BadRequestException('Slug cannot be empty.');
+
+    // Same allowlist discipline as PATCH: anything unlisted is dropped, not trusted.
+    // `tenantId` is a separate trusted argument rather than a body key, so no payload
+    // shape can decide which tenant the record lands in.
+    const values: Record<string, unknown> = { tenantId };
+    for (const key of Object.keys(ProductsService.UPDATABLE)) {
+      if (data[key] !== undefined) values[key] = data[key];
+    }
+    // Assigned after the copy loop: `slug` is in the allowlist, so letting the loop run
+    // last would put the untrimmed original straight back over the normalised value.
+    values.title = title;
+    values.slug = slug;
+
+    const [product] = await this.db.insert(productsBundle).values(values as never).returning();
     if (product) this.syncSearch(product.tenantId, product.id);
     return product;
   }

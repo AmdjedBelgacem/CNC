@@ -2,6 +2,7 @@ import {
   Controller, Get, Post, Patch, Delete, Param, Query, Body, Req,
   UseGuards, NotFoundException,
 } from '@nestjs/common';
+import { BadRequestException, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
@@ -99,12 +100,24 @@ export class ProductsController {
 
   @Get('check-availability')
   @ApiOperation({ summary: 'Check if product is available for quantity' })
+  /**
+   * `productId` is validated as a UUID before the service sees it.
+   *
+   * Without this, a missing or non-UUID `productId` reached `eq(products.id, ...)` and
+   * Postgres raised `invalid input syntax for type uuid` / `UNDEFINED_VALUE`, surfacing
+   * as a 500. A caller mistake is a 400, and 500s on a public endpoint pollute error
+   * tracking and trip uptime alerts.
+   */
   checkAvailability(
-    @Query('productId') productId: string,
+    @Query('productId', new ParseUUIDPipe()) productId: string,
     @Query('quantity') quantity: string,
-    @Query('variantId') variantId?: string,
+    @Query('variantId', new ParseUUIDPipe({ optional: true })) variantId?: string,
   ) {
-    return this.products.checkAvailability(productId, +quantity, variantId);
+    const parsed = Number(quantity);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new BadRequestException('quantity must be a positive integer');
+    }
+    return this.products.checkAvailability(productId, parsed, variantId);
   }
 
   @Get(':slug')
@@ -148,7 +161,7 @@ export class ProductsController {
     @CurrentTenant() tenant: { id: string },
     @Body() body: any,
   ) {
-    return this.products.create({ ...body, tenantId: tenant.id });
+    return this.products.create(body, tenant.id);
   }
 
   @Patch(':id')

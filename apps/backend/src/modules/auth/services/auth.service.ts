@@ -34,6 +34,24 @@ const LOGIN_HISTORY_ACTIONS = [
   'user.login.2fa_verified',
 ];
 
+/**
+ * Map with a ceiling on in-flight tasks. Used where fanning out one query per row would
+ * otherwise exceed the database connection pool or a pooler client limit.
+ */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      const item = items[index];
+      if (item !== undefined) out[index] = await fn(item);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -821,7 +839,18 @@ export class AuthService {
       this.drizzle.db.select({ count: sql<number>`count(*)::int` }).from(users).where(where as any),
     ]);
 
-    return { items: await Promise.all(results.map((u: any) => this.sanitizeUser(u))), total: Number(totalArr[0]?.count ?? 0) };
+    /**
+     * Bounded concurrency, NOT `Promise.all`.
+     *
+     * `sanitizeUser` issues an RBAC query per user, so listing 50 of them fanned out 50
+     * simultaneous queries. Against the Supabase transaction pooler in session mode that
+     * is a hard ceiling (`EMAXCONNSESSION`, max 15 clients), so `/admin/users` returned
+     * 500 once the tenant had more than a handful of members — the more users, the more
+     * reliably it failed. Draining in small batches keeps the fan-out below any
+     * pool/pooler limit while still overlapping enough to stay fast.
+     */
+    const items = await mapWithConcurrency(results, 8, (u: any) => this.sanitizeUser(u));
+    return { items, total: Number(totalArr[0]?.count ?? 0) };
   }
 
   async adminChangeUserRole(adminUserId: string, targetUserId: string, newRole: string): Promise<void> {
