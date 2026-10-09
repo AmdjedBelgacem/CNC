@@ -544,7 +544,10 @@ export function ThemeEditor() {
                     id="theme-blur"
                     type="number"
                     min={0}
-                    max={64}
+                    // Matches `themeTokensSchema` (`glass.blur: max(30)`). This was 64, so
+                    // any value from 31 upward was accepted by the input and then rejected by
+                    // the server with an opaque validation error.
+                    max={30}
                     value={String(current.glass.blur)}
                     onChange={(e) =>
                       patch((tk) => ({

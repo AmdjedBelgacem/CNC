@@ -1287,10 +1287,19 @@ export class MoyasarService {
       bucket.push(line);
       byOrder.set(line.orderId, bucket);
     }
-    return rows.map((row) => ({
-      ...row,
-      // The secret-bearing columns never leave the service.
-      providerPayload: row.providerPayload ?? null,
+    /**
+     * `providerPayload` is stripped, not merely nulled.
+     *
+     * The spread below copied every column including the raw provider webhook body, so a
+     * comment claimed the secret-bearing columns never leave the service while the opposite
+     * was true. It reached every `orders:view` holder, including the admin order list. The
+     * payload is not needed by any caller.
+     */
+    return rows.map((row) => {
+      const { providerPayload: _omitted, ...safeRow } = row;
+      void _omitted;
+      return {
+        ...safeRow,
       items: (byOrder.get(row.id) ?? []).map((line) => ({
         id: line.id,
         itemType: line.itemType,
@@ -1304,8 +1313,9 @@ export class MoyasarService {
         fulfilledAt: line.fulfilledAt,
         // Why a line failed, for support. Safe to show: it is our own message.
         fulfillmentError: line.fulfillmentError,
-      })),
-    }));
+        })),
+      };
+    });
   }
 
   /**

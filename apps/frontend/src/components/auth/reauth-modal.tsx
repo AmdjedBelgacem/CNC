@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { api } from '@/lib/api-client';
 interface ReauthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,30 +34,26 @@ export function ReauthModal({
       setError(null);
       setStatus('loading');
       try {
-        const res = await fetch('/api/proxy/auth/verify-password', { credentials: 'include',
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => null);
-          // 401/403 mean the password itself was wrong; anything else is transport/server.
-          setError(
-            res.status === 401 || res.status === 403
-              ? (typeof body?.message === 'string' ? body.message : t('incorrectPassword'))
-              : t('genericError'),
-          );
-          setStatus('idle');
-          return;
-        }
+        // Through the shared client so the CSRF token is attached. As a raw `fetch` this
+        // relied on the BFF minting a token server-side for it, which stops working the
+        // moment that compatibility path is removed.
+        // `api.post` resolves the parsed body and throws on a non-2xx, carrying `status`.
+        await api.post('/auth/verify-password', { password });
         setStatus('success');
         const verifiedPassword = password;
         setTimeout(() => {
           onOpenChange(false);
           onVerified(verifiedPassword);
         }, 800);
-      } catch {
-        setError(t('genericError'));
+      } catch (err) {
+        // 401/403 mean the password itself was wrong; anything else is transport or server.
+        const status = (err as { status?: number })?.status;
+        const body = (err as { body?: { message?: unknown } })?.body;
+        setError(
+          status === 401 || status === 403
+            ? (typeof body?.message === 'string' ? body.message : t('incorrectPassword'))
+            : t('genericError'),
+        );
         setStatus('idle');
       }
     },

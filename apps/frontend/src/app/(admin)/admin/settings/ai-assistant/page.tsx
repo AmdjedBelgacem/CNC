@@ -202,7 +202,9 @@ export default function AiAssistantSettingsPage() {
     form.baseUrl.trim().length > 0 &&
     form.primaryModel.trim().length > 0 &&
     isValidNumber(form.timeoutMs, 1000, 120000, true) &&
-    isValidNumber(form.maxTokens, 1, 8000, true) &&
+    // Floor is 256 to match `@Min(256)` on the server DTO and MIN_MAX_TOKENS in the service.
+    // It was 1, so a value the form called valid was rejected with a 400 on save.
+    isValidNumber(form.maxTokens, 256, 8000, true) &&
     isValidNumber(form.temperature, 0, 2) &&
     isValidNumber(form.retrievalTopK, 1, 50, true) &&
     isValidNumber(form.retrievalMinScore, 0, 1) &&

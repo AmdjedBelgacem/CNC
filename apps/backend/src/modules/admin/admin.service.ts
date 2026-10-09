@@ -600,6 +600,9 @@ export class AdminService {
       faviconUrl: data.faviconUrl,
       primaryColor: data.primaryColor,
       secondaryColor: data.secondaryColor,
+      // Dropped from this list until now: the column exists and the admin form sends it, so
+      // every save returned 200 and showed "Settings saved" while the value was discarded.
+      accentColor: data.accentColor,
       fontFamily: data.fontFamily,
     };
 

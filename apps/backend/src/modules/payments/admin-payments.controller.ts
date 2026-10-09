@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { and, eq } from 'drizzle-orm';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
@@ -99,10 +99,11 @@ export class AdminPaymentsController {
     const enabled = dto.enabled ?? existing?.enabled ?? false;
     if (enabled && !encryptedSecretKey && !dto.secretKey) {
       // Fail closed at configuration time rather than at the till.
-      return {
-        data: { error: 'A secret key is required before payments can be enabled' },
-        status: 400,
-      };
+      //
+      // This returned HTTP 200 with the error in the body, so the panel's non-throwing
+      // `api.put` treated it as success and toasted "Saved" while payments stayed disabled —
+      // the one outcome that must never be reported as a success.
+      throw new BadRequestException('A secret key is required before payments can be enabled');
     }
 
     const values = {

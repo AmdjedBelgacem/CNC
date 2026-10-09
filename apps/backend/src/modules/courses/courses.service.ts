@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, ForbiddenException, UnauthorizedException, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '../../database/drizzle.service';
+import { isUploadedMediaRef } from '../../common/validators/uploaded-media-url';
 import { courses, series, lessons } from '../../database/schema/courses';
 import { academies } from '../../database/schema/academies';
 import { enrollments, lessonProgress, lessonQuizAttempts } from '../../database/schema/progress';
@@ -701,9 +702,36 @@ export class CoursesService {
     if (seriesList.length === 0) reasons.push('Add at least one section that contains a lesson');
     else if (lessonCount === 0) reasons.push('Add at least one lesson to your section');
     if (!course.thumbnailUrl?.trim()) reasons.push('Upload a thumbnail image (16:9 recommended)');
+    /**
+     * A resource counts as uploaded when it is a file this application's uploader produced.
+     *
+     * This inlined a second copy of the old media regex, which only ever matched app-relative
+     * paths. Since uploads moved to S3 the uploader returns an absolute
+     * `https://<project>.supabase.co/storage/v1/object/public/uploads/...` URL, so *every*
+     * genuinely uploaded resource failed this check and the course could never be published —
+     * reproduced live: thumbnail and SEO satisfied, one real S3 resource attached, and the sole
+     * remaining reason was "Upload every course resource before publishing".
+     *
+     * `isUploadedMediaRef` is the same validator the course DTOs use, so the create/update path
+     * and this preflight finally agree. It accepts this deployment's own storage bases and
+     * nothing else, which is what keeps external and hostile URLs out of lesson content.
+     */
     const resources = Array.isArray(course.metadata?.resources) ? course.metadata.resources : [];
-    if (resources.some((resource: any) => !resource || typeof resource.url !== 'string' || !/^(?:tenants\/|uploads\/|\/uploads\/|\/images\/)[A-Za-z0-9._/-]+$/.test(resource.url))) {
-      reasons.push('Upload every course resource before publishing');
+    const missingResource = resources.some((resource: any) => {
+      if (!resource || typeof resource !== 'object') return true;
+      const url = (resource as { url?: unknown }).url;
+      // Empty is accepted by the shared validator so that clearing an optional media field
+      // does not require sending `null`. A course *resource* with no URL is not an uploaded
+      // file, so the emptiness check is made here rather than weakening the shared rule.
+      if (typeof url !== 'string' || url.trim() === '') return true;
+      return !isUploadedMediaRef(url);
+    });
+    if (missingResource) {
+      reasons.push(
+        resources.length === 0
+          ? 'Add at least one course resource before publishing'
+          : 'Re-upload every course resource: one or more files are missing a valid storage URL',
+      );
     }
     if (!isCurrencyCode(course.currency)) reasons.push('Choose a supported currency');
     const mode = (course.accessMode ?? 'open') as string;
