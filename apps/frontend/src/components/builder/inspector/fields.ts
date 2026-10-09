@@ -28,7 +28,7 @@ import type {
   StatsProps,
   TextProps,
 } from '@titan/shared';
-import {
+import { Square,
   AlignLeft,
   Box,
   Braces,
@@ -1082,6 +1082,30 @@ export const sectionInspector = defineInspector<SectionProps>().groups([
     ],
   },
   { id: 'spacing', title: 'Spacing', icon: Box, fields: PADDING_FIELDS as never[] },
+  {
+    id: 'background',
+    title: 'Background',
+    titleKey: 'background',
+    icon: Layers,
+    fields: [
+      { key: 'bgColor', label: 'Background', control: 'color' },
+      { key: 'bgGradient', label: 'Gradient', control: 'text', hint: 'e.g. linear-gradient(135deg, #0ea5e9, #6366f1)' },
+      { key: 'bgImage', label: 'Background image', control: 'text', hint: 'Uploaded image URL' },
+      { key: 'glass', label: 'Frosted glass', control: 'toggle' },
+    ],
+  },
+  {
+    id: 'border',
+    title: 'Border',
+    titleKey: 'border',
+    icon: Square,
+    fields: [
+      { key: 'border', label: 'Width (px)', control: 'number', min: 0, max: 16 },
+      { key: 'borderColor', label: 'Border colour', control: 'color' },
+      { key: 'radius', label: 'Corner radius (px)', control: 'number', min: 0, max: 64 },
+      { key: 'overflow', label: 'Overflow', control: 'select', options: [{ value: 'hidden', label: 'Clip' }, { value: 'visible', label: 'Visible' }] },
+    ],
+  },
   {
     id: 'behavior',
     title: 'Visibility',

@@ -1290,6 +1290,26 @@ export const sectionPropsSchema = layoutPropsSchema.extend({
   bg: z.enum(['transparent', 'white', 'muted', 'secondary', 'primary', 'gradient-primary', 'gradient-muted']).optional(),
   /** Visibility toggle (renders the section hidden). */
   hidden: z.boolean().optional(),
+  /**
+   * Background colour, gradient or image, layered over `bg`.
+   *
+   * `bg` is the coarse treatment the seeds use; these are the fine controls an author reaches
+   * for when the preset is not the look. All three are optional and unset means "inherit the
+   * preset", so a section that has never been touched renders exactly as it did before.
+   */
+  bgColor: z.string().max(100).optional(),
+  bgGradient: z.string().max(200).optional(),
+  bgImage: z.string().max(500).optional(),
+  /** Frosted-glass treatment over whatever background is behind the content. */
+  glass: z.boolean().optional(),
+  /** Corner radius (px) for the section box. */
+  radius: z.number().int().min(0).max(64).optional(),
+  /** Border width (px); 0 or unset means no border. */
+  border: z.number().int().min(0).max(16).optional(),
+  /** Border colour. */
+  borderColor: z.string().max(100).optional(),
+  /** Content overflow. `hidden` clips, `visible` lets children spill. */
+  overflow: z.enum(['hidden', 'visible']).optional(),
 });
 export type SectionProps = z.infer<typeof sectionPropsSchema>;
 

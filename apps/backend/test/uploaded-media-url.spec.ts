@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { isUploadedMediaRef } from '../src/common/validators/uploaded-media-url';
+import { isUploadedMediaRef } from '@titan/shared';
 
 /**
  * Reproduces "thumbnailUrl must match /^(?:tenants\/|uploads\/|\/uploads\/|\/images\/)…$/".

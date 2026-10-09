@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, ForbiddenException, UnauthorizedException, Optional } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DrizzleService } from '../../database/drizzle.service';
-import { isUploadedMediaRef } from '../../common/validators/uploaded-media-url';
+import { isUploadedMediaRef } from '@titan/shared';
 import { courses, series, lessons } from '../../database/schema/courses';
 import { academies } from '../../database/schema/academies';
 import { enrollments, lessonProgress, lessonQuizAttempts } from '../../database/schema/progress';
