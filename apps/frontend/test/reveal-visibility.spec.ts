@@ -80,10 +80,15 @@ describe('revealed content can never stay invisible', () => {
    * Asserting `initial={false}` keeps the guarantee attached to the thing that must hold.
    */
   it('never holds content at opacity 0, at the source', () => {
-    const reveal = motion.slice(
-      motion.indexOf('export function Reveal'),
-      motion.indexOf('export function', motion.indexOf('export function Reveal') + 10),
-    );
+    // Comments are stripped: the note beside the prop explains the fix by naming the value it
+    // replaced, and a naive substring match then finds the prose instead of the code.
+    const reveal = motion
+      .slice(
+        motion.indexOf('export function Reveal'),
+        motion.indexOf('export function', motion.indexOf('export function Reveal') + 10),
+      )
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
     expect(reveal).toContain('initial={false}');
     expect(reveal).not.toContain('initial="hidden"');
   });
