@@ -158,3 +158,34 @@ the same behaviour; the difference is provenance.
 `unless-stopped`. After any deploy that touches the host Docker daemon, verify all four
 containers are `Up` — `caddy`, `frontend`, `backend`, `redis` — and not just that the site
 responds.
+
+## Backend image is still a hot-patch — required follow-up
+
+`certifications.pdf_url` was widened to `text` by migration `037_certificate_pdf_url_text.sql`,
+applied directly to the database, so certificate issuance works in production today. The
+running image is still layered over an earlier build rather than rebuilt from source; see the
+note above for why (apt signature verification fails against this environment's clock).
+Rebuild off-box once the clock is corrected, so the deployed image matches the Dockerfile.
+
+## Course studio media is now presigned
+
+The studio previously base64-encoded media into JSON, which hit the 2 MB API body limit and
+surfaced as "File is too large" for files the UI said it accepted (10 MB thumbnails, 500 MB
+trailers). All course media — trailer, thumbnail, lesson video, lesson attachments, block
+media, SEO OG image, course resources — now uses the presigned direct upload that products
+already used. Verified with a 5 MB image: PUT to storage 200, public read 200.
+
+The lesson-video path no longer falls back to base64 when presigning fails. That fallback
+converted any storage fault into "File is too large", describing neither the cause nor the
+author's file; the real error now surfaces.
+
+## Service worker no longer intercepts navigations
+
+Document navigations are left to the browser. Four successive fixes to the worker's
+navigation handler each still left a blank page reachable, so the interception was removed
+rather than patched again. Consequences to be aware of:
+
+- Offline navigation now shows the browser's own offline error page instead of an in-app one.
+  `/offline` is still precached and served if a user reaches it directly.
+- The `pages-*` cache is no longer read for page loads, only written. It can be removed in a
+  later change if it is not wanted.
