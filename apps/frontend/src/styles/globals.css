@@ -733,8 +733,32 @@
 
      `!important` is necessary and correct here: it has to beat the inline style
      Framer Motion wrote. `@media (scripting: none)` matches only when
-     scripting is unavailable, so it costs nothing for everyone else.
+     scripting is unavailable, so it costs nothing for everyone else. The always-on failsafe
+     below covers the other failure: scripting *available* but the observer never firing.
      ───────────────────────────────────────────────────────────────────── */
+  /* ── Reveal failsafe ────────────────────────────────────────────────────
+     `<Reveal>` renders `initial="hidden"`, which Framer Motion writes out as an inline
+     `opacity: 0`, and clears it only when its `whileInView` IntersectionObserver fires. The
+     `@media (scripting: none)` rule below rescues that when JavaScript is *disabled* — but
+     nothing rescued it when JavaScript ran and the observer simply never fired: the content
+     stayed at `opacity: 0` indefinitely, so the page rendered in the DOM and displayed
+     nothing. That is the blank storefront.
+
+     This guarantees the outcome regardless of whether the observer fires. `forwards` and
+     `!important` let the animation override the inline style, so the element cannot be left
+     invisible. When the reveal does run, it finishes long before the delay elapses and this is
+     a no-op; when it does not, content is visible within ~1.6s either way. */
+  .motion-reveal {
+    animation: motion-reveal-failsafe 400ms ease-out 1200ms forwards;
+  }
+
+  @keyframes motion-reveal-failsafe {
+    to {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
   @media (scripting: none) {
     /* Reserve the box so a fading image doesn't collapse its layout first. */
   img[data-media='pending'] {

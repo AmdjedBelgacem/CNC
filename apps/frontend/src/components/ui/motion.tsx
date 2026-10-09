@@ -106,7 +106,17 @@ export function Reveal({
       variants={variants}
       initial="hidden"
       whileInView="visible"
-      viewport={repeat ? { amount: inView.amount } : { once: inView.once, amount: inView.amount, margin: inView.margin }}
+      /**
+       * `margin` is deliberately dropped from the non-repeating case.
+       *
+       * `0px 0px -10% 0px` shrinks the bottom of the observer's root by 10%, so a block sitting
+       * in the bottom tenth of the viewport never satisfied it and stayed at `opacity: 0`. A
+       * negative bottom margin is a common trick to delay the trigger until a block is further
+       * into view, and it is reasonable for content animating on scroll — but not for content
+       * that the page cannot be without. The CSS failsafe in globals.css is the backstop; this
+       * narrows how often it is needed.
+       */
+      viewport={repeat ? { amount: inView.amount } : { once: inView.once, amount: inView.amount }}
       {...rest}
     >
       {children}
