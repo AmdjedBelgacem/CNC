@@ -1,5 +1,6 @@
 import { Injectable, Logger, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { and, asc, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { matchQuality, normalizeSearchText, squashSearchText, tokenizeSearchQuery, SEARCH_MATCH_TIERS } from '@titan/shared';
 import { DrizzleService } from '../../database/drizzle.service';
 import { ConfigService } from '../../config/config.service';
 import { users } from '../../database/schema/users';
@@ -172,13 +173,35 @@ function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
-function contains(column: unknown, value: string) {
-  return sql`${column} ILIKE ${`%${escapeLike(value)}%`} ESCAPE '\\'`;
+/**
+ * SQL-side pre-filter, kept deliberately permissive.
+ *
+ * The precise decision is made in `scoreCandidate` on normalised text. This only has to avoid
+ * throwing away rows that could match, so it requires every query token to appear as a
+ * substring. That is a superset of what `matchQuality` accepts — a token that starts a word is
+ * necessarily a substring, and the squashed fallback only widens things further — so nothing
+ * reachable is lost, while the result set stays small enough to rank in process.
+ *
+ * The previous form compared the whole raw query, which is what made `3_axis` and
+ * `machining-center` return nothing.
+ */
+function tokenFilter(column: unknown, value: string) {
+  const tokens = tokenizeSearchQuery(value);
+  if (tokens.length === 0) return sql`true`;
+  const squashed = squashSearchText(value);
+  const clauses = tokens.map(
+    (token) => sql`${column}::text ILIKE ${`%${escapeLike(token)}%`} ESCAPE '\\'`,
+  );
+  // The squashed form is what lets an unpunctuated query such as "3axis" survive the
+  // pre-filter, because its token would not otherwise appear in a hyphenated column.
+  if (squashed) {
+    clauses.push(sql`replace(lower(${column}::text), '[^a-z0-9]+', '') ILIKE ${`%${escapeLike(squashed)}%`}`);
+  }
+  return sql`(${sql.join(clauses, sql` AND `)})`;
 }
 
-function jsonContains(column: unknown, value: string) {
-  return sql`${column}::text ILIKE ${`%${escapeLike(value)}%`} ESCAPE '\\'`;
-}
+const contains = tokenFilter;
+const jsonContains = tokenFilter;
 
 function toCount(value: unknown) {
   return Number(value ?? 0) || 0;
@@ -205,24 +228,40 @@ function dateValue(value: Date | string | null | undefined) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+/**
+ * Score a candidate against a query, with separators and casing already normalised.
+ *
+ * The previous version lower-cased both sides and compared the raw query, so `3_axis` and
+ * `machining-center` matched nothing while `3-axis` matched: punctuation decided relevance.
+ * Matching now runs through the shared `matchQuality`, so the tier is decided on the same
+ * normalised text the filter uses, and the field-weighted bonuses below order results within
+ * a tier.
+ */
 function scoreCandidate(candidate: SearchCandidate, query: string) {
-  const needle = query.toLocaleLowerCase();
-  const title = candidate.title.toLocaleLowerCase();
-  const subtitle = (candidate.subtitle ?? '').toLocaleLowerCase();
-  const body = candidate.body.toLocaleLowerCase();
-  const tokens = needle.split(/\s+/).filter(Boolean);
-  let score = 0;
-  if (title === needle) score += 1000;
-  else if (title.startsWith(needle)) score += 800;
-  else if (title.includes(needle)) score += 650;
-  if (subtitle.includes(needle)) score += 250;
-  if (body.includes(needle)) score += 100;
-  for (const token of tokens) {
-    if (title.includes(token)) score += 80;
-    else if (subtitle.includes(token)) score += 35;
-    else if (body.includes(token)) score += 15;
+  const queryNormalized = normalizeSearchText(query);
+  if (!queryNormalized) return 0;
+
+  const fields: { text: string; weight: number }[] = [
+    { text: normalizeSearchText(candidate.title), weight: 1 },
+    { text: normalizeSearchText(candidate.subtitle ?? ''), weight: 0.4 },
+    { text: normalizeSearchText(candidate.body), weight: 0.2 },
+  ];
+
+  // A match anywhere in the record is a match; the best tier wins and its field decides the
+  // order, so a title hit always outranks a body hit at the same textual quality.
+  let best: { tier: number; weight: number } | null = null;
+  for (const field of fields) {
+    if (!field.text) continue;
+    const quality = matchQuality(field.text, query);
+    if (!quality) continue;
+    const tier = SEARCH_MATCH_TIERS[quality];
+    if (!best || tier * field.weight > best.tier * best.weight) {
+      best = { tier, weight: field.weight };
+    }
   }
-  return score;
+  if (!best) return 0;
+  // Rounded so a body match can never outrank a title match at the same tier.
+  return Math.round(best.tier * best.weight);
 }
 
 function publicResult(candidate: SearchCandidate): SearchResultItem {
@@ -523,6 +562,14 @@ export class SearchService {
    * `index_primary_key_multiple_candidates_found` and the index silently stays empty.
    * The primary key must therefore be declared explicitly.
    */
+  /**
+   * Index settings, re-applied whenever they change.
+   *
+   * `meiliSettingsReady` is a per-process latch, so editing these settings requires a restart
+   * to take effect on an already-running index. That is deliberate: re-applying settings on
+   * every query would add a round trip to the hot path. The comment above the latch should be
+   * kept in sync with this note.
+   */
   private async prepareMeiliIndex(index: MeiliIndex) {
     if (this.meiliSettingsReady) return;
     await this.ensureMeiliIndex(index);
@@ -531,6 +578,27 @@ export class SearchService {
       filterableAttributes: ['tenantId', 'type', 'publicVisible', 'adminVisible'],
       sortableAttributes: ['title', 'updatedAt'],
       displayedAttributes: ['entityId', 'type', 'title', 'subtitle', 'href', 'imageUrl', 'score', 'meta', 'updatedAt', 'tenantId', 'publicVisible', 'adminVisible', 'body'],
+      /**
+       * Separators and ranking, so the engine behaves like the Postgres fallback rather than
+       * treating punctuation as significant. `3-axis`, `3 axis` and `3axis` must all find the
+       * same rows; without this the two paths disagree whenever Meilisearch is enabled.
+       */
+      separatorTokens: ['-', '_', '.', '/', '\\', '|', ','],
+      nonSeparatorTokens: [],
+      rankingRules: [
+        'words',
+        'typo',
+        'proximity',
+        'attribute',
+        'sort',
+        'exactness',
+      ],
+      // Tolerate the small typos real users make, without loosening the fallback.
+      typoTolerance: {
+        enabled: true,
+        minWordSizeForTypos: { oneTypo: 4, twoTypos: 8 },
+        disableOnAttributes: ['tenantId', 'type'],
+      },
     });
     this.meiliSettingsReady = true;
   }
