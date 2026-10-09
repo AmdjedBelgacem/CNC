@@ -20,9 +20,16 @@
  * the reload does not help, the user sees the real error rather than a spinner.
  *
  * Deliberately inline in the document head, before React hydrates, because the error is
- * thrown *by* hydration and a component effect would run too late to observe it.
+ * raised *by* hydration and a component effect would run too late to observe it.
+ *
+ * The `nonce` is not optional in practice. The Content-Security-Policy is
+ * `script-src 'self' 'nonce-…'` with a fresh per-request nonce, and Next.js only stamps that
+ * nonce on scripts it emits itself. An inline script without one is blocked outright — which
+ * is exactly what happened on the first deployment of this guard: it shipped, the tag was in
+ * the HTML, and it never ran, so the page still went blank. The nonce comes from the same
+ * `x-nonce` request header the middleware sets.
  */
-export function HydrationRecovery() {
+export function HydrationRecovery({ nonce }: { nonce?: string }) {
   const script = `(function(){
   try {
     if (window.__hydraRecovered) return;
@@ -82,6 +89,7 @@ export function HydrationRecovery() {
   return (
     <script
       id="hydration-recovery"
+      nonce={nonce}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{ __html: script }}
     />

@@ -19,7 +19,7 @@ const layout = readFileSync(resolve(__dirname, '../src/app/layout.tsx'), 'utf8')
 
 describe('hydration recovery guard', () => {
   it('is mounted in the document head, before hydration can throw', () => {
-    expect(layout).toContain('<HydrationRecovery />');
+    expect(layout).toContain('<HydrationRecovery nonce={nonce} />');
     expect(layout.indexOf('<HydrationRecovery />')).toBeLessThan(layout.indexOf('<body'));
   });
 
@@ -33,6 +33,14 @@ describe('hydration recovery guard', () => {
     // console.error with no error or unhandledrejection event, so listeners alone never fired.
     expect(source).toContain('console.error = function');
     expect(source).toContain('nativeError.apply');
+  });
+
+  it('carries the CSP nonce, or the browser blocks it outright', () => {
+    // `script-src 'self' 'nonce-…'` with a fresh per-request nonce, and Next only stamps that
+    // nonce on scripts it emits. Without it the guard shipped, appeared in the HTML, and never
+    // ran — the page still went blank.
+    expect(source).toContain('nonce={nonce}');
+    expect(layout).toContain("headers()).get('x-nonce')");
   });
 
   it('recognises the minified hydration errors and the worded form', () => {

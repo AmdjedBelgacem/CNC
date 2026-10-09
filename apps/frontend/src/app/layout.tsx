@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
@@ -77,6 +77,10 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+
+  // Set by the middleware on the request; Next.js only stamps the CSP nonce on scripts it emits itself.
+  // See HydrationRecovery — an inline script without it is blocked entirely.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const rawLocale = await getLocale();
@@ -118,7 +122,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Tenant published theme (server-rendered). User overrides are appended
             later by ThemeProvider so they win the cascade. */}
         {/* Must run before React hydrates: it listens for the error hydration itself throws. */}
-        <HydrationRecovery />
+        <HydrationRecovery nonce={nonce} />
         <style
           id="tenant-theme-tokens"
           suppressHydrationWarning
