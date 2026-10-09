@@ -11,6 +11,7 @@ import '@/styles/globals.css';
 import '@/styles/puck.css';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { MotionProvider } from '@/components/providers/motion-provider';
+import { HydrationRecovery } from '@/components/analytics/hydration-recovery';
 import { MediaLoadProvider } from '@/components/providers/media-load-provider';
 import { NotificationSocketProvider } from '@/components/providers/notification-socket-provider';
 import { BRAND_NAME, OG_IMAGE, SITE_URL } from '@/lib/brand';
@@ -116,6 +117,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="robots" content="index, follow, max-image-preview:large" />
         {/* Tenant published theme (server-rendered). User overrides are appended
             later by ThemeProvider so they win the cascade. */}
+        {/* Must run before React hydrates: it listens for the error hydration itself throws. */}
+        <HydrationRecovery />
         <style
           id="tenant-theme-tokens"
           suppressHydrationWarning
