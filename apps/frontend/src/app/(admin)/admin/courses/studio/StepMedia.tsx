@@ -4,22 +4,14 @@ import { useTranslations } from 'next-intl';
 import { Plus, X, Paperclip, Upload, Loader2, Image as ImageIcon, Video } from 'lucide-react';
 import { FormSection } from '@/components/admin/admin-form';
 import type { CourseStudioData } from './types';
-import * as api from './api';
 import { toast } from '@/components/ui/toast';
+import { uploadFileToStorage } from '@/lib/upload';
 interface ResourceRow {
   id: string;
   name: string;
   type: string;
   url: string;
   size: number;
-}
-function readFileAsDataUrl(file: File, errorMessage = 'Could not read file'): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = () => reject(new Error(errorMessage));
-    r.readAsDataURL(file);
-  });
 }
 function readResources(meta: Record<string, unknown> | null): ResourceRow[] {
   const r = meta?.resources;
@@ -51,8 +43,7 @@ export function StepMedia({
     if (!file) return;
     setResourceUploading(id);
     try {
-      const dataUrl = await readFileAsDataUrl(file, t('couldNotReadFile', { default: 'Could not read file' }));
-      const result = await api.uploadFile(dataUrl, 'resources', file.name);
+      const result = await uploadFileToStorage(file, 'resources');
       patchResource(id, { name: result.name, type: result.type, url: result.url, size: result.size });
       toast({ type: 'ok', title: t('resourceUploaded', { default: 'Resource uploaded' }) });
     } catch (error) {
@@ -88,8 +79,7 @@ export function StepMedia({
     setThumbPreview(URL.createObjectURL(file));
     setThumbUploading(true);
     try {
-      const dataUrl = await readFileAsDataUrl(file, t('couldNotReadFile', { default: 'Could not read file' }));
-      const res = await api.uploadFile(dataUrl, 'covers', file.name);
+      const res = await uploadFileToStorage(file, 'covers');
       update({ thumbnailUrl: res.url });
       toast({ type: 'ok', title: t('thumbnailUploaded', { default: 'Thumbnail uploaded' }) });
     } catch (e: any) {
@@ -112,8 +102,7 @@ export function StepMedia({
     setTrailerPreview(URL.createObjectURL(file));
     setTrailerUploading(true);
     try {
-      const dataUrl = await readFileAsDataUrl(file, t('couldNotReadFile', { default: 'Could not read file' }));
-      const res = await api.uploadFile(dataUrl, 'trailers', file.name);
+      const res = await uploadFileToStorage(file, 'trailers');
       update({ trailerUrl: res.url });
       toast({ type: 'ok', title: t('trailerUploaded', { default: 'Trailer uploaded' }) });
     } catch (e: any) {

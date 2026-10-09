@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
+import { uploadFileToStorage } from '@/lib/upload';
 import { useTranslations } from 'next-intl';
 import {
   ArrowDown,
@@ -50,14 +51,6 @@ const BLOCK_LABELS: Record<LessonBlock['type'], { key: string; fallback: string 
   quiz: { key: 'studio.blockQuiz', fallback: 'Quiz' },
 };
 
-function readFileAsDataUrl(file: File, errorMessage = 'Could not read file'): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(errorMessage));
-    reader.readAsDataURL(file);
-  });
-}
 
 function blockLabel(
   type: LessonBlock['type'],
@@ -82,7 +75,6 @@ export function LessonBlockEditor({
 }) {
   const [document, setDocument] = useState<LessonContentDocument>(sortDocument(cloneDocument(initialDocument)));
   const t = useTranslations('courses');
-  const tMedia = useTranslations('media');
   const tCommon = useTranslations('common');
   const [selectedId, setSelectedId] = useState<string | null>(() => initialDocument?.blocks[0]?.id ?? null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -324,8 +316,7 @@ export function LessonBlockEditor({
     }
     setUploading(true);
     try {
-      const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
-      const result = await api.uploadFile(dataUrl, folder, file.name);
+      const result = await uploadFileToStorage(file, folder);
       apply(result.url);
       toast({ type: 'ok', title: t('studio.mediaUploaded', { default: 'Media uploaded' }) });
     } catch (error) {

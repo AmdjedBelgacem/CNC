@@ -39,7 +39,17 @@ export const certifications = pgTable('certifications', {
   }>(),
   /** Storage object key. `pdfUrl` remains for backwards compatibility. */
   pdfStorageKey: varchar('pdf_storage_key', { length: 500 }),
-  pdfUrl: varchar('pdf_url', { length: 500 }),
+  /**
+   * Presigned object URL, kept as a convenience link.
+   *
+   * `text`, not `varchar`: a presigned Supabase/S3 URL carries signature query parameters
+   * and comes to roughly 700 characters. At `varchar(500)` Postgres rejected the whole
+   * insert with `22001 string_data_right_truncation`, so issuing a certificate returned a
+   * 500 *after* the PDF had been rendered and uploaded — and no certificate had ever been
+   * issued on this deployment. Downloads go through `pdfStorageKey`, so this column is only
+   * a display value, but it still has to fit what is actually stored in it.
+   */
+  pdfUrl: text('pdf_url'),
   digitalSignature: text('digital_signature'),
   /** 'automatic' (course completion) or 'manual' (admin override). */
   source: varchar('source', { length: 20 }).default('automatic').notNull(),

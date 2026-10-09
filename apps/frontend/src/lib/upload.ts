@@ -31,8 +31,17 @@ const ALLOWED_TYPES = [
   'video/quicktime',
 ];
 
-/** Folders the backend will honour; anything else is silently demoted to `uploads`. */
-const FOLDERS = ['covers', 'courses', 'avatars', 'attachments', 'resources', 'og'];
+/**
+ * Folders the backend honours; anything else is silently demoted to `uploads`.
+ *
+ * Mirrors `allowedFolders` in the backend's upload service. `trailers`, `lessons`,
+ * `lesson-images` and `captions` were missing here, so a course trailer uploaded through
+ * this helper landed in `uploads` instead of `trailers`.
+ */
+const FOLDERS = [
+  'covers', 'trailers', 'og', 'lesson-images', 'attachments', 'lessons',
+  'resources', 'captions', 'courses', 'avatars', 'certificates',
+];
 
 export interface UploadedFile {
   /** Public URL to store in the database. */
@@ -50,8 +59,20 @@ interface PresignedResponse {
   contentType: string;
 }
 
-/** Defensive ceiling so a mis-picked 500 MB file fails before it is read into memory. */
+/**
+ * Ceilings, checked before a file is read into memory.
+ *
+ * These mirror the backend's own limits so the UI rejects a file at the same threshold the
+ * server would, instead of uploading it and failing afterwards. Video gets the larger
+ * allowance because the course studio advertises 500 MB for trailers and lesson videos, and
+ * a single flat 40 MB ceiling rejected those with "File is too large" before any byte was
+ * sent — the studio advertises limits the uploader refused to honour.
+ */
 const MAX_IMAGE_BYTES = 40 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024;
+
+const maxBytesFor = (type: string): number =>
+  type.startsWith('video/') ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
 
 const safeName = (file: File) => {
   const base = file.name.replace(/[^A-Za-z0-9._-]/g, '').slice(-60) || 'upload';
@@ -65,9 +86,14 @@ export async function uploadFileToStorage(
   if (!ALLOWED_TYPES.includes(file.type)) {
     throw new Error(`Unsupported file type: ${file.type || 'unknown'}`);
   }
-  if (file.size > MAX_IMAGE_BYTES) {
+  const maxBytes = maxBytesFor(file.type);
+  if (file.size > maxBytes) {
+    const mb = Math.round(file.size / 1024 / 1024);
+    const limitMb = Math.round(maxBytes / 1024 / 1024);
     throw new Error(
-      `File is too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB.`,
+      file.type.startsWith('video/')
+        ? `Video is too large (${mb}MB). Maximum is ${limitMb}MB.`
+        : `File is too large (${mb}MB). Maximum is ${limitMb}MB.`,
     );
   }
 

@@ -88,13 +88,27 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * exist, publish cleanly, and then 404 for every visitor with no error anywhere.
  * The list is the union of the `(main)`, `(store)`, `(social)`, `(academy)` and
  * `(admin)` route folders plus the auth and checkout paths.
+ *
+ * This list was 20 route folders out of date. It reserved `signup` while the folder is
+ * `register`, and did not reserve `courses` at all — so the single most likely slug an
+ * admin would pick for a courses landing page passed validation, published without
+ * complaint, and 404'd for every visitor. `page-slugs-vs-routes.spec.ts` in the backend
+ * suite enumerates the real route tree and fails when a folder is missing here, so the
+ * list cannot rot unnoticed again.
  */
 export const RESERVED_SLUGS: readonly string[] = [
   // (main) — these are real folders and always win over [slug]
   'academy', 'about', 'privacy', 'terms', 'refunds', 'edu-purchases', 'events', 'feed', 'products',
   'groups', 'learning', 'sponsors', 'titan-tv', 'verify', 'ai', 'home',
+  'account', 'appearance', 'billing', 'callback', 'chat', 'confirm', 'connected-accounts',
+  'courses', 'danger', 'profile', 'repair', 'security', 'success', 'tags',
+  // auth routes — a page here would collide with the auth screens
+  'forgot-password', 'register', 'resend-verification', 'reset-password',
+  'verify-email', 'verify-email-change',
+  // pwa
+  'offline',
   // reserved without a folder today, but the app must never grow one by accident
-  'admin', 'api', 'login', 'logout', 'signup', 'account', 'settings',
+  'admin', 'api', 'login', 'logout', 'signup', 'settings',
   'cart', 'checkout', 'payments', 'orders', 'search', 'notifications',
   '_next', 'static', 'assets', 'well-known', 'favicon.ico', 'robots.txt', 'sitemap.xml',
   'wp-admin', 'wp-login.php',

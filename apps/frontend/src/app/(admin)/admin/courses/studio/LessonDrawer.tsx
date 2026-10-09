@@ -21,14 +21,7 @@ import type { Attachment, Lesson, LessonVideoMeta, Section } from './types';
 import { slugify } from './slugify';
 import { LessonBlockEditor } from './LessonBlockEditor';
 import * as api from './api';
-function readFileAsDataUrl(file: File, errorMessage = 'Could not read file'): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = () => reject(new Error(errorMessage));
-    r.readAsDataURL(file);
-  });
-}
+import { uploadFileToStorage } from '@/lib/upload';
 function formatBytes(n: number): string {
   if (!n) return '';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -201,24 +194,18 @@ export function LessonDrawer({
         setVideoProgress(100);
         key = k;
         meta = { key, size: file.size, contentType: file.type, filename: file.name };
-      } catch (_presignErr) {
-        // Intentionally swallowed: the presign failure is not surfaced to the user,
-        // it just selects the fallback path below. Fallback 1: server stores to S3;
-        // Fallback 2: local disk (works when MinIO is down).
+      } catch (presignErr) {
+        /**
+         * There is no base64 fallback, and that is the fix.
+         *
+         * Any presign failure used to be swallowed and quietly routed into two fallback
+         * paths that POST the video as base64 JSON — bounded by the 2 MB API body limit. A
+         * storage problem therefore surfaced to the author as "File is too large", which
+         * described neither the cause nor the file they had chosen. The real error now
+         * reaches them.
+         */
         setVideoProgress(null);
-        const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
-        try {
-          const res = await api.uploadLessonVideoServer(lesson.id, {
-            file: dataUrl,
-            filename: file.name,
-          });
-          key = res.key;
-          meta = res.meta;
-        } catch {
-          const res2 = await api.uploadFile(dataUrl, 'lessons', file.name);
-          key = res2.url;
-          meta = { key: res2.url, size: res2.size, contentType: res2.type, filename: res2.name };
-        }
+        throw presignErr;
       }
       setVideoUrl(key);
       setVideoMeta(meta);
@@ -256,8 +243,7 @@ export function LessonDrawer({
     setThumbPreview(localPreview);
     setUploading((u) => ({ ...u, thumb: true }));
     try {
-      const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
-      const res = await api.uploadFile(dataUrl, 'covers', file.name);
+      const res = await uploadFileToStorage(file, 'covers');
       setThumbUrl(res.url);
       toast({ type: 'ok', title: tMedia('thumbnailUploaded', { default: 'Thumbnail uploaded' }) });
     } catch (e: any) {
@@ -291,8 +277,7 @@ export function LessonDrawer({
       setAttachments((a) => [...a, temp]);
       setUploading((u) => ({ ...u, [id]: true }));
       try {
-        const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
-        const res = await api.uploadFile(dataUrl, 'attachments', file.name);
+        const res = await uploadFileToStorage(file, 'attachments');
         setAttachments((a) =>
           a.map((x) =>
             x.id === id

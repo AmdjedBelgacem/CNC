@@ -433,12 +433,24 @@ export class BuilderService {
     const layout = this.parsePageLayout(dto.layout as PageLayout);
     const page = await this.getPage(tenantId, slug);
 
+    /**
+     * `status` is deliberately left untouched.
+     *
+     * This used to write `status: 'draft'` on every save. The public read gate requires
+     * `status === 'published'`, so clicking Save (or Cmd-S) on a live page took it off the
+     * site immediately — it 404'd for every visitor until Publish was pressed again, with
+     * nothing in the UI saying so. That is the difference between a builder whose pages
+     * "don't exist" and a builder that works: you save, you go live.
+     *
+     * The draft still lives in `pages.layout`, while `page_versions` keeps the last
+     * published snapshot and `pages.version` still points at it, so Publish remains the only
+     * thing that moves live content forward. Revert and Reset still set `draft` explicitly.
+     */
     const [updated] = await this.drizzle.db
       .update(pages)
       .set({
         layout,
         title: dto.title?.trim() || page.title,
-        status: 'draft',
         updatedById: actor.id,
         updatedAt: new Date(),
       })

@@ -6,17 +6,9 @@ import { Check, Languages, Link2, Loader2, Search, Share2, Upload } from 'lucide
 import type { ContentLocale } from '@titan/shared';
 import { FormSection, TextField, TextAreaField } from '@/components/admin/admin-form';
 import type { CourseStudioData } from './types';
-import * as api from './api';
 import { toast } from '@/components/ui/toast';
+import { uploadFileToStorage } from '@/lib/upload';
 
-function readFileAsDataUrl(file: File, errorMessage = 'Could not read file'): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(errorMessage));
-    reader.readAsDataURL(file);
-  });
-}
 
 function valueFor(course: CourseStudioData, locale: ContentLocale, field: 'seoTitle' | 'seoDescription' | 'seoKeywords') {
   if (locale === 'en') return course[field] ?? '';
@@ -63,8 +55,7 @@ export function StepLocalization({
     }
     setOgUploading(true);
     try {
-      const dataUrl = await readFileAsDataUrl(file, tMedia('couldNotReadFile', { default: 'Could not read file' }));
-      const result = await api.uploadFile(dataUrl, 'og', file.name);
+      const result = await uploadFileToStorage(file, 'og');
       update({ ogImageUrl: result.url });
       toast({ type: 'ok', title: tMedia('imageUploaded', { default: 'Image uploaded' }) });
     } catch (error) {

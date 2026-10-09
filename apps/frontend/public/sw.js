@@ -108,61 +108,61 @@ self.addEventListener('fetch', (event) => {
   // Never cache API, auth, admin mutations, or websockets
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin/') || url.pathname.startsWith('/auth/')) return;
 
-  // Navigations: network-first, then cache, then offline fallback
-  const isNavigation =
-    req.mode === 'navigate' ||
-    (req.headers.get('accept') || '').includes('text/html');
-
-  if (isNavigation) {
-    event.respondWith(
-      /**
-       * This handler must always settle with a Response.
-       *
-       * It previously ended in `.catch(async () => (await caches.match(req)) || caches.match('/offline'))`.
-       * `caches.match` resolves to `undefined` on a miss, so when the network failed *and*
-       * the page had never been cached *and* `/offline` was not in the cache, `respondWith`
-       * was handed `undefined` and the browser rejected the fetch event with
-       * "Failed to convert value to 'Response'" followed by a blank page. When `caches.match`
-       * itself rejected, the surfaced message was "the promise was rejected" instead. Either
-       * way a transient network failure became an unrecoverable empty screen.
-       *
-       * Every path below now produces a real Response, and a synthesised HTML page backs up
-       * the last resort so this cannot depend on the offline page having been precached.
-       */
-      fetch(req)
-        .then(async (res) => {
-          // Only a real success is worth keeping: caching a 500 would pin the error page.
-          if (res.ok) {
-            try {
-              const cache = await caches.open(PAGES_CACHE);
-              await cache.put(req, res.clone());
-            } catch {
-              /* a full or unavailable cache must not break the response */
-            }
-          }
-          return res;
-        })
-        .catch(() => offlineResponse()),
-    );
+  /**
+   * Document navigations are NOT intercepted.
+   *
+   * This worker used to own navigations with a network-first-then-cache strategy, and every
+   * version of that produced blank pages. `respondWith` was handed `undefined` when the
+   * network failed and the cache missed, giving "Failed to convert value to 'Response'";
+   * when the cached HTML was served instead, its scripts were frequently not in the cache —
+   * a first visit runs before this worker takes control — so React never hydrated and the
+   * page rendered Next's "the app failed to start" boundary; and when `/offline` was served,
+   * it failed identically, because that is also a Next page whose chunks are not precached.
+   *
+   * Four separate fixes to that handler were each still not enough. Rather than keep
+   * patching it, navigations are left alone entirely: no `respondWith`, so the browser
+   * performs its own request and supplies its own error page. An interception bug can no
+   * longer turn a page request into a blank screen, and online behaviour is unchanged
+   * because this was network-first already — the cache was only ever consulted after the
+   * network had already failed.
+   *
+   * The precache still installs `/offline` so the browser's offline fallback has something
+   * to show, and everything below continues to cache hashed assets and images, where the
+   * content-addressed names make caching genuinely safe.
+   */
+  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
     return;
   }
 
   /**
    * Hashed Next.js static assets: cache-first.
    *
-   * Safe only because the cache is build-scoped. A miss is fetched and cached, and a 404 is
-   * returned as-is rather than left to wedge the page — with build-scoped caches an entry
-   * can never outlive the asset it points at.
+   * Safe because the name is content-addressed and the cache is build-scoped, so an entry
+   * cannot outlive the asset it points at. Every failure path still ends in a Response: if
+   * `caches.open` rejects, the network fetch is used instead, so a storage fault degrades
+   * the cache rather than the page.
    */
   if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/_next/image')) {
     event.respondWith(
-      caches.open(STATIC_CACHE).then(async (cache) => {
-        const hit = await cache.match(req);
-        if (hit) return hit;
+      (async () => {
+        let cache = null;
+        try {
+          cache = await caches.open(STATIC_CACHE);
+          const hit = await cache.match(req);
+          if (hit) return hit;
+        } catch {
+          /* fall through to the network */
+        }
         const res = await fetch(req);
-        if (res.ok) cache.put(req, res.clone());
+        if (res.ok && cache) {
+          try {
+            await cache.put(req, res.clone());
+          } catch {
+            /* a full cache must not break the response */
+          }
+        }
         return res;
-      }),
+      })(),
     );
     return;
   }
@@ -170,32 +170,49 @@ self.addEventListener('fetch', (event) => {
   // Images/fonts: stale-while-revalidate
   if (req.destination === 'image' || req.destination === 'font') {
     event.respondWith(
-      caches.match(req).then((hit) => {
+      (async () => {
+        const hit = await caches.match(req).catch(() => undefined);
         const network = fetch(req)
-          .then((res) => {
+          .then(async (res) => {
             if (res.ok) {
-              const copy = res.clone();
-              caches.open(IMAGES_CACHE).then((c) => c.put(req, copy).then(trimImagesCache));
+              try {
+                const cache = await caches.open(IMAGES_CACHE);
+                await cache.put(req, res.clone());
+                await trimImagesCache();
+              } catch {
+                /* cache faults must not break the response */
+              }
             }
             return res;
           })
           .catch(() => hit);
         return hit || network;
-      }),
+      })(),
     );
     return;
   }
 
-  // Everything else same-origin GET: try network, fall back to cache
+  // Everything else same-origin GET: network, with the cache only as a fallback.
   event.respondWith(
-    fetch(req)
-      .then((res) => {
+    (async () => {
+      try {
+        const res = await fetch(req);
         if (res.ok) {
-          const copy = res.clone();
-          caches.open(PAGES_CACHE).then((c) => c.put(req, copy));
+          try {
+            const cache = await caches.open(PAGES_CACHE);
+            await cache.put(req, res.clone());
+          } catch {
+            /* ignore */
+          }
         }
         return res;
-      })
-      .catch(() => caches.match(req)),
+      } catch (err) {
+        // Undefined here would be a rejected fetch event; return the cached copy if there
+        // is one, and otherwise rethrow so the browser reports a real network failure.
+        const hit = await caches.match(req).catch(() => undefined);
+        if (hit) return hit;
+        throw err;
+      }
+    })(),
   );
 });

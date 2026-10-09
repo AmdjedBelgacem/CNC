@@ -1,5 +1,7 @@
 import { DEFAULT_THEME_TOKENS, getDefaultLayout } from '@titan/shared';
 import type { PageLayout, ThemeTokens } from '@titan/shared';
+import { serverApiUrl } from '../server-api-url';
+
 /**
  * Server-side origin for builder/content calls.
  *
@@ -10,10 +12,19 @@ import type { PageLayout, ThemeTokens } from '@titan/shared';
  * usually swallows the error — which is how the primary navigation went missing without a
  * single error in the logs.
  *
- * `API_INTERNAL_URL` is the Vercel service binding and only exists at runtime; the public
- * var remains the fallback so local dev works unchanged.
+ * This must go through `serverApiUrl()` like every other server-side fetcher. It used to
+ * spell the fallback chain out itself and, in doing so, skipped `API_URL` — the only variable
+ * the deployed container sets. On the Lightsail stack `API_URL=http://backend:4000` while
+ * `NEXT_PUBLIC_API_URL` is blank, so this resolved to `http://localhost:4000`, the frontend
+ * container's own loopback, where nothing listens. Every builder fetch raised ECONNREFUSED
+ * and was swallowed by `catch { return null }`, which is why the admin builder appeared
+ * totally disconnected from the website: `/[slug]` called `notFound()` and the fixed routes
+ * silently rendered hardcoded seed JSX instead of the pages the admin had actually built.
+ *
+ * `lib/products.ts` carries the same note for the same bug; this module was simply missed
+ * during that migration.
  */
-export const API_BASE = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_BASE = serverApiUrl();
 /** Every backend call is tenant-scoped by header, never by a path segment. */
 export function tenantHeaders(tenantSlug: string): HeadersInit {
   return { 'x-tenant-slug': tenantSlug };

@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { BlockRenderer } from '@/components/builder/block-renderer';
 import { API_BASE, tenantHeaders } from '@/lib/builder/theme';
+import { HomeBuilder } from '@/components/home/home-builder';
+import { fetchPublishedAcademies } from '@/lib/academies';
+import { fetchPublishedCourses } from '@/lib/courses';
+import { fetchPublishedSponsors } from '@/lib/sponsors';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { cookies } from 'next/headers';
 
@@ -80,5 +83,35 @@ export default async function DynamicBuilderPage({
   const { tenantSlug, locale } = await getContext();
   const page = await loadPublishedPage(tenantSlug, slug, locale);
   if (!page) notFound();
-  return <BlockRenderer layout={page.layout as never} />;
+
+  /**
+   * Rendered through `HomeBuilder`, not `BlockRenderer`, so a custom page behaves like the
+   * fixed routes do.
+   *
+   * `BlockRenderer` renders whatever the layout says, which for the catalog-aware blocks
+   * means the hardcoded seed content that ships with each block. That is why a page built in
+   * the admin looked nothing like the same blocks on the home page: `academy-grid` showed
+   * fake academies, `program-cards` fake courses, `partner-logos` fake sponsors, and a
+   * `live-island` rendered its editor placeholder — the string "this stub only appears in
+   * the builder canvas" — to real visitors. `HomeBuilder` substitutes live tenant data into
+   * exactly those blocks, and drops seed testimonials, since there is no public API for
+   * them and fabricated social proof should never reach the storefront.
+   *
+   * The fetchers each swallow their own errors and return an empty list, so a catalog that
+   * is unreachable degrades to the seed blocks instead of failing the page.
+   */
+  const [academies, courses, sponsors] = await Promise.all([
+    fetchPublishedAcademies(tenantSlug),
+    fetchPublishedCourses(tenantSlug, 6, locale as never),
+    fetchPublishedSponsors(tenantSlug),
+  ]);
+
+  return (
+    <HomeBuilder
+      layout={page.layout as never}
+      academies={academies}
+      courses={courses}
+      sponsors={sponsors}
+    />
+  );
 }
