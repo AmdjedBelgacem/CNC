@@ -22,11 +22,12 @@ const stripComments = (src: string) =>
   src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 /**
- * The script itself must not exist.
+ * The script must be real JavaScript that removes itself.
  *
- * A browser that fetches its worker script and receives a 404 unregisters the worker without
- * needing any cooperation from the page bundle — which matters, because a page the old worker
- * is already breaking may never run the code that would otherwise clean up after it.
+ * Deleting it was tried, on the theory that a 404 makes the browser unregister. Next.js has no
+ * `/sw.js` route, so it answers with its catch-all page: HTTP 200 with `text/html`. That only
+ * unregisters via a per-engine MIME heuristic, so it is not dependable. A valid script that
+ * unregisters itself does not depend on the heuristic.
  */
 const swFile = resolve(__dirname, '../public/sw.js');
 const sw = existsSync(swFile) ? stripComments(readFileSync(swFile, 'utf8')) : '';
@@ -36,8 +37,20 @@ const register = readFileSync(
 );
 
 describe('the service worker is dismantled', () => {
-  it('serves no worker script at all, so the browser unregisters on its own', () => {
-    expect(existsSync(swFile)).toBe(false);
+  it('is a real script, so the browser can evaluate it rather than infer from a MIME type', () => {
+    expect(existsSync(swFile)).toBe(true);
+    expect(sw.length).toBeGreaterThan(0);
+  });
+
+  it('unregisters itself and clears every cache', () => {
+    expect(sw).toContain('self.registration.unregister()');
+    expect(sw).toContain('self.caches.keys()');
+    expect(sw).toContain('self.caches.delete');
+  });
+
+  it('applies immediately instead of waiting for tabs to close', () => {
+    expect(sw).toContain('self.skipWaiting()');
+    expect(sw).toContain('self.clients.claim()');
   });
 
   it('serves nothing: no fetch handler remains', () => {
@@ -46,9 +59,9 @@ describe('the service worker is dismantled', () => {
     expect(sw).not.toContain('caches.match');
   });
 
-  it('never contains a fetch or message handler, stub or otherwise', () => {
+  it('never serves a request, so it cannot blank a page', () => {
     expect(sw).not.toContain("addEventListener('fetch'");
-    expect(sw).not.toContain("addEventListener('message'");
+    expect(sw).not.toContain('respondWith');
   });
 
   it('registers no worker anywhere in the app', () => {
