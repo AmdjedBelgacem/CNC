@@ -216,3 +216,38 @@ and resetting plus republishing restored it.
 keys to `users`. Sweeping every FK-referencing table when removing an account deleted a real
 page row whose last editor was the synthetic QA user. Page rows are production content: detach
 those references with `UPDATE ... SET <col> = NULL`, never `DELETE` from `pages`.
+
+## The service worker is removed
+
+`apps/frontend/public/sw.js` is a stub: it deletes every cache and unregisters itself on
+install and activate, with `skipWaiting` and `clients.claim` so it applies on the next load.
+`PWARegister` registers nothing and instead purges existing registrations and caches on every
+page load.
+
+Removing registration is what matters. A stale worker keeps controlling a visitor's browser
+until each tab closes, so every fix only helped people arriving after it — which is why four
+successive fixes produced reports I could not reproduce from a clean profile. The failures were:
+`respondWith` handed `undefined`; cached HTML arrived without its scripts; `/offline` failed
+because it is itself a Next page; and the catch-all branch rethrew on a network-and-cache miss
+(`ERR_CACHE_MISS`, `TypeError: Failed to fetch`).
+
+Verified from a browser carrying the old worker: caches purged, `navigator.serviceWorker.controller`
+false, zero service-worker console errors across the site.
+
+## Builder pages are published and self-describing
+
+All ten `BUILDER_PAGE_SLUGS` rows are `published` at version 1, each with a `page_versions`
+snapshot of the seeded layout — byte-identical to the `getDefaultLayout` fallback the site
+already rendered, so nothing displayed changed. `/content/pages/<slug>` now answers 200
+instead of falling through to a code default, and the builder reports "Live" instead of "Draft"
+for pages that were already on the website.
+
+The builder canvas reports live data for `live-island` blocks (`useIslandSummary`) and for
+placeholder catalog-hero stats (`useCatalogStats`), read from the same public endpoints the
+site uses. The islands themselves are async server components and cannot render in the editor;
+rather than fork their markup into a second implementation that would drift, the canvas reports
+what each section resolves to plus a link to the rendered page.
+
+Known cosmetic difference: the editor's price range is rendered without a currency prefix
+(`0.01 – 0.01`) where the site formats it (`SAR 0.01 – SAR 0.01`). The values agree; only the
+currency label is missing, because the shared formatter is used server-side.
