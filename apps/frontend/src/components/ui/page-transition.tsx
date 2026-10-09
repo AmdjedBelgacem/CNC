@@ -78,9 +78,32 @@ export function PageTransition({
         // AnimatePresence actually has something to cross-fade.
         key={`${direction}:${pathname}`}
         className={cn('min-h-0', className)}
-        initial={{ opacity: 0, y: 10 * direction }}
+        /**
+         * Opacity is pinned to 1 on every state; only the vertical offset animates.
+         *
+         * This is the wrapper around the entire page, inside `<main>`, and it started from
+         * `opacity: 0`. Framer Motion writes that out as an inline style and clears it only
+         * when the `animate` transition actually runs. It does not always: the reported DOM was
+         *
+         *     <main class="flex-1"><div class="min-h-0" style="opacity: 0; transform: none;">
+         *
+         * — `transform: none` meaning the `y: 0` end value *had* resolved while `opacity` had
+         * not, so the animation applied halfway and left the page invisible. With
+         * `AnimatePresence mode="wait"` a page that never finishes its exit also blocks the
+         * next one, which is why a refresh was the only way out.
+         *
+         * A CSS failsafe was tried for the same class of bug on `<Reveal>` and measurably did
+         * not hold: the keyframe applied and the element still computed to `opacity: 0`,
+         * because the library reasserts its own inline value. A guarantee layered over the
+         * animation cannot work, so the page is simply never asked to be invisible.
+         *
+         * The trade is the crossfade: pages now swap without fading. The lift is kept, so
+         * navigation still reads as movement. Invisible is not a state a page wrapper should
+         * be able to reach.
+         */
+        initial={{ opacity: 1, y: 10 * direction }}
         animate={{ opacity: 1, y: 0, transition: transition.enter }}
-        exit={{ opacity: 0, transition: { duration: exitSeconds, ease: ease.exit } }}
+        exit={{ opacity: 1, y: -10 * direction, transition: { duration: exitSeconds, ease: ease.exit } }}
       >
         {children}
       </m.div>
