@@ -189,3 +189,30 @@ rather than patched again. Consequences to be aware of:
   `/offline` is still precached and served if a user reaches it directly.
 - The `pages-*` cache is no longer read for page loads, only written. It can be removed in a
   later change if it is not wanted.
+
+## Builder provisioning
+
+`GET /builder/pages` now reconciles the system page set: any of the ten `BUILDER_PAGE_SLUGS`
+without a row is inserted with `getDefaultLayout(slug)` and `is_system = true`. This is
+idempotent (`onConflictDoNothing` against the `(tenant_id, slug)` unique index) and runs on
+every list.
+
+Before this, `provisionPage` was reachable only from `getPage`, so rows materialised only if
+somebody opened a page by slug. Production held a single row — `home`, a draft at version 0 —
+while the site resolves ten slugs through the builder. The builder listed one page against a
+website built from ten, and the nine without rows could only render the hardcoded seed layout.
+
+Seeded layouts are byte-identical to the `getDefaultLayout` fallback the site already used, so
+provisioning changes what is *manageable*, not what is *displayed*. Nothing is published as a
+side effect; Publish remains the only action that does that.
+
+All ten pages are currently drafts at version 0, which renders exactly the seed content the
+site showed before. Verified end to end: editing `about` and publishing changed the live page,
+and resetting plus republishing restored it.
+
+## Careful when deleting users
+
+`pages.updated_by_id`, `pages.published_by_id` and `page_versions.changed_by_id` are foreign
+keys to `users`. Sweeping every FK-referencing table when removing an account deleted a real
+page row whose last editor was the synthetic QA user. Page rows are production content: detach
+those references with `UPDATE ... SET <col> = NULL`, never `DELETE` from `pages`.
