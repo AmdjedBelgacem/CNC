@@ -53,6 +53,29 @@ export function HydrationRecovery() {
       var msg = (e && e.reason && (e.reason.message || e.reason)) || '';
       if (HYDRATION.test(String(msg))) recover();
     });
+
+    /*
+     * React does not throw a hydration mismatch — in a production build it *reports* it.
+     * Verified against the live site: WebKit logged "Minified React error #418" through
+     * console.error with no accompanying error or unhandledrejection event, so the listeners
+     * above never fired and the guard sat idle while the page went blank. That is the whole
+     * failure this exists to catch, so console.error has to be watched too.
+     *
+     * Errors are forwarded to the original console method so nothing is hidden from
+     * developers, and the pattern still has to match, so ordinary logging never reloads.
+     */
+    var nativeError = console.error;
+    console.error = function () {
+      try {
+        var parts = [];
+        for (var i = 0; i < arguments.length; i++) {
+          var a = arguments[i];
+          parts.push(a && a.message ? a.message : String(a));
+        }
+        if (HYDRATION.test(parts.join(' '))) recover();
+      } catch (e) {}
+      return nativeError.apply(console, arguments);
+    };
   } catch (e) {}
 })();`;
 

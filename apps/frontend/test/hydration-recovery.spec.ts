@@ -23,9 +23,16 @@ describe('hydration recovery guard', () => {
     expect(layout.indexOf('<HydrationRecovery />')).toBeLessThan(layout.indexOf('<body'));
   });
 
-  it('listens for the error hydration itself throws', () => {
+  it('listens for the error and rejection paths', () => {
     expect(source).toContain("addEventListener('error'");
     expect(source).toContain("addEventListener('unhandledrejection'");
+  });
+
+  it('also watches console.error, because that is how React reports it in production', () => {
+    // Verified on the live site: WebKit logged "Minified React error #418" through
+    // console.error with no error or unhandledrejection event, so listeners alone never fired.
+    expect(source).toContain('console.error = function');
+    expect(source).toContain('nativeError.apply');
   });
 
   it('recognises the minified hydration errors and the worded form', () => {
