@@ -73,7 +73,24 @@ export const metadata: Metadata = {
       'CNC machining courses, simulation-first training and industry-recognised certification for machinists, engineers and manufacturing teams.',
     images: [OG_IMAGE.url],
   },
-  icons: { icon: '/favicon.ico' },
+  /**
+   * Icon set. `icon-32` and `icon-180` were missing, so the browser fell back to
+   * `/favicon.ico` for the tab and iOS had no touch icon at all — a 404 in the network tab
+   * and a grey rounded square when a visitor saved the site to their home screen.
+   *
+   * `apple-touch-icon` is named explicitly because iOS ignores the manifest and only looks
+   * for that exact path.
+   */
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icons/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-180.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
