@@ -11,9 +11,12 @@ import { useEffect, useState } from 'react';
  * the clearest remaining case of the builder not showing what the site shows.
  *
  * Only placeholders are replaced. A stat the admin has deliberately set to a real value keeps
- * it, so this never overrides an edit. Values come from the same public endpoint the site uses,
- * and mirror its shape: SKU count, department count and price range in the workspace currency.
+ * it, so this never overrides an edit. Values come from the same public endpoint the site uses
+ * and are formatted with the very same `formatMinorUnits` the server render uses, so the canvas
+ * shows `SAR 0.01 – SAR 0.01` rather than a bare `0.01 – 0.01`.
  */
+
+import { coerceCurrency, formatMinorUnits } from '@/lib/money';
 
 export interface HeroStat {
   label: string;
@@ -54,10 +57,11 @@ export function useCatalogStats(stats: HeroStat[] | undefined): HeroStat[] | und
             max = Math.max(max, price);
           }
         }
+        // Same formatter the server render uses, so the two agree character for character.
+        const currency = coerceCurrency(items[0]?.currency);
+        const money = (minor: number) => formatMinorUnits(minor, currency, 'en-US');
         const range =
-          min !== null && max > 0
-            ? `${(min / 100).toFixed(2)} – ${(max / 100).toFixed(2)}`
-            : null;
+          min !== null && max > 0 ? `${money(min)} – ${money(max)}` : null;
 
         setLive([
           { label: stats[0]?.label ?? 'SKUs', value: String(items.length) },

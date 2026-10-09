@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -21,30 +21,34 @@ import { describe, expect, it } from 'vitest';
 const stripComments = (src: string) =>
   src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-const sw = stripComments(readFileSync(resolve(__dirname, '../public/sw.js'), 'utf8'));
+/**
+ * The script itself must not exist.
+ *
+ * A browser that fetches its worker script and receives a 404 unregisters the worker without
+ * needing any cooperation from the page bundle — which matters, because a page the old worker
+ * is already breaking may never run the code that would otherwise clean up after it.
+ */
+const swFile = resolve(__dirname, '../public/sw.js');
+const sw = existsSync(swFile) ? stripComments(readFileSync(swFile, 'utf8')) : '';
 const register = readFileSync(
   resolve(__dirname, '../src/components/pwa/pwa-register.tsx'),
   'utf8',
 );
 
 describe('the service worker is dismantled', () => {
+  it('serves no worker script at all, so the browser unregisters on its own', () => {
+    expect(existsSync(swFile)).toBe(false);
+  });
+
   it('serves nothing: no fetch handler remains', () => {
     expect(sw).not.toContain("addEventListener('fetch'");
     expect(sw).not.toContain('respondWith');
     expect(sw).not.toContain('caches.match');
   });
 
-  it('unregisters itself and clears every cache on install and activate', () => {
-    expect(sw).toContain('self.registration.unregister()');
-    expect(sw).toContain('self.caches.keys()');
-    expect(sw).toContain('self.caches.delete');
-    expect(sw).toContain("addEventListener('install'");
-    expect(sw).toContain("addEventListener('activate'");
-  });
-
-  it('takes effect immediately rather than waiting for tabs to close', () => {
-    expect(sw).toContain('self.skipWaiting()');
-    expect(sw).toContain('self.clients.claim()');
+  it('never contains a fetch or message handler, stub or otherwise', () => {
+    expect(sw).not.toContain("addEventListener('fetch'");
+    expect(sw).not.toContain("addEventListener('message'");
   });
 
   it('registers no worker anywhere in the app', () => {

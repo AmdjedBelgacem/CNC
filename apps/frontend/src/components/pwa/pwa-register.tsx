@@ -5,19 +5,19 @@ import { useEffect } from 'react';
 /**
  * The service worker is gone, so nothing is registered any more.
  *
- * This component no longer registers `/sw.js`. It only clears out anything an earlier
- * version left behind — a registration, and every cache — because visitors who loaded the
- * site before the removal would otherwise keep an installed worker until each tab closed.
+ * `public/sw.js` has been deleted. That is the load-bearing part of the removal: a browser
+ * that checks its worker script and gets a 404 unregisters the worker on its own, with no
+ * cooperation from this bundle. That matters because an installed worker keeps controlling a
+ * visitor's pages until every tab is closed, so it has to be dismantled by the browser rather
+ * than by the new JavaScript — which cannot run on a page the old worker is already breaking.
  *
- * `/sw.js` itself is now a stub that unregisters and clears caches on install, so the browser
- * picks it up on its own. This is the belt to that braces: it runs on the first page view
- * either way, and covers browsers that had the worker registered by something other than
- * this component.
+ * This component is the second line: it deletes every cache and unregisters every
+ * registration, so caches are cleared even where the script check has not happened yet, and it
+ * covers a worker registered by something other than this component.
  *
- * Nothing is registered afterwards. A caching service worker on a server-rendered site has
- * now failed in four different ways, each time producing blank pages that could not be
- * reproduced from a clean profile; the platform HTTP cache covers the part that was actually
- * worth having.
+ * Nothing is registered. A caching service worker on a server-rendered site failed four
+ * different ways here, each after a fix that appeared to work, every one of them surfacing as
+ * a blank page that could not be reproduced from a clean profile.
  */
 export function PWARegister() {
   useEffect(() => {
