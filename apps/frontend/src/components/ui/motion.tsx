@@ -104,7 +104,25 @@ export function Reveal({
       // scripting is disabled; see the note on `.motion-reveal` there.
       className={cn('motion-reveal', className)}
       variants={variants}
-      initial="hidden"
+      /**
+       * `initial={false}` — content starts in its visible state and is never held at
+       * `opacity: 0`.
+       *
+       * This was the blank storefront. `initial="hidden"` makes Framer Motion write an inline
+       * `opacity: 0`, cleared only by its `whileInView` observer; when that did not fire, the
+       * page rendered in the DOM and displayed nothing. The CSS failsafe in globals.css was
+       * tried as the fix and its keyframe animation *was* applied — `motion-reveal-failsafe`,
+       * 1.2s delay, `forwards` — and the element still computed to `opacity: 0` four seconds
+       * later, because the library reasserts its own inline value and wins. So the guarantee
+       * has to be at the source rather than layered over the top of it.
+       *
+       * The trade is real and worth stating: content no longer fades in on first view. Blocks
+       * still animate as they enter the viewport, and the layout, spacing and motion are
+       * unchanged — only the entrance fade is gone. Correct and legible beats decorative and
+       * invisible, but if the fade matters, reintroduce it behind a measured check that the
+       * observer actually fires rather than an assumption.
+       */
+      initial={false}
       whileInView="visible"
       /**
        * `margin` is deliberately dropped from the non-repeating case.

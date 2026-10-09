@@ -68,8 +68,23 @@ describe('revealed content can never stay invisible', () => {
     expect(reveal).not.toContain('inView.margin');
   });
 
-  it('still reveals: it is a failsafe, not a replacement', () => {
+  it('still reveals on scroll, so this is not simply "animation off"', () => {
     expect(motion).toContain('whileInView="visible"');
     expect(motion).toContain('motion-reveal');
+  });
+
+  /**
+   * The guarantee has to live at the source. A CSS failsafe was tried first and was
+   * measurably insufficient: the keyframe was applied and the element still computed to
+   * `opacity: 0` four seconds later, because Framer Motion reasserts its own inline value.
+   * Asserting `initial={false}` keeps the guarantee attached to the thing that must hold.
+   */
+  it('never holds content at opacity 0, at the source', () => {
+    const reveal = motion.slice(
+      motion.indexOf('export function Reveal'),
+      motion.indexOf('export function', motion.indexOf('export function Reveal') + 10),
+    );
+    expect(reveal).toContain('initial={false}');
+    expect(reveal).not.toContain('initial="hidden"');
   });
 });
