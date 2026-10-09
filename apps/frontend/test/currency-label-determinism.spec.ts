@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STOREFRONT_CURRENCIES, currencySymbol } from '../src/lib/money';
+import { STOREFRONT_CURRENCIES, currencySymbol, formatMinorUnits } from '../src/lib/money';
 
 /**
  * Guards the storefront against a hydration mismatch caused by `Intl`.
@@ -44,5 +44,46 @@ describe('currencySymbol is identical across runtimes', () => {
   it('covers SAR, the currency that actually diverged', () => {
     expect(currencySymbol('SAR', 'en-US')).toBe('SAR');
     expect(currencySymbol('SAR', 'ar-SA')).toBe('SAR');
+  });
+});
+/**
+ * `formatMinorUnits` had the same divergence as `currencySymbol`, and it is the one that
+ * mattered: the server rendered `‎⃁ 0.01` (U+200E + U+20C1, a combining mark) where the browser
+ * rendered `SAR 0.01`. Identical price, different text, so hydration failed and the page went
+ * blank. `currencyDisplay: 'code'` pins every price path to the ISO code.
+ */
+describe('formatMinorUnits is identical across runtimes', () => {
+  it('renders the ISO code for minor units, not a narrow symbol', () => {
+    for (const currency of STOREFRONT_CURRENCIES) {
+      const out = formatMinorUnits(100, currency, 'en-US');
+      expect(out, `${currency} leaked a locale symbol`).toMatch(/^[A-Z]{3}\s/);
+      expect(out).not.toMatch(/[\u20c1\u200e\u200f]/);
+    }
+  });
+
+  /**
+   * An Arabic locale legitimately reorders the parts — `‏1.00 SAR` rather than `SAR 1.00` —
+   * and inserts directional marks. That is a *locale* difference, and the server and client
+   * derive the locale from the same page, so both sides produce it identically. Asserting the
+   * two locales render the same would be asserting something untrue.
+   *
+   * What must not vary is the ICU data: a given locale must always yield the same string,
+   * whichever runtime formats it. That is what `currencyDisplay: 'code'` guarantees.
+   */
+  it('is stable for a given locale, which is what server and client both use', () => {
+    for (const locale of ['en-US', 'ar-SA']) {
+      for (const currency of STOREFRONT_CURRENCIES) {
+        const first = formatMinorUnits(100, currency, locale);
+        const second = formatMinorUnits(100, currency, locale);
+        expect(first).toBe(second);
+        // No narrow symbol, whichever locale asked for it.
+        expect(first).not.toMatch(/\u20c1/);
+      }
+    }
+  });
+
+  it('still honours the currency fraction digits', () => {
+    expect(formatMinorUnits(100, 'SAR', 'en-US')).toMatch(/^SAR\s1\.00/);
+    expect(formatMinorUnits(1, 'JPY', 'en-US')).toMatch(/^JPY\s1$/);
   });
 });

@@ -85,6 +85,19 @@ export function formatMinorUnits(
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
+    /**
+     * `currencyDisplay: 'code'` is load-bearing, not cosmetic.
+     *
+     * ICU is free to return a narrow symbol for a currency, and it does not have to be the
+     * same one in Node and in a browser. For SAR the server produced `‎⃁ 0.01` — a
+     * left-to-right mark followed by U+20C1, a *combining* mark — while Safari produced
+     * `SAR 0.01`. The price was identical; the text was not, so hydration failed with React
+     * error #418 and the page went blank.
+     *
+     * The ISO code is stable across engines and is what the storefront already shows, so this
+     * also makes every price agree with the currency control.
+     */
+    currencyDisplay: 'code',
     numberingSystem: 'latn',
     minimumFractionDigits: options?.minimumFractionDigits ?? digits,
     maximumFractionDigits: options?.maximumFractionDigits ?? digits,
