@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
+import { useCatalogStats } from './use-catalog-stats';
 
 function CtaLink({
   label,
@@ -44,6 +45,8 @@ function CtaLink({
 
 /** Catalog hero: blueprint grid, badge row, accent H1, stats strip, CTAs. */
 export function CatalogHeroBlock({ props }: BlockComponentProps<CatalogHeroProps>) {
+  const liveStats = useCatalogStats(props.stats);
+
   const {
     id,
     className,
@@ -53,7 +56,6 @@ export function CatalogHeroBlock({ props }: BlockComponentProps<CatalogHeroProps
     title,
     titleAccent,
     subtitle,
-    stats,
     primaryCta,
     secondaryCta,
     borderBottom = true,
@@ -101,9 +103,9 @@ export function CatalogHeroBlock({ props }: BlockComponentProps<CatalogHeroProps
           </p>
         ) : null}
 
-        {stats && stats.length > 0 ? (
+        {liveStats && liveStats.length > 0 ? (
           <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
-            {stats.map((s) => (
+            {liveStats.map((s) => (
               <div key={s.label} className="bg-card px-4 py-3.5">
                 <dt className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   {s.label}
