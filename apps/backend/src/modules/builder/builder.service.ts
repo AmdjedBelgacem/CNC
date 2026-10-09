@@ -104,6 +104,7 @@ export class BuilderService {
    * page when it actually opens it.
    */
   async listPages(tenantId: string) {
+    await this.ensureSystemPages(tenantId);
     return this.drizzle.db
       .select({
         id: pages.id,
@@ -904,6 +905,55 @@ export class BuilderService {
    * route would have created a page for any URL a visitor guessed — and
    * `is_system` stops the seeded pages from being deleted later.
    */
+  /**
+   * Make sure every system page has a row, so the builder lists exactly what the site
+   * renders.
+   *
+   * `provisionPage` used to be reachable only from `getPage`, so a page materialised only if
+   * somebody opened it directly by slug. On this deployment the table held a single row —
+   * `home` — while the site resolves ten slugs through the builder (`products`, `feed`,
+   * `events`, `academy-landing`, `about`, `privacy`, `terms`, `refunds`, `edu-purchases`).
+   * The builder's page list therefore showed one page against a website built out of ten,
+   * and the nine with no row could only ever render the hardcoded `getDefaultLayout` seed
+   * rather than anything the admin had edited. That is what "the builder isn't connected to
+   * the website" looked like from the inside.
+   *
+   * Rows are seeded with `getDefaultLayout(slug)` — byte-identical to what the site falls
+   * back to today — so this changes what is *manageable*, not what is *displayed*. Nothing
+   * is published here; Publish remains the only thing that does that.
+   *
+   * Idempotent, and safe to run on every list: it inserts only what is missing.
+   */
+  private async ensureSystemPages(tenantId: string): Promise<void> {
+    const existing = await this.drizzle.db
+      .select({ slug: pages.slug })
+      .from(pages)
+      .where(eq(pages.tenantId, tenantId));
+    const present = new Set(existing.map((r) => r.slug));
+    const missing = BUILDER_PAGE_SLUGS.filter((slug) => !present.has(slug));
+    if (missing.length === 0) return;
+
+    await this.drizzle.db
+      .insert(pages)
+      .values(
+        missing.map((slug) => ({
+          tenantId,
+          slug,
+          title: this.defaultTitle(slug),
+          layout: getDefaultLayout(slug),
+          isSystem: true,
+        })),
+      )
+      .onConflictDoNothing();
+
+    await this.audit.log({
+      action: 'builder.pages.provisioned',
+      entityType: 'page',
+      details: { slugs: missing, count: missing.length },
+      tenantId,
+    });
+  }
+
   private async provisionPage(tenantId: string, slug: string) {
     if (!BUILDER_PAGE_SLUGS.includes(slug as (typeof BUILDER_PAGE_SLUGS)[number])) return null;
     const [created] = await this.drizzle.db

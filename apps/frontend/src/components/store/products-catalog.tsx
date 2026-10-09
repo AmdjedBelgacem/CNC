@@ -123,8 +123,17 @@ export function ProductsCatalog({
       })
       .catch((err: unknown) => {
         if (!active) return;
+        /**
+         * Keep whatever we already have.
+         *
+         * This used to `setProducts([])`, which replaced a correct, fully rendered list with
+         * an empty one whenever this *revalidation* failed — an offline tab, a flaky mobile
+         * connection, a blocked request, a dropped connection. The server had already sent
+         * the catalog and it was on screen; the refetch is a freshness nicety, and failing it
+         * must never destroy good data. The error is still surfaced, but as a notice beside
+         * the list rather than in place of it.
+         */
         setError(err instanceof Error ? err.message : 'Request failed');
-        setProducts([]);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -619,11 +628,34 @@ export function ProductsCatalog({
           </div>
         </div>
 
-        {error && !loading && (
+        {/*
+          * A failed revalidation must not hide a list that is already on screen. The full
+          * failure panel is only correct when there is genuinely nothing to show; otherwise
+          * the products stay, with the problem reported alongside them.
+          */}
+        {error && !loading && filtered.length === 0 && (
           <div className="rounded-xl border border-destructive/40 bg-destructive/5 px-5 py-8 text-center">
             <p className="text-sm font-medium text-foreground">{t('loadFailedShort')}</p>
             <p className="mt-1 font-mono text-xs text-muted-foreground">{error}</p>
             <Button variant="outline" className="mt-4" onClick={() => setReloadKey((k) => k + 1)}>
+              {t('retry')}
+            </Button>
+          </div>
+        )}
+
+        {error && !loading && filtered.length > 0 && (
+          <div
+            role="status"
+            className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-muted-foreground"
+          >
+            <span>{t('loadFailedShort')}</span>
+            <span className="font-mono">{error}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setReloadKey((k) => k + 1)}
+            >
               {t('retry')}
             </Button>
           </div>
