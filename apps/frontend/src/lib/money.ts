@@ -91,9 +91,26 @@ export function formatMinorUnits(
   }).format((minor ?? 0) / 10 ** digits);
 }
 
+/**
+ * The currency label used in chrome, e.g. a price filter toggle.
+ *
+ * `currencyDisplay: 'code'` is deliberate and load-bearing. Without it the symbol comes from
+ * whatever ICU the runtime happens to ship: Node's build of `Intl` returns the narrow symbol
+ * for SAR — `⃁`, a combining mark — while Safari's returns `SAR`. Same currency, different
+ * text, so a server-rendered page and its hydration disagreed and React threw hydration error
+ * #418. A refresh could paper over it, which is exactly the "blank until I reload" report.
+ *
+ * The ISO code is stable across engines, and is also what the storefront already shows in
+ * prices elsewhere, so this makes the control consistent with them.
+ */
 export function currencySymbol(currency: CurrencyCode, locale: string): string {
   return (
-    new Intl.NumberFormat(locale, { style: 'currency', currency, numberingSystem: 'latn' })
+    new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'code',
+      numberingSystem: 'latn',
+    })
       .formatToParts(0)
       .find((part) => part.type === 'currency')?.value ?? currency
   );

@@ -29,7 +29,23 @@ function subscribe(listener: () => void) {
 }
 
 const getSnapshot = () => state;
-const getServerSnapshot = () => state;
+
+/**
+ * The server snapshot must be the *empty* state, always.
+ *
+ * It used to return the live module `state`, which on a long-running server holds whatever the
+ * first request fetched. So the first server render showed "Loading live rates…" and every
+ * render after it showed "Converted at live rates · SAR is our main currency", while a
+ * browser — with its own fresh module state — always started empty. Server and client
+ * therefore disagreed about this text, React threw hydration error #418, and it threw it
+ * intermittently depending on which request happened to warm the module first.
+ *
+ * Returning the empty snapshot makes the server and the first client render agree by
+ * construction. Rates are fetched in the effect below, after hydration, so both show the
+ * loading state and then converge.
+ */
+const EMPTY: FxState = { data: null, loading: false, error: null };
+const getServerSnapshot = () => EMPTY;
 
 function ensure(force = false): Promise<FxRates> {
   if (!force && state.data && Date.now() - fetchedAt < TTL_MS) return Promise.resolve(state.data);
