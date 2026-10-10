@@ -31,6 +31,24 @@ import { EventsService } from '../events/events.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PlatformAlertsService } from '../notifications/platform-alerts.service';
 
+/**
+ * Postgres unique-violation, whatever driver error shape is in play.
+ *
+ * The conflict may arrive as a `DrizzleQueryError` wrapping the cause, or directly, so both are
+ * inspected rather than assuming one shape.
+ */
+function isUniqueViolation(error: unknown): boolean {
+  let current: any = error;
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    const code = current.code ?? current.cause?.code;
+    if (code === '23505') return true;
+    if (/UniqueViolation|duplicate key/i.test(current.message ?? '')) return true;
+    if (current.constraint === 'orders_tenant_idempotency_unique') return true;
+    current = current.cause;
+  }
+  return false;
+}
+
 const MOYASAR_API = 'https://api.moyasar.com/v1';
 export const MAX_LINES = 20;
 export const MAX_QUANTITY = 25;
@@ -403,23 +421,57 @@ export class MoyasarService {
     const subtotal = resolved.reduce((sum, line) => sum + line.unitAmountCents * line.quantity, 0);
     const total = subtotal; // No tax or shipping until a tenant configures them.
 
-    const [created] = await this.drizzle.db
-      .insert(orders)
-      .values({
-        tenantId: params.tenantId,
-        userId: params.userId,
-        status: 'pending',
-        provider: 'moyasar',
-        providerPayload: null,
-        idempotencyKey: params.idempotencyKey ?? null,
-        total,
-        subtotal,
-        tax: 0,
-        shipping: 0,
-        currency: runtime.currency,
-        notes: null,
-      })
-      .returning();
+    let created: typeof orders.$inferSelect | undefined;
+    try {
+      [created] = await this.drizzle.db
+        .insert(orders)
+        .values({
+          tenantId: params.tenantId,
+          userId: params.userId,
+          status: 'pending',
+          provider: 'moyasar',
+          providerPayload: null,
+          idempotencyKey: params.idempotencyKey ?? null,
+          total,
+          subtotal,
+          tax: 0,
+          shipping: 0,
+          currency: runtime.currency,
+          notes: null,
+        })
+        .returning();
+    } catch (error) {
+      /**
+       * Two requests with the same key can both pass the lookup above before either inserts.
+       *
+       * The unique index then rejects the loser with a raw Postgres error, which surfaced as
+       * `Internal server error` — on exactly the retry the idempotency key exists to make safe. A
+       * shopper double-clicking Pay, or a retry landing during a slow response, got a 500 and a
+       * stranded pending order. The winner's order is the correct answer, so return it.
+       */
+      if (isUniqueViolation(error) && params.idempotencyKey) {
+        const [winner] = await this.drizzle.db
+          .select({ id: orders.id, total: orders.total, currency: orders.currency, status: orders.status })
+          .from(orders)
+          .where(
+            and(
+              eq(orders.tenantId, params.tenantId),
+              eq(orders.idempotencyKey, params.idempotencyKey),
+            ),
+          )
+          .limit(1);
+        if (winner) {
+          return {
+            orderId: winner.id,
+            amount: winner.total,
+            currency: winner.currency ?? runtime.currency,
+            status: winner.status ?? 'pending',
+            orderRef: this.signOrderRef(winner.id, winner.total),
+          };
+        }
+      }
+      throw error;
+    }
     if (!created) throw new Error('Failed to create order');
 
     await this.drizzle.db.insert(orderItems).values(
