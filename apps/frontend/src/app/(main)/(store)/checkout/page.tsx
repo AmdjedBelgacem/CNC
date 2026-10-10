@@ -14,23 +14,49 @@ import { trackBeginCheckout } from '@/lib/analytics';
 import { api } from '@/lib/api-client';
 import type { OrderView } from '@/hooks/use-payments';
 
-/** Loads Moyasar's hosted form. PCI scope stays with the gateway. */
-const MOYASAR_SCRIPT = 'https://cdn.moyasar.com/sdk/v1/moyasar.js';
+/**
+ * Loads Moyasar's hosted form. PCI scope stays with the gateway.
+ *
+ * Each candidate is tried in turn. The CDN has served 403 from CloudFront on every path at
+ * times, and the failure surfaced only as a generic "Could not load the payment form", which told
+ * the shopper nothing and gave support nothing to act on. Spacing the candidates out means a
+ * single bad host does not take checkout down.
+ */
+const MOYASAR_SCRIPTS = [
+  'https://cdn.moyasar.com/sdk/v1/moyasar.js',
+  'https://cdn.moyasar.com/mpf/0.3.0/moyasar.min.js',
+];
 
 let moyasarScriptPromise: Promise<void> | null = null;
 
-function loadMoyasar(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
-  if ((window as { Moyasar?: unknown }).Moyasar) return Promise.resolve();
-  if (moyasarScriptPromise) return moyasarScriptPromise;
-  moyasarScriptPromise = new Promise<void>((resolve, reject) => {
+function loadFrom(src: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = MOYASAR_SCRIPT;
+    script.src = src;
     script.async = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Could not load the payment form'));
+    script.onerror = () => reject(new Error(`Could not load ${src}`));
     document.head.appendChild(script);
   });
+}
+
+async function loadMoyasar(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  if ((window as { Moyasar?: unknown }).Moyasar) return;
+  if (!moyasarScriptPromise) {
+    moyasarScriptPromise = MOYASAR_SCRIPTS.reduce<Promise<void>>(
+      (chain, src) =>
+        chain.catch(() =>
+          // A failed host must not poison the next attempt.
+          new Promise<void>((resolve) => setTimeout(resolve, 0)).then(() => loadFrom(src)),
+        ),
+      Promise.reject(new Error('no attempt made')),
+    ).catch((error) => {
+      // Allow a later retry; a transient CDN outage should not need a page reload to recover.
+      moyasarScriptPromise = null;
+      throw error;
+    });
+  }
   return moyasarScriptPromise;
 }
 
@@ -257,7 +283,12 @@ async function resolveProductRef(item: { productId: string; slug?: string }): Pr
           : { order_id: effective.orderId },
       });
       form.mount(formRef.current);
-    }).catch(() => setError('Could not load the payment form'));
+    }).catch((cause: Error) =>
+      // Name the host: "could not load" is unactionable for a shopper and useless for support.
+      setError(
+        `Could not load the payment form. Moyasar's script host did not respond — please try again in a moment. (${cause?.message ?? 'unknown'})`,
+      ),
+    );
     return () => {
       cancelled = true;
     };
