@@ -212,7 +212,7 @@ function tokenFilter(column: unknown, value: string) {
 
   // The squashed form is an *alternative*, so an unpunctuated query such as "3axis" still
   // finds "3-Axis Vertical..." through it rather than being required to match each token.
-  return sql`(${everyToken} OR ${normalised(column)} LIKE ${`%${escapeLike(squashed)}%`} ESCAPE '\\'})`;
+  return sql`(${everyToken} OR ${normalised(column)} LIKE ${`%${escapeLike(squashed)}%`} ESCAPE '\\')`;
 }
 
 const contains = tokenFilter;

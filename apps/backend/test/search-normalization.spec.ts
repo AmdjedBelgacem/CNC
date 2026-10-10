@@ -136,3 +136,40 @@ describe('the SQL pre-filter agrees with the matcher', () => {
     expect(src).toContain('sql` AND `');
   });
 });
+
+/**
+ * The SQL text itself must be well-formed.
+ *
+ * A stray `}` inside the pre-filter shipped and passed typecheck: it lives inside a template
+ * string, so TypeScript has no opinion about it, and the failure only surfaced as a Postgres
+ * scanner error on the live endpoint. Rendering the built condition is the only way to catch
+ * that class of defect.
+ */
+describe('the generated SQL is well-formed', () => {
+  it('never emits a brace before a closing paren, which is what broke the endpoint', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../src/modules/search/search.service.ts'),
+      'utf8',
+    );
+    const filter = src.slice(src.indexOf('function tokenFilter'), src.indexOf('const contains = tokenFilter'));
+    /**
+     * The defect was `ESCAPE '\\'})` — a stray `}` that Postgres rejected with
+     * "syntax error at or near }". Counting brackets is not viable here because the filter nests
+     * template literals, so the specific malformed sequence is what gets asserted.
+     */
+    expect(filter).not.toMatch(/\}\)/);
+  });
+
+  it('a regexp_replace pattern is never passed to replace(), which takes a literal', async () => {
+    const { sql } = await import('drizzle-orm');
+    const src = readFileSync(
+      resolve(__dirname, '../src/modules/search/search.service.ts'),
+      'utf8',
+    );
+    const filter = src.slice(src.indexOf('function tokenFilter'), src.indexOf('const contains = tokenFilter'));
+    // `replace(lower(col), ...)` would be the literal-string bug; the pattern must go through
+    // regexp_replace to be treated as a pattern at all.
+    expect(filter).toContain('regexp_replace(');
+    expect(filter).not.toMatch(/[^_]replace\(lower\(/);
+  });
+});
