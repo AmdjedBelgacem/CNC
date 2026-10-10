@@ -165,9 +165,20 @@ function buildCsp(nonce: string): string {
   const scriptSrc = [`'self'`, `'nonce-${nonce}'`];
   if (isDev) scriptSrc.push("'unsafe-eval'", "'unsafe-inline'");
 
+  /**
+   * The payment gateway's SDK, and the frame it mounts.
+   *
+   * `script-src` allowed only `'self'` and the nonce, so `cdn.moyasar.com/sdk/v1/moyasar.js` was
+   * refused and checkout failed with "Could not load the payment form" — the policy blocked the
+   * one script the till depends on. The hosted form is an iframe, which needs `frame-src` too.
+   * Only these two hosts are named; `'unsafe-inline'` is not reintroduced, so the nonce still
+   * protects every inline script.
+   */
+  const paymentHosts = ['https://cdn.moyasar.com'];
+
   return [
     "default-src 'self'",
-    `script-src ${scriptSrc.join(' ')}`,
+    `script-src ${scriptSrc.join(' ')} ${paymentHosts.join(' ')}`,
     // Styles must allow inline: the layout injects a <style> block built from tenant
     // theme tokens, and Tailwind injects rules at runtime.
     "style-src 'self' 'unsafe-inline'",
@@ -175,6 +186,10 @@ function buildCsp(nonce: string): string {
     "font-src 'self' data:",
     `media-src 'self' blob: https:${mediaOrigin ? ` ${mediaOrigin}` : ''}`,
     `connect-src 'self' https: wss:${isDev ? ' ws: http://localhost:*' : ''}`,
+    // The payment form is served in an iframe from the gateway.
+    `frame-src 'self' ${paymentHosts.join(' ')}`,
+    // The iframe must be allowed to frame us back for its redirect-based flows.
+    `child-src 'self' ${paymentHosts.join(' ')}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
