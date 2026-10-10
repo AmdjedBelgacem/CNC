@@ -188,16 +188,31 @@ function escapeLike(value: string) {
 function tokenFilter(column: unknown, value: string) {
   const tokens = tokenizeSearchQuery(value);
   if (tokens.length === 0) return sql`true`;
-  const squashed = squashSearchText(value);
-  const clauses = tokens.map(
-    (token) => sql`${column}::text ILIKE ${`%${escapeLike(token)}%`} ESCAPE '\\'`,
+
+  /**
+   * Normalised text: everything that is not a letter or digit becomes nothing.
+   *
+   * `regexp_replace`, not `replace` — Postgres treats `replace`'s second argument as a literal
+   * string, so `replace(col, '[^a-z0-9]+', '')` removes nothing at all and silently makes the
+   * filter far stricter than intended.
+   */
+  const normalised = (expr: unknown) =>
+    sql`regexp_replace(lower(${expr}::text), '[^a-z0-9]+', '', 'g')`;
+
+  // Every query token has to appear as a substring. This is a superset of what `matchQuality`
+  // accepts, so nothing the matcher can reach is dropped here, while the result set stays
+  // small enough to rank in process.
+  const everyToken = sql.join(
+    tokens.map((token) => sql`${normalised(column)} LIKE ${`%${escapeLike(token)}%`} ESCAPE '\\'`),
+    sql` AND `,
   );
-  // The squashed form is what lets an unpunctuated query such as "3axis" survive the
-  // pre-filter, because its token would not otherwise appear in a hyphenated column.
-  if (squashed) {
-    clauses.push(sql`replace(lower(${column}::text), '[^a-z0-9]+', '') ILIKE ${`%${escapeLike(squashed)}%`}`);
-  }
-  return sql`(${sql.join(clauses, sql` AND `)})`;
+
+  const squashed = squashSearchText(value);
+  if (!squashed) return everyToken;
+
+  // The squashed form is an *alternative*, so an unpunctuated query such as "3axis" still
+  // finds "3-Axis Vertical..." through it rather than being required to match each token.
+  return sql`(${everyToken} OR ${normalised(column)} LIKE ${`%${escapeLike(squashed)}%`} ESCAPE '\\'})`;
 }
 
 const contains = tokenFilter;

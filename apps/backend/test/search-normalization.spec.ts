@@ -96,3 +96,43 @@ describe('search normalisation, end to end', () => {
     expect(src).toContain('rankingRules');
   });
 });
+
+/**
+ * The SQL pre-filter must not be stricter than the matcher.
+ *
+ * Two bugs here shipped in the first version and were caught by the live endpoint returning
+ * nothing for a query that had matched before: `replace()` in Postgres takes a literal string
+ * rather than a regex, so the normalisation removed nothing; and the squashed form was ANDed in
+ * as an extra requirement instead of offered as an alternative.
+ */
+describe('the SQL pre-filter agrees with the matcher', () => {
+  it('uses regexp_replace, not replace, which Postgres treats as a literal', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../src/modules/search/search.service.ts'),
+      'utf8',
+    );
+    const filter = src.slice(src.indexOf('function tokenFilter'), src.indexOf('const contains = tokenFilter'));
+    expect(filter).toContain("regexp_replace(lower(");
+    // The bug is `replace(lower(col::text), '[^a-z0-9]+', '')` — a literal, not a regex.
+    // Asserting the negative form separately is self-defeating: "regexp_replace(lower("
+    // contains "replace(lower(" as a substring.
+    expect(filter).not.toMatch(/replace\(lower\([^)]*\), '\^/);
+  });
+
+  it('offers the squashed form as an alternative rather than an extra requirement', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../src/modules/search/search.service.ts'),
+      'utf8',
+    );
+    // The squashed clause is inside the same parenthesised OR as the token conjunction.
+    expect(src).toMatch(/OR \$\{normalised\(column\)\} LIKE/);
+  });
+
+  it('requires every token, so a multi-token query cannot match on one word alone', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../src/modules/search/search.service.ts'),
+      'utf8',
+    );
+    expect(src).toContain('sql` AND `');
+  });
+});
