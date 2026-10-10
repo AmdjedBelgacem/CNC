@@ -51,18 +51,20 @@ describe('content security policy allows the payment gateway', () => {
   });
 
   /**
-   * The CDN has served 403 on every path at times, so the loader falls back rather than
-   * taking checkout down, and resets so a later retry can recover without a page reload.
+   * The CDN has served 403 on every path, so the loader falls back rather than taking checkout
+   * down, and resets so a later retry can recover without a page reload. The first-party copy is
+   * tried before the CDN; the CDN is no longer listed as a literal candidate URL.
    */
-  it('tries more than one SDK host and does not cache a failure forever', () => {
+  it('falls back to the CDN and does not cache a failure forever', () => {
     const checkout = readFileSync(
       resolve(__dirname, '../src/app/(main)/(store)/checkout/page.tsx'),
       'utf8',
     );
-    const start = checkout.indexOf('const MOYASAR_SCRIPTS');
-    const window = checkout.slice(start, start + 2000);
-    expect(window.match(/https:\/\/cdn\.moyasar\.com/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
-    expect(window).toMatch(/moyasarScriptPromise = null/);
+    const local = checkout.indexOf('loadScript(MOYASAR_SDK_LOCAL, MOYASAR_SDK_SRI)');
+    const cdn = checkout.indexOf('loadScript(MOYASAR_SDK_CDN)');
+    expect(local).toBeGreaterThan(-1);
+    expect(cdn).toBeGreaterThan(local);
+    expect(checkout).toMatch(/moyasarScriptPromise = null/);
   });
 
   it('reports which host failed, rather than a bare "could not load"', () => {

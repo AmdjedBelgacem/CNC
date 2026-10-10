@@ -15,47 +15,58 @@ import { api } from '@/lib/api-client';
 import type { OrderView } from '@/hooks/use-payments';
 
 /**
- * Loads Moyasar's hosted form. PCI scope stays with the gateway.
+ * Loads Moyasar's Payment Form.
  *
- * Each candidate is tried in turn. The CDN has served 403 from CloudFront on every path at
- * times, and the failure surfaced only as a generic "Could not load the payment form", which told
- * the shopper nothing and gave support nothing to act on. Spacing the candidates out means a
- * single bad host does not take checkout down.
+ * Our own copy is tried first. `cdn.moyasar.com` served `403 AccessDenied` from CloudFront on
+ * every path, for every client, while the rest of Moyasar worked — so a vendor CDN outage could
+ * take the whole till down. The vendored file is identical to the published bundle and removes
+ * that dependency; the CDN stays as a fallback in case our copy is ever wrong.
  */
-const MOYASAR_SCRIPTS = [
-  'https://cdn.moyasar.com/sdk/v1/moyasar.js',
-  'https://cdn.moyasar.com/mpf/0.3.0/moyasar.min.js',
-];
+const MOYASAR_SDK_LOCAL = '/vendor/moyasar/moyasar.umd.js';
+const MOYASAR_SDK_SRI =
+  'sha384-cdaa327caa1ac857dc69940b63158462a8c6fe87fc800c399585662b3ebc146e23f2d9b6ecbaa6a8d16e20f94db5d2dd';
+const MOYASAR_SDK_CDN = 'https://cdn.moyasar.com/sdk/v1/moyasar.js';
+/** Injected so the first-party copy is not refused by our own style policy. */
+const MOYASAR_SDK_CSS = '/vendor/moyasar/moyasar.css';
 
 let moyasarScriptPromise: Promise<void> | null = null;
 
-function loadFrom(src: string): Promise<void> {
+function loadScript(src: string, integrity?: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
+    if (integrity) script.integrity = integrity;
     script.async = true;
+    script.crossOrigin = 'anonymous';
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Could not load ${src}`));
+    script.onerror = () => {
+      script.remove();
+      reject(new Error(`Could not load ${src}`));
+    };
     document.head.appendChild(script);
   });
+}
+
+function ensureStylesheet(href: string): void {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.appendChild(link);
 }
 
 async function loadMoyasar(): Promise<void> {
   if (typeof window === 'undefined') return;
   if ((window as { Moyasar?: unknown }).Moyasar) return;
   if (!moyasarScriptPromise) {
-    moyasarScriptPromise = MOYASAR_SCRIPTS.reduce<Promise<void>>(
-      (chain, src) =>
-        chain.catch(() =>
-          // A failed host must not poison the next attempt.
-          new Promise<void>((resolve) => setTimeout(resolve, 0)).then(() => loadFrom(src)),
-        ),
-      Promise.reject(new Error('no attempt made')),
-    ).catch((error) => {
-      // Allow a later retry; a transient CDN outage should not need a page reload to recover.
-      moyasarScriptPromise = null;
-      throw error;
-    });
+    ensureStylesheet(MOYASAR_SDK_CSS);
+    moyasarScriptPromise = loadScript(MOYASAR_SDK_LOCAL, MOYASAR_SDK_SRI)
+      .catch(() => loadScript(MOYASAR_SDK_CDN))
+      .catch((error) => {
+        // Do not cache the failure: a transient outage should recover on the next attempt.
+        moyasarScriptPromise = null;
+        throw error;
+      });
   }
   return moyasarScriptPromise;
 }
@@ -262,27 +273,44 @@ async function resolveProductRef(item: { productId: string; slug?: string }): Pr
       if (cancelled || !formRef.current) return;
       const Moyasar = (window as unknown as {
         Moyasar?: {
-          createPaymentForm: (config: Record<string, unknown>) => { mount: (el: HTMLElement) => void };
+          init: (config: Record<string, unknown>) => void;
+          setAmount?: (amount: number) => void;
         };
       }).Moyasar;
-      if (!Moyasar) {
+      if (!Moyasar?.init) {
         setError('The payment form could not be initialised');
         return;
       }
-      const form = Moyasar.createPaymentForm({
-        publishableKey: effective.publishableKey,
+      /**
+       * `Moyasar.init({ element })`, not `createPaymentForm(...).mount(...)`.
+       *
+       * `createPaymentForm` belongs to QIWI, ConnexPay and myPOS — Moyasar's SDK has never had
+       * it. So the call threw on a property that is undefined, and no error mentioned it: the
+       * form simply never mounted. This is the shape Moyasar documents and the one their SDK
+       * actually exposes (`init`, `setAmount`).
+       */
+      Moyasar.init({
+        element: formRef.current,
+        publishable_api_key: effective.publishableKey,
         amount: effective.amount,
         currency: effective.currency,
         description: `TITANS order ${effective.orderId.slice(0, 8)}`,
         // The callback carries our order id, so verification knows what to check.
         callback_url: `${window.location.origin}/checkout/success?order=${effective.orderId}`,
-        methods: ['creditcard', 'mada', 'applepay', 'stcpay'],
-        // The signed reference is what lets an early webhook find this order.
+        /**
+         * Only these combinations render; anything else shows "Form configuration issue!".
+         *
+         * Verified against the SDK: `methods` is required, and listing `creditcard` together
+         * with `applepay` or `stcpay` is rejected. `applepay` on its own is rejected too, so
+         * Apple Pay cannot be offered through this build — worth raising with Moyasar.
+         * `stcpay` alone renders no card fields.
+         */
+        methods: ['creditcard', 'mada'],
+        supported_networks: ['mada', 'visa', 'mastercard', 'amex', 'unionpay'],
         metadata: effective.orderRef
           ? { order_ref: `${effective.orderRef.orderId}.${effective.orderRef.sig}` }
           : { order_id: effective.orderId },
       });
-      form.mount(formRef.current);
     }).catch((cause: Error) =>
       // Name the host: "could not load" is unactionable for a shopper and useless for support.
       setError(
