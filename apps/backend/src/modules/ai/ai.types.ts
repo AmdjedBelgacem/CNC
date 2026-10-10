@@ -1,8 +1,9 @@
+import type { AiProviderName } from '../../database/schema/ai';
 export type AiLocale = 'en' | 'ar';
 
 export interface AiProviderRuntimeConfig {
   tenantId: string;
-  provider: 'openai-compatible';
+  provider: AiProviderName;
   baseUrl: string;
   apiKey: string;
   primaryModel: string;
@@ -15,7 +16,7 @@ export interface AiProviderRuntimeConfig {
 }
 
 export interface AiMaskedSettings {
-  provider: 'openai-compatible';
+  provider: AiProviderName;
   baseUrl: string;
   primaryModel: string;
   fallbackModel: string | null;

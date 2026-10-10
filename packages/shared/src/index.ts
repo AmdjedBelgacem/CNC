@@ -8,3 +8,4 @@ export * from './blocks/seeds';
 export * from './blocks/slots';
 export * from './search/match';
 export * from './common/validators';
+export * from './ai/providers';

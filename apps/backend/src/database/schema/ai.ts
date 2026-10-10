@@ -15,7 +15,7 @@ import { tenants } from './tenants';
 import { users } from './users';
 
 export type AiAudience = 'public' | 'free-preview' | 'enrolled' | 'admin';
-export type AiProviderName = 'openai-compatible';
+export type AiProviderName = 'openai-compatible' | 'deepseek';
 
 export interface AiPermissionMetadata {
   courseId?: string;

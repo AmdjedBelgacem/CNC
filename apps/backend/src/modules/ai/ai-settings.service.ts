@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableE
 import { eq } from 'drizzle-orm';
 import { tenants } from '../../database/schema/tenants';
 import { DrizzleService } from '../../database/drizzle.service';
+import type { AiProviderName } from '../../database/schema/ai';
+import { aiProviderDefaults } from '@titan/shared';
 import { aiProviderConfigs } from '../../database/schema/ai';
 import { ConfigService } from '../../config/config.service';
 import { AiAuditService, type AiAuditContext } from './ai-audit.service';
@@ -65,13 +67,28 @@ export class AiSettingsService {
     if (!tenant || !tenant.isActive) throw new NotFoundException('Tenant not found or inactive');
     const existing = await this.find(tenantId);
     const provider = this.normalizeProvider(input.provider ?? existing?.provider ?? 'openai-compatible');
-    const baseUrl = await this.validateUrl(input.baseUrl ?? existing?.baseUrl ?? DEFAULT_BASE_URL);
+    /**
+     * A named preset supplies the base URL and model when the author has not typed either.
+     *
+     * Without this, choosing "DeepSeek" in the selector changed the stored provider while
+     * leaving the OpenAI base URL and model in place, so the assistant pointed at the wrong
+     * service and every request failed with an auth error from a host that was never asked for
+     * a key. The preset only fills gaps: an explicit value always wins, and switching back to
+     * the generic provider leaves whatever is configured alone.
+     */
+    const preset = aiProviderDefaults(provider);
+    const baseUrl = await this.validateUrl(
+      input.baseUrl ?? existing?.baseUrl ?? preset.baseUrl ?? DEFAULT_BASE_URL,
+    );
     const embeddingBaseUrl = input.embeddingBaseUrl === null
       ? null
       : input.embeddingBaseUrl === undefined
         ? existing?.embeddingBaseUrl || null
         : await this.validateUrl(input.embeddingBaseUrl);
-    const primaryModel = this.cleanModel(input.primaryModel ?? existing?.primaryModel ?? DEFAULT_MODEL, 'primary model');
+    const primaryModel = this.cleanModel(
+      input.primaryModel ?? existing?.primaryModel ?? preset.primaryModel ?? DEFAULT_MODEL,
+      'primary model',
+    );
     const fallbackModel = this.cleanOptionalModel(input.fallbackModel === undefined ? existing?.fallbackModel : input.fallbackModel);
     const embeddingModel = this.cleanOptionalModel(input.embeddingModel === undefined ? existing?.embeddingModel : input.embeddingModel);
     const enabled = input.enabled ?? existing?.enabled ?? false;
@@ -318,9 +335,18 @@ export class AiSettingsService {
     }
   }
 
-  private normalizeProvider(value: string): 'openai-compatible' {
+  /**
+   * Accepts a provider id and returns the canonical stored value.
+   *
+   * `deepseek` is a named preset rather than a different protocol: the assistant speaks the
+   * OpenAI chat-completions protocol, and DeepSeek implements it, so the only thing that
+   * distinguishes the two is the default base URL and model. `openai` is accepted as an alias
+   * for the generic endpoint because that is what people type.
+   */
+  private normalizeProvider(value: string): AiProviderName {
     const normalized = value.trim().toLowerCase().replace(/_/g, '-');
     if (normalized === 'openai' || normalized === 'openai-compatible') return 'openai-compatible';
+    if (normalized === 'deepseek') return 'deepseek';
     throw new BadRequestException('Unsupported AI provider');
   }
 

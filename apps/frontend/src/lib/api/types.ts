@@ -524,7 +524,7 @@ export interface Paged<T> {
   hasMore?: boolean;
 }
 
-export type AiProviderName = 'openai-compatible';
+export type AiProviderName = 'openai-compatible' | 'deepseek';
 
 export interface AiPublicConfig {
   enabled: boolean;

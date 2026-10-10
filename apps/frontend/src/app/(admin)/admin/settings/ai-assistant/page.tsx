@@ -37,6 +37,7 @@ import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { AiLearningPanel } from './ai-learning-panel';
 import { PaymentSettingsPanel } from './payment-settings-panel';
+import { AI_PROVIDER_PRESETS } from '@titan/shared';
 
 const REINDEX_STORAGE_KEY = 'ai-assistant-last-reindex';
 
@@ -215,7 +216,28 @@ export default function AiAssistantSettingsPage() {
 
   const setField = (key: keyof AiFormState, value: string | boolean) => {
     isDirtyRef.current = true;
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      /**
+       * Choosing a named provider prefills its base URL and model.
+       *
+       * The assistant speaks the OpenAI chat-completions protocol and DeepSeek implements it,
+       * so the two differ only in where they are reached. Without this, selecting "DeepSeek"
+       * changed the stored provider while the OpenAI base URL and model stayed put, and every
+       * request failed against a host that was never given a key.
+       *
+       * Only filled when the author has not already typed a value, so switching providers never
+       * discards an edit.
+       */
+      if (key === 'provider') {
+        const preset = AI_PROVIDER_PRESETS.find((entry) => entry.id === value);
+        if (preset) {
+          if (!current.baseUrl.trim()) next.baseUrl = preset.baseUrl;
+          if (!current.primaryModel.trim()) next.primaryModel = preset.primaryModel;
+        }
+      }
+      return next;
+    });
     setAction('idle');
     setActionMessage('');
   };
@@ -479,6 +501,7 @@ const buildPayload = (): AiSettingsUpdate => {
                   className="flex h-10 w-full rounded-md border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="openai-compatible">OpenAI-compatible</option>
+                  <option value="deepseek">DeepSeek</option>
                 </select>
               </Field>
               <Field label={t('baseUrl')} htmlFor="ai-base-url" hint={t('baseUrlHint')}>
