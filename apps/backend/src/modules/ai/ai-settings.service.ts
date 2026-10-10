@@ -170,8 +170,17 @@ export class AiSettingsService {
     if (options.requireEnabled !== false && !row.enabled) {
       throw this.unavailable('assistant_disabled', 'AI assistant is switched off in settings');
     }
-    if (row.provider !== 'openai-compatible') {
-      throw this.unavailable('unsupported_provider', `provider "${row.provider}" is not supported`);
+    /**
+     * Any configured provider is accepted here.
+     *
+     * This rejected everything that was not `openai-compatible`, so saving a DeepSeek config
+     * stored it correctly and then refused to run: `provider "deepseek" is not supported`. The
+     * assistant speaks the OpenAI chat-completions protocol and DeepSeek implements it, so the
+     * provider only selects which host `baseUrl` points at — and `baseUrl` is already validated
+     * against the host allowlist on save.
+     */
+    if (!row.provider) {
+      throw this.unavailable('unsupported_provider', 'no AI provider has been saved');
     }
     if (!this.secrets.configured) {
       throw this.unavailable('encryption_unavailable', 'server is missing AI_ASSISTANT_ENCRYPTION_KEY');
@@ -262,7 +271,15 @@ export class AiSettingsService {
       }
     }
     return {
-      provider: 'openai-compatible',
+      /**
+       * The stored provider, not a constant.
+       *
+       * This was hardcoded to `'openai-compatible'`, so saving a DeepSeek config returned a
+       * response describing OpenAI. The assistant would then be pointed at the wrong host while
+       * the API insisted it was not — the exact failure the preset exists to prevent, reintroduced
+       * one layer up.
+       */
+      provider: row?.provider || 'openai-compatible',
       baseUrl: row?.baseUrl || DEFAULT_BASE_URL,
       primaryModel: row?.primaryModel || DEFAULT_MODEL,
       fallbackModel: row?.fallbackModel || null,

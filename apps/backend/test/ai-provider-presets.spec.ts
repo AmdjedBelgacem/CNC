@@ -76,3 +76,39 @@ describe('DeepSeek as a named provider preset', () => {
     expect(aiProviderDefaults('not-a-real-provider')).toEqual({});
   });
 });
+
+/**
+ * The API must report the provider that is actually stored.
+ *
+ * `toMasked` hardcoded `provider: 'openai-compatible'`, so saving a DeepSeek config returned a
+ * response describing OpenAI. The assistant would be pointed at the wrong host while the API
+ * insisted otherwise — the failure the preset exists to prevent, reintroduced one layer up.
+ */
+describe('the API reports the stored provider', () => {
+  it('does not hardcode the provider in the masked response', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../src/modules/ai/ai-settings.service.ts'),
+      'utf8',
+    );
+    const masked = src.slice(src.indexOf('private toMasked'), src.indexOf('private toMasked') + 1400);
+    expect(masked).toContain('provider: row?.provider ||');
+    expect(masked).not.toMatch(/provider:\s*'openai-compatible'/);
+  });
+
+  /**
+   * The runtime path must accept a configured provider, not just OpenAI.
+   *
+   * `getRuntimeConfig` threw `unsupported_provider` for anything else, so a DeepSeek config was
+   * stored correctly and then refused to run — the same failure as the hardcoded response field,
+   * one layer deeper.
+   */
+  it('the runtime path accepts any saved provider rather than only OpenAI', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../src/modules/ai/ai-settings.service.ts'),
+      'utf8',
+    );
+    const runtime = src.slice(src.indexOf('async getRuntimeConfig'), src.indexOf('async getRuntimeConfig') + 1600);
+    expect(runtime).not.toContain("row.provider !== 'openai-compatible'");
+    expect(runtime).toContain('if (!row.provider)');
+  });
+});
