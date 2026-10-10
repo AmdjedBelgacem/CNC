@@ -32,6 +32,8 @@ const MOYASAR_SDK_SRI =
 const MOYASAR_SDK_CDN = 'https://cdn.moyasar.com/sdk/v1/moyasar.js';
 /** Injected so the first-party copy is not refused by our own style policy. */
 const MOYASAR_SDK_CSS = '/vendor/moyasar/moyasar.css';
+/** Moyasar will not charge less than this in the smallest currency unit. */
+const MINIMUM_CHARGE = 100;
 
 let moyasarScriptPromise: Promise<void> | null = null;
 
@@ -293,8 +295,23 @@ async function resolveProductRef(item: { productId: string; slug?: string }): Pr
        * form simply never mounted. This is the shape Moyasar documents and the one their SDK
        * actually exposes (`init`, `setAmount`).
        */
+      // Mirrors the server-side floor; Moyasar renders "Form configuration issue!" below 100.
+      if (effective.amount < MINIMUM_CHARGE) {
+        setError(
+          `This order totals ${effective.amount} halalas, below the ${MINIMUM_CHARGE} the payment gateway accepts. Raise the product price to at least 1 SAR to pay by card.`,
+        );
+        return;
+      }
+
       Moyasar.init({
-        element: formRef.current,
+        /**
+         * A CSS selector, not the element itself.
+         *
+         * Moyasar documents that an Element instance is accepted, but this SDK build rejects it
+         * with "Form configuration issue!" while the same call with a selector renders the card
+         * fields. Passing the id keeps us on the path that demonstrably works.
+         */
+        element: '#moyasar-form',
         publishable_api_key: effective.publishableKey,
         amount: effective.amount,
         currency: effective.currency,
@@ -410,7 +427,11 @@ async function resolveProductRef(item: { productId: string; slug?: string }): Pr
                   {t('preparing')}
                 </div>
               ) : (
-                <div ref={formRef} className="rounded-lg border border-border p-4" />
+                <div
+                  id="moyasar-form"
+                  ref={formRef}
+                  className="rounded-lg border border-border p-4"
+                />
               )}
             </div>
           </div>

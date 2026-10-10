@@ -51,6 +51,11 @@ function isUniqueViolation(error: unknown): boolean {
 
 const MOYASAR_API = 'https://api.moyasar.com/v1';
 export const MAX_LINES = 20;
+/**
+ * Smallest charge the gateway will accept, in the smallest currency unit (halalas for SAR).
+ * Verified against Moyasar: 1 and 99 are rejected by the form, 100 renders.
+ */
+export const MINIMUM_CHARGE = 100;
 export const MAX_QUANTITY = 25;
 /** A pending order that never gets a callback expires rather than living forever. */
 const ORDER_TTL_MINUTES = 60;
@@ -420,6 +425,19 @@ export class MoyasarService {
 
     const subtotal = resolved.reduce((sum, line) => sum + line.unitAmountCents * line.quantity, 0);
     const total = subtotal; // No tax or shipping until a tenant configures them.
+
+    /**
+     * Refuse totals the gateway cannot charge, before creating the order.
+     *
+     * Moyasar's minimum is 100 in the smallest currency unit. A cheaper order reached the form and
+     * came back as "Form configuration issue!" — an opaque message about the card widget for what
+     * is really a pricing problem, on an order that had already been created and left pending.
+     */
+    if (total < MINIMUM_CHARGE) {
+      throw new BadRequestException(
+        `This order totals ${total} in the smallest currency unit, below the ${MINIMUM_CHARGE} minimum the payment gateway accepts`,
+      );
+    }
 
     let created: typeof orders.$inferSelect | undefined;
     try {

@@ -31,8 +31,21 @@ describe('the payment form uses the real Moyasar API', () => {
     expect(code).not.toMatch(/createPaymentForm/);
   });
 
-  it('passes an element, not a separate mount call', () => {
-    expect(config).toMatch(/element:/);
+  it('passes the container as a CSS selector', () => {
+    // Moyasar documents that an Element instance is accepted, but this build rejects it with
+    // "Form configuration issue!" while the selector renders the card fields.
+    expect(config).toMatch(/element:\s*'#moyasar-form'/);
+    expect(config).not.toMatch(/element:\s*formRef\.current/);
+  });
+
+  it('the container the selector points at exists', () => {
+    expect(checkout).toMatch(/id="moyasar-form"/);
+  });
+
+  it('refuses a total below the gateway minimum, with a price-shaped message', () => {
+    expect(config).toMatch(/amount < MINIMUM_CHARGE/);
+    expect(checkout).toMatch(/below the \$\{MINIMUM_CHARGE\}/);
+    expect(checkout).toMatch(/Raise the product price/);
   });
 
   it('uses publishable_api_key, the name the SDK expects', () => {

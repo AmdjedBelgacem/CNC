@@ -104,3 +104,17 @@ describe('checkout line validation', () => {
     expect(new CheckoutLineDto().quantity).toBeUndefined();
   });
 });
+
+/**
+ * Orders the gateway cannot charge must be refused up front.
+ *
+ * Moyasar's minimum is 100 in the smallest currency unit. A cheaper order was created and left
+ * pending, then the form rendered "Form configuration issue!" — an opaque widget error for what is
+ * really a pricing problem.
+ */
+describe('the minimum charge', () => {
+  it('is 100 in the smallest currency unit', async () => {
+    const { MINIMUM_CHARGE } = await import('../src/modules/payments/moyasar.service');
+    expect(MINIMUM_CHARGE).toBe(100);
+  });
+});
