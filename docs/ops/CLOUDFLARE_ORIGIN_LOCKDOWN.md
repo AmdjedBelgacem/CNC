@@ -53,3 +53,22 @@ From a home network (not Cloudflare), the origin must be unreachable:
     sudo ufw allow 80,443 proto tcp
 
 SSH is never modified by any of this; port 22 stays allowed from anywhere.
+
+## Two ways this has broken, and the guard against each
+
+**1. Egress was blocked (this actually happened).** The rules were written as
+`-p tcp --dports 80,443` with no direction constraint. In `FORWARD`, `--dports` matches the
+destination port of a packet in whichever direction it is travelling, so the rule also caught the
+*backend's own outbound* calls to `api.supabase.co:443`. Every login then failed with
+`Authentication is unavailable` and a `ConnectTimeoutError` toward Cloudflare-resolved Supabase
+addresses. Fix: an unconditional `-i br+ RETURN` for container egress, and every web rule scoped
+with `-o br+` so it only matches packets being delivered *into* a container.
+
+**2. Interface prefix matching.** `-i br-` is an exact interface name, not a prefix; the wildcard
+is `-i br+`. The `br-` rules silently matched nothing, which is why the counters stayed at zero
+and the broken exemption looked plausible.
+
+`tests/test-origin-lockdown.sh` asserts both, plus the block itself, by exercising egress to a
+Cloudflare-hosted endpoint. Run it after any change to the rules or to Docker networking:
+
+    sudo bash deploy/lightsail/tests/test-origin-lockdown.sh
