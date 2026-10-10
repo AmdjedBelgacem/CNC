@@ -49,6 +49,29 @@ describe('checkout line validation', () => {
     expect(errors.join(' ')).toMatch(/itemType/);
   });
 
+  /**
+   * The allowed set must match the `OrderItemType` union the service actually handles.
+   *
+   * It previously listed `event` instead of `event_ticket` and omitted `custom`, so validation
+   * would have rejected a legitimate event ticket even though the service prices it correctly.
+   */
+  it('accepts every item type the service can price', async () => {
+    for (const itemType of ['course', 'product', 'event_ticket', 'bundle', 'custom']) {
+      expect(await validateLines([{ itemType, refId: realUuid }])).toEqual([]);
+    }
+  });
+
+  it('rejects "event", which is not the real item type', async () => {
+    const errors = await validateLines([{ itemType: 'event', refId: realUuid }]);
+    expect(errors.join(' ')).toMatch(/itemType/);
+  });
+
+  it('accepts a uuid of any version, not only v4', async () => {
+    // Postgres uuid columns accept any version; pinning '4' would reject legitimate rows.
+    const v1 = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+    expect(await validateLines([{ itemType: 'product', refId: v1 }])).toEqual([]);
+  });
+
   it('rejects a zero or negative quantity', async () => {
     expect((await validateLines([{ itemType: 'product', refId: realUuid, quantity: 0 }])).join(' '))
       .toMatch(/at least 1/);

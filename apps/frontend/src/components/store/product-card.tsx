@@ -128,7 +128,8 @@ export function ProductCard({ product }: { product: Product }) {
             title={unitMinor == null ? t('priceNotSet') : undefined}
             onClick={() =>
               addItem({
-                productId: product.slug,
+                productId: product.id,
+                slug: product.slug,
                 title: product.title,
                 price: product.variants?.[0]?.price ?? product.price ?? 0,
                 currency: sourceCurrency ?? DEFAULT_CURRENCY,

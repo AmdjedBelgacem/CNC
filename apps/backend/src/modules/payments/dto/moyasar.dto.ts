@@ -16,12 +16,20 @@ import {
 import type { OrderItemType } from '../../../database/schema/orders';
 import { MAX_LINES, MAX_QUANTITY } from '../moyasar.service';
 
-/** Item kinds an order line may reference. */
-const ITEM_TYPES = ['product', 'course', 'event', 'bundle'] as const;
+/**
+ * Item kinds an order line may reference.
+ *
+ * Mirrors the `OrderItemType` union exactly. This previously listed `event` instead of
+ * `event_ticket` and omitted `custom`, so a legitimate event ticket would have been rejected by
+ * validation even though the service handles it.
+ */
+const ITEM_TYPES: OrderItemType[] = ['course', 'product', 'event_ticket', 'bundle', 'custom'];
 
 export class CheckoutLineDto {
   @ApiProperty()
-  @IsIn(ITEM_TYPES, { message: 'itemType must be product, course, event or bundle' })
+  @IsIn(ITEM_TYPES, {
+    message: `itemType must be one of ${ITEM_TYPES.join(', ')}`,
+  })
   itemType: OrderItemType;
 
   /**
@@ -31,7 +39,7 @@ export class CheckoutLineDto {
    * Postgres rejected it with `invalid input syntax for type uuid`. That surfaced as an opaque
    * HTTP 500, telling the caller the server was broken when in fact their request was malformed.
    */
-  @IsUUID('4', { message: 'refId must be a valid product, course or event id' })
+  @IsUUID(undefined, { message: 'refId must be a valid id' })
   refId: string;
 
   @IsOptional()

@@ -3,7 +3,15 @@ import { persist } from 'zustand/middleware';
 import { DEFAULT_CURRENCY } from '@titan/shared';
 import { trackAddToCart } from '@/lib/analytics';
 interface CartItem {
+  /**
+   * The product's UUID — the only identifier the checkout API accepts.
+   *
+   * This used to hold the slug, which the order endpoint rejects: it looks a row up by primary
+   * key, so a slug can never resolve to an order line.
+   */
   productId: string;
+  /** Kept for links and for identifying carts written before `productId` became an id. */
+  slug?: string;
   title: string;
   price: number;
   /** Currency the stored `price` is held in; the cart converts for display. */

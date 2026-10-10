@@ -73,16 +73,40 @@ export default function CheckoutPage() {
     [],
   );
 
+/**
+ * Resolve a cart line to the product id the order API expects.
+ *
+ * Carts persisted before the fix store the slug in `productId`, and the API looks a line up by
+ * primary key — so a returning shopper's existing cart would be rejected as a malformed id. The
+ * slug is looked up once and the cart is repaired in place, rather than asking them to empty it.
+ */
+async function resolveProductRef(item: { productId: string; slug?: string }): Promise<string> {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.productId)) {
+    return item.productId;
+  }
+  const slug = item.slug ?? item.productId;
+  const product = await api.get<{ id: string }>(`/products/${encodeURIComponent(slug)}`);
+  useCartStore.setState((state) => ({
+    items: state.items.map((i) =>
+      i === item ? { ...i, productId: product.id, slug } : i,
+    ),
+  }));
+  return product.id;
+}
+
   const createOrder = useCallback(async () => {
     setCreating(true);
     setError('');
     try {
-      const result = await api.post<CreatedOrder>('/payments/moyasar/create-order', {
-        lines: items.map((item) => ({
-          itemType: 'product',
-          refId: item.productId,
+      const lines = await Promise.all(
+        items.map(async (item) => ({
+          itemType: 'product' as const,
+          refId: await resolveProductRef(item),
           quantity: item.quantity,
         })),
+      );
+      const result = await api.post<CreatedOrder>('/payments/moyasar/create-order', {
+        lines,
         // A retry of the same cart must not create a second order.
         idempotencyKey,
         successUrl: `${window.location.origin}/checkout/success`,

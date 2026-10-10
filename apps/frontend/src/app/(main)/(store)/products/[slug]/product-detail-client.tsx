@@ -228,7 +228,9 @@ export function ProductDetailClient({
   const add = () => {
     if (displayPrice == null) return;
     addItem({
-      productId: p.slug,
+      // The checkout API looks the line up by primary key, so this must be the id.
+      productId: p.id,
+      slug: p.slug,
       title: p.title,
       price: displayPrice,
       currency,
