@@ -3459,7 +3459,10 @@
     "purchasesRecorded": "Purchases recorded",
     "refulfill": "Retry delivery",
     "refillQueued": "Delivery retried",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "keyAlreadyStored": "A secret key is already stored. Leave this blank to keep it — just toggle and save.",
+    "enableFailed": "Payments could not be enabled. See the message below.",
+    "unsavedChanges": "You have unsaved changes."
   },
   "builder": {
     "canvas": {

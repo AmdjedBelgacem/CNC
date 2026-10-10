@@ -78,8 +78,18 @@ describe('Moyasar settlement', () => {
   });
 
   it('takes prices from the database, never the request', () => {
-    // The request shape has no money in it at all.
-    expect(controller).toMatch(/body: \{ lines: CheckoutLine\[\]/);
+    // The request shape has no money in it at all. It is now a validated DTO rather than an
+    // inline type — the invariant is that no field carries a price, amount or currency.
+    expect(controller).toMatch(/body: CreateMoyasarOrderDto/);
+    const checkoutDto = readFileSync(
+      resolve(__dirname, '../src/modules/payments/dto/moyasar.dto.ts'),
+      'utf8',
+    );
+    const lineDto = checkoutDto.slice(
+      checkoutDto.indexOf('export class CheckoutLineDto'),
+      checkoutDto.indexOf('export class CreateMoyasarOrderDto'),
+    );
+    expect(lineDto).not.toMatch(/price|amount|currency/i);
     const inputType = moyasar.slice(
       moyasar.indexOf('export interface CreateOrderLineInput'),
       moyasar.indexOf('export interface VerifiedPayment'),

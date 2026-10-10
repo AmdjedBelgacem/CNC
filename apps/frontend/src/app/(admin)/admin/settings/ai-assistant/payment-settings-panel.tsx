@@ -93,6 +93,7 @@ export function PaymentSettingsPanel() {
   const [webhookSecret, setWebhookSecret] = useState('');
   const [currency, setCurrency] = useState('SAR');
   const [enabled, setEnabled] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [liveMode, setLiveMode] = useState(false);
   const [seeded, setSeeded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -123,6 +124,7 @@ export function PaymentSettingsPanel() {
 
   const save = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       await api.put('/admin/payments/config', {
         publishableKey: publishableKey || undefined,
@@ -139,7 +141,14 @@ export function PaymentSettingsPanel() {
       toast({ type: 'ok', title: t('saved') });
     } catch (error) {
       const message = (error as Error).message ?? '';
-      toast({ type: 'err', title: /secret key is required/i.test(message) ? t('needsSecret') : message });
+      // The secret field is intentionally blank (keys are write-only), so this used to read as a
+      // silent no-op: toggle on, press save, nothing changes and no reason is obvious. Name it.
+      toast({
+        type: 'err',
+        title: /secret key is required/i.test(message) ? t('needsSecret') : t('enableFailed'),
+        description: message || undefined,
+      });
+      setSaveError(message || t('enableFailed'));
     } finally {
       setSaving(false);
     }
@@ -210,6 +219,16 @@ export function PaymentSettingsPanel() {
             <ErrorState title={tAdmin('loadFailed')} onRetry={() => void config.refetch()} />
           ) : (
             <>
+              {saveError && (
+                <p
+                  role="alert"
+                  className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"
+                >
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  {saveError}
+                </p>
+              )}
+
               {!data?.health.webhookSecretPresent && data?.health.enabled && (
                 <p className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 p-2 text-xs text-warning">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
@@ -249,7 +268,12 @@ export function PaymentSettingsPanel() {
                     placeholder={data?.secretKeyConfigured ? t('configured') : 'sk_live_…'}
                     className="font-mono text-xs"
                   />
-                  <p className="text-2xs text-muted-foreground">{t('writeOnly')}</p>
+                  <p className="text-2xs text-muted-foreground">
+                    {t('writeOnly')}
+                    {data?.secretKeyConfigured && (
+                      <span className="ms-1 font-medium text-success">{t('keyAlreadyStored')}</span>
+                    )}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pay-wh">{t('webhookSecret')}</Label>

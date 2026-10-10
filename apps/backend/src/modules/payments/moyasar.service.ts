@@ -32,8 +32,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PlatformAlertsService } from '../notifications/platform-alerts.service';
 
 const MOYASAR_API = 'https://api.moyasar.com/v1';
-const MAX_LINES = 20;
-const MAX_QUANTITY = 25;
+export const MAX_LINES = 20;
+export const MAX_QUANTITY = 25;
 /** A pending order that never gets a callback expires rather than living forever. */
 const ORDER_TTL_MINUTES = 60;
 

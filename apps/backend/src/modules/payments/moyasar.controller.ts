@@ -18,15 +18,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SkipCsrf } from '../auth/guards/csrf.guard';
+import { CreateMoyasarOrderDto } from './dto/moyasar.dto';
 import { MoyasarService } from './moyasar.service';
-import type { OrderItemType } from '../../database/schema/orders';
-
-interface CheckoutLine {
-  itemType: OrderItemType;
-  refId: string;
-  quantity?: number;
-  variantId?: string;
-}
 
 @ApiTags('payments')
 @Controller('payments')
@@ -48,8 +41,7 @@ export class MoyasarController {
   async createOrder(
     @CurrentTenant() tenant: { id: string },
     @CurrentUser() user: { id: string },
-    @Body()
-    body: { lines: CheckoutLine[]; idempotencyKey?: string; successUrl?: string; cancelUrl?: string },
+    @Body() body: CreateMoyasarOrderDto,
   ) {
     const order = await this.moyasar.createOrder({
       tenantId: tenant.id,
