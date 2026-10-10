@@ -3657,7 +3657,7 @@
       "glass": "زجاجي",
       "glow": "توهج",
       "glow-hero-eyebrow": "توهج (عنوان البطل)",
-      "gradient": "تدرج",
+      "gradient": "التدرج",
       "gradient-mesh": "شبكة متدرجة",
       "grey": "رمادي",
       "h1": "H1",
@@ -3761,7 +3761,17 @@
       "wide-0-025em": "واسع (٠٫٠٢٥em)",
       "wider-0-05em": "أوسع (٠٫٠٥em)",
       "width": "العرض",
-      "xl": "XL"
+      "xl": "XL",
+      "border": "الإطار",
+      "background-color": "لون الخلفية",
+      "background-image": "صورة الخلفية",
+      "frosted-glass": "زجاج مصنفر",
+      "width-px": "العرض (بكسل)",
+      "border-colour": "لون الإطار",
+      "corner-radius-px": "استدارة الزاوية (بكسل)",
+      "overflow": "الفيض",
+      "uploaded-image-url": "رابط الصورة المرفوعة",
+      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "مثال: linear-gradient(135deg, #0ea5e9, #6366f1)"
     },
     "fieldPlaceholders": {
       "free-manufacturing-education-for-all": "تعليم صناعي مجاني للجميع",
@@ -3787,7 +3797,19 @@
       "style": "النمط",
       "trust-chips": "شارات الثقة",
       "typography": "الطباعة",
-      "visibility": "الظهور"
+      "visibility": "الظهور",
+      "background": "الخلفية",
+      "border": "الإطار",
+      "background-color": "لون الخلفية",
+      "gradient": "التدرج",
+      "background-image": "صورة الخلفية",
+      "frosted-glass": "زجاج مصنفر",
+      "width-px": "العرض (بكسل)",
+      "border-colour": "لون الإطار",
+      "corner-radius-px": "استدارة الزاوية (بكسل)",
+      "overflow": "الفيض",
+      "uploaded-image-url": "رابط الصورة المرفوعة",
+      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "مثال: linear-gradient(135deg, #0ea5e9, #6366f1)"
     },
     "history": {
       "title": "سجل الإصدارات",

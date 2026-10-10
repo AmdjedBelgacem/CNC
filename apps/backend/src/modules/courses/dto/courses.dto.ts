@@ -2,7 +2,7 @@ import { IsString, IsOptional, IsNumber, IsBoolean, Min, Max, MaxLength, IsUUID,
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { type LessonVideoMeta } from '../../../database/schema/courses';
-import { isUploadedMediaRef, IsUploadedMediaUrl } from '../../../common/validators/uploaded-media-url';
+import { isUploadedMediaRef, IsUploadedMediaUrl } from '@titan/shared';
 import { CURRENCY_CODES, courseTranslationsSchema, lessonContentDocumentSchema, lessonTranslationsSchema, seriesTranslationsSchema } from '@titan/shared';
 import type { CourseContentTranslation, LessonBlock, LessonContentDocument, LessonContentTranslation, SeriesContentTranslation } from '@titan/shared';
 import type { z } from 'zod';

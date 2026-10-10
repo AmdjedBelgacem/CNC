@@ -13,7 +13,7 @@ import {
   type LessonContentTranslation,
   type QuizQuestionResult,
 } from '@titan/shared';
-import { isUploadedMediaRef } from '../../common/validators/uploaded-media-url';
+import { isUploadedMediaRef } from '@titan/shared';
 
 export type CourseTranslationMap = Partial<Record<ContentLocale, CourseContentTranslation>>;
 export type SeriesTranslationMap = Partial<Record<ContentLocale, SeriesContentTranslation>>;

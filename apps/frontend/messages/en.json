@@ -3761,7 +3761,17 @@
       "wide-0-025em": "Wide (0.025em)",
       "wider-0-05em": "Wider (0.05em)",
       "width": "Width",
-      "xl": "XL"
+      "xl": "XL",
+      "border": "Border",
+      "background-color": "Background color",
+      "background-image": "Background image",
+      "frosted-glass": "Frosted glass",
+      "width-px": "Width (px)",
+      "border-colour": "Border colour",
+      "corner-radius-px": "Corner radius (px)",
+      "overflow": "Overflow",
+      "uploaded-image-url": "Uploaded image URL",
+      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)"
     },
     "fieldPlaceholders": {
       "free-manufacturing-education-for-all": "Free manufacturing education for all",
@@ -3787,7 +3797,19 @@
       "style": "Style",
       "trust-chips": "Trust Chips",
       "typography": "Typography",
-      "visibility": "Visibility"
+      "visibility": "Visibility",
+      "background": "Background",
+      "border": "Border",
+      "background-color": "Background color",
+      "gradient": "Gradient",
+      "background-image": "Background image",
+      "frosted-glass": "Frosted glass",
+      "width-px": "Width (px)",
+      "border-colour": "Border colour",
+      "corner-radius-px": "Corner radius (px)",
+      "overflow": "Overflow",
+      "uploaded-image-url": "Uploaded image URL",
+      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)"
     },
     "history": {
       "title": "Version history",
