@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -69,6 +70,24 @@ describe('the SDK is vendored so a vendor CDN outage cannot stop checkout', () =
 
   it('pins the vendored file with an integrity hash', () => {
     expect(checkout).toMatch(/MOYASAR_SDK_SRI\s*=\s*'sha384-[A-Za-z0-9+/=]+'/);
+  });
+
+  /**
+   * The digest must actually match the shipped bytes.
+   *
+   * The first attempt wrapped `shasum`'s hex output as if it were SRI, which is base64. The file
+   * was correct and the hash was wrong, so the browser refused the script — and because the loader
+   * falls back on failure, it silently degraded to the broken CDN instead of reporting anything.
+   * Recomputing the digest here means a wrong constant fails the suite rather than production.
+   */
+  it('the integrity digest matches the bytes we ship', () => {
+    const declared = checkout.match(/MOYASAR_SDK_SRI\s*=\s*'sha384-([^']+)'/)?.[1];
+    expect(declared).toBeTruthy();
+    const bytes = readFileSync(
+      resolve(__dirname, '../public/vendor/moyasar/moyasar.umd.js'),
+    );
+    const actual = createHash('sha384').update(bytes).digest('base64');
+    expect(declared).toBe(actual);
   });
 
   it('ships the bundle and its stylesheet, with provenance documented', () => {

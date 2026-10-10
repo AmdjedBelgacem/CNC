@@ -16,8 +16,11 @@ single point of failure.
     tar xzf moyasar-payment-form-<version>.tgz
     cp package/dist/moyasar.umd.js package/dist/moyasar.css .
 
-Then update `MOYASAR_SDK_VERSION` and the integrity hash in
-`src/app/(main)/(store)/checkout/page.tsx`.
+Then update the integrity hash in `src/app/(main)/(store)/checkout/page.tsx`.
+
+The SRI value is **base64**, not the hex that `shasum` prints:
+
+    openssl dgst -sha384 -binary moyasar.umd.js | openssl base64 -A
 
 ## Provenance caveat
 

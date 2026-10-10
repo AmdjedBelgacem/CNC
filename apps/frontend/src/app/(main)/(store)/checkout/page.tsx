@@ -23,8 +23,12 @@ import type { OrderView } from '@/hooks/use-payments';
  * that dependency; the CDN stays as a fallback in case our copy is ever wrong.
  */
 const MOYASAR_SDK_LOCAL = '/vendor/moyasar/moyasar.umd.js';
+/**
+ * Subresource-integrity digest, base64 — *not* the hex form `shasum` prints.
+ * `shasum -a 384 file | awk '{print $1}'` yields hex; SRI requires base64 of the raw digest.
+ */
 const MOYASAR_SDK_SRI =
-  'sha384-cdaa327caa1ac857dc69940b63158462a8c6fe87fc800c399585662b3ebc146e23f2d9b6ecbaa6a8d16e20f94db5d2dd';
+  'sha384-zaoyfKoayFfcaZQLYxWEYqjG/of8gAw5lYVmKz68FG4j8tm27LqmqNFuIPlNtdLd';
 const MOYASAR_SDK_CDN = 'https://cdn.moyasar.com/sdk/v1/moyasar.js';
 /** Injected so the first-party copy is not refused by our own style policy. */
 const MOYASAR_SDK_CSS = '/vendor/moyasar/moyasar.css';

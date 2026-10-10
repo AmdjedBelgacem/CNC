@@ -1,0 +1,25 @@
+import pw from '/Users/mac/programming/projects/cnc/node_modules/playwright/index.js'; const { chromium } = pw;
+const b = await chromium.launch();
+const p = await (await b.newContext()).newPage();
+const csp=[], net=[];
+p.on('console', m=>{ if(/Content Security Policy|violates/i.test(m.text())) csp.push(m.text().slice(0,110)); });
+p.on('request', r=>{ if(/moyasar/i.test(r.url())) net.push(r.url().slice(0,58)); });
+await p.goto('https://barootcnc.com/login', { waitUntil:'networkidle', timeout:60000 });
+await p.fill('input[type="email"]','qa.rep.1791668418@example.com'); await p.fill('input[type="password"]','Qa!Passw0rd-2026');
+await p.click('button[type="submit"]'); await p.waitForTimeout(7000);
+await p.goto('https://barootcnc.com/cart', { waitUntil:'domcontentloaded', timeout:60000 });
+await p.evaluate((c)=>localStorage.setItem('cart-storage', JSON.stringify(c)),
+  { state:{ items:[{ productId:'2ae3557a-3e60-456e-ae46-1b9e8a92fd5b', title:'Aerospace Manufacturing Academy', price:1, currency:'SAR', quantity:1 }], version:0 } });
+await p.reload({ waitUntil:'networkidle', timeout:60000 }); await p.waitForTimeout(2500);
+await p.locator('a[href="/checkout"]').first().click().catch(()=>{});
+await p.waitForTimeout(4000);
+await p.locator('button:has-text("Proceed"), button:has-text("Pay"), button[type="submit"]').first().click().catch(()=>{});
+await p.waitForTimeout(18000);
+console.log('  requests      :', net.length ? net.join(' , ') : 'none');
+console.log('  CSP violations:', csp.length ? csp.slice(0,2) : 'NONE');
+const body = await p.locator('body').innerText();
+console.log('  config error  :', /configuration issue/i.test(body) ? 'YES' : 'no');
+console.log('  could-not-load:', /Could not load the payment form/.test(body) ? 'YES' : 'no');
+console.log('  card inputs   :', await p.locator('#mysr input, iframe').count());
+console.log('  form present  :', await p.locator('#mysr').count() > 0);
+await b.close();
