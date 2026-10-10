@@ -315,7 +315,15 @@ export class AiSettingsService {
   private deriveStatus(enabled: boolean, encryptedApiKey: string | null, provider: string, model: string): string {
     if (!enabled) return 'disabled';
     if (!this.secrets.configured) return 'encryption_unavailable';
-    if (!encryptedApiKey || !model || provider !== 'openai-compatible') return 'incomplete';
+    /**
+     * Readiness is about whether the assistant can answer, not about which vendor was picked.
+     *
+     * This demanded `provider === 'openai-compatible'`, so a correctly configured DeepSeek tenant
+     * was permanently reported `incomplete` no matter what key was saved. The chat UI hides
+     * itself unless status is `ready`, which made the assistant unopenable after a correct setup.
+     * The provider only selects the host — `baseUrl` is allowlisted on save.
+     */
+    if (!encryptedApiKey || !model || !provider) return 'incomplete';
     return 'ready';
   }
 
