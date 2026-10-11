@@ -94,8 +94,14 @@ if [[ "$PUSH_ONLY" -eq 1 ]]; then
 fi
 
 echo "==> syncing sources"
+# rsync hands `-e` to a shell, which re-splits it, so the key path needs shell quoting rather
+# than a backslash escape. The path is under a directory with a space in its name.
+case "$KEY" in
+  *"'"*) echo "Key path contains a single quote; set LIGHTSAIL_KEY instead" >&2; exit 2 ;;
+esac
+rsync_ssh="ssh -i '$KEY' ${CONNECT_OPTS[*]}"
 rsync -az --delete \
-  -e "ssh ${SSH_OPTS[*]} ${CONNECT_OPTS[*]}" \
+  -e "$rsync_ssh" \
   --exclude node_modules --exclude .next --exclude .git --exclude dist \
   --exclude .dev-logs --exclude '.env' --exclude 'deploy/lightsail/logs' \
   ./ "$HOST:$REMOTE_DIR/"
