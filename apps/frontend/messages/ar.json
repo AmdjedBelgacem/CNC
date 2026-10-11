@@ -4484,6 +4484,10 @@
       "storeEyebrow": "المتجر",
       "recommendedTitle": "منتجات موصى بها",
       "viewAllTools": "عرض كل الأدوات"
+    },
+    "a11y": {
+      "skipToContent": "تخطَّ إلى المحتوى الرئيسي",
+      "skipToContentShort": "تخطَّ إلى المحتوى"
     }
   },
   "pages": {

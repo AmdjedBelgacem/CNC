@@ -4484,6 +4484,10 @@
       "storeEyebrow": "Store",
       "recommendedTitle": "Recommended Products",
       "viewAllTools": "View all tools"
+    },
+    "a11y": {
+      "skipToContent": "Skip to main content",
+      "skipToContentShort": "Skip to content"
     }
   },
   "pages": {

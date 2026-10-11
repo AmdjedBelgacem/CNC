@@ -81,8 +81,10 @@ export default function LearningPage() {
   );
 
   if (!isAuthenticated) {
+    // No heading in this branch, so a signed-out visitor got a page with no title structure.
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
+        <h1 className="sr-only">{t('title')}</h1>
         <EmptyState
           icon={BookOpen}
           title={t('empty')}

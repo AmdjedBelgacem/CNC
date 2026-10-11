@@ -268,7 +268,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             ))}{' '}
           </nav>{' '}
         </aside>{' '}
-        <main className="min-w-0 flex-1">{children}</main>{' '}
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">{children}</main>{' '}
       </div>{' '}
     </div>
   );

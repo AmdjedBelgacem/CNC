@@ -34,6 +34,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
       <div className="pointer-events-none fixed inset-0 blueprint-grid opacity-60" aria-hidden />
+      {/* Same skip link as the main layout: this group has no site navigation, but the
+          brand, back link and highlights panel still precede the form in the tab order. */}
+      <a
+        href="#main"
+        className="sr-only z-[100] focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <div className="relative mx-auto flex min-h-screen max-w-[1400px] flex-col px-6 py-6">
         <div className="flex items-center justify-between">
           <Link
@@ -48,16 +56,27 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="flex flex-1 items-center justify-center py-8">
           <div className="corner-ticks relative w-full overflow-hidden rounded-lg border border-border bg-card shadow-md">
             <div className="flex">
-              <div className="min-h-[520px] flex-1 p-8 sm:p-10">{children}</div>
+              {/*
+                `main` and `footer` landmarks were missing from every screen in this group,
+                so a screen-reader user had no way to skip past the panel and reach the form:
+                these routes rendered a bare div tree with no landmark structure at all.
+                The aside is complementary, so it sits outside `main` rather than inside it.
+              */}
+              <main id="main" tabIndex={-1} className="min-h-[520px] flex-1 p-8 sm:p-10 focus:outline-none">
+                {children}
+              </main>
 
-              <div className="hidden w-px shrink-0 bg-border lg:block" />
+              <div className="hidden w-px shrink-0 bg-border lg:block" aria-hidden />
 
-              <div className="hidden w-[420px] shrink-0 lg:flex lg:flex-col">
+              <aside
+                aria-label="About Baroot CNC Solutions"
+                className="hidden w-[420px] shrink-0 lg:flex lg:flex-col"
+              >
                 <div className="relative flex flex-1 flex-col items-center justify-center px-10 py-14">
                   <BrandMark />
-                  <h2 className="mt-6 text-center font-display text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-foreground">
+                  <p className="mt-6 text-center font-display text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-foreground">
                     Baroot <br /> CNC Solutions
-                  </h2>
+                  </p>
                   <div className="mt-5 h-0.5 w-14 bg-primary" aria-hidden />
                   <p className="mt-5 text-center text-sm leading-relaxed text-muted-foreground">
                     Expert-led CNC manufacturing education, professional certifications, and a
@@ -72,9 +91,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                     <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
                       Platform Highlights
                     </p>
-                    <div className="space-y-3">
+                    <ul className="space-y-3" aria-labelledby="platform-highlights">
                       {HIGHLIGHTS.map(([title, desc]) => (
-                        <div key={title} className="group flex gap-3">
+                        <li key={title} className="group flex gap-3">
                           <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
                             <Check className="size-3" strokeWidth={3} />
                           </span>
@@ -82,19 +101,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                             <p className="text-13 font-semibold text-foreground">{title}</p>
                             <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
                           </div>
-                        </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
                 </div>
-              </div>
+              </aside>
             </div>
           </div>
         </div>
 
-        <div className="text-center font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+        <footer className="text-center font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
           &copy; {new Date().getFullYear()} Baroot CNC Solutions
-        </div>
+        </footer>
       </div>
     </div>
   );

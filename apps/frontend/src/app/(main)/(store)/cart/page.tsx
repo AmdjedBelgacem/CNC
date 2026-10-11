@@ -42,8 +42,11 @@ export default function CartPage() {
   const money = (minor: number) => formatMinorUnits(minor, displayCurrency, locale);
 
   if (items.length === 0) {
+    // `EmptyState` renders its title as a paragraph, so this branch had no heading at all —
+    // an empty cart is a real page a visitor lands on and needs to be able to identify.
     return (
       <div className="container mx-auto px-4 py-24">
+        <h1 className="sr-only">{t('title')}</h1>
         <EmptyState
           icon={ShoppingBag}
           title={tp('cartEmpty')}
