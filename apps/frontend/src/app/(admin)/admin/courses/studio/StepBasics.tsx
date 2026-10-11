@@ -12,13 +12,10 @@ import {
   TextInput,
   SelectInput,
 } from '@/components/admin/admin-form';
-import {
-  DIFFICULTY_LEVELS,
-  difficultyKey,
-  difficultyFallback,
-} from '@/lib/difficulty';
+import { DIFFICULTY_LEVELS, difficultyKey, difficultyFallback } from '@/lib/difficulty';
 import { slugify } from './slugify';
 import type { CourseStudioData } from './types';
+import { TranslateToArabic } from '@/components/admin/translate-to-arabic';
 
 interface AcademyOption {
   id: string;
@@ -26,9 +23,35 @@ interface AcademyOption {
   title: string;
 }
 
-function translationValue(course: CourseStudioData, locale: ContentLocale, field: 'title' | 'subtitle' | 'description') {
+function translationValue(
+  course: CourseStudioData,
+  locale: ContentLocale,
+  field: 'title' | 'subtitle' | 'description',
+) {
   if (locale === 'en') return course[field] ?? '';
   return course.translations?.[locale]?.[field] ?? '';
+}
+
+/**
+ * Seed the Arabic copy from the English columns.
+ *
+ * Only offered on the English tab, because English is the source: the English values live at the
+ * top level of the draft and the Arabic ones under `translations.ar`.
+ */
+function applyArabicTranslation(course: CourseStudioData, translations: Record<string, string>) {
+  const current = course.translations?.ar ?? {};
+  const pick = (label: string, fallback: string) => translations[label] ?? fallback;
+  return {
+    translations: {
+      ...(course.translations ?? {}),
+      ar: {
+        ...current,
+        title: pick('Title', course.title ?? ''),
+        subtitle: pick('Subtitle', course.subtitle ?? ''),
+        description: pick('Description', course.description ?? ''),
+      },
+    },
+  };
 }
 
 export function StepBasics({
@@ -52,7 +75,9 @@ export function StepBasics({
     let cancelled = false;
     void (async () => {
       try {
-        const response = await fetch('/api/proxy/admin/academies?limit=100', { credentials: 'include' });
+        const response = await fetch('/api/proxy/admin/academies?limit=100', {
+          credentials: 'include',
+        });
         if (!response.ok) throw new Error('Academy request failed');
         const data = await response.json();
         if (!cancelled) setAcademies(Array.isArray(data?.items) ? data.items : []);
@@ -74,7 +99,10 @@ export function StepBasics({
     update({
       translations: {
         ...(course.translations ?? {}),
-        [locale]: { ...current, [field]: field === 'title' ? value.trim() || undefined : value || null },
+        [locale]: {
+          ...current,
+          [field]: field === 'title' ? value.trim() || undefined : value || null,
+        },
       },
     });
   };
@@ -93,18 +121,38 @@ export function StepBasics({
             <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
               {locale === 'ar'
                 ? t('studio.arabicSourceHint', {
-                    default: 'English is the source content. Any Arabic field left blank falls back to English.',
+                    default:
+                      'English is the source content. Any Arabic field left blank falls back to English.',
                   })
                 : t('studio.englishSourceHint', {
-                    default: 'English is the source content. Arabic fields can fall back to English until translated.',
+                    default:
+                      'English is the source content. Arabic fields can fall back to English until translated.',
                   })}
             </p>
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg border border-primary/20 bg-background px-3 py-1.5 text-xs font-semibold text-primary sm:self-auto">
-          <Languages className="size-3.5" />
-          {locale === 'ar' ? 'العربية' : 'English'}
-        </span>
+        <div className="flex shrink-0 flex-col items-start gap-2 self-start sm:self-auto sm:items-end">
+          <span className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-primary/20 bg-background px-3 py-1.5 text-xs font-semibold text-primary">
+            <Languages className="size-3.5" />
+            {locale === 'ar' ? 'العربية' : 'English'}
+          </span>
+          {/* Always visible on the English tab so it can be found before any field is filled;
+              it disables itself when there is nothing to translate. */}
+          {locale === 'en' ? (
+            <TranslateToArabic
+              entity="course copy"
+              fields={{
+                Title: course.title ?? '',
+                Subtitle: course.subtitle ?? '',
+                Description: course.description ?? '',
+              }}
+              hasArabic={Boolean(
+                course.translations?.ar && Object.keys(course.translations.ar).length,
+              )}
+              onTranslated={(tr) => update(applyArabicTranslation(course, tr))}
+            />
+          ) : null}
+        </div>
       </div>
 
       <FormSection
@@ -142,7 +190,9 @@ export function StepBasics({
             dir="auto"
             value={subtitle}
             onChange={(event) => updateLocalized('subtitle', event.target.value)}
-            placeholder={t('studio.subtitlePlaceholder', { default: 'Short marketing line shown under the title' })}
+            placeholder={t('studio.subtitlePlaceholder', {
+              default: 'Short marketing line shown under the title',
+            })}
           />
           <TextAreaField
             label={t('studio.description', { default: 'Description' })}
@@ -150,7 +200,9 @@ export function StepBasics({
             rows={5}
             value={description}
             onChange={(event) => updateLocalized('description', event.target.value)}
-            placeholder={t('studio.descriptionPlaceholder', { default: 'What will learners walk away with?' })}
+            placeholder={t('studio.descriptionPlaceholder', {
+              default: 'What will learners walk away with?',
+            })}
           />
         </div>
       </FormSection>
@@ -158,7 +210,8 @@ export function StepBasics({
       {locale === 'ar' && !course.translations?.ar?.title && (
         <p className="rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-xs leading-relaxed text-warning">
           {t('studio.arabicTitleEmpty', {
-            default: 'Arabic title is empty; learners will see the English title until you add a translation.',
+            default:
+              'Arabic title is empty; learners will see the English title until you add a translation.',
           })}
         </p>
       )}
@@ -173,14 +226,18 @@ export function StepBasics({
         <div className="space-y-4">
           <Field
             label={t('academyLabel', { default: 'Academy' })}
-            hint={t('studio.academyHint', { default: 'Published courses appear in the academy catalog once assigned.' })}
+            hint={t('studio.academyHint', {
+              default: 'Published courses appear in the academy catalog once assigned.',
+            })}
           >
             {(field) => (
               <SelectInput
                 {...field}
                 disabled={academies === null}
                 value={course.academyId ?? ''}
-                onChange={(event) => update({ academyId: event.target.value || null, academy: null })}
+                onChange={(event) =>
+                  update({ academyId: event.target.value || null, academy: null })
+                }
               >
                 <option value="">
                   {t('studio.noAcademy', { default: 'No academy — tenant course library only' })}
@@ -196,7 +253,9 @@ export function StepBasics({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label={t('studio.difficulty', { default: 'Difficulty' })}
-              hint={t('studio.difficultyHint', { default: 'Shown on the course card and catalog.' })}
+              hint={t('studio.difficultyHint', {
+                default: 'Shown on the course card and catalog.',
+              })}
             >
               {(field) => (
                 <SelectInput
@@ -207,7 +266,9 @@ export function StepBasics({
                   {DIFFICULTY_LEVELS.map((difficulty) => (
                     <option key={difficulty} value={difficulty}>
                       {difficulty} —{' '}
-                      {tDifficulty(difficultyKey(difficulty), { default: difficultyFallback(difficulty) })}
+                      {tDifficulty(difficultyKey(difficulty), {
+                        default: difficultyFallback(difficulty),
+                      })}
                     </option>
                   ))}
                 </SelectInput>

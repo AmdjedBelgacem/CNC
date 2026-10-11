@@ -98,9 +98,24 @@ describe('builder chrome', () => {
   });
 
   it('closes menus on outside click and Escape', () => {
-    expect(header).toMatch(/useDismissableMenu/);
-    expect(header).toMatch(/event\.key === 'Escape'/);
-    expect(header).toMatch(/document\.addEventListener\('mousedown'/);
+    // Dismissal moved into AnchorPanel when the header menus were portalled: outside-pointerdown
+    // and Escape are handled there for every panel, rather than per menu. The header's job is now
+    // to pass `onDismiss`, and to stop rendering popovers inside the clipped toolbox bar.
+    const anchorPanel = read('src/components/builder/anchor-panel.tsx');
+    expect(anchorPanel).toMatch(/document\.addEventListener\('pointerdown'/);
+    expect(anchorPanel).toMatch(/event\.key === 'Escape'/);
+    expect(header).toMatch(/onDismiss=\{close\}/);
+    expect(pageManager).toMatch(/onDismiss=\{\(\) => setOpen\(false\)\}/);
+  });
+
+  it('renders no popover inside the clipping toolbox bar', () => {
+    // `overflow-x-auto` clips an absolutely-positioned child into the 44px bar and paints it
+    // under the layers sidebar. Every header menu must be portalled; three were missed on the
+    // first pass, which is why the overflow menu and page switcher still slid out of view.
+    const headerCode = header.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(headerCode).not.toMatch(/absolute end-0 top-full/);
+    expect(headerCode).not.toMatch(/absolute start-0 top-full/);
+    expect(header).toMatch(/<AnchorPanel/);
   });
 
   it('moves focus into the version drawer and closes it on Escape', () => {

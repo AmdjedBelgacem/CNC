@@ -132,7 +132,7 @@ export function StepLocalization({
             })}
           </div>
         </div>
-        {locale === 'en' && (course.seoTitle || course.seoDescription || course.seoKeywords) ? (
+        {locale === 'en' ? (
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
             <TranslateToArabic
               entity="course SEO metadata"

@@ -20,10 +20,11 @@
  * actions moved into an overflow menu so the bar stays calm.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { PageManager } from '@/components/builder/page-manager';
+import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { PublishChecklist } from '@/components/builder/publish-checklist';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import { useOpenPage } from '@/components/builder/use-open-page';
@@ -99,6 +100,7 @@ function IconButton({
   className,
   haspopup,
   expanded,
+  triggerRef,
 }: {
   title: string;
   disabled?: boolean;
@@ -108,10 +110,13 @@ function IconButton({
   className?: string;
   /** Declares what this button opens, e.g. "menu" for the overflow menu. */
   haspopup?: 'menu' | 'dialog' | 'listbox' | 'true';
+  /** Lets a portalled panel anchor itself to this button. */
+  triggerRef?: React.Ref<HTMLButtonElement>;
   expanded?: boolean;
 }) {
   return (
     <button
+      ref={triggerRef}
       type="button"
       title={title}
       aria-label={title}
@@ -178,27 +183,6 @@ function MenuItem({
       </span>
     </button>
   );
-}
-
-/** A menu that closes on outside click, Escape, or selection. */
-function useDismissableMenu(open: boolean, close: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) close();
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open, close]);
-  return ref;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -488,12 +472,14 @@ export function BuilderHeader() {
 
 function OverflowMenu({ onOpenShortcuts }: { onOpenShortcuts: () => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useDismissableMenu(open, () => setOpen(false));
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const tb = useTranslations('builder');
   const setResetOpen = useBuilderUI((state) => state.setResetOpen);
+  const close = useCallback(() => setOpen(false), []);
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div className="shrink-0">
       <IconButton
+        triggerRef={triggerRef}
         title={tb('more.menu')}
         active={open}
         haspopup="menu"
@@ -502,11 +488,11 @@ function OverflowMenu({ onOpenShortcuts }: { onOpenShortcuts: () => void }) {
       >
         <MoreHorizontal className="size-4" aria-hidden="true" />
       </IconButton>
-      {open && (
-        <div
-          role="menu"
-          className="absolute end-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-border bg-popover p-1.5 shadow-lg"
-        >
+      {/* Portalled for the same reason as the block menu: the toolbox bar is `overflow-x-auto`,
+          which clips an absolutely-positioned child into the 44px bar and paints it under the
+          sidebar. This menu was missed on the first pass and still slid out of view. */}
+      <AnchorPanel anchorRef={triggerRef} open={open} onDismiss={close} minWidth={256}>
+        <div role="menu" className="max-h-[60vh] overflow-y-auto p-1.5">
           <MenuItem
             icon={History}
             label={tb('more.history')}
@@ -543,7 +529,7 @@ function OverflowMenu({ onOpenShortcuts }: { onOpenShortcuts: () => void }) {
             }}
           />
         </div>
-      )}
+      </AnchorPanel>
     </div>
   );
 }

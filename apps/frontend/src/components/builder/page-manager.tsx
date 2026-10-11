@@ -32,13 +32,21 @@ import {
 import type { PageRecord } from '@titan/shared';
 import { normalizeSlug, validateSlug } from '@titan/shared';
 import { api } from '@/lib/api-client';
+import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { useBuilderUI } from '@/components/builder/builder-ui-store';
 import { useOpenPage } from '@/components/builder/use-open-page';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 type Template = 'blank' | 'landing' | 'content';
 
@@ -56,6 +64,7 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
   const status = useBuilderUI((s) => s.status);
 
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [pages, setPages] = useState<PageRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -169,6 +178,7 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
     <>
       <div className="relative min-w-0">
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-haspopup="dialog"
@@ -183,7 +193,12 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
               {current?.title ?? status?.title ?? slug}
             </span>
             <span className="flex items-center gap-1 text-2xs leading-tight">
-              <span className={cn('inline-flex items-center gap-1', live ? 'text-success' : 'text-warning')}>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1',
+                  live ? 'text-success' : 'text-warning',
+                )}
+              >
                 <span
                   className={cn(
                     'relative inline-flex size-1.5',
@@ -220,18 +235,25 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
         </button>
 
         {open && (
-          <>
+          <AnchorPanel
+            anchorRef={triggerRef}
+            open={open}
+            onDismiss={() => setOpen(false)}
+            minWidth={320}
+          >
             <button
               type="button"
               aria-label={tb('pages.close')}
-              className="fixed inset-0 z-40 cursor-default"
+              className="fixed inset-0 -z-10 cursor-default"
               onClick={() => setOpen(false)}
             />
+            {/* Portalled: the toolbox bar is `overflow-x-auto`, which clips an absolutely
+                positioned child into the 44px bar and paints it under the layers sidebar. */}
             <div
               id="builder-page-manager"
               role="dialog"
               aria-label={tb('pages.dialogLabel')}
-              className="absolute start-0 top-full z-50 mt-1 w-[min(24rem,90vw)] rounded-md border border-border bg-popover p-1 shadow-lg"
+              className="w-[min(24rem,90vw)] rounded-md border border-border bg-popover p-1 shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
             >
               <div className="flex items-center gap-1 border-b border-border p-1">
                 <Search className="ms-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -246,7 +268,10 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
               </div>
 
               {error && (
-                <p role="alert" className="m-1 rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive">
+                <p
+                  role="alert"
+                  className="m-1 rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive"
+                >
                   {error}
                 </p>
               )}
@@ -280,7 +305,9 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
                               <span className="truncate text-13 font-medium text-foreground">
                                 {page.title}
                               </span>
-                              {active && <Check className="size-3 shrink-0 text-primary" aria-hidden />}
+                              {active && (
+                                <Check className="size-3 shrink-0 text-primary" aria-hidden />
+                              )}
                             </span>
                             <span className="block truncate font-mono text-2xs text-muted-foreground">
                               /{page.slug}
@@ -314,13 +341,22 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
 
                         <div className="flex shrink-0 items-center opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                           <IconAction
-                            label={page.status === 'disabled' ? tb('pages.enable') : tb('pages.disable')}
+                            label={
+                              page.status === 'disabled' ? tb('pages.enable') : tb('pages.disable')
+                            }
                             onClick={() => void toggleStatus(page)}
                             disabled={busy === page.slug}
                           >
-                            {page.status === 'disabled' ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                            {page.status === 'disabled' ? (
+                              <Eye className="size-3.5" />
+                            ) : (
+                              <EyeOff className="size-3.5" />
+                            )}
                           </IconAction>
-                          <IconAction label={tb('pages.duplicate')} onClick={() => setDuplicating(page)}>
+                          <IconAction
+                            label={tb('pages.duplicate')}
+                            onClick={() => setDuplicating(page)}
+                          >
                             <Copy className="size-3.5" />
                           </IconAction>
                           <IconAction
@@ -351,7 +387,7 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
                 </Button>
               </div>
             </div>
-          </>
+          </AnchorPanel>
         )}
       </div>
 
@@ -524,10 +560,7 @@ function CreatePageDialog({
                 {tb('pages.urlPreview', { url: `/${slug}` })}
               </p>
             ) : (
-              <p
-                role="alert"
-                className="flex items-start gap-1 text-2xs text-destructive"
-              >
+              <p role="alert" className="flex items-start gap-1 text-2xs text-destructive">
                 <AlertTriangle className="mt-px size-3 shrink-0" aria-hidden />
                 {check.reason === 'reserved'
                   ? tb('pages.slugReserved', { slug: check.slug })
@@ -571,7 +604,10 @@ function CreatePageDialog({
           </div>
 
           {error && (
-            <p role="alert" className="rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive">
+            <p
+              role="alert"
+              className="rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive"
+            >
               {error}
             </p>
           )}
@@ -638,7 +674,12 @@ function DuplicateDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="dup-title">{tb('pages.fieldTitle')}</Label>
-            <Input id="dup-title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <Input
+              id="dup-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="dup-slug">{tb('pages.fieldSlug')}</Label>
@@ -667,7 +708,10 @@ function DuplicateDialog({
             {tb('pages.duplicateDraftNote')}
           </p>
           {error && (
-            <p role="alert" className="rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive">
+            <p
+              role="alert"
+              className="rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive"
+            >
               {error}
             </p>
           )}
