@@ -1533,7 +1533,13 @@
       "pricingFrom": "From a price",
       "pricingRequest": "Request a quote",
       "pricingRequestExplain": "No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.",
-      "fieldPriceHintFrom": "Used as the base. “From” is computed from the lowest option price across variants."
+      "fieldPriceHintFrom": "Used as the base. “From” is computed from the lowest option price across variants.",
+      "arabicCopy": "Arabic copy",
+      "arabicCopyHint": "Shown to Arabic visitors. Leave blank to fall back to English.",
+      "arabicTitle": "Arabic title",
+      "arabicTagline": "Arabic tagline",
+      "arabicDescription": "Arabic description",
+      "arabicFeatures": "Arabic bullet points (one per line)"
     },
     "productsPage": {
       "action": {
@@ -2050,6 +2056,16 @@
       "markClosed": "Close",
       "updated": "Request updated",
       "updateFailed": "Could not update"
+    },
+    "translate": {
+      "button": "Translate to Arabic",
+      "working": "Translating…",
+      "done": "{count} field(s) translated to Arabic",
+      "reviewHint": "Review the Arabic before saving.",
+      "fallbackUsed": "The primary model failed, so a fallback was used.",
+      "failed": "Translation failed",
+      "empty": "The model returned nothing usable.",
+      "overwriteConfirm": "This will replace the Arabic copy already on this page. Continue?"
     }
   },
   "aiAssistant": {
@@ -2719,7 +2735,8 @@
         "scopeNone": "No template",
         "defaultLayoutWarning": "This template has no variables placed, so certificates will use the built-in default layout.",
         "noTemplateWarning": "No active template at any scope, so completing this course will not issue a certificate."
-      }
+      },
+      "translateHint": "Seeds the Arabic tab from English. Review before saving."
     }
   },
   "lesson": {

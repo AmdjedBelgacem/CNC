@@ -61,9 +61,20 @@ export function AnchorPanel({
     const maxHeight = Math.max(160, flip ? spaceAbove : spaceBelow);
     const width = Math.max(minWidth, rect.width);
 
-    // Keep the panel on screen; the trigger is near the left edge of a full-width toolbar.
+    /*
+     * Align to the trigger's far edge when it sits on the right of the window.
+     *
+     * Right-anchored triggers — the publish checklist, the overflow menu — otherwise got a panel
+     * clamped flush against the viewport edge, straddling the right-hand inspector. Because the
+     * popover and the inspector share a near-identical surface colour, the panel then read as
+     * part of the sidebar rather than floating over it, which looks exactly like a z-index
+     * failure even though the panel is painted above. Opening leftwards, over the canvas, makes
+     * it unambiguous.
+     */
+    const anchoredRight = rect.left > vw / 2;
+    const rawLeft = anchoredRight ? rect.right - width : rect.left;
     const left = Math.min(
-      Math.max(VIEWPORT_MARGIN, rect.left),
+      Math.max(VIEWPORT_MARGIN, rawLeft),
       Math.max(VIEWPORT_MARGIN, vw - width - VIEWPORT_MARGIN),
     );
     const top = flip ? rect.top - gap - maxHeight : rect.bottom + gap;
@@ -126,7 +137,7 @@ export function AnchorPanel({
         // Above the layers sidebar (z-40) and any editor chrome, below modal dialogs (z-[60]).
         zIndex: 55,
       }}
-      className="flex flex-col overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
+      className="flex flex-col overflow-hidden rounded-xl border border-border bg-popover shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
     >
       {children}
     </div>,

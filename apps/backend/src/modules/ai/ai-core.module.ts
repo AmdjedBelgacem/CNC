@@ -6,6 +6,7 @@ import { AiRetrievalService } from './ai-retrieval.service';
 import { AiSafetyService } from './ai-safety.service';
 import { AiSecretService } from './ai-secret.service';
 import { AiSettingsService } from './ai-settings.service';
+import { AiTranslationService } from './ai-translation.service';
 import { AiWebSearchService } from './ai-web-search.service';
 import { AiFeedbackService } from './ai-feedback.service';
 
@@ -17,6 +18,7 @@ const SERVICES = [
   AiSafetyService,
   AiSecretService,
   AiSettingsService,
+  AiTranslationService,
   AiWebSearchService,
   AiFeedbackService,
 ] as const;

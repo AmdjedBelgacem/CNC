@@ -5,6 +5,9 @@ import { useTranslations } from 'next-intl';
 import { Globe, GlobeLock, Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import type { ContentLocale } from '@titan/shared';
+import { TranslateToArabic } from '@/components/admin/translate-to-arabic';
+import { TextAreaField, TextField } from '@/components/admin/admin-form';
 import { toast } from '@/components/ui/toast';
 import { formatMoney } from '@/lib/api/normalize';
 import {
@@ -37,17 +40,33 @@ export interface ProductImage {
 }
 
 interface ProductDetail {
-  id: string; slug: string; title: string; tagline: string | null;
-  description: string | null; features: string[] | null;
-  thumbnailUrl: string | null; mediaUrls: string[] | null;
-  price: number; compareAtPrice: number | null; currency: string;
+  id: string;
+  slug: string;
+  title: string;
+  tagline: string | null;
+  description: string | null;
+  features: string[] | null;
+  thumbnailUrl: string | null;
+  mediaUrls: string[] | null;
+  price: number;
+  compareAtPrice: number | null;
+  currency: string;
   pricingMode?: 'fixed' | 'from' | 'request' | null;
-  inventory: number | null; trackInventory: boolean; allowBackorder: boolean;
-  backorderLeadDays: number | null; isDigital: boolean;
-  isPublished: boolean; isArchived: boolean; featured: boolean;
-  category: string | null; tags: string[] | null;
-  sortOrder: number | null; academyId: string | null; courseId: string | null;
-  seoTitle: string | null; seoDescription: string | null;
+  inventory: number | null;
+  trackInventory: boolean;
+  allowBackorder: boolean;
+  backorderLeadDays: number | null;
+  isDigital: boolean;
+  isPublished: boolean;
+  isArchived: boolean;
+  featured: boolean;
+  category: string | null;
+  tags: string[] | null;
+  sortOrder: number | null;
+  academyId: string | null;
+  courseId: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
   updatedAt: string;
   images?: ProductImage[] | null;
   pinpoints?: any[] | null;
@@ -55,6 +74,17 @@ interface ProductDetail {
   academy?: { id: string; title: string; slug: string } | null;
   course?: { id: string; title: string; slug: string } | null;
   variants?: unknown[];
+  translations?: Partial<
+    Record<
+      ContentLocale,
+      {
+        title?: string;
+        tagline?: string | null;
+        description?: string | null;
+        features?: string[] | null;
+      }
+    >
+  > | null;
 }
 
 /** The form value that a saved product corresponds to, used for dirty tracking. */
@@ -86,6 +116,14 @@ function baselineOf(p: ProductDetail): ProductFormValue {
     thumbnailUrl: p.thumbnailUrl ?? null,
     pinpoints: (p as any).pinpoints ?? [],
     documents: (p as any).documents ?? [],
+    translationsAr: {
+      title: p.translations?.ar?.title ?? '',
+      tagline: p.translations?.ar?.tagline ?? '',
+      description: p.translations?.ar?.description ?? '',
+      features: Array.isArray(p.translations?.ar?.features)
+        ? p.translations.ar.features!.join('\n')
+        : '',
+    },
   };
 }
 
@@ -167,7 +205,9 @@ export default function ProductEditorPage() {
         const body = (err as { body?: { message?: string } }).body;
         setError(
           body?.message ??
-            t('saveConflict', { default: 'This product changed since you opened it. Reload before saving.' }),
+            t('saveConflict', {
+              default: 'This product changed since you opened it. Reload before saving.',
+            }),
         );
         return;
       }
@@ -189,8 +229,13 @@ export default function ProductEditorPage() {
         void load();
       }
     } catch (e) {
-      const message = e instanceof Error ? e.message : t('saveFailedGeneric', { default: 'Save failed' });
-      toast({ type: 'err', title: t('saveFailedGeneric', { default: 'Save failed' }), description: message });
+      const message =
+        e instanceof Error ? e.message : t('saveFailedGeneric', { default: 'Save failed' });
+      toast({
+        type: 'err',
+        title: t('saveFailedGeneric', { default: 'Save failed' }),
+        description: message,
+      });
     } finally {
       setSaving(false);
     }
@@ -210,8 +255,13 @@ export default function ProductEditorPage() {
       });
       void load();
     } catch (e) {
-      const message = e instanceof Error ? e.message : t('actionFailed', { default: 'Action failed' });
-      toast({ type: 'err', title: t('actionFailed', { default: 'Action failed' }), description: message });
+      const message =
+        e instanceof Error ? e.message : t('actionFailed', { default: 'Action failed' });
+      toast({
+        type: 'err',
+        title: t('actionFailed', { default: 'Action failed' }),
+        description: message,
+      });
     } finally {
       setPublishing(false);
     }
@@ -220,7 +270,10 @@ export default function ProductEditorPage() {
   const handleDelete = async () => {
     if (!product) return;
     const ok = window.confirm(
-      t('confirmDelete', { title: product.title, default: 'Delete "{title}"? This cannot be undone.' }),
+      t('confirmDelete', {
+        title: product.title,
+        default: 'Delete "{title}"? This cannot be undone.',
+      }),
     );
     if (!ok) return;
     setBusy(true);
@@ -229,8 +282,13 @@ export default function ProductEditorPage() {
       toast({ type: 'ok', title: t('deleted', { default: 'Product deleted' }) });
       router.push('/admin/products');
     } catch (e) {
-      const message = e instanceof Error ? e.message : t('deleteFailed', { default: 'Delete failed' });
-      toast({ type: 'err', title: t('deleteFailed', { default: 'Delete failed' }), description: message });
+      const message =
+        e instanceof Error ? e.message : t('deleteFailed', { default: 'Delete failed' });
+      toast({
+        type: 'err',
+        title: t('deleteFailed', { default: 'Delete failed' }),
+        description: message,
+      });
     } finally {
       setBusy(false);
     }
@@ -287,7 +345,13 @@ export default function ProductEditorPage() {
         actions={
           <>
             <BarButton
-              icon={product.isPublished ? <GlobeLock className="size-4" /> : <Globe className="size-4" />}
+              icon={
+                product.isPublished ? (
+                  <GlobeLock className="size-4" />
+                ) : (
+                  <Globe className="size-4" />
+                )
+              }
               disabled={publishing}
               onClick={() => void togglePublish()}
             >
@@ -297,7 +361,11 @@ export default function ProductEditorPage() {
                     default: product.isPublished ? 'Unpublish' : 'Publish',
                   })}
             </BarButton>
-            <BarButton icon={<Trash2 className="size-4" />} disabled={busy} onClick={() => void handleDelete()}>
+            <BarButton
+              icon={<Trash2 className="size-4" />}
+              disabled={busy}
+              onClick={() => void handleDelete()}
+            >
               {t('delete', { default: 'Delete' })}
             </BarButton>
           </>
@@ -308,7 +376,9 @@ export default function ProductEditorPage() {
             disabled={!dirty || saving || uploadingCount > 0}
             onClick={() => void save()}
           >
-            {saving ? t('saving', { default: 'Saving…' }) : t('saveChanges', { default: 'Save changes' })}
+            {saving
+              ? t('saving', { default: 'Saving…' })
+              : t('saveChanges', { default: 'Save changes' })}
           </BarPrimaryButton>
         }
       />
@@ -320,7 +390,9 @@ export default function ProductEditorPage() {
           badge={
             <StatusPill
               label={t(`status.${statusKey}`, { default: statusKey })}
-              tone={statusKey === 'published' ? 'emerald' : statusKey === 'draft' ? 'amber' : 'slate'}
+              tone={
+                statusKey === 'published' ? 'emerald' : statusKey === 'draft' ? 'amber' : 'slate'
+              }
               pulse={statusKey === 'published'}
               className={cn('self-start md:self-auto')}
             />
@@ -342,6 +414,80 @@ export default function ProductEditorPage() {
 
         <div className="space-y-5">
           <ProductFormSections value={value} set={set} />
+          {/*
+            Arabic copy. The column and storefront search already understood `translations`, but
+            nothing in the admin could set it, so this is where a bilingual product actually gets
+            made. Translation is offered as a starting point and stays editable by hand.
+          */}
+          <div className="rounded-2xl border border-border bg-card p-4" dir="rtl">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {t('arabicCopy', { default: 'Arabic copy' })}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('arabicCopyHint', {
+                    default: 'Shown to Arabic visitors. Leave blank to fall back to English.',
+                  })}
+                </p>
+              </div>
+              <TranslateToArabic
+                entity="product copy"
+                hasArabic={Boolean(
+                  value.translationsAr.title ||
+                  value.translationsAr.tagline ||
+                  value.translationsAr.description ||
+                  value.translationsAr.features,
+                )}
+                fields={{
+                  Title: value.title,
+                  Tagline: value.tagline,
+                  Description: value.description,
+                  'Bullet points (one per line)': value.features,
+                }}
+                onTranslated={(tr) => {
+                  set('translationsAr', {
+                    title: tr.Title ?? value.translationsAr.title,
+                    tagline: tr.Tagline ?? value.translationsAr.tagline,
+                    description: tr.Description ?? value.translationsAr.description,
+                    features: tr['Bullet points (one per line)'] ?? value.translationsAr.features,
+                  });
+                }}
+              />
+            </div>
+            <div className="mt-4 grid gap-4">
+              <TextField
+                label={t('arabicTitle', { default: 'Arabic title' })}
+                value={value.translationsAr.title}
+                onChange={(e) =>
+                  set('translationsAr', { ...value.translationsAr, title: e.target.value })
+                }
+              />
+              <TextField
+                label={t('arabicTagline', { default: 'Arabic tagline' })}
+                value={value.translationsAr.tagline}
+                onChange={(e) =>
+                  set('translationsAr', { ...value.translationsAr, tagline: e.target.value })
+                }
+              />
+              <TextAreaField
+                label={t('arabicDescription', { default: 'Arabic description' })}
+                value={value.translationsAr.description}
+                onChange={(e) =>
+                  set('translationsAr', { ...value.translationsAr, description: e.target.value })
+                }
+                rows={5}
+              />
+              <TextAreaField
+                label={t('arabicFeatures', { default: 'Arabic bullet points (one per line)' })}
+                value={value.translationsAr.features}
+                onChange={(e) =>
+                  set('translationsAr', { ...value.translationsAr, features: e.target.value })
+                }
+                rows={4}
+              />
+            </div>
+          </div>
 
           <section className="rounded-2xl border border-border bg-background p-4 sm:p-6">
             <h2 className="text-sm font-semibold text-foreground">

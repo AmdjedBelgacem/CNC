@@ -7,10 +7,14 @@ import type { ContentLocale } from '@titan/shared';
 import { FormSection, TextField, TextAreaField } from '@/components/admin/admin-form';
 import type { CourseStudioData } from './types';
 import { toast } from '@/components/ui/toast';
+import { TranslateToArabic } from '@/components/admin/translate-to-arabic';
 import { uploadFileToStorage } from '@/lib/upload';
 
-
-function valueFor(course: CourseStudioData, locale: ContentLocale, field: 'seoTitle' | 'seoDescription' | 'seoKeywords') {
+function valueFor(
+  course: CourseStudioData,
+  locale: ContentLocale,
+  field: 'seoTitle' | 'seoDescription' | 'seoKeywords',
+) {
   if (locale === 'en') return course[field] ?? '';
   return course.translations?.[locale]?.[field] ?? '';
 }
@@ -33,6 +37,22 @@ export function StepLocalization({
   const seoDescription = valueFor(course, locale, 'seoDescription');
   const seoKeywords = valueFor(course, locale, 'seoKeywords');
 
+  /**
+   * Seed the Arabic SEO fields from the English ones with the configured AI provider.
+   *
+   * Only available while the English tab is showing, because the source is the English column —
+   * the English values live at the top level and the Arabic ones under `translations.ar`.
+   */
+  const translateToArabic = (translations: Record<string, string>) => {
+    const current = course.translations?.ar ?? {};
+    update({
+      translations: {
+        ...(course.translations ?? {}),
+        ar: { ...current, ...(translations as Record<string, string>) },
+      },
+    });
+  };
+
   const updateLocalized = (field: 'seoTitle' | 'seoDescription' | 'seoKeywords', value: string) => {
     if (locale === 'en') {
       update({ [field]: value || null });
@@ -50,7 +70,11 @@ export function StepLocalization({
   const handleOgFile = async (file?: File | null) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast({ type: 'err', title: tMedia('notAnImage', { default: 'Not an image' }), description: tMedia('chooseImageFile', { default: 'Please choose an image file.' }) });
+      toast({
+        type: 'err',
+        title: tMedia('notAnImage', { default: 'Not an image' }),
+        description: tMedia('chooseImageFile', { default: 'Please choose an image file.' }),
+      });
       return;
     }
     setOgUploading(true);
@@ -59,7 +83,14 @@ export function StepLocalization({
       update({ ogImageUrl: result.url });
       toast({ type: 'ok', title: tMedia('imageUploaded', { default: 'Image uploaded' }) });
     } catch (error) {
-      toast({ type: 'err', title: tMedia('uploadFailed', { default: 'Upload failed' }), description: error instanceof Error ? error.message : tMedia('tryAgain', { default: 'Please try again.' }) });
+      toast({
+        type: 'err',
+        title: tMedia('uploadFailed', { default: 'Upload failed' }),
+        description:
+          error instanceof Error
+            ? error.message
+            : tMedia('tryAgain', { default: 'Please try again.' }),
+      });
     } finally {
       setOgUploading(false);
     }
@@ -70,15 +101,29 @@ export function StepLocalization({
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-foreground">{t('studio.languageAvailability', { default: 'Language availability' })}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{t('studio.localeFieldsHint', { default: 'Public responses include the resolved locale and any fallback fields.' })}</p>
+            <p className="text-sm font-semibold text-foreground">
+              {t('studio.languageAvailability', { default: 'Language availability' })}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t('studio.localeFieldsHint', {
+                default: 'Public responses include the resolved locale and any fallback fields.',
+              })}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {(['en', 'ar'] as ContentLocale[]).map((item) => {
-              const available = item === 'en' || Boolean(course.translations?.[item] && Object.keys(course.translations[item] ?? {}).length);
+              const available =
+                item === 'en' ||
+                Boolean(
+                  course.translations?.[item] &&
+                  Object.keys(course.translations[item] ?? {}).length,
+                );
               const active = item === locale;
               return (
-                <span key={item} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${active ? 'border-primary bg-primary/10 text-primary' : available ? 'border-success/30 bg-success/10 text-success' : 'border-border bg-muted text-muted-foreground'}`}>
+                <span
+                  key={item}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${active ? 'border-primary bg-primary/10 text-primary' : available ? 'border-success/30 bg-success/10 text-success' : 'border-border bg-muted text-muted-foreground'}`}
+                >
                   {available && <Check className="size-3.5" />}
                   {item === 'ar' ? 'العربية' : 'English'}
                   {!available && t('studio.fallbackSuffix', { default: ' · fallback' })}
@@ -87,9 +132,38 @@ export function StepLocalization({
             })}
           </div>
         </div>
+        {locale === 'en' && (course.seoTitle || course.seoDescription || course.seoKeywords) ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+            <TranslateToArabic
+              entity="course SEO metadata"
+              fields={{
+                'SEO title': course.seoTitle ?? '',
+                'SEO description': course.seoDescription ?? '',
+                'SEO keywords': course.seoKeywords ?? '',
+              }}
+              hasArabic={Boolean(
+                course.translations?.ar && Object.keys(course.translations.ar).length,
+              )}
+              onTranslated={translateToArabic}
+            />
+            <span className="text-xs text-muted-foreground">
+              {t('studio.translateHint', {
+                default: 'Seeds the Arabic tab from English. Review before saving.',
+              })}
+            </span>
+          </div>
+        ) : null}
+
         <div className="mt-4 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
           <Languages className="size-4 text-primary" />
-          {locale === 'ar' ? t('studio.arabicFieldsNote', { default: 'Arabic fields are saved as translations; empty fields fall back to English.' }) : t('studio.englishFieldsNote', { default: 'English is the source language. Use the header toggle to edit Arabic.' })}
+          {locale === 'ar'
+            ? t('studio.arabicFieldsNote', {
+                default:
+                  'Arabic fields are saved as translations; empty fields fall back to English.',
+              })
+            : t('studio.englishFieldsNote', {
+                default: 'English is the source language. Use the header toggle to edit Arabic.',
+              })}
         </div>
       </div>
 
@@ -97,7 +171,8 @@ export function StepLocalization({
         title={t('studio.searchSection', { default: 'Search appearance' })}
         icon={Search}
         description={t('studio.searchSectionDesc', {
-          default: 'Optional overrides. Anything left blank falls back to the course title and description.',
+          default:
+            'Optional overrides. Anything left blank falls back to the course title and description.',
         })}
       >
         <div className="space-y-4">
@@ -106,7 +181,9 @@ export function StepLocalization({
             dir="auto"
             value={seoTitle}
             onChange={(event) => updateLocalized('seoTitle', event.target.value)}
-            placeholder={t('studio.seoTitlePlaceholder', { default: 'Appears in search results and browser tabs' })}
+            placeholder={t('studio.seoTitlePlaceholder', {
+              default: 'Appears in search results and browser tabs',
+            })}
           />
           <TextAreaField
             label={t('studio.seoDescription', { default: 'SEO description' })}
@@ -114,12 +191,15 @@ export function StepLocalization({
             rows={3}
             value={seoDescription}
             onChange={(event) => updateLocalized('seoDescription', event.target.value)}
-            placeholder={t('studio.seoDescriptionPlaceholder', { default: 'A concise summary for search engines' })}
+            placeholder={t('studio.seoDescriptionPlaceholder', {
+              default: 'A concise summary for search engines',
+            })}
             error={
               seoDescription.length > 160
                 ? t('studio.seoTooLong', {
                     count: seoDescription.length - 160,
-                    default: '{count} characters over the 160-character limit. Search engines will truncate it.',
+                    default:
+                      '{count} characters over the 160-character limit. Search engines will truncate it.',
                   })
                 : undefined
             }
@@ -133,7 +213,9 @@ export function StepLocalization({
             dir="auto"
             value={seoKeywords}
             onChange={(event) => updateLocalized('seoKeywords', event.target.value)}
-            placeholder={t('studio.keywordsPlaceholder', { default: 'cnc, machining, manufacturing' })}
+            placeholder={t('studio.keywordsPlaceholder', {
+              default: 'cnc, machining, manufacturing',
+            })}
           />
         </div>
       </FormSection>
@@ -145,26 +227,63 @@ export function StepLocalization({
           default: 'Shown when the course link is pasted into social apps and chat.',
         })}
       >
-      <div className="space-y-1.5">
-        <span className="text-xs font-semibold text-foreground">{t('studio.ogImage', { default: 'Social preview image (OG)' })}</span>
-        <div
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(event) => { event.preventDefault(); setOgDrag(true); }}
-          onDragLeave={() => setOgDrag(false)}
-          onDrop={(event) => { event.preventDefault(); setOgDrag(false); void handleOgFile(event.dataTransfer.files?.[0]); }}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center text-xs transition ${ogDrag ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/50'}`}
-        >
-          {ogUploading ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : <Upload className="size-4 text-muted-foreground/70" />}
-          <p className="font-sans text-muted-foreground">{ogDrag ? tMedia('dropToUpload', { default: 'Drop to upload' }) : tMedia('dropImageHint', { default: 'Drag & drop an image, or click to upload' })}</p>
-        </div>
-        <input ref={inputRef} id="studio-og-image" type="file" accept="image/*" className="hidden" onChange={(event) => { void handleOgFile(event.target.files?.[0]); event.target.value = ''; }} />
-        {course.ogImageUrl && (
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <img src={course.ogImageUrl} alt="" className="h-28 w-44 rounded-xl object-cover shadow-sm" />
-            <button type="button" onClick={() => update({ ogImageUrl: null })} className="shrink-0 rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10">{tMedia('remove', { default: 'Remove' })}</button>
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-foreground">
+            {t('studio.ogImage', { default: 'Social preview image (OG)' })}
+          </span>
+          <div
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setOgDrag(true);
+            }}
+            onDragLeave={() => setOgDrag(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setOgDrag(false);
+              void handleOgFile(event.dataTransfer.files?.[0]);
+            }}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center text-xs transition ${ogDrag ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/50'}`}
+          >
+            {ogUploading ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : (
+              <Upload className="size-4 text-muted-foreground/70" />
+            )}
+            <p className="font-sans text-muted-foreground">
+              {ogDrag
+                ? tMedia('dropToUpload', { default: 'Drop to upload' })
+                : tMedia('dropImageHint', { default: 'Drag & drop an image, or click to upload' })}
+            </p>
           </div>
-        )}
-      </div>
+          <input
+            ref={inputRef}
+            id="studio-og-image"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => {
+              void handleOgFile(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
+          {course.ogImageUrl && (
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <img
+                src={course.ogImageUrl}
+                alt=""
+                className="h-28 w-44 rounded-xl object-cover shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => update({ ogImageUrl: null })}
+                className="shrink-0 rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+              >
+                {tMedia('remove', { default: 'Remove' })}
+              </button>
+            </div>
+          )}
+        </div>
       </FormSection>
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-xs">
         <Link2 className="size-4 shrink-0 text-primary" />

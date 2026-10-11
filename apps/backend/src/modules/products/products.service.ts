@@ -343,6 +343,14 @@ export class ProductsService {
     thumbnailUrl: true, mediaUrls: true, pinpoints: true, documents: true,
     academyId: true, courseId: true, seoTitle: true, seoDescription: true,
     pricingMode: true,
+    /**
+     * Localized copy.
+     *
+     * The column has always existed and storefront search reads it, but it was missing here — so
+     * an admin save carrying Arabic silently dropped it. The unknown-key filter is what made that
+     * invisible: the request succeeded and the field vanished.
+     */
+    translations: true,
   };
 
 

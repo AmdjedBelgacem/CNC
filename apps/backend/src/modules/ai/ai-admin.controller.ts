@@ -16,11 +16,13 @@ import { AiSettingsService } from './ai-settings.service';
 import { AiWebSearchService } from './ai-web-search.service';
 import { AiFeedbackService } from './ai-feedback.service';
 import { AiEvalService } from './ai-eval.service';
+import { AiTranslationService } from './ai-translation.service';
 import {
   AiEvalCaseDto,
   AiEvalRunDto,
   AiReindexDto,
   UpdateAiSettingsDto,
+  TranslateFieldsDto,
   UpdateAiWebSearchDto,
 } from './dto/ai.dto';
 
@@ -38,6 +40,7 @@ export class AiAdminController {
     private readonly webSearch: AiWebSearchService,
     private readonly feedback: AiFeedbackService,
     private readonly evals: AiEvalService,
+    private readonly translation: AiTranslationService,
   ) {}
 
   @Get()
@@ -94,6 +97,29 @@ export class AiAdminController {
       userId: user.id,
       ip: request.ip,
       userAgent: typeof request.headers?.['user-agent'] === 'string' ? request.headers['user-agent'] : undefined,
+    });
+  }
+
+  /**
+   * Translate authored English fields into Arabic using the tenant's configured provider.
+   *
+   * Returns the translations; nothing is persisted. The caller decides whether to write them,
+   * because an editor reviews machine output before it goes live.
+   */
+  @Post('translate')
+  @Permissions('settings:edit')
+  @ApiOperation({
+    summary: 'Translate English content fields into Arabic with the configured AI provider',
+  })
+  translate(
+    @CurrentTenant() tenant: { id: string },
+    @Body() dto: TranslateFieldsDto,
+  ) {
+    return this.translation.translateFields(tenant.id, {
+      sourceLocale: dto.sourceLocale as 'en',
+      targetLocale: dto.targetLocale as 'ar',
+      fields: dto.fields,
+      entity: dto.entity,
     });
   }
 

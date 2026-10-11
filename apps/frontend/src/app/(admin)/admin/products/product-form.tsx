@@ -28,6 +28,20 @@ export interface ProductFormValue {
   slug: string;
   tagline: string;
   description: string;
+  /**
+   * Arabic copy, stored under `translations.ar`.
+   *
+   * The column has always existed and storefront search reads it, but the admin form had no way
+   * to set it — so a bilingual product could only be produced by writing SQL. `features` is a
+   * list and is sent as a block rather than per-bullet, because translating bullets one at a time
+   * loses their alignment with the English list.
+   */
+  translationsAr: {
+    title: string;
+    tagline: string;
+    description: string;
+    features: string;
+  };
   category: string;
   priceCents: string;
   pricingMode: 'fixed' | 'from' | 'request';
@@ -90,6 +104,9 @@ export function useProductForm(initial?: Partial<ProductFormValue>) {
     slug: '',
     tagline: '',
     description: '',
+    // Required on the type, but genuinely optional for a caller that has no Arabic yet — a new
+    // product starts monolingual and stays that way until someone translates it.
+    translationsAr: initial?.translationsAr ?? { title: '', tagline: '', description: '', features: '' },
     category: '',
     priceCents: '',
     pricingMode: 'fixed',
@@ -122,7 +139,22 @@ export function useProductForm(initial?: Partial<ProductFormValue>) {
 }
 
 export function productFormPayload(value: ProductFormValue) {
+  const ar = value.translationsAr;
+  const hasArabic = Boolean(ar.title.trim() || ar.tagline.trim() || ar.description.trim() || ar.features.trim());
   return {
+    translations: hasArabic
+      ? {
+          ar: {
+            title: ar.title.trim() || undefined,
+            tagline: ar.tagline.trim() || null,
+            description: ar.description.trim() || null,
+            features: ar.features
+              .split('\n')
+              .map((line) => line.trim())
+              .filter(Boolean),
+          },
+        }
+      : null,
     title: value.title.trim(),
     slug: value.slug.trim() || slugify(value.title),
     tagline: value.tagline.trim() || null,
