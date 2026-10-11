@@ -127,6 +127,12 @@ describe('every route group provides the skip link', () => {
     // Only one h1 per breakpoint: the mobile-only title is now an h2.
     expect(chat).not.toMatch(/<h1 className="truncate font-display/);
   });
+
+  it('the signed-out gate identifies the page — it is what anonymous visitors see', () => {
+    const chat = read('components/ai/chat-workspace/ai-chat-workspace.tsx');
+    const gate = chat.slice(chat.indexOf('if (!isAuthenticated && authHydrated)'));
+    expect(gate.slice(0, 700)).toMatch(/<h1/);
+  });
 });
 
 describe('the account settings area has a landmark target', () => {

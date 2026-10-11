@@ -285,8 +285,11 @@ export function AiChatWorkspace({
 
 
   if (!isAuthenticated && authHydrated) {
+    // `EmptyState` renders its title as a paragraph, so this signed-out gate had no heading
+    // at all — it is what every anonymous visitor to /ai/chat actually sees.
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-24">
+        <h1 className="sr-only">{t('newChatTitle')}</h1>
         <EmptyState
           icon={Sparkles}
           title={t('signInTitle')}
