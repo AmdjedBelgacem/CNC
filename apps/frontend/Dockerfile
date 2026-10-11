@@ -63,13 +63,15 @@ FROM node:22-bookworm-slim AS runner
 ENV NODE_ENV=production
 WORKDIR /repo
 RUN corepack enable
-# Reuse the deps node_modules — Next start needs it — but own the tree by the
-# node user so no COPY runs as root and nothing needs a chown pass afterwards.
-COPY --from=deps --chown=node:node /repo/node_modules ./node_modules
-COPY --chown=node:node package.json pnpm-workspace.yaml ./
-COPY --from=build --chown=node:node /repo/apps/frontend ./apps/frontend
-COPY --from=build --chown=node:node /repo/packages ./packages
-RUN mkdir -p .next/cache && chown node:node /repo/apps/frontend/.next/cache
+# Next's standalone output, which traces the server's real imports into a pruned tree.
+# This replaces copying the workspace `node_modules` (1.6 GB for three apps) and the whole
+# source tree; the image went from ~4 GB to a few hundred MB, which is what makes it loadable
+# onto a 58 GB host at all.
+COPY --from=build --chown=node:node /repo/apps/frontend/.next/standalone ./
+# Static assets and public files live outside `standalone` and are copied next to it.
+COPY --from=build --chown=node:node /repo/apps/frontend/.next/static ./apps/frontend/.next/static
+COPY --from=build --chown=node:node /repo/apps/frontend/public ./apps/frontend/public
+RUN mkdir -p /repo/apps/frontend/.next/cache && chown -R node:node /repo/apps/frontend/.next
 # The service worker used to be scoped to this build's ID, so a deploy would change the file
 # and its activate handler would clear the previous build's caches. It is now a stub that
 # unregisters and clears caches unconditionally, which needs no build ID and no substitution
@@ -85,4 +87,4 @@ ENV HOST=0.0.0.0
 ENV NODE_OPTIONS="--max-old-space-size=384"
 
 EXPOSE 3000
-CMD ["pnpm", "--dir", "apps/frontend", "start"]
+CMD ["node", "apps/frontend/server.js"]

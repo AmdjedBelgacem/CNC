@@ -6,6 +6,17 @@ import { serverApiUrl } from './src/lib/server-api-url';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
+  /**
+   * Emit a self-contained server bundle.
+   *
+   * Without this the runtime image has to ship the entire monorepo `node_modules` — 1.6 GB of
+   * dependencies for three apps — because `next start` resolves modules from the workspace.
+   * Standalone traces the imports actually reachable from the server entrypoint and bundles
+   * exactly those, which is the difference between a ~4 GB image and a few hundred megabytes.
+   * It also lets `docker load` finish: the 1.7 GB image failed with a spurious
+   * `no space left on device` on the host while a 9 MB image loaded fine.
+   */
+  output: 'standalone',
   turbopack: {
     // Monorepo root, resolved from this file rather than hardcoded. An absolute
     // machine-specific path (`/Users/mac/...`) made Turbopack fail on CI with
