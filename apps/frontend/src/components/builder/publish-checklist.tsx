@@ -13,12 +13,13 @@
  * the message keys those rules return against the catalog.
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, CheckCircle2, CircleAlert } from 'lucide-react';
 import type { PageLayout } from '@titan/shared';
 import { collectPublishIssues } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
+import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { cn } from '@/lib/utils';
 
 export interface PublishRecord {
@@ -52,11 +53,29 @@ export function PublishChecklist({ page }: { page: PublishRecord | null }) {
     );
   }
 
+  /*
+   * Rendered through the same portal as the Add Block menu.
+   *
+   * This was a native `<details>`, so the list expanded in place inside the header toolbar and was
+   * painted underneath the right-hand inspector — the same clipping ancestor that trapped the
+   * block menu, and the errors were unreadable in exactly the situation they matter.
+   */
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const summary = errors.length
+    ? tb('publish.errorCount', { count: errors.length })
+    : tb('publish.warningCount', { count: warnings.length });
+
   return (
-    <details className="group">
-      <summary
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
         className={cn(
-          'flex cursor-pointer list-none items-center gap-1.5 text-2xs',
+          'flex cursor-pointer items-center gap-1.5 text-2xs',
           errors.length ? 'text-destructive' : 'text-warning',
         )}
       >
@@ -65,27 +84,27 @@ export function PublishChecklist({ page }: { page: PublishRecord | null }) {
         ) : (
           <CircleAlert className="size-3.5" aria-hidden />
         )}
-        {errors.length
-          ? tb('publish.errorCount', { count: errors.length })
-          : tb('publish.warningCount', { count: warnings.length })}
-      </summary>
-      <ul className="mt-1.5 space-y-1 ps-1">
-        {issues.map((issue) => (
-          <li key={issue.id} className="flex items-start gap-1.5 text-2xs">
-            <span
-              className={cn(
-                'mt-1 size-1.5 shrink-0 rounded-full',
-                issue.level === 'error' ? 'bg-destructive' : 'bg-warning',
-              )}
-              aria-hidden
-            />
-            <span className="text-muted-foreground">
-              {tb(`publish.${issue.messageKey}` as never, (issue.values ?? {}) as never)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </details>
+        {summary}
+      </button>
+      <AnchorPanel anchorRef={triggerRef} open={open} onDismiss={close} minWidth={340}>
+        <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto p-3 ps-4" aria-label={summary}>
+          {issues.map((issue) => (
+            <li key={issue.id} className="flex items-start gap-1.5 text-2xs">
+              <span
+                className={cn(
+                  'mt-1 size-1.5 shrink-0 rounded-full',
+                  issue.level === 'error' ? 'bg-destructive' : 'bg-warning',
+                )}
+                aria-hidden
+              />
+              <span className="text-muted-foreground">
+                {tb(`publish.${issue.messageKey}` as never, (issue.values ?? {}) as never)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </AnchorPanel>
+    </>
   );
 }
 
@@ -105,10 +124,7 @@ export function useBuilderShortcuts(options: { onDeleteSelected?: () => void } =
       if (!el) return false;
       const tag = el.tagName;
       return (
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        el.isContentEditable === true
+        tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true
       );
     };
 

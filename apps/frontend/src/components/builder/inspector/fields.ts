@@ -5,6 +5,10 @@ import type {
   BadgeProps,
   ButtonProps,
   CardProps,
+  CardGridProps,
+  CatalogHeroProps,
+  ClosingCtaProps,
+  CtaSignupProps,
   CtaBannerProps,
   FaqItemProps,
   FaqProps,
@@ -14,8 +18,10 @@ import type {
   FooterProps,
   GridProps,
   HeadingProps,
+  HeroConsoleProps,
   HeroProps,
   IconProps,
+  ProgramCardProps,
   ImageProps,
   LinkProps,
   NavLinkProps,
@@ -26,9 +32,13 @@ import type {
   StackProps,
   StatItemProps,
   StatsProps,
+  SpotlightCardsProps,
+  TestimonialCardProps,
   TextProps,
+  TwinSectionProps,
 } from '@titan/shared';
-import { Square,
+import {
+  Square,
   AlignLeft,
   Box,
   Braces,
@@ -44,6 +54,7 @@ import { Square,
   Rows3,
   Sparkles,
   Type,
+  Users,
 } from 'lucide-react';
 import {
   defineInspector,
@@ -237,7 +248,7 @@ export const textInspector = defineInspector<TextProps>().groups([
           { label: 'SB', labelKey: 'sb', value: 'semibold' },
           { label: 'B', labelKey: 'b', value: 'bold' },
         ],
-       },
+      },
       {
         key: 'opacity',
         label: 'Opacity',
@@ -322,7 +333,7 @@ export const buttonInspector = defineInspector<ButtonProps>().groups([
           { label: 'M', value: 'md' },
           { label: 'L', labelKey: 'l', value: 'lg' },
         ],
-       },
+      },
       {
         key: 'width',
         label: 'Width',
@@ -573,7 +584,7 @@ export const badgeInspector = defineInspector<BadgeProps>().groups([
           { label: 'S (10px)', value: 'sm' },
           { label: 'M (12px)', value: 'md' },
         ],
-       },
+      },
       { key: 'uppercase', label: 'Uppercase', control: 'toggle' },
       { key: 'color', label: 'Color', control: 'select', options: textColorOptions },
     ],
@@ -638,7 +649,7 @@ export const progressCardInspector = defineInspector<ProgressCardProps>().groups
           { label: 'M', value: 'h-3' },
           { label: 'L', labelKey: 'l', value: 'h-4' },
         ],
-       },
+      },
     ],
   },
   spacingGroup<ProgressCardProps>(),
@@ -883,7 +894,7 @@ export const featureItemInspector = defineInspector<FeatureItemProps>().groups([
           { label: '24px', labelKey: '24px', value: 'gap-6' },
           { label: '32px', labelKey: '32px', value: 'gap-8' },
         ],
-       },
+      },
     ],
   },
   spacingGroup<FeatureItemProps>(),
@@ -913,7 +924,7 @@ export const academyCardInspector = defineInspector<AcademyCardProps>().groups([
           { label: '3XL', value: 'rounded-3xl' },
           { label: '2rem', labelKey: '2rem', value: 'rounded-[2rem]' },
         ],
-       },
+      },
       {
         key: 'contentPadding',
         label: 'Content padding',
@@ -924,7 +935,7 @@ export const academyCardInspector = defineInspector<AcademyCardProps>().groups([
           { label: '32', value: 'p-8' },
           { label: '40', labelKey: '40', value: 'p-10' },
         ],
-       },
+      },
       {
         key: 'mediaAspect',
         label: 'Media aspect',
@@ -935,7 +946,7 @@ export const academyCardInspector = defineInspector<AcademyCardProps>().groups([
           { label: '16:9', value: 'aspect-video' },
           { label: '1:1', labelKey: '1-1', value: 'aspect-square' },
         ],
-       },
+      },
     ],
   },
   spacingGroup<AcademyCardProps>(),
@@ -965,7 +976,7 @@ export const faqItemInspector = defineInspector<FaqItemProps>().groups([
           { label: '32', value: 'px-8' },
           { label: '40', labelKey: '40', value: 'px-10' },
         ],
-       },
+      },
       {
         key: 'buttonPaddingY',
         label: 'Toggle padding Y',
@@ -976,7 +987,7 @@ export const faqItemInspector = defineInspector<FaqItemProps>().groups([
           { label: '24', value: 'py-6' },
           { label: '32', labelKey: '32', value: 'py-8' },
         ],
-       },
+      },
       {
         key: 'answerPaddingX',
         label: 'Answer padding X',
@@ -987,7 +998,7 @@ export const faqItemInspector = defineInspector<FaqItemProps>().groups([
           { label: '32', value: 'px-8' },
           { label: '40', labelKey: '40', value: 'px-10' },
         ],
-       },
+      },
       {
         key: 'answerPaddingBottom',
         label: 'Answer padding bottom',
@@ -998,7 +1009,7 @@ export const faqItemInspector = defineInspector<FaqItemProps>().groups([
           { label: '32', value: 'pb-8' },
           { label: '40', labelKey: '40', value: 'pb-10' },
         ],
-       },
+      },
     ],
   },
   spacingGroup<FaqItemProps>(),
@@ -1021,7 +1032,7 @@ export const footerColInspector = defineInspector<FooterColProps>().groups([
           { label: '16px', value: 'gap-4' },
           { label: '24px', labelKey: '24px', value: 'gap-6' },
         ],
-       },
+      },
     ],
   },
   spacingGroup<FooterColProps>(),
@@ -1089,7 +1100,12 @@ export const sectionInspector = defineInspector<SectionProps>().groups([
     icon: Layers,
     fields: [
       { key: 'bgColor', label: 'Background', control: 'color' },
-      { key: 'bgGradient', label: 'Gradient', control: 'text', hint: 'e.g. linear-gradient(135deg, #0ea5e9, #6366f1)' },
+      {
+        key: 'bgGradient',
+        label: 'Gradient',
+        control: 'text',
+        hint: 'e.g. linear-gradient(135deg, #0ea5e9, #6366f1)',
+      },
       { key: 'bgImage', label: 'Background image', control: 'text', hint: 'Uploaded image URL' },
       { key: 'glass', label: 'Frosted glass', control: 'toggle' },
     ],
@@ -1103,7 +1119,15 @@ export const sectionInspector = defineInspector<SectionProps>().groups([
       { key: 'border', label: 'Width (px)', control: 'number', min: 0, max: 16 },
       { key: 'borderColor', label: 'Border colour', control: 'color' },
       { key: 'radius', label: 'Corner radius (px)', control: 'number', min: 0, max: 64 },
-      { key: 'overflow', label: 'Overflow', control: 'select', options: [{ value: 'hidden', label: 'Clip' }, { value: 'visible', label: 'Visible' }] },
+      {
+        key: 'overflow',
+        label: 'Overflow',
+        control: 'select',
+        options: [
+          { value: 'hidden', label: 'Clip' },
+          { value: 'visible', label: 'Visible' },
+        ],
+      },
     ],
   },
   {
@@ -1194,7 +1218,7 @@ export const navInspector = defineInspector<NavProps>().groups([
           { label: '12px', labelKey: '12px', value: 'py-3' },
           { label: '16px', labelKey: '16px', value: 'py-4' },
         ],
-       },
+      },
       {
         key: 'containerRadius',
         label: 'Corners',
@@ -1206,7 +1230,7 @@ export const navInspector = defineInspector<NavProps>().groups([
           { label: 'XL', labelKey: 'xl', value: 'rounded-2xl' },
           { label: '2XL', labelKey: '2xl', value: 'rounded-3xl' },
         ],
-       },
+      },
     ],
   },
   advancedGroup<NavProps>(),
@@ -1289,7 +1313,11 @@ export const heroInspector = defineInspector<HeroProps>().groups([
         labelKey: 'content-padding-x',
         control: 'select',
         options: [
-          { label: 'Theme mobile margin', labelKey: 'theme-mobile-margin', value: 'px-margin-mobile' },
+          {
+            label: 'Theme mobile margin',
+            labelKey: 'theme-mobile-margin',
+            value: 'px-margin-mobile',
+          },
           { label: '16px', labelKey: '16px', value: 'px-4' },
           { label: '24px', labelKey: '24px', value: 'px-6' },
           { label: '32px', labelKey: '32px', value: 'px-8' },
@@ -1402,7 +1430,7 @@ export const statsInspector = defineInspector<StatsProps>().groups([
           { label: '1', value: 'grid-cols-1' },
           { label: '2', value: 'grid-cols-2' },
         ],
-       },
+      },
       {
         key: 'columnsSm',
         label: 'Columns (sm+)',
@@ -1412,7 +1440,7 @@ export const statsInspector = defineInspector<StatsProps>().groups([
           { label: '2', value: 'sm:grid-cols-2' },
           { label: '3', value: 'sm:grid-cols-3' },
         ],
-       },
+      },
       {
         key: 'columnsLg',
         label: 'Columns (lg+)',
@@ -1423,7 +1451,7 @@ export const statsInspector = defineInspector<StatsProps>().groups([
           { label: '3', value: 'lg:grid-cols-3' },
           { label: '4', labelKey: '4', value: 'lg:grid-cols-4' },
         ],
-       },
+      },
       {
         key: 'gap',
         label: 'Gap',
@@ -1435,7 +1463,7 @@ export const statsInspector = defineInspector<StatsProps>().groups([
           { label: '32', labelKey: '32', value: 'gap-8' },
           { label: '48', labelKey: '48', value: 'gap-12' },
         ],
-       },
+      },
     ],
   },
   advancedGroup<StatsProps>(),
@@ -1576,7 +1604,7 @@ export const academyGridInspector = defineInspector<AcademyGridProps>().groups([
           { label: '2', value: 'md:grid-cols-2' },
           { label: '3', value: 'md:grid-cols-3' },
         ],
-       },
+      },
       {
         key: 'cardsGap',
         label: 'Card gap',
@@ -1587,7 +1615,7 @@ export const academyGridInspector = defineInspector<AcademyGridProps>().groups([
           { label: '32', value: 'gap-8' },
           { label: '40', labelKey: '40', value: 'gap-10' },
         ],
-       },
+      },
     ],
   },
   advancedGroup<AcademyGridProps>(),
@@ -1643,7 +1671,7 @@ export const ctaBannerInspector = defineInspector<CtaBannerProps>().groups([
           { label: '3rem', labelKey: '3rem', value: 'rounded-[3rem]' },
           { label: '4rem', labelKey: '4rem', value: 'rounded-[4rem]' },
         ],
-       },
+      },
     ],
   },
   {
@@ -1673,7 +1701,7 @@ export const ctaBannerInspector = defineInspector<CtaBannerProps>().groups([
           { label: '3/5', value: 'lg:w-3/5' },
           { label: '2/3', labelKey: '2-3', value: 'lg:w-2/3' },
         ],
-       },
+      },
       {
         key: 'sideWidth',
         label: 'Side column (lg+)',
@@ -1684,7 +1712,7 @@ export const ctaBannerInspector = defineInspector<CtaBannerProps>().groups([
           { label: '2/5', value: 'lg:w-2/5' },
           { label: '1/2', labelKey: '1-2', value: 'lg:w-1/2' },
         ],
-       },
+      },
     ],
   },
   advancedGroup<CtaBannerProps>(),
@@ -1729,7 +1757,7 @@ export const faqInspector = defineInspector<FaqProps>().groups([
           { label: '16px', value: 'flex flex-col gap-4' },
           { label: '24px', labelKey: '24px', value: 'flex flex-col gap-6' },
         ],
-       },
+      },
       {
         key: 'footerMarginTop',
         label: 'Footer top margin',
@@ -1762,7 +1790,7 @@ export const footerInspector = defineInspector<FooterProps>().groups([
           { label: '2', value: 'sm:grid-cols-2' },
           { label: '3', value: 'sm:grid-cols-3' },
         ],
-       },
+      },
       {
         key: 'columnsLg',
         label: 'Columns (md+)',
@@ -1772,7 +1800,7 @@ export const footerInspector = defineInspector<FooterProps>().groups([
           { label: '3', value: 'md:grid-cols-3' },
           { label: '4', value: 'md:grid-cols-4' },
         ],
-       },
+      },
       {
         key: 'gridGap',
         label: 'Column gap',
@@ -1783,7 +1811,7 @@ export const footerInspector = defineInspector<FooterProps>().groups([
           { label: '48px', value: 'gap-12' },
           { label: '64px', labelKey: '64px', value: 'gap-16' },
         ],
-       },
+      },
       {
         key: 'bottomGap',
         label: 'Bottom bar gap',
@@ -1793,13 +1821,289 @@ export const footerInspector = defineInspector<FooterProps>().groups([
           { label: '16px', value: 'gap-4' },
           { label: '32px', value: 'gap-8' },
         ],
-       },
+      },
     ],
   },
   advancedGroup<FooterProps>(),
   spacingGroup<FooterProps>(),
 ]); // ------------------------------------------------------------------ registry
 import type { InspectorBlockDef } from './types';
+
+/*
+ * Definitions for blocks that previously had none.
+ *
+ * Twelve of the forty-one registered blocks had no entry in `BLOCK_INSPECTOR`, so selecting them
+ * fell through to the "no editable properties" panel. Several of those hold the page's copy —
+ * Spotlight Cards, Closing CTA, Card Grid, CTA Signup — and their headings, body text and button
+ * labels could not be edited anywhere except raw JSON.
+ *
+ * `program-cards` and `testimonials` are deliberately absent: they render live records, so their
+ * text belongs to the data, not the layout. They are covered by the dynamic-content notice.
+ */
+export const spotlightCardsInspector = defineInspector<SpotlightCardsProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'eyebrow', label: 'Eyebrow', control: 'text' },
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'subtitle', label: 'Subtitle', control: 'textarea' },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      {
+        key: 'band',
+        label: 'Band',
+        control: 'select',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Sunken', value: 'sunken' },
+        ],
+      },
+      { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+    ],
+  },
+]);
+
+export const closingCtaInspector = defineInspector<ClosingCtaProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'eyebrow', label: 'Eyebrow', control: 'text' },
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'body', label: 'Body', control: 'textarea' },
+    ],
+  },
+  {
+    id: 'actions',
+    title: 'Buttons',
+    titleKey: 'actions',
+    icon: MousePointerClick,
+    fields: [
+      { key: 'primaryLabel', label: 'Primary label', control: 'text' },
+      { key: 'primaryHref', label: 'Primary link', control: 'text', placeholder: '/path' },
+      { key: 'secondaryLabel', label: 'Secondary label', control: 'text' },
+      { key: 'secondaryHref', label: 'Secondary link', control: 'text', placeholder: '/path' },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      { key: 'borderTop', label: 'Top border', control: 'toggle' },
+      { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+    ],
+  },
+]);
+
+export const cardGridInspector = defineInspector<CardGridProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'eyebrow', label: 'Eyebrow', control: 'text' },
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'subtitle', label: 'Subtitle', control: 'textarea' },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      { key: 'showNumbers', label: 'Show numbers', control: 'toggle' },
+      {
+        key: 'columns',
+        label: 'Columns',
+        control: 'select',
+        options: [
+          { label: '3 columns', value: 'md:grid-cols-3' },
+          { label: '2 columns', value: 'md:grid-cols-2' },
+        ],
+      },
+      {
+        key: 'band',
+        label: 'Band',
+        control: 'select',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Sunken', value: 'sunken' },
+        ],
+      },
+      { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+    ],
+  },
+]);
+
+export const ctaSignupInspector = defineInspector<CtaSignupProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'pill', label: 'Pill', control: 'text' },
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'subtitle', label: 'Subtitle', control: 'textarea' },
+      { key: 'note', label: 'Small print', control: 'textarea' },
+    ],
+  },
+  {
+    id: 'form',
+    title: 'Form',
+    titleKey: 'form',
+    icon: MousePointerClick,
+    fields: [
+      { key: 'placeholder', label: 'Input placeholder', control: 'text' },
+      { key: 'buttonLabel', label: 'Button label', control: 'text' },
+      { key: 'formAction', label: 'Form action', control: 'text', placeholder: '/register' },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+    ],
+  },
+]);
+
+export const heroConsoleInspector = defineInspector<HeroConsoleProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'imageAlt', label: 'Background image alt text', control: 'text' },
+      { key: 'fileName', label: 'File name', control: 'text' },
+      { key: 'syncLabel', label: 'Sync label', control: 'text' },
+      { key: 'auditTitle', label: 'Audit title', control: 'text' },
+    ],
+  },
+  {
+    id: 'media',
+    title: 'Media',
+    titleKey: 'media',
+    icon: ImageIcon,
+    fields: [
+      { key: 'imageUrl', label: 'Background image URL', control: 'text', placeholder: 'https://…' },
+    ],
+  },
+]);
+
+export const twinSectionInspector = defineInspector<TwinSectionProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'fileName', label: 'File name', control: 'text' },
+      { key: 'statusLabel', label: 'Status label', control: 'text' },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      { key: 'sectionBg', label: 'Section background', control: 'text' },
+      { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+    ],
+  },
+]);
+
+export const programCardInspector = defineInspector<ProgramCardProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'level', label: 'Level', control: 'text' },
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'description', label: 'Description', control: 'textarea' },
+      { key: 'tags', label: 'Tags', control: 'text' },
+      { key: 'duration', label: 'Duration', control: 'text' },
+      { key: 'metaLabel', label: 'Meta line', control: 'text' },
+    ],
+  },
+  {
+    id: 'instructor',
+    title: 'Instructor',
+    titleKey: 'instructor',
+    icon: Users,
+    fields: [
+      { key: 'instructorInitials', label: 'Initials', control: 'text' },
+      { key: 'instructorName', label: 'Name', control: 'text' },
+    ],
+  },
+  {
+    id: 'actions',
+    title: 'Button',
+    titleKey: 'actions',
+    icon: MousePointerClick,
+    fields: [
+      { key: 'ctaLabel', label: 'Label', control: 'text' },
+      { key: 'href', label: 'Link', control: 'text', placeholder: '/path' },
+    ],
+  },
+]);
+
+export const testimonialCardInspector = defineInspector<TestimonialCardProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'quote', label: 'Quote', control: 'textarea' },
+      { key: 'name', label: 'Name', control: 'text' },
+      { key: 'role', label: 'Role', control: 'text' },
+      { key: 'rating', label: 'Rating', control: 'number', min: 0, max: 5 },
+    ],
+  },
+]);
+
+export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'eyebrow', label: 'Eyebrow', control: 'text' },
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'titleAccent', label: 'Title accent', control: 'text' },
+      { key: 'subtitle', label: 'Subtitle', control: 'textarea' },
+    ],
+  },
+]);
+
 export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   heading: { label: 'Heading', groups: headingInspector.groups },
   text: { label: 'Text', groups: textInspector.groups },
@@ -1830,4 +2134,13 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   'cta-banner': { label: 'CTA Banner', groups: ctaBannerInspector.groups },
   faq: { label: 'FAQ', groups: faqInspector.groups },
   footer: { label: 'Footer', groups: footerInspector.groups },
+  'spotlight-cards': { label: 'Spotlight Cards', groups: spotlightCardsInspector.groups },
+  'closing-cta': { label: 'Closing CTA', groups: closingCtaInspector.groups },
+  'card-grid': { label: 'Card Grid', groups: cardGridInspector.groups },
+  'cta-signup': { label: 'CTA Signup Band', groups: ctaSignupInspector.groups },
+  'hero-console': { label: 'Hero + Sim Console', groups: heroConsoleInspector.groups },
+  'twin-section': { label: 'Digital Twin', groups: twinSectionInspector.groups },
+  'program-card': { label: 'Program Card', groups: programCardInspector.groups },
+  'testimonial-card': { label: 'Testimonial Card', groups: testimonialCardInspector.groups },
+  'catalog-hero': { label: 'Catalog Hero', groups: catalogHeroInspector.groups },
 };

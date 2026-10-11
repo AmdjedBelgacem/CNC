@@ -121,3 +121,84 @@ describe('every element on a page is individually reachable', () => {
     expect(tree).toMatch(/tree\.ancestors\.get\(selectedId\)/);
   });
 });
+
+describe('every block is either editable or explains why it is not', () => {
+  /**
+   * Twelve of the forty-one registered blocks had no `BLOCK_INSPECTOR` entry, so selecting them
+   * fell through to "This block has no editable properties". Several hold the page's copy —
+   * Spotlight Cards, Closing CTA, Card Grid, CTA Signup — and their headings, body text and button
+   * labels were editable only as raw JSON.
+   */
+  const fields = read('components/builder/inspector/fields.ts');
+  const notice = read('components/builder/inspector/dynamic-content-notice.tsx');
+
+  it('the composite blocks that hold copy now have inspector definitions', () => {
+    for (const type of [
+      'spotlight-cards',
+      'closing-cta',
+      'card-grid',
+      'cta-signup',
+      'hero-console',
+      'twin-section',
+      'program-card',
+      'testimonial-card',
+      'catalog-hero',
+    ]) {
+      expect(fields).toMatch(new RegExp(`'${type}':\\s*\\{ label:`));
+    }
+  });
+
+  it('those definitions expose the text fields, not only appearance', () => {
+    // Eyebrow/title/subtitle/body/label are the copy an editor wants to change.
+    expect(fields).toMatch(/key: 'eyebrow', label: 'Eyebrow', control: 'text'/);
+    expect(fields).toMatch(/key: 'subtitle', label: 'Subtitle', control: 'textarea'/);
+    expect(fields).toMatch(/key: 'body', label: 'Body', control: 'textarea'/);
+    expect(fields).toMatch(/key: 'primaryLabel', label: 'Primary label', control: 'text'/);
+    expect(fields).toMatch(/key: 'quote', label: 'Quote', control: 'textarea'/);
+  });
+
+  it('data-driven blocks are labelled as dynamic instead of silently uneditable', () => {
+    for (const type of [
+      'academy-grid',
+      'program-cards',
+      'testimonials',
+      'partner-logos',
+      'catalog-hero',
+      'live-island',
+    ]) {
+      expect(notice).toMatch(new RegExp(`['\\"]?${type}['\\"]?\\s*:`));
+    }
+    expect(notice).toMatch(/Dynamic content/);
+    // It must name where the content actually lives, not just say "dynamic".
+    expect(notice).toMatch(/href:/);
+  });
+
+  it('the notice renders in the inspector, including the no-properties fallback', () => {
+    const inspector = read('components/builder/inspector/smart-inspector.tsx');
+    expect(inspector).toMatch(/<DynamicContentNotice type=\{selected\.type\} \/>/);
+    // Twice: once above the field groups, once above the "no editable properties" panel.
+    expect((inspector.match(/<DynamicContentNotice/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('the publish checklist dropdown is not trapped by the inspector', () => {
+  const checklist = read('components/builder/publish-checklist.tsx');
+
+  /**
+   * It was a native `<details>`, so the list expanded in place inside the header toolbar and was
+   * painted under the right-hand inspector — unreadable in exactly the situation it exists for.
+   */
+  it('uses the same portal as the other popovers', () => {
+    expect(checklist).toMatch(/<AnchorPanel/);
+    // `<details>` survives only in the comment explaining why it was replaced.
+    const code = checklist.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(code).not.toMatch(/<details/);
+    expect(code).not.toMatch(/<summary/);
+  });
+
+  it('still exposes the error and warning counts on the trigger', () => {
+    expect(checklist).toMatch(/publish\.errorCount/);
+    expect(checklist).toMatch(/publish\.warningCount/);
+    expect(checklist).toMatch(/aria-expanded=\{open\}/);
+  });
+});

@@ -7,6 +7,7 @@ import { ChevronDown, MousePointerClick, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JsonInspectorSection } from '../node-inspector';
 import { BLOCK_INSPECTOR } from './fields';
+import { DynamicContentNotice } from './dynamic-content-notice';
 import type { InspectorGroup, InspectorFieldDef } from './types';
 import {
   useInspectorText,
@@ -58,11 +59,12 @@ export function SmartInspector() {
       data: { ...selected, props: newProps },
     });
   }; // Selected block without an inspector definition (chrome blocks etc.) gets a // lightweight fallback panel so the sidebar never looks broken.
-if (!def) {
+  if (!def) {
     return (
       <div key={selected.props.id} className="flex min-h-0 flex-1 flex-col">
         {' '}
         <InspectorHeader type={selected.type} label={selected.type} />{' '}
+        <DynamicContentNotice type={selected.type} />{' '}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
           {' '}
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -82,7 +84,11 @@ if (!def) {
   return (
     <div key={selected.props.id} className="flex min-h-0 flex-1 flex-col">
       {' '}
-      <InspectorHeader type={selected.type} label={groupText.label(undefined, def.label ?? selected.type)} />{' '}
+      <InspectorHeader
+        type={selected.type}
+        label={groupText.label(undefined, def.label ?? selected.type)}
+      />{' '}
+      <DynamicContentNotice type={selected.type} />{' '}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         {' '}
         {def.groups.map((group) => (
