@@ -26,6 +26,7 @@ import { useTranslations } from 'next-intl';
 import { PageManager } from '@/components/builder/page-manager';
 import { PublishChecklist } from '@/components/builder/publish-checklist';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
+import { useOpenPage } from '@/components/builder/use-open-page';
 import {
   ArrowLeft,
   CircleAlert,
@@ -121,8 +122,11 @@ function IconButton({
       onClick={onClick}
       className={cn(
         'flex size-8 shrink-0 items-center justify-center rounded-md transition',
-        active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-        disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
+        active
+          ? 'bg-primary/10 text-primary'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        disabled &&
+          'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
         className,
       )}
     >
@@ -155,11 +159,19 @@ function MenuItem({
       )}
     >
       <Icon
-        className={cn('mt-0.5 size-4 shrink-0', danger ? 'text-destructive' : 'text-muted-foreground')}
+        className={cn(
+          'mt-0.5 size-4 shrink-0',
+          danger ? 'text-destructive' : 'text-muted-foreground',
+        )}
         aria-hidden="true"
       />
       <span className="min-w-0 flex-1">
-        <span className={cn('block text-13 font-medium', danger ? 'text-destructive' : 'text-foreground')}>
+        <span
+          className={cn(
+            'block text-13 font-medium',
+            danger ? 'text-destructive' : 'text-foreground',
+          )}
+        >
           {label}
         </span>
         {hint && <span className="mt-0.5 block text-2xs text-muted-foreground">{hint}</span>}
@@ -306,6 +318,15 @@ export function BuilderHeader() {
   const setPublishOpen = useBuilderUI((state) => state.setPublishOpen);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const pageStatus = useBuilderUI((state) => state.status);
+  /*
+   * The slug comes from the URL, not from the builder store.
+   *
+   * `StatusInfo` has no slug field, and deliberately: a module-level copy of the open page is
+   * exactly what used to fall out of step with the route. Passing it separately keeps the URL the
+   * single source of truth while giving the publish checks the fact they need — without it,
+   * `collectPublishIssues` read the slug as undefined and raised "no URL slug" on every page.
+   */
+  const { slug: openSlug } = useOpenPage();
 
   const setViewport = (width: number) =>
     dispatch({
@@ -455,7 +476,7 @@ export function BuilderHeader() {
         <div className="ms-auto flex shrink-0 items-center gap-2.5 ps-2">
           {/* The page's version and publish state already sit on the switcher in
               tier one, so this row carries only what is not shown elsewhere. */}
-          <PublishChecklist page={pageStatus} />
+          <PublishChecklist page={pageStatus ? { ...pageStatus, slug: openSlug } : null} />
           <OverflowMenu onOpenShortcuts={() => setShortcutsOpen(true)} />
         </div>
       </div>

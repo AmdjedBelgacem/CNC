@@ -558,7 +558,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           status: cached.status,
           version: cached.version,
           title: cached.title,
-          slug: cached.slug,
           isSystem: cached.isSystem,
           showInNav: cached.showInNav,
           seoTitle: cached.seoTitle,
@@ -580,7 +579,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           status: body.status,
           version: body.version,
           title: body.title,
-          slug: body.slug,
           isSystem: body.isSystem,
           showInNav: body.showInNav,
           seoTitle: body.seoTitle,
@@ -644,7 +642,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         status: updated.status,
         version: updated.version,
         title: updated.title,
-        slug: updated.slug,
         isSystem: updated.isSystem,
         showInNav: updated.showInNav,
         seoTitle: updated.seoTitle,
@@ -661,7 +658,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         title: tb('editor.draftSaved', { default: 'Draft saved' }),
         description: tb('editor.draftSavedDetail', {
           version: updated.version ? `v${updated.version}\n` : '',
-          slug: updated.slug,
           default: `Saved ${updated.version ? `v${updated.version}\n` : ''}to ${updated.slug}`,
         }),
       });
@@ -700,7 +696,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           // Carried through so saving does not wipe the slug the checklist needs: these two
           // paths replaced the object wholesale, which silently reintroduced the false
           // "no URL slug" error immediately after a successful save.
-          slug: updated.slug,
           title: updated.title,
           isSystem: updated.isSystem,
           showInNav: updated.showInNav,
@@ -717,7 +712,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           type: 'ok',
           title: tb('editor.pagePublished', { default: 'Page published' }),
           description: tb('editor.pagePublishedDetail', {
-            slug: updated.slug,
             version: updated.version,
             default: `${updated.slug} is now live (v${updated.version})`,
           }),
@@ -748,7 +742,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         status: updated.status,
         version: updated.version,
         title: updated.title,
-        slug: updated.slug,
         isSystem: updated.isSystem,
         showInNav: updated.showInNav,
         seoTitle: updated.seoTitle,
@@ -794,7 +787,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           // Carried through so saving does not wipe the slug the checklist needs: these two
           // paths replaced the object wholesale, which silently reintroduced the false
           // "no URL slug" error immediately after a successful save.
-          slug: updated.slug,
           title: updated.title,
           isSystem: updated.isSystem,
           showInNav: updated.showInNav,

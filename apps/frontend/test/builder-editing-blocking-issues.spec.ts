@@ -60,31 +60,39 @@ describe('popovers escape the toolbar instead of being trapped by it', () => {
 
 describe('publish checks report the real slug', () => {
   /**
-   * `StatusInfo` had no `slug` field, so `collectPublishIssues` read `slug` as undefined on every
+   * `StatusInfo` never had a slug field, so `collectPublishIssues` read it as undefined on every
    * page and raised "This page has no URL slug" and "A built-in page must keep a slug" as hard
    * errors regardless of the page's actual slug — two false errors, and publish blocked, on
    * every page in the builder.
+   *
+   * The slug is passed in from the URL rather than added to the store: a module-level copy of the
+   * open page is what previously fell out of step with the route, and an existing test guards
+   * against reintroducing one.
    */
+  const header = read('components/builder/editor-header.tsx');
   const store = read('components/builder/builder-ui-store.ts');
-  const editor = read('app/(admin)/admin/builder/builder-editor.tsx');
+  const checklist = read('components/builder/publish-checklist.tsx');
 
-  it('the status type carries a slug', () => {
-    expect(store).toMatch(/slug\?: string;/);
+  it('the editor header takes the slug from the URL', () => {
+    expect(header).toMatch(/const \{ slug: openSlug \} = useOpenPage\(\)/);
+    expect(header).toMatch(/slug: openSlug/);
   });
 
-  it('every setStatus call site supplies it', () => {
-    const sites = editor.match(/setStatus\(\{[\s\S]{0,400}?\}\);/g) ?? [];
-    expect(sites.length).toBeGreaterThanOrEqual(3);
-    for (const site of sites) expect(site).toMatch(/slug:/);
+  it('the store still holds no copy of the open page', () => {
+    expect(store).not.toMatch(/\bslug\b/);
   });
 
-  it('the checklist therefore receives a slug for a page that has one', () => {
-    // The rules themselves were correct — they only fire when the slug is genuinely empty.
+  it('the checklist accepts a slug as an explicit fact', () => {
+    expect(checklist).toMatch(/slug\?: string \| null/);
+  });
+
+  it('the rules themselves were correct — they only fire on a genuinely empty slug', () => {
     const rules = readFileSync(
       resolve(__dirname, '../../../packages/shared/src/utils/publish-rules.ts'),
       'utf8',
     );
     expect(rules).toMatch(/!page\.slug\?\.trim\(\)/);
+    expect(rules).toMatch(/page\.isSystem && !page\.slug/);
   });
 });
 
