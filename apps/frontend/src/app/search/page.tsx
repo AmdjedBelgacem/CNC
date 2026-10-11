@@ -190,7 +190,7 @@ function SearchPageInner() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-14">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-8 focus:outline-none sm:px-6 sm:py-10 lg:px-8 lg:py-14">
         {!hasQuery ? (
           <div className="grid gap-4 md:grid-cols-[1.15fr_.85fr]">
             <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-xs sm:p-8">

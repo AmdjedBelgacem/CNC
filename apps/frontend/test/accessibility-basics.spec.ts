@@ -102,6 +102,33 @@ describe('empty states still identify the page', () => {
   });
 });
 
+describe('every route group provides the skip link', () => {
+  /**
+   * The landing page lives in its own `(public)` route group and `/search` sits outside any
+   * group, so neither inherited `(main)`'s copy — the audit found `/` was the one page with no
+   * way past the navigation.
+   */
+  const pub = read('app/(public)/layout.tsx');
+  const search = read('app/search/page.tsx');
+
+  it('the landing page group has its own skip link', () => {
+    expect(pub).toMatch(/href="#main"/);
+    expect(pub).toMatch(/<main id="main" tabIndex=\{-1\}/);
+  });
+
+  it('the search page main is addressable', () => {
+    expect(search).toMatch(/<main id="main" tabIndex=\{-1\}/);
+  });
+
+  it('the ai assistant has a heading at desktop widths', () => {
+    // The visible title was inside a `lg:hidden` header, so desktop had no heading at all.
+    const chat = read('components/ai/chat-workspace/ai-chat-workspace.tsx');
+    expect(chat).toMatch(/sr-only lg:not-sr-only[\s\S]{0,200}<\/h1>/);
+    // Only one h1 per breakpoint: the mobile-only title is now an h2.
+    expect(chat).not.toMatch(/<h1 className="truncate font-display/);
+  });
+});
+
 describe('the account settings area has a landmark target', () => {
   it('main is addressable for the skip link', () => {
     expect(settings).toMatch(/<main id="main" tabIndex=\{-1\}/);

@@ -487,6 +487,15 @@ export function AiChatWorkspace({
 
       {/* Transcript + composer */}
       <section className="flex min-w-0 flex-1 flex-col">
+        {/*
+          The visible title below lives in a `lg:hidden` header, so at desktop widths this
+          page had no heading at all — the conversation title was announced nowhere. This is
+          the desktop equivalent, shown only when the mobile one is not, so exactly one h1
+          exists at any breakpoint.
+        */}
+        <h1 className="sr-only lg:not-sr-only lg:px-4 lg:pt-3 lg:font-display lg:text-base lg:font-semibold lg:text-foreground">
+          {activeId ? active.data?.title || t('loading') : t('newChatTitle')}
+        </h1>
         <header className="flex items-center gap-2 border-b border-border px-4 py-3">
           <Button
             variant="ghost"
@@ -501,9 +510,9 @@ export function AiChatWorkspace({
             <Sparkles className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-base font-semibold text-foreground">
+            <h2 className="truncate font-display text-base font-semibold text-foreground">
               {activeId ? active.data?.title || t('loading') : t('newChatTitle')}
-            </h1>
+            </h2>
             <p className="truncate font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
               {activeId ? t('savedBadge') : t('unsavedHint')}
             </p>
