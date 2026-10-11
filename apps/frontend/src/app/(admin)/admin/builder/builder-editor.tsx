@@ -186,16 +186,16 @@ function BuilderPuckShell({
     <>
       <BuilderShortcuts />
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <PuckDispatchBridge onDispatch={onDispatch} onPuck={onPuck} />
-      <BuilderHeader />
-      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        {structureOpen && <StructureSidebar />}
-        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-          {children}
-          <CanvasControls />
+        <PuckDispatchBridge onDispatch={onDispatch} onPuck={onPuck} />
+        <BuilderHeader />
+        <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          {structureOpen && <StructureSidebar />}
+          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+            {children}
+            <CanvasControls />
+          </div>
+          {inspectorOpen && <InspectorPanel />}
         </div>
-        {inspectorOpen && <InspectorPanel />}
-      </div>
       </div>
     </>
   );
@@ -558,6 +558,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           status: cached.status,
           version: cached.version,
           title: cached.title,
+          slug: cached.slug,
           isSystem: cached.isSystem,
           showInNav: cached.showInNav,
           seoTitle: cached.seoTitle,
@@ -579,6 +580,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           status: body.status,
           version: body.version,
           title: body.title,
+          slug: body.slug,
           isSystem: body.isSystem,
           showInNav: body.showInNav,
           seoTitle: body.seoTitle,
@@ -642,6 +644,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         status: updated.status,
         version: updated.version,
         title: updated.title,
+        slug: updated.slug,
         isSystem: updated.isSystem,
         showInNav: updated.showInNav,
         seoTitle: updated.seoTitle,
@@ -694,6 +697,15 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         setStatus({
           status: updated.status,
           version: updated.version,
+          // Carried through so saving does not wipe the slug the checklist needs: these two
+          // paths replaced the object wholesale, which silently reintroduced the false
+          // "no URL slug" error immediately after a successful save.
+          slug: updated.slug,
+          title: updated.title,
+          isSystem: updated.isSystem,
+          showInNav: updated.showInNav,
+          seoTitle: updated.seoTitle,
+          seoDescription: updated.seoDescription,
         });
         setData(updated.layout);
         liveRef.current = updated.layout;
@@ -736,6 +748,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         status: updated.status,
         version: updated.version,
         title: updated.title,
+        slug: updated.slug,
         isSystem: updated.isSystem,
         showInNav: updated.showInNav,
         seoTitle: updated.seoTitle,
@@ -778,6 +791,15 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         setStatus({
           status: updated.status,
           version: updated.version,
+          // Carried through so saving does not wipe the slug the checklist needs: these two
+          // paths replaced the object wholesale, which silently reintroduced the false
+          // "no URL slug" error immediately after a successful save.
+          slug: updated.slug,
+          title: updated.title,
+          isSystem: updated.isSystem,
+          showInNav: updated.showInNav,
+          seoTitle: updated.seoTitle,
+          seoDescription: updated.seoDescription,
         });
         setData(updated.layout);
         liveRef.current = updated.layout;

@@ -27,6 +27,7 @@ interface StructureNode {
   parent: string | null;
 }
 interface TreeData {
+  branchIds: string[];
   roots: StructureNode[];
   ancestors: Map<string, string[]>;
 }
@@ -73,7 +74,17 @@ function buildTree(data: Data): TreeData {
       };
     });
   };
-  return { roots: walk(ROOT_ZONE, data.content ?? [], 0, null), ancestors };
+  const roots = walk(ROOT_ZONE, data.content ?? [], 0, null);
+  /** Every id that has children, so the tree can start fully open. */
+  const branchIds: string[] = [];
+  const collect = (nodes: StructureNode[]) => {
+    for (const node of nodes) {
+      if (node.hasChildren) branchIds.push(node.id);
+      collect(node.children);
+    }
+  };
+  collect(roots);
+  return { roots, ancestors, branchIds };
 } /**
  * Lightweight structure tree — replaces Puck's expensive layer tree. * One component subscribes to the store (no per-node subscriptions), so it * stays cheap even with hundreds of nodes. Click a row to select that node. */
 export function StructureTree() {
@@ -81,9 +92,25 @@ export function StructureTree() {
   const data = useBuilderPuck((s) => s.appState.data);
   const selectedItem = useBuilderPuck((s) => s.selectedItem);
   const dispatch = useBuilderPuck((s) => s.dispatch);
+  /**
+   * Start fully expanded.
+   *
+   * Every page starts as a handful of `section` wrappers, so a collapsed tree showed seven opaque
+   * rows and no headings, text or buttons — the page looked like a few big containers with nothing
+   * individually editable in them. Open by default, each element is a row you can select and edit,
+   * and individual branches still collapse.
+   */
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const selectedId = (selectedItem as { props?: { id?: string } } | null)?.props?.id ?? null;
-  const tree = useMemo(() => buildTree(data as Data), [data]); // Keep the branch containing the selection expanded.
+  const tree = useMemo(() => buildTree(data as Data), [data]);
+  const [primed, setPrimed] = useState(false);
+  useEffect(() => {
+    if (primed) return;
+    if (!tree.branchIds.length) return;
+    setExpanded(new Set(tree.branchIds));
+    setPrimed(true);
+  }, [tree.branchIds, primed]);
+  // Keep the branch containing the selection expanded.
   useEffect(() => {
     if (!selectedId) return;
     const chain = tree.ancestors.get(selectedId);
@@ -101,7 +128,10 @@ export function StructureTree() {
     });
   }, [selectedId, tree]);
   const select = (node: StructureNode) => {
-    dispatch({ type: 'setUi', ui: { itemSelector: { index: node.index, zone: node.zone } } } as never);
+    dispatch({
+      type: 'setUi',
+      ui: { itemSelector: { index: node.index, zone: node.zone } },
+    } as never);
     if (node.hasChildren && !expanded.has(node.id)) {
       setExpanded((prev) => new Set(prev).add(node.id));
     }

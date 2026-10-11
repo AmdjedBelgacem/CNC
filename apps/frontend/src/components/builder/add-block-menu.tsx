@@ -39,6 +39,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { Button } from '@/components/ui/button';
 import { puckBlockLabel, puckCategoryLabel, puckConfig } from '@/lib/builder/puck-config';
 import {
@@ -105,17 +106,9 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('all');
   const [highlight, setHighlight] = useState(0);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
   const activeId = (type: string) => `add-block-option-${type}`;
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, []);
   useEffect(() => {
     if (open) {
       setQuery('');
@@ -244,7 +237,7 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
     }
   };
   return (
-    <div ref={rootRef} className={cn('relative', asCard && 'w-full')}>
+    <div ref={triggerRef} className={cn(asCard && 'w-full')}>
       {' '}
       {asCard ? (
         <button
@@ -261,11 +254,13 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
           <Plus className="size-3.5" /> {t('addBlock')}{' '}
         </Button>
       )}{' '}
-      {open && (
-        <div
-          className="fixed start-3 end-3 top-[48px] z-50 w-auto overflow-hidden rounded-xl border border-border bg-popover shadow-sm lg:absolute lg:start-0 lg:end-auto lg:top-full lg:mt-1.5 lg:w-80"
-          onKeyDown={onKeyDown}
-        >
+      <AnchorPanel
+        anchorRef={triggerRef}
+        open={open}
+        onDismiss={() => setOpen(false)}
+        minWidth={320}
+      >
+        <div className="flex min-h-0 flex-col" onKeyDown={onKeyDown}>
           <div className="sr-only" role="heading" aria-level={2}>
             {t('insertHeading')}
           </div>{' '}
@@ -321,11 +316,10 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
             {t('resultsCount', { count: rows.length, total: allRows.length })}
           </div>
           <div
-            ref={listRef}
             id="add-block-listbox"
             role="listbox"
             aria-label={t('insertHeading')}
-            className="scrollbar-thin max-h-[55vh] overflow-y-auto p-1.5"
+            className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1.5"
           >
             {' '}
             {rows.length === 0 ? (
@@ -386,7 +380,7 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
             </p>{' '}
           </div>{' '}
         </div>
-      )}{' '}
+      </AnchorPanel>{' '}
     </div>
   );
 }

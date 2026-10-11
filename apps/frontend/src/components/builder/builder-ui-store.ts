@@ -6,6 +6,15 @@ export interface StatusInfo {
   status: 'draft' | 'published' | 'disabled';
   version: number;
   title?: string;
+  /**
+   * The page's URL slug.
+   *
+   * This was missing entirely, so `collectPublishIssues` read `slug` as undefined on every page
+   * and raised "This page has no URL slug" and "A built-in page must keep a slug" as hard errors
+   * regardless of what the page was actually called. Two false errors on every page in the
+   * builder, blocking publish.
+   */
+  slug?: string;
   isSystem?: boolean;
   showInNav?: boolean;
   seoTitle?: string | null;

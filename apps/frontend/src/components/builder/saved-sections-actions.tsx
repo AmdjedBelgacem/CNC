@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { useTranslations } from 'next-intl';
 import { Boxes, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
@@ -36,9 +37,11 @@ export function SavedSectionsActions() {
   const [loading, setLoading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const setSectionDialog = useBuilderUI((s) => s.setSectionDialog);
-  const selectedNode = selectedItemRaw as (SavedSection['node'] & {
-    readOnly?: boolean;
-  }) | null;
+  const selectedNode = selectedItemRaw as
+    | (SavedSection['node'] & {
+        readOnly?: boolean;
+      })
+    | null;
   const selectedId = (selectedNode?.props?.id as string | undefined) ?? null;
   const canSave = selectedNode?.type === 'section';
 
@@ -173,11 +176,12 @@ export function SavedSectionsActions() {
             : tb('savedSections.label', { default: 'Sections' })}{' '}
         </button>
       </div>
-      {open && (
-        <div className="fixed start-3 end-3 top-[48px] z-50 w-auto rounded-xl border border-border bg-popover p-2 shadow-sm lg:absolute lg:start-0 lg:end-auto lg:top-full lg:mt-1.5 lg:w-80">
+      <AnchorPanel anchorRef={rootRef} open={open} onDismiss={() => setOpen(false)} minWidth={320}>
+        <div className="scrollbar-thin min-h-0 overflow-y-auto p-2">
           <p className="px-2 pb-1.5 text-2xs font-bold uppercase tracking-wide text-muted-foreground">
             {tb('savedSections.listHint', {
-              default: 'Reusable sections — inserted after the selected block, or at the end of the page',
+              default:
+                'Reusable sections — inserted after the selected block, or at the end of the page',
             })}
           </p>
           {loading ? (
@@ -256,7 +260,7 @@ export function SavedSectionsActions() {
             </ul>
           )}
         </div>
-      )}
+      </AnchorPanel>
     </div>
   );
 }
