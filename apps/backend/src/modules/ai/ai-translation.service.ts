@@ -19,7 +19,7 @@ export interface TranslateFieldsInput {
   sourceLocale: ContentLocale;
   targetLocale: ContentLocale;
   /** Field label → source text. Only non-empty strings are sent. */
-  fields: Record<string, string>;
+  fields: Record<string, unknown>;
   /** Free-text hint describing what these fields are, e.g. "course description". */
   entity?: string;
 }
@@ -54,13 +54,21 @@ export class AiTranslationService {
       throw new BadRequestException('Only Arabic is supported as a translation target');
     }
 
-    const entries = Object.entries(input.fields ?? {})
-      .filter(([, value]) => typeof value === 'string' && value.trim().length > 0)
+    const raw = Object.entries(input.fields ?? {});
+    // Reject before filtering, so a nested object is named rather than silently dropped.
+    for (const [key, value] of raw) {
+      if (typeof value !== 'string') {
+        throw new BadRequestException(`Field "${key}" must be a string`);
+      }
+    }
+    const usable = raw
+      .map(([key, value]) => [key, (value as string).trim()] as [string, string])
+      .filter(([, value]) => value.length > 0)
       .slice(0, MAX_FIELDS);
-    if (entries.length === 0) {
+    if (usable.length === 0) {
       throw new BadRequestException('There is nothing to translate — fill in at least one English field first');
     }
-    for (const [key, value] of entries) {
+    for (const [key, value] of usable) {
       if (value.length > MAX_FIELD_CHARS) {
         throw new BadRequestException(`Field "${key}" is too long to translate in one request`);
       }
@@ -79,7 +87,7 @@ export class AiTranslationService {
       '- If a value is already Arabic, return it unchanged.',
     ].join('\n');
 
-    const payload = Object.fromEntries(entries);
+    const payload = Object.fromEntries(usable);
     let content: string;
     let usedFallback = false;
     let model = runtime.primaryModel;
@@ -117,7 +125,7 @@ export class AiTranslationService {
       );
     }
 
-    const translations = this.parse(content, entries.map(([key]) => key));
+    const translations = this.parse(content, usable.map(([key]) => key));
     return { targetLocale, translations, model, usedFallback };
   }
 
