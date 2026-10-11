@@ -396,17 +396,38 @@ cause.
 # backend-only deploy (the supported path)
 bash scripts/lightsail/deploy.sh
 
-# frontend: build elsewhere (cross-building for the host's amd64 is fine)
+# frontend: build off-box, ship it, switch over
+bash scripts/lightsail/push-frontend.sh
+```
+
+`push-frontend.sh` does the whole off-box path: cross-builds for `linux/amd64`, transfers the
+image **gzipped**, retries the transfer, verifies it landed before touching anything, then
+replaces `FRONTEND_IMAGE` in place and recreates only the frontend.
+
+The retry and verification are the point. The SSH link drops without warning during long
+transfers, and piping `docker save` straight into `ssh docker load` sends a few hundred megabytes
+of uncompressed tar — a broken pipe halfway through leaves nothing usable on either side. Gzip
+cuts the bytes, `set -o pipefail` turns a truncated stream into a failure rather than a silent
+partial, and the image is only switched over once the host confirms it is present. A failed
+attempt therefore costs a few minutes instead of leaving the box without a frontend.
+
+Useful flags: `--tag <name>` to choose the tag, `--skip-build` to re-push an image already built
+locally, `--push-only` to ship without restarting the service.
+
+Underlying commands, if you ever need them by hand:
+
+```sh
 docker buildx build --platform linux/amd64 --load \
   -f apps/frontend/Dockerfile -t baroot/frontend:<tag> \
   --build-arg NEXT_PUBLIC_SITE_URL=https://barootcnc.com \
-  --build-arg NEXT_PUBLIC_DEFAULT_TENANT_SLUG=cnc-fundamentals . \
-&& docker save baroot/frontend:<tag> | gzip | \
-     ssh ubuntu@13.206.178.25 'gunzip | docker load'
+  --build-arg NEXT_PUBLIC_DEFAULT_TENANT_SLUG=cnc-fundamentals .
+docker save baroot/frontend:<tag> | gzip | \
+  ssh ubuntu@13.206.178.25 'gunzip | docker load'
 
-# on the host: point compose at the loaded image, then recreate ONLY that service
-echo 'FRONTEND_IMAGE=baroot/frontend:<tag>' >> deploy/lightsail/.env
-cd deploy/lightsail && docker compose --project-name titan up -d --no-build frontend
+# on the host: replace the key in place, never append (a second line is ambiguous)
+cd deploy/lightsail
+sed -i 's|^FRONTEND_IMAGE=.*|FRONTEND_IMAGE=baroot/frontend:<tag>|' .env
+docker compose --project-name titan up -d --no-build frontend
 ```
 
 `FRONTEND_IMAGE` is what makes this safe: with it set, compose uses the image that was
