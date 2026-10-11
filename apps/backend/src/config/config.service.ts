@@ -67,7 +67,17 @@ const envSchema = z
     // degrading to the database is a far better outcome than 500ing every route. A
     // placeholder is instead reported at boot (see assertNoPlaceholderSecrets) and through
     // /health, so it is impossible to miss without also being fatal.
-    REDIS_URL: z.string().min(1),
+    REDIS_URL: z.string().min(1).optional(),
+    /**
+     * Upstash credentials, as the dashboard hands them out.
+     *
+     * Upstash issues a REST URL and token rather than a connection string, but it serves the
+     * same store over TLS on 6379 with that token as the password. Deriving `REDIS_URL` from
+     * this pair means an operator can paste exactly what the dashboard shows instead of
+     * hand-building a URL and putting a credential in a hostname.
+     */
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 
     // Global abuse ceiling. Defaults reproduce the previously hardcoded 100 req/min.
     // Raise THROTTLE_LIMIT for load testing or for clients behind shared NAT.
@@ -156,10 +166,18 @@ const envSchema = z
     SUPABASE_JWT_SECRET: z.string().optional(),
     AI_SECRET_ENCRYPTION_KEY: z.string().optional(),
     AI_PROVIDER_ALLOWED_HOSTS: z.string().optional(),
-    AI_PROVIDER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(1024).max(10_000_000).default(1_048_576),
+    AI_PROVIDER_MAX_RESPONSE_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1024)
+      .max(10_000_000)
+      .default(1_048_576),
     AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(15_000),
     AI_PROVIDER_ALLOW_PRIVATE_HOSTS: z.string().optional(),
-    FX_RATES_URL: z.preprocess((value) => value === '' ? undefined : value, z.string().url().optional()),
+    FX_RATES_URL: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().url().optional(),
+    ),
 
     // --- Moyasar (primary payment gateway) --------------------------------
     /** Master key for encrypting payment and OAuth secrets at rest (32 bytes, hex or base64). */
@@ -224,8 +242,9 @@ const envSchema = z
       });
     }
 
-    const hasAiEncryptionKey = [val.AI_ASSISTANT_ENCRYPTION_KEY, val.AI_SECRET_ENCRYPTION_KEY]
-      .some((value) => typeof value === 'string' && value.trim().length > 0);
+    const hasAiEncryptionKey = [val.AI_ASSISTANT_ENCRYPTION_KEY, val.AI_SECRET_ENCRYPTION_KEY].some(
+      (value) => typeof value === 'string' && value.trim().length > 0,
+    );
     if (!hasAiEncryptionKey) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -258,6 +277,7 @@ export class ConfigService {
       process.exit(1);
     }
     this.env = result.data;
+    this.env.REDIS_URL = deriveRedisUrl(result.data);
   }
 
   get<T extends keyof Env>(key: T): Env[T] {
@@ -277,6 +297,29 @@ export class ConfigService {
  * @param values parsed configuration
  * @param log sink for the warnings (a Nest Logger, injected to avoid a cycle here)
  */
+
+/**
+ * Build a connection string from whichever Redis credentials were supplied.
+ *
+ * `REDIS_URL` wins when set, so an existing deployment is unaffected. Otherwise the Upstash
+ * REST pair is converted: the REST hostname is also the TLS endpoint, the token is the
+ * password, and the user is `default`. Nothing is logged — this builds a credential.
+ */
+function deriveRedisUrl(env: Env): string | undefined {
+  if (env.REDIS_URL) return env.REDIS_URL;
+  const restUrl = env.UPSTASH_REDIS_REST_URL;
+  const token = env.UPSTASH_REDIS_REST_TOKEN;
+  if (!restUrl || !token) return undefined;
+  try {
+    const { hostname, port } = new URL(restUrl);
+    if (!hostname) return undefined;
+    const auth = `${encodeURIComponent('default')}:${encodeURIComponent(token)}`;
+    return `rediss://${auth}@${hostname}${port ? `:${port}` : ':6379'}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export function assertNoPlaceholderSecrets(
   values: Record<string, unknown>,
   log: { error: (message: string) => void },

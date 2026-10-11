@@ -3905,7 +3905,8 @@
         "content": "Content",
         "items": "Items",
         "layout": "Layout",
-        "sections": "Sections"
+        "sections": "Sections",
+        "chrome": "Page chrome"
       }
     },
     "savedSections": {
@@ -4420,7 +4421,12 @@
       "collapse": "Collapse",
       "expand": "Expand",
       "pageEmpty": "The page is empty",
-      "pageEmptyHint": "Use Add Block to insert your first component."
+      "pageEmptyHint": "Use Add Block to insert your first component.",
+      "allCategories": "All",
+      "resultsCount": "{count} of {total} blocks",
+      "chromeCategory": "Page chrome",
+      "insertHeading": "Insert a block",
+      "closeBlocks": "Close block picker"
     },
     "chatWidget": {
       "title": "TITANS Support",

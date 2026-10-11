@@ -3905,7 +3905,8 @@
         "content": "المحتوى",
         "items": "العناصر",
         "layout": "التخطيط",
-        "sections": "الأقسام"
+        "sections": "الأقسام",
+        "chrome": "هيكل الصفحة"
       }
     },
     "savedSections": {
@@ -4420,7 +4421,12 @@
       "collapse": "طيّ",
       "expand": "توسيع",
       "pageEmpty": "الصفحة فارغة",
-      "pageEmptyHint": "استخدم زر «إضافة كتلة» لإدراج أول مكوّن."
+      "pageEmptyHint": "استخدم زر «إضافة كتلة» لإدراج أول مكوّن.",
+      "allCategories": "الكل",
+      "resultsCount": "{count} من {total} عنصر",
+      "chromeCategory": "هيكل الصفحة",
+      "insertHeading": "إدراج عنصر",
+      "closeBlocks": "إغلاق قائمة العناصر"
     },
     "chatWidget": {
       "title": "دعم TITANS",

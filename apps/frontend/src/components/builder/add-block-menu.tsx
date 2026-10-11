@@ -41,10 +41,24 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { puckBlockLabel, puckCategoryLabel, puckConfig } from '@/lib/builder/puck-config';
-import { getZoneItems, type PageLayout } from '@titan/shared';
+import {
+  BLOCK_CATEGORIES,
+  BLOCK_REGISTRY,
+  getZoneItems,
+  isKnownBlockType,
+  type BlockDefinition,
+  type PageLayout,
+} from '@titan/shared';
 import { cn } from '@/lib/utils';
 const ROOT_ZONE = 'root:default-zone';
 const BLOCK_ICONS: Record<string, LucideIcon> = {
+  // Five blocks previously fell back to the generic `Puzzle` glyph, which made
+  // them look like placeholders in a list where everything else had an icon.
+  'catalog-hero': MonitorPlay,
+  'card-grid': LayoutGrid,
+  'spotlight-cards': Sparkles,
+  'closing-cta': CheckSquare2,
+  'live-island': MousePointerClick,
   nav: Navigation,
   footer: PanelBottom,
   hero: Sparkles,
@@ -89,10 +103,12 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
   const dispatch = useBuilderPuck((s) => s.dispatch);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<string>('all');
   const [highlight, setHighlight] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const activeId = (type: string) => `add-block-option-${type}`;
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
@@ -103,6 +119,7 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
   useEffect(() => {
     if (open) {
       setQuery('');
+      setCategory('all');
       setHighlight(0);
       window.setTimeout(() => inputRef.current?.focus(), 30);
     }
@@ -127,22 +144,91 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
     return puckBlockLabel(tb, type, component?.label ?? component?.title ?? type);
   };
   const categoryLabel = (category: string) => puckCategoryLabel(tb, category, category);
+  /**
+   * Every block the editor can actually insert, taken from the registry.
+   *
+   * The menu used to iterate `puckConfig.categories`, which is a separate hand-maintained list:
+   * it silently omitted `nav`, `footer`, `footer-col` and `nav-link`, so four real blocks could
+   * never be added from the UI. The registry is the single source of truth and is checked against
+   * the component map so an entry without a renderer is never offered.
+   */
+  const allRows = useMemo(() => {
+    const defs = BLOCK_REGISTRY as unknown as Record<string, BlockDefinition | undefined>;
+    return Object.entries(defs)
+      .filter(
+        ([type, def]) => def && isKnownBlockType(type) && Boolean(puckConfig.components[type]),
+      )
+      .map(([type, def]) => ({
+        category: def!.category,
+        type,
+        label: label(type),
+        description: def!.description ?? '',
+      }));
+  }, [tb]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of allRows) counts.set(row.category, (counts.get(row.category) ?? 0) + 1);
+    return counts;
+  }, [allRows]);
+
+  /** Categories in the registry's declared order, so the tabs never shuffle. */
+  const tabs = useMemo(() => {
+    const present = new Set(allRows.map((r) => r.category));
+    return [
+      { key: 'all', count: allRows.length },
+      ...BLOCK_CATEGORIES.filter((c) => present.has(c)).map((c) => ({
+        key: c as string,
+        count: categoryCounts.get(c) ?? 0,
+      })),
+    ];
+  }, [allRows, categoryCounts]);
+
+  /**
+   * Rank matches so the obvious answer is first: an exact type or label beats a
+   * prefix, which beats a word match, which beats a match anywhere. A search for
+   * "grid" used to surface Grid Layout above Card Grid purely by registry order.
+   */
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const out: { category: string; type: string; label: string }[] = [];
-    for (const [category, { components }] of Object.entries(puckConfig.categories ?? {})) {
-      for (const type of components ?? []) {
-        const l = label(type);
-        if (!q || l.toLowerCase().includes(q) || type.toLowerCase().includes(q)) {
-          out.push({ category, type, label: l });
-        }
-      }
+    const inCategory = (c: string) => category === 'all' || c === category;
+    if (!q) return allRows.filter((r) => inCategory(r.category));
+
+    const scored: { row: (typeof allRows)[number]; score: number }[] = [];
+    for (const row of allRows) {
+      if (!inCategory(row.category)) continue;
+      const label = row.label.toLowerCase();
+      const type = row.type.toLowerCase();
+      const description = row.description.toLowerCase();
+      const cat = categoryLabel(row.category).toLowerCase();
+      let score = -1;
+      if (type === q || label === q) score = 0;
+      else if (type.startsWith(q) || label.startsWith(q)) score = 1;
+      else if (new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(label)) score = 2;
+      else if (label.includes(q) || type.includes(q)) score = 3;
+      else if (description.includes(q)) score = 4;
+      else if (cat.includes(q)) score = 5;
+      if (score >= 0) scored.push({ row, score });
     }
-    return out;
-  }, [query, tb]);
+    return scored
+      .sort((a, b) => a.score - b.score || a.row.label.localeCompare(b.row.label))
+      .map((x) => x.row);
+  }, [allRows, query, category, tb]);
+
   useEffect(() => {
     setHighlight(0);
-  }, [query]);
+  }, [query, category]);
+
+  /** Keep the keyboard highlight inside the list as it shrinks. */
+  useEffect(() => {
+    if (highlight > rows.length - 1) setHighlight(Math.max(0, rows.length - 1));
+  }, [rows.length, highlight]);
+
+  /** Scroll the highlighted row into view while arrowing through a long list. */
+  useEffect(() => {
+    if (!open || !rows[highlight]) return;
+    document.getElementById(activeId(rows[highlight].type))?.scrollIntoView({ block: 'nearest' });
+  }, [open, highlight, rows]);
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -177,10 +263,12 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
       )}{' '}
       {open && (
         <div
-          className="fixed start-3 end-3 top-[48px] z-50 w-auto overflow-hidden rounded-xl border border-border bg-popover shadow-sm lg:absolute lg:start-0 lg:end-auto lg:top-full lg:mt-1.5 lg:w-64"
+          className="fixed start-3 end-3 top-[48px] z-50 w-auto overflow-hidden rounded-xl border border-border bg-popover shadow-sm lg:absolute lg:start-0 lg:end-auto lg:top-full lg:mt-1.5 lg:w-80"
           onKeyDown={onKeyDown}
         >
-          {' '}
+          <div className="sr-only" role="heading" aria-level={2}>
+            {t('insertHeading')}
+          </div>{' '}
           <div className="border-b border-border p-1.5">
             {' '}
             <div className="relative">
@@ -188,6 +276,13 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
               <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
               <input
                 ref={inputRef}
+                type="text"
+                role="combobox"
+                aria-expanded={open}
+                aria-controls="add-block-listbox"
+                aria-autocomplete="list"
+                aria-activedescendant={rows[highlight] ? activeId(rows[highlight].type) : undefined}
+                aria-label={t('searchBlocksPlaceholder')}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('searchBlocksPlaceholder')}
@@ -195,32 +290,83 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
               />{' '}
             </div>{' '}
           </div>{' '}
-          <div ref={listRef} className="scrollbar-thin max-h-[55vh] overflow-y-auto p-1.5">
+          <div
+            className="flex flex-wrap gap-1 border-b border-border px-1.5 py-1.5"
+            role="tablist"
+            aria-label={t('allCategories')}
+          >
+            {tabs.map((tab) => {
+              const selected = category === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setCategory(tab.key)}
+                  className={cn(
+                    'rounded-md px-2 py-1 text-2xs font-medium transition',
+                    selected
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  {tab.key === 'all' ? t('allCategories') : categoryLabel(tab.key)}
+                  <span className="ms-1 font-mono opacity-60">{tab.count}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="px-2.5 py-1 text-2xs text-muted-foreground/70" aria-live="polite">
+            {t('resultsCount', { count: rows.length, total: allRows.length })}
+          </div>
+          <div
+            ref={listRef}
+            id="add-block-listbox"
+            role="listbox"
+            aria-label={t('insertHeading')}
+            className="scrollbar-thin max-h-[55vh] overflow-y-auto p-1.5"
+          >
             {' '}
             {rows.length === 0 ? (
               <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                {t('noBlocksMatch', { query })}
+                {query
+                  ? t('noBlocksMatch', { query })
+                  : t('resultsCount', { count: 0, total: allRows.length })}
               </p>
             ) : (
               rows.map((row, i) => {
                 const Icon = BLOCK_ICONS[row.type] ?? Puzzle;
                 return (
                   <button
-                    key={`${row.category}-${row.type}`}
+                    key={row.type}
+                    id={activeId(row.type)}
                     type="button"
+                    role="option"
+                    aria-selected={i === highlight}
                     onMouseEnter={() => setHighlight(i)}
                     onClick={() => insert(row.type)}
                     className={cn(
-                      'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition',
+                      'flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition',
                       i === highlight
                         ? 'bg-primary/10 text-primary'
                         : 'text-foreground hover:bg-muted',
                     )}
                   >
                     {' '}
-                    <Icon className="size-3.5 shrink-0 text-muted-foreground" />{' '}
-                    <span className="truncate">{row.label}</span>{' '}
-                    <span className="ms-auto shrink-0 font-mono text-2xs uppercase text-muted-foreground/60">
+                    <Icon
+                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />{' '}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{row.label}</span>
+                      {row.description ? (
+                        <span className="mt-0.5 block text-2xs font-normal leading-snug text-muted-foreground">
+                          {row.description}
+                        </span>
+                      ) : null}
+                    </span>{' '}
+                    <span className="mt-0.5 shrink-0 font-mono text-2xs uppercase text-muted-foreground/60">
                       {categoryLabel(row.category)}
                     </span>{' '}
                   </button>
