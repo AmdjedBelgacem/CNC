@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import {
   AdminCommandBar,
@@ -108,6 +109,31 @@ export default function NewProductPage() {
         {/* Two columns, matching the academies create screen. Seven stacked full-width
             sections turned this into an endless scroll on a laptop. */}
         <ProductFormSections value={value} set={set} columns={2} />
+        {/* Mirrors the academies create screen: a plain action row at the foot, repeated
+            from the command bar. Deliberately not the shared FormActions — that component
+            reports "All changes saved", which is false here, because a product that has not
+            been created has never been saved at all. */}
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => router.push('/admin/products')}
+            className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            {t('cancel', { default: 'Cancel' })}
+          </button>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={busy || !valid}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50',
+              busy || !valid ? 'bg-muted-foreground/40' : 'bg-primary shadow-xs hover:bg-primary/90',
+            )}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+            {busy ? t('creating', { default: 'Creating…' }) : t('createProduct', { default: 'Create product' })}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -935,25 +935,37 @@ export function PublishReadiness({
 }) {
   const t = useTranslations('admin.productForm');
   const ready = checks.filter((c) => c.ok).length;
-  const pct = checks.length === 0 ? 100 : Math.round((ready / checks.length) * 100);
   const missing = checks.filter((c) => !c.ok).map((c) => c.label);
+  const done = missing.length === 0;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold text-foreground">{t('publishReadiness')}</p>
-        <span className="font-mono text-xs text-muted-foreground">{ready}/{checks.length}</span>
+        <span className={cn(
+          'inline-flex items-center gap-2 font-mono text-xs tabular-nums',
+          done ? 'text-success' : 'text-muted-foreground',
+        )}>
+          {/* One segment per check, so an incomplete list shows which requirement is still
+              outstanding rather than a bar that only says "somewhere short". */}
+          <span className="inline-flex items-center gap-[3px]" aria-hidden>
+            {checks.map((check, index) => (
+              <span
+                key={index}
+                className={cn(
+                  'block h-1.5 w-2 rounded-[2px]',
+                  check.ok ? 'bg-success' : 'bg-warning/70',
+                )}
+              />
+            ))}
+          </span>
+          {ready}/{checks.length}
+        </span>
       </div>
-      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        {missing.length === 0
+      <p className={cn('mt-2 text-xs', done ? 'text-success' : 'text-muted-foreground')}>
+        {done
           ? t('readinessReady')
-          : t('readinessMissing', { items: missing.join(', ') })}
+          : t('readinessMissing', { items: missing.join(' · ') })}
       </p>
     </div>
   );
