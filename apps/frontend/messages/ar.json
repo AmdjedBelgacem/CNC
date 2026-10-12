@@ -2096,6 +2096,13 @@
         "missing": "ناقص",
         "missingCount": "{count} حقلاً لا يزال بلا نص عربي.",
         "close": "إغلاق"
+      },
+      "page": {
+        "title": "النسخة العربية من هذه الصفحة",
+        "hint": "ينشئ تخطيطاً عربياً منفصلاً، وتبقى الصفحة الإنجليزية كما هي تماماً.",
+        "save": "حفظ الصفحة العربية",
+        "saved": "توجد بالفعل نسخة عربية من هذه الصفحة.",
+        "entity": "الصفحة"
       }
     }
   },
@@ -3606,7 +3613,8 @@
       "lastChange": "آخر تغيير {status} · الإصدار {version}",
       "pagePublishedDetail": "{slug} · النسخة {version}",
       "publishedVersion": "الإصدار المنشور {version}",
-      "restoredVersion": "تم استرجاع الإصدار {version}"
+      "restoredVersion": "تم استرجاع الإصدار {version}",
+      "translatePage": "النسخة العربية"
     },
     "empty": {
       "title": "لا يوجد ما تُحرّره بعد",

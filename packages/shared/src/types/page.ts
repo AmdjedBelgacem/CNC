@@ -41,6 +41,9 @@ export interface SavedSectionRecord {
   updatedAt: string;
 }
 
+import type { ContentLocale } from './lesson';
+import type { PageTranslation } from './translations';
+
 export interface PageRecord {
   id: string;
   tenantId: string;
@@ -57,6 +60,14 @@ export interface PageRecord {
   seoTitle: string | null;
   seoDescription: string | null;
   template: string | null;
+  /**
+   * Localized copies of the whole page.
+   *
+   * Pages are localized as a complete alternate layout rather than per-block translations, so this
+   * was written by nothing and only read by the renderer — a translated page existed only if
+   * someone ran SQL by hand.
+   */
+  translations?: Partial<Record<ContentLocale, PageTranslation>> | null;
   createdAt: string;
   updatedAt: string;
 }

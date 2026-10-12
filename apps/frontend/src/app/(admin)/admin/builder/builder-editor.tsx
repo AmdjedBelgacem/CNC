@@ -16,7 +16,8 @@ import {
 } from '@titan/shared';
 import { puckConfig } from '@/lib/builder/puck-config';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
-import { Loader2 } from 'lucide-react';
+import { PageTranslationPanel } from '@/components/builder/page-translation';
+import { Languages, Loader2 } from 'lucide-react';
 import { BuilderHeader, VIEWPORTS } from '@/components/builder/editor-header';
 import { BuilderDialogs } from '@/components/builder/dialogs';
 import { ToastViewport, toast } from '@/components/ui/toast';
@@ -223,6 +224,7 @@ export function BuilderEditor() {
   const { slug } = useOpenPage();
 
   const [page, setPage] = useState<PageRecord | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
   const [data, setData] = useState<Data | null>(null);
   /**
    * The page the canvas is currently mounted against, and the `key` that keeps
@@ -878,6 +880,31 @@ Stable registration callback (unstable identity would re-run the bridge effect o
               overrides={overrides}
             />{' '}
           </div>{' '}
+          {page && data && (
+            // A page's Arabic copy is a separate layout, so it lives outside the canvas rather
+            // than as an inspector tab that would be lost the moment the canvas is remounted.
+            <div className="absolute bottom-4 end-4 z-30 max-w-sm">
+              <button
+                type="button"
+                onClick={() => setShowTranslation((open) => !open)}
+                aria-expanded={showTranslation}
+                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium shadow-lg"
+              >
+                <Languages className="size-3.5" aria-hidden="true" />
+                {tb('editor.translatePage', { default: 'Arabic version' })}
+              </button>
+              {showTranslation && (
+                <div className="mt-2">
+                  <PageTranslationPanel
+                    slug={page.slug}
+                    layout={page.layout}
+                    existing={page.translations?.ar ?? null}
+                    onSaved={() => void load(slug)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       {showVersions && (

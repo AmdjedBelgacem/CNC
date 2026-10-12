@@ -7,6 +7,7 @@ export * from './blocks/registry';
 export * from './types/translations';
 export * from './types/translatable-entities';
 export * from './lesson-translation';
+export * from './page-translation';
 export * from './blocks/seeds';
 export * from './blocks/slots';
 export * from './search/match';

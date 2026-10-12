@@ -2096,6 +2096,13 @@
         "missing": "Missing",
         "missingCount": "{count} field(s) still have no Arabic copy.",
         "close": "Close"
+      },
+      "page": {
+        "title": "Arabic version of this page",
+        "hint": "Creates a separate Arabic layout. The English page stays exactly as it is.",
+        "save": "Save Arabic page",
+        "saved": "An Arabic version of this page already exists.",
+        "entity": "page"
       }
     }
   },
@@ -3606,7 +3613,8 @@
       "lastChange": "Last change {status} · v{version}",
       "pagePublishedDetail": "{slug} · version {version}",
       "publishedVersion": "Published version {version}",
-      "restoredVersion": "Restored version {version}"
+      "restoredVersion": "Restored version {version}",
+      "translatePage": "Arabic version"
     },
     "empty": {
       "title": "Nothing to edit yet",
