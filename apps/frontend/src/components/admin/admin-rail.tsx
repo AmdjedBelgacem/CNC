@@ -179,7 +179,7 @@ function RailButton({
       href={href}
       title={title}
       className={cn(
-        'group relative flex h-10 w-10 items-center justify-center rounded-md transition-colors duration-150',
+        'group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-150',
         active
           ? 'bg-primary/10 text-primary shadow-sm'
           : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -200,7 +200,7 @@ function SearchRailButton({ label }: { label: string }) {
       type="button"
       onClick={openAdminSearch}
       title={label}
-      className="group relative flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
+      className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
     >
       {' '}
       <Search className="size-[18px]" />{' '}
@@ -227,138 +227,50 @@ export function AdminRail() {
   return (
     <>
       {' '}
-      <aside className="fixed inset-y-0 start-0 z-40 hidden w-16 flex-col items-center gap-1.5 border-r border-border bg-card/60 py-5 lg:flex">
+      <aside className="no-scrollbar fixed inset-y-0 start-0 z-40 hidden w-16 flex-col items-center gap-1 overflow-y-auto border-r border-border bg-card/60 py-3 lg:flex">
         {' '}
         <Link
           href="/admin"
           title="TITANS Admin"
-          className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs"
+          className="mb-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs"
         >
           <Crosshair className="size-4" strokeWidth={2.5} />
         </Link>{' '}
-        <div className="mb-1.5 flex flex-col items-center gap-1.5">
+        <div className="mb-1 flex shrink-0 flex-col items-center gap-1">
           {' '}
           <SearchRailButton label={tAdmin('searchHint')} />{' '}
           {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}{' '}
         </div>{' '}
-        <RailButton href="/admin" title={tAdmin('dashboard')} active={pathname === '/admin'}>
-          {' '}
-          <LayoutDashboard className="size-[18px]" />{' '}
-        </RailButton>{' '}
-        <RailButton
-          href="/admin/builder"
-          title={tAdmin('builder')}
-          active={pathname.startsWith('/admin/builder')}
-        >
-          {' '}
-          <LayoutTemplate className="size-[18px]" />{' '}
-        </RailButton>{' '}
-        {role === 'super_admin' || role === 'admin' ? (
-          <>
-            {' '}
-            <RailButton
-              href="/admin/theme"
-              title={tAdmin('theme')}
-              active={pathname.startsWith('/admin/theme')}
-            >
-              {' '}
-              <Palette className="size-[18px]" />{' '}
-            </RailButton>{' '}
-            <RailButton
-              href="/admin/analytics"
-              title={tAdmin('analytics')}
-              active={pathname.startsWith('/admin/analytics')}
-            >
-              {' '}
-              <BarChart2 className="size-[18px]" />{' '}
-            </RailButton>{' '}
-            <RailButton
-              href="/admin/users"
-              title={tAdmin('users')}
-              active={pathname.startsWith('/admin/users')}
-            >
-              {' '}
-              <Users className="size-[18px]" />{' '}
-            </RailButton>{' '}
-          </>
-        ) : null}{' '}
-        {['super_admin', 'admin', 'instructor', 'moderator', 'sponsor'].includes(role) ? (
+        {/*
+          Rendered from `visibleTabs`, the same list the mobile bar below uses.
+
+          This used to be thirteen hand-written <RailButton>s with the role checks copied
+          alongside them, which meant a route added to `tabsBase` appeared on phones and
+          nowhere else — /admin/email, /admin/navigation and the rest were reachable only
+          by scrolling the mobile bar. Two renderings of one list cannot both stay right;
+          this one is derived, so a new entry cannot be left out of a viewport by accident.
+        */}
+        {visibleTabs.map((tab) => (
           <RailButton
-            href="/admin/staff"
-            title={tAdmin('staff')}
-            active={pathname.startsWith('/admin/staff')}
+            key={tab.href}
+            href={tab.href}
+            title={tab.title}
+            active={Boolean(tab.match(pathname))}
           >
             {' '}
-            <UserCog className="size-[18px]" />{' '}
+            <tab.icon className="size-[18px]" />{' '}
           </RailButton>
-        ) : null}{' '}
-        <RailButton
-          href="/admin/academies"
-          title={tAdmin('academies')}
-          active={pathname.startsWith('/admin/academies')}
-        >
+        ))}{' '}
+        <div className="sticky bottom-0 mt-auto flex shrink-0 flex-col items-center gap-1 bg-card/95 pt-2 backdrop-blur-sm">
           {' '}
-          <GraduationCap className="size-[18px]" />{' '}
-        </RailButton>{' '}
-        <RailButton
-          href="/admin/courses"
-          title={tAdmin('courses')}
-          active={pathname.startsWith('/admin/courses')}
-        >
-          {' '}
-          <BookOpen className="size-[18px]" />{' '}
-        </RailButton>{' '}
-        <RailButton
-          href="/admin/products"
-          title={tAdmin('products')}
-          active={pathname.startsWith('/admin/products')}
-        >
-          {' '}
-          <Package className="size-[18px]" />{' '}
-        </RailButton>{' '}
-        {role === 'super_admin' || role === 'admin' ? (
-          <>
-            {' '}
-            <RailButton
-              href="/admin/finance"
-              title={tAdmin('finance')}
-              active={pathname.startsWith('/admin/finance')}
-            >
-              {' '}
-              <DollarSign className="size-[18px]" />{' '}
-            </RailButton>{' '}
-            <RailButton
-              href="/admin/certificates"
-              title={tAdmin('certificates')}
-              active={pathname.startsWith('/admin/certificates')}
-            >
-              {' '}
-              <Award className="size-[18px]" />{' '}
-            </RailButton>{' '}
-            <RailButton
-              href="/admin/settings"
-              title={tAdmin('settings')}
-              active={pathname.startsWith('/admin/settings')}
-            >
-              {' '}
-              <Settings className="size-[18px]" />{' '}
-            </RailButton>{' '}
-          </>
-        ) : null}{' '}
-        <div className="mt-auto flex flex-col items-center gap-1.5">
-          {' '}
-          <div className="my-1.5 h-px w-8 bg-border" />{' '}
-          <RailButton href="/" title={tAdmin('viewSite')} active={false}>
-            {' '}
-            <ExternalLink className="size-[18px]" />{' '}
-          </RailButton>{' '}
+          <div className="my-1 h-px w-8 bg-border" />{' '}
           <button
             type="button"
             onClick={() => {
               window.location.href = '/';
             }}
             title={tAdmin('exitAdmin')}
-            className="group relative flex h-10 w-10 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:border-destructive hover:bg-destructive/10 hover:text-destructive dark:hover:border-red-900/30"
+            className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:border-destructive hover:bg-destructive/10 hover:text-destructive dark:hover:border-red-900/30"
           >
             {' '}
             <LogOut className="size-[18px]" />{' '}
