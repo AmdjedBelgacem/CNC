@@ -126,11 +126,12 @@ export function PageTranslationPanel({
         open={open}
         onOpenChange={setOpen}
         entityLabel={t('page.entity')}
-        items={harvested.harvested.map((field) => ({
-          label: field.key,
-          source: field.value,
-          translation: String(readAt(draft?.layout ?? existing?.layout ?? {}, field.path) ?? ''),
-        }))}
+        items={harvested.harvested.map((field) => {
+          const translation = String(
+            readAt(draft?.layout ?? existing?.layout ?? {}, field.path) ?? '',
+          );
+          return { label: field.key, source: field.value, translation, missing: !translation.trim() };
+        })}
       />
     </div>
   );

@@ -2079,7 +2079,8 @@
         "label": "Arabic coverage",
         "badge": "{translated}/{total} translated",
         "missing": "Missing: {fields}",
-        "empty": "Nothing to translate"
+        "empty": "Nothing to translate",
+        "complete": "Fully translated"
       },
       "menu": {
         "title": "Translate with AI",
@@ -2090,11 +2091,14 @@
       },
       "review": {
         "title": "Review {entity}",
-        "description": "Compare each field with its English source. Fix anything that reads wrong before saving.",
+        "description": "Read across each row to check the Arabic says what the English says.",
         "nothing": "There are no translatable fields yet.",
         "arabic": "Arabic",
-        "missing": "Missing",
-        "missingCount": "{count} field(s) still have no Arabic copy.",
+        "missing": "Not translated",
+        "notYet": "No Arabic copy yet.",
+        "translateOne": "Translate this field",
+        "missingCount": "{count} missing",
+        "hint": "Nothing is saved until you save the form.",
         "close": "Close"
       },
       "page": {
