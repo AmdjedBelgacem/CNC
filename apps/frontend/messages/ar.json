@@ -2108,6 +2108,13 @@
         "saved": "توجد بالفعل نسخة عربية من هذه الصفحة.",
         "entity": "الصفحة"
       }
+    },
+    "nav": {
+      "groupOverview": "نظرة عامة",
+      "groupContent": "المحتوى",
+      "groupPeople": "الأشخاص",
+      "groupCommerce": "التجارة",
+      "groupPlatform": "المنصة"
     }
   },
   "aiAssistant": {

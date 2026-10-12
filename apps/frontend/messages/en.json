@@ -2108,6 +2108,13 @@
         "saved": "An Arabic version of this page already exists.",
         "entity": "page"
       }
+    },
+    "nav": {
+      "groupOverview": "Overview",
+      "groupContent": "Content",
+      "groupPeople": "People",
+      "groupCommerce": "Commerce",
+      "groupPlatform": "Platform"
     }
   },
   "aiAssistant": {
