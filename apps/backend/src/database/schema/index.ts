@@ -38,7 +38,7 @@ export { savedSections } from './saved-sections';
 export { aiConversations, aiMessages, aiConversationSources, aiConversationStatuses } from './ai-assistant';
 export { notifications, platformNotificationPrefs } from './notifications';
 export { userPreferences } from './user-preferences';
-export { repairShops, groups, groupMembers, studyGroups } from './social';
+export { repairShops, groupMembers, studyGroups } from './social';
 export { quotes } from './quotes';
 export { videoSeries, videos } from './videos';
 export { chatConversations, chatMessages } from './chat';

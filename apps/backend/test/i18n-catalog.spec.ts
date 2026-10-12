@@ -83,6 +83,8 @@ describe('message catalogs', () => {
       'admin.certificateTemplates.font.DM Sans.label',
       'admin.certificateTemplates.font.Georgia.label',
       'admin.roleSecurity.admin', // FIDO2 / 2FA — standards names
+
+      'pages.groups.memberCount', // {count}/{max} — digits and a slash, no words to translate
     ]);
 
     const hasArabic = (text) => /[\u0600-\u06FF]/.test(text);

@@ -292,6 +292,20 @@
       "when": 1787361697672,
       "tag": "036_product_pricing_modes_and_quote_pipeline",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1787361698672,
+      "tag": "038_study_group_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1787361699672,
+      "tag": "039_backfill_group_members",
+      "breakpoints": true
     }
   ]
 }

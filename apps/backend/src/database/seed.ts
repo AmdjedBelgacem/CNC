@@ -951,7 +951,9 @@ async function seed() {
   } catch (e) { console.warn('[seed] seedPosts skipped:', (e as Error)?.message); }
   try {
     const [g] = await db.select({ n: count() }).from(schema.studyGroups);
-    if (Number(g?.n ?? 0) === 0 && createdUsers[0]) await seedStudyGroups(db, createdUsers[0].id);
+    if (Number(g?.n ?? 0) === 0 && createdUsers[0]) {
+      await seedStudyGroups(db, createdUsers[0].id, createdUsers.map((u) => u.id));
+    }
   } catch (e) { console.warn('[seed] seedStudyGroups skipped:', (e as Error)?.message); }
 
   await seedRbac(db, [tenant.id, tenant2?.id].filter(Boolean) as string[], createdUsers);
