@@ -17,6 +17,18 @@ const nextConfig: NextConfig = {
    * `no space left on device` on the host while a 9 MB image loaded fine.
    */
   output: 'standalone',
+  /**
+   * Ship source maps for the client bundle.
+   *
+   * Lighthouse's Best Practices score includes an audit for first-party JavaScript that has no
+   * source map attached. Weight zero, so it never moved the score on its own — the 96 → 100 came
+   * from clearing the console errors — but it leaves a red line in the report and hands anyone
+   * opening devtools a stack trace that points at compiled frames instead of our source.
+   *
+   * The maps are fetched only when devtools is open, so this costs nothing at runtime; it costs
+   * image size, which is why it is stated plainly rather than left implicit.
+   */
+  productionBrowserSourceMaps: true,
   turbopack: {
     // Monorepo root, resolved from this file rather than hardcoded. An absolute
     // machine-specific path (`/Users/mac/...`) made Turbopack fail on CI with

@@ -56,7 +56,11 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
   # Cross-building for the host's amd64 from an arm Mac is the whole point: the build never runs
   # on the 2 GB box, only the resulting image does.
   echo "==> building off-box for linux/amd64 (this never runs on the host)"
-  docker buildx build --platform linux/amd64 --load \
+  # --network=host is load-bearing, not a workaround. BuildKit's default bridge cannot fetch
+  # Debian packages on this machine, so the apt layer fails with "Connection failed" against
+  # deb.debian.org. It went unnoticed because the layer was cached and only rebuilt after
+  # `docker builder prune`. Without the flag a clean build fails here every time.
+  docker buildx build --platform linux/amd64 --network=host --load \
     -f apps/frontend/Dockerfile -t "$IMAGE" \
     --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://barootcnc.com}" \
     --build-arg NEXT_PUBLIC_DEFAULT_TENANT_SLUG="${NEXT_PUBLIC_DEFAULT_TENANT_SLUG:-cnc-fundamentals}" \
@@ -64,6 +68,34 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
 fi
 
 docker image inspect "$IMAGE" >/dev/null 2>&1 || { echo "No local image $IMAGE" >&2; exit 1; }
+
+# Free space first. `docker load` unpacks the entire image into /var/lib/docker/tmp before it
+# imports anything, so a host that is merely "almost full" fails mid-load with
+# "no space left on device" and leaves nothing behind. The host never builds — images arrive
+# pre-built from this machine — so its build cache is dead weight, and each deploy leaves another
+# tagged image behind that nothing references.
+#
+# This bit the last backend deploy: seven stale frontend tags plus 12 GB of build cache left the
+# box with no room, and the transfer died after the gzip had already streamed across.
+echo "==> reclaiming space on the host"
+# The repository and the tag are interpolated locally: the block below runs in the remote shell,
+# where neither is defined, so leaving ${IMAGE...} inside it would expand to an empty string and
+# silently match nothing.
+ssh "${SSH_OPTS[@]}" "${CONNECT_OPTS[@]}" "$HOST" bash -s -- "$IMAGE" <<'REMOTE_PRUNE'
+set -e
+KEEP="$1"
+REPO="${KEEP%%:*}"
+# Keep whatever the running container actually uses, plus the image we are about to send;
+# drop every other tag of ours. Nothing else on this box belongs to this repository.
+CURRENT=$(docker inspect -f '{{.Config.Image}}' titan-frontend-1 2>/dev/null || true)
+for img in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep "^${REPO}:" || true); do
+  if [ "$img" != "$CURRENT" ] && [ "$img" != "$KEEP" ]; then
+    docker rmi "$img" >/dev/null 2>&1 || true
+  fi
+done
+docker builder prune -af >/dev/null 2>&1 || true
+df -h / | tail -1
+REMOTE_PRUNE
 
 size=$(docker image inspect "$IMAGE" --format '{{.Size}}')
 printf '==> transferring (%.0f MB uncompressed, gzipped on the wire)\n' "$(echo "$size / 1048576" | bc -l)"
