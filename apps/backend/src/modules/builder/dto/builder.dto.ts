@@ -15,6 +15,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PAGE_TEMPLATES } from '@titan/shared';
+import type { PageTranslation } from '@titan/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePageDto {
@@ -95,6 +96,18 @@ export class UpdatePageDto {
   @IsString()
   @MaxLength(500)
   seoDescription?: string | null;
+
+  /**
+   * Whole alternate layout per locale.
+   *
+   * The column is written by nothing and read by the renderer, so localized pages could only
+   * exist if someone ran SQL by hand. `layout` is validated as an object here and the service
+   * normalizes it against the block registry before storing.
+   */
+  @ApiPropertyOptional({ description: 'Localized page layout keyed by locale.' })
+  @IsOptional()
+  @IsObject()
+  translations?: Record<string, PageTranslation>;
 }
 
 export class DuplicatePageDto {

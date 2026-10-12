@@ -20,6 +20,7 @@ import {
   ExternalLink,
   AlertCircle,
   AlertTriangle,
+  Languages,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { difficultyKey, difficultyTone, difficultyFallback } from '@/lib/difficulty';
@@ -43,10 +44,22 @@ import {
   TextField,
   TextAreaField,
 } from '@/components/admin/admin-form';
+import {
+  TranslateAction,
+  TranslationCoveragePanel,
+  useTranslateDraft,
+} from '@/components/admin/translation';
+import {
+  ACADEMY_FIELDS,
+  type AcademyContentTranslation,
+  type ContentLocale,
+} from '@titan/shared';
 
 interface AcademyDetail {
   id: string;
   slug: string;
+  /** Localized copy. Long present in the schema but unusable until the DTO accepted it. */
+  translations?: Partial<Record<ContentLocale, AcademyContentTranslation>> | null;
   title: string;
   subtitle: string | null;
   description: string | null;
@@ -87,6 +100,10 @@ interface CourseOption {
 type EditableField =
   'title' | 'subtitle' | 'description' | 'accentColor' | 'seoTitle' | 'seoDescription';
 
+type ArabicField = 'title' | 'subtitle' | 'description' | 'seoTitle' | 'seoDescription';
+
+const ARABIC_FIELDS: ArabicField[] = ['title', 'subtitle', 'description', 'seoTitle', 'seoDescription'];
+
 function isDirty(a: AcademyDetail | null, b: Partial<Record<EditableField, string>>): boolean {
   if (!a) return false;
   return (Object.keys(b) as EditableField[]).some((k) => (b[k] ?? '') !== (a[k] ?? ''));
@@ -107,6 +124,7 @@ export default function AcademyEditorPage() {
   const t = useTranslations('admin.academiesPage.editor');
   const tAdmin = useTranslations('admin');
   const tEditor = useTranslations('admin.academiesEditor');
+  const tTranslate = useTranslations('admin.translate');
   const tCommon = useTranslations('common');
   const tDifficulty = useTranslations('admin');
   const [academy, setAcademy] = useState<AcademyDetail | null>(null);
@@ -115,6 +133,55 @@ export default function AcademyEditorPage() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [form, setForm] = useState<Partial<Record<EditableField, string>>>({});
+  const [formAr, setFormAr] = useState<Record<ArabicField, string>>(() =>
+    Object.fromEntries(ARABIC_FIELDS.map((field) => [field, ''])) as Record<ArabicField, string>,
+  );
+
+  const arabicDirty = academy
+    ? ARABIC_FIELDS.some((field) => (formAr[field] ?? '') !== (academy.translations?.ar?.[field] ?? ''))
+    : false;
+  const dirty = isDirty(academy, form) || arabicDirty;
+
+  const { busy: translateBusy, run: runTranslate, coverageFor } = useTranslateDraft({
+    entity: 'academy copy',
+    descriptors: ACADEMY_FIELDS,
+    groups: [
+      {
+        key: 'academy',
+        fields: {
+          Title: form.title ?? '',
+          Subtitle: form.subtitle ?? '',
+          Description: form.description ?? '',
+          'SEO title': form.seoTitle ?? '',
+          'SEO description': form.seoDescription ?? '',
+        },
+      },
+    ],
+    onApply: (_key, translations) => {
+      setFormAr((prev) => ({
+        ...prev,
+        title: translations['Title'] ?? prev.title,
+        subtitle: translations['Subtitle'] ?? prev.subtitle,
+        description: translations['Description'] ?? prev.description,
+        seoTitle: translations['SEO title'] ?? prev.seoTitle,
+        seoDescription: translations['SEO description'] ?? prev.seoDescription,
+      }));
+    },
+    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
+  });
+
+  const academyCoverage = academy
+    ? coverageFor(
+        {
+          title: form.title ?? '',
+          subtitle: form.subtitle ?? '',
+          description: form.description ?? '',
+          seoTitle: form.seoTitle ?? '',
+          seoDescription: form.seoDescription ?? '',
+        },
+        formAr,
+      )
+    : null;
   const [publishReasons, setPublishReasons] = useState<string[]>([]);
   const [publishWarnings, setPublishWarnings] = useState<string[]>([]);
 
@@ -141,6 +208,9 @@ export default function AcademyEditorPage() {
         seoTitle: data.seoTitle ?? '',
         seoDescription: data.seoDescription ?? '',
       });
+      setFormAr(Object.fromEntries(
+        ARABIC_FIELDS.map((field) => [field, data.translations?.ar?.[field] ?? '']),
+      ) as Record<ArabicField, string>);
     } catch (e: any) {
       setError(e?.message || tEditor('loadFailed'));
     } finally {
@@ -167,15 +237,24 @@ export default function AcademyEditorPage() {
     }
   }, [pickerOpen, courseOptions]);
 
-  const dirty = isDirty(academy, form);
 
   const save = async () => {
     if (!academy || !dirty) return;
     setSaving(true);
     try {
-      const patch: Record<string, string | null> = {};
+      const patch: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(form)) {
         if ((v ?? '') !== ((academy as any)[k] ?? '')) patch[k] = v === '' ? null : v;
+      }
+      if (arabicDirty) {
+        // Sent as an object rather than field-by-field: the API takes the whole locale block, and
+        // sending only the changed keys would blank the rest of the Arabic on save.
+        patch.translations = {
+          ...(academy?.translations ?? {}),
+          ar: Object.fromEntries(
+            ARABIC_FIELDS.map((field) => [field, formAr[field].trim() || null]),
+          ),
+        };
       }
       const updated = await api.patch<{ slug?: string }>(`/admin/academies/${academy.slug}`, patch);
       toast({ type: 'ok', title: t('saved', { default: 'Academy saved' }) });
@@ -620,6 +699,54 @@ export default function AcademyEditorPage() {
               placeholder={t('seoDescriptionPlaceholder', {
                 default: 'Meta description for search & social unfurls',
               })}
+            />
+          </div>
+        </FormSection>
+
+        {/* Arabic used to be impossible to save here at all: the column existed, the form read it,
+            and the API rejected any payload containing it. */}
+        <FormSection
+          title={t('arabicSection', { default: 'Arabic copy' })}
+          icon={Languages}
+          description={t('arabicSectionDesc', {
+            default: 'Shown to Arabic visitors. Translate from English, then review before saving.',
+          })}
+          actions={
+            academyCoverage && (
+              <TranslateAction
+                coverage={academyCoverage}
+                busy={translateBusy}
+                onTranslate={(scope) => void runTranslate(scope)}
+              />
+            )
+          }
+        >
+          {academyCoverage && <TranslationCoveragePanel coverage={academyCoverage} className="mb-4" />}
+          <div dir="rtl" className="grid gap-4">
+            <TextField
+              label={t('arabicTitle', { default: 'Arabic title' })}
+              value={formAr.title}
+              onChange={(e) => setFormAr({ ...formAr, title: e.target.value })}
+            />
+            <TextField
+              label={t('arabicSubtitle', { default: 'Arabic subtitle' })}
+              value={formAr.subtitle}
+              onChange={(e) => setFormAr({ ...formAr, subtitle: e.target.value })}
+            />
+            <TextAreaField
+              label={t('arabicDescription', { default: 'Arabic description' })}
+              value={formAr.description}
+              onChange={(e) => setFormAr({ ...formAr, description: e.target.value })}
+            />
+            <TextField
+              label={t('arabicSeoTitle', { default: 'Arabic SEO title' })}
+              value={formAr.seoTitle}
+              onChange={(e) => setFormAr({ ...formAr, seoTitle: e.target.value })}
+            />
+            <TextAreaField
+              label={t('arabicSeoDescription', { default: 'Arabic SEO description' })}
+              value={formAr.seoDescription}
+              onChange={(e) => setFormAr({ ...formAr, seoDescription: e.target.value })}
             />
           </div>
         </FormSection>

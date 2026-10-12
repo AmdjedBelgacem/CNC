@@ -21,7 +21,7 @@ import {
   migrateLegacyLayout,
   inlineSectionZones,
 } from '@titan/shared';
-import type { PageLayout, ThemeTokens, PuckNode } from '@titan/shared';
+import type { PageLayout, PageTranslation, ThemeTokens, PuckNode } from '@titan/shared';
 import { SearchService } from '../search/search.service';
 import { NavigationService } from './navigation.service';
 
@@ -275,6 +275,32 @@ export class BuilderService {
    * have rules a field assignment cannot express — a rename has to stay clear of
    * reserved slugs, and `published` is meaningless without a snapshot behind it.
    */
+  /**
+   * Merge incoming localized layouts over what is already stored.
+   *
+   * Shallow assignment on `translations[locale]` would drop any Arabic layout an editor had already
+   * built whenever the English title was saved, so incoming locales are merged field by field and
+   * locales absent from the payload are left untouched.
+   */
+  private mergePageTranslations(
+    existing: unknown,
+    incoming: Record<string, PageTranslation>,
+  ): Record<string, PageTranslation> {
+    const current = (existing ?? {}) as Record<string, PageTranslation>;
+    const merged: Record<string, PageTranslation> = { ...current };
+    for (const [locale, value] of Object.entries(incoming ?? {})) {
+      const previous = current[locale] ?? {};
+      merged[locale] = {
+        ...previous,
+        ...value,
+        // `layout` is the whole block tree. Replace it wholesale when supplied; keeping the old
+        // tree while new title/SEO text arrives would publish a mix of two page versions.
+        ...(value.layout !== undefined ? { layout: value.layout } : {}),
+      };
+    }
+    return merged;
+  }
+
   async updatePage(
     tenantId: string,
     slug: string,
@@ -285,6 +311,7 @@ export class BuilderService {
       showInNav?: boolean;
       seoTitle?: string | null;
       seoDescription?: string | null;
+      translations?: Record<string, PageTranslation>;
     },
     actor: Actor,
     ctx: AuditContext = {},
@@ -300,6 +327,9 @@ export class BuilderService {
     if (dto.showInNav !== undefined) patch.showInNav = dto.showInNav;
     if (dto.seoTitle !== undefined) patch.seoTitle = dto.seoTitle;
     if (dto.seoDescription !== undefined) patch.seoDescription = dto.seoDescription;
+    if (dto.translations !== undefined) {
+      patch.translations = this.mergePageTranslations(page.translations, dto.translations);
+    }
 
     if (dto.slug !== undefined && dto.slug !== slug) {
       const next = this.assertSlugAvailable(dto.slug);

@@ -851,7 +851,14 @@
         "published": "Academy published",
         "saveFailed": "Save failed",
         "saved": "Academy saved",
-        "unpublished": "Academy unpublished"
+        "unpublished": "Academy unpublished",
+        "arabicSection": "Arabic copy",
+        "arabicSectionDesc": "Shown to Arabic visitors. Translate from English, then review before saving.",
+        "arabicTitle": "Arabic title",
+        "arabicSubtitle": "Arabic subtitle",
+        "arabicDescription": "Arabic description",
+        "arabicSeoTitle": "Arabic SEO title",
+        "arabicSeoDescription": "Arabic SEO description"
       }
     },
     "certificateDetail": {
@@ -2065,7 +2072,31 @@
       "fallbackUsed": "The primary model failed, so a fallback was used.",
       "failed": "Translation failed",
       "empty": "The model returned nothing usable.",
-      "overwriteConfirm": "This will replace the Arabic copy already on this page. Continue?"
+      "overwriteConfirm": "This will replace the Arabic copy already on this page. Continue?",
+      "nothingMissing": "There is nothing left to translate in this {entity}.",
+      "partial": "{failed} item(s) could not be translated. The rest were filled in.",
+      "coverage": {
+        "label": "Arabic coverage",
+        "badge": "{translated}/{total} translated",
+        "missing": "Missing: {fields}",
+        "empty": "Nothing to translate"
+      },
+      "menu": {
+        "title": "Translate with AI",
+        "missing": "Translate missing fields",
+        "all": "Re-translate everything",
+        "review": "Review English / Arabic",
+        "hint": "Nothing is saved until you save the form."
+      },
+      "review": {
+        "title": "Review {entity}",
+        "description": "Compare each field with its English source. Fix anything that reads wrong before saving.",
+        "nothing": "There are no translatable fields yet.",
+        "arabic": "Arabic",
+        "missing": "Missing",
+        "missingCount": "{count} field(s) still have no Arabic copy.",
+        "close": "Close"
+      }
     }
   },
   "aiAssistant": {
@@ -2736,7 +2767,9 @@
         "defaultLayoutWarning": "This template has no variables placed, so certificates will use the built-in default layout.",
         "noTemplateWarning": "No active template at any scope, so completing this course will not issue a certificate."
       },
-      "translateHint": "Seeds the Arabic tab from English. Review before saving."
+      "translateHint": "Seeds the Arabic tab from English. Review before saving.",
+      "lessonsTranslation": "Lessons and content",
+      "lessonsTranslationHint": "Fills Arabic for every section, lesson and content block in one pass."
     }
   },
   "lesson": {

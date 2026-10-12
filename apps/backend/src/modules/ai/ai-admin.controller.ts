@@ -16,13 +16,14 @@ import { AiSettingsService } from './ai-settings.service';
 import { AiWebSearchService } from './ai-web-search.service';
 import { AiFeedbackService } from './ai-feedback.service';
 import { AiEvalService } from './ai-eval.service';
-import { AiTranslationService } from './ai-translation.service';
+import { AiTranslationService, AiTranslationBatchService } from './ai-translation.service';
 import {
   AiEvalCaseDto,
   AiEvalRunDto,
   AiReindexDto,
   UpdateAiSettingsDto,
   TranslateFieldsDto,
+  TranslateFieldGroupsDto,
   UpdateAiWebSearchDto,
 } from './dto/ai.dto';
 
@@ -41,6 +42,7 @@ export class AiAdminController {
     private readonly feedback: AiFeedbackService,
     private readonly evals: AiEvalService,
     private readonly translation: AiTranslationService,
+    private readonly translationBatch: AiTranslationBatchService,
   ) {}
 
   @Get()
@@ -119,6 +121,29 @@ export class AiAdminController {
       sourceLocale: dto.sourceLocale as 'en',
       targetLocale: dto.targetLocale as 'ar',
       fields: dto.fields,
+      entity: dto.entity,
+    });
+  }
+
+  /**
+   * Translate many field groups in one call — a course's lessons, a page's block tree.
+   *
+   * Split into batches internally and reported per group, so one oversized or rate-limited group
+   * does not discard the rest. Still draft-only: nothing here is persisted.
+   */
+  @Post('translate/batch')
+  @Permissions('settings:edit')
+  @ApiOperation({
+    summary: 'Translate multiple field groups (lessons, blocks, page layout) into Arabic',
+  })
+  translateBatch(
+    @CurrentTenant() tenant: { id: string },
+    @Body() dto: TranslateFieldGroupsDto,
+  ) {
+    return this.translationBatch.translateGroups(tenant.id, {
+      sourceLocale: dto.sourceLocale as 'en',
+      targetLocale: dto.targetLocale as 'ar',
+      groups: dto.groups,
       entity: dto.entity,
     });
   }

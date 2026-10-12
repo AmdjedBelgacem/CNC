@@ -41,6 +41,16 @@ export interface ProductFormValue {
     tagline: string;
     description: string;
     features: string;
+    seoTitle: string;
+    seoDescription: string;
+    /**
+     * Arabic hotspot copy, keyed by hotspot id.
+     *
+     * Keyed rather than positional so a pin keeps its translated label when it is moved or when a
+     * new one is added — a positional list reattaches Arabic text to whichever pin happens to sit
+     * at that index.
+     */
+    hotspots: Record<string, { label: string; tooltip: string; detail: string }>;
   };
   category: string;
   priceCents: string;
@@ -98,15 +108,21 @@ export function slugify(input: string): string {
   );
 }
 
-export function useProductForm(initial?: Partial<ProductFormValue>) {
-  const [value, setValue] = useState<ProductFormValue>({
+/**
+ * A blank product form.
+ *
+ * Exported rather than inlined in the hook so the payload builder can be tested without React and
+ * so a field added here cannot be forgotten in one of two places.
+ */
+export function emptyProductForm(): ProductFormValue {
+  return {
     title: '',
     slug: '',
     tagline: '',
     description: '',
-    // Required on the type, but genuinely optional for a caller that has no Arabic yet — a new
-    // product starts monolingual and stays that way until someone translates it.
-    translationsAr: initial?.translationsAr ?? { title: '', tagline: '', description: '', features: '' },
+    // A new product starts monolingual and stays that way until someone translates it, so an
+    // empty Arabic block is the normal initial state rather than an error.
+    translationsAr: emptyArabicProduct(),
     category: '',
     priceCents: '',
     pricingMode: 'fixed',
@@ -129,7 +145,26 @@ export function useProductForm(initial?: Partial<ProductFormValue>) {
     thumbnailUrl: null,
     pinpoints: [],
     documents: [],
+  };
+}
+
+export function emptyArabicProduct(): ProductFormValue['translationsAr'] {
+  return {
+    title: '',
+    tagline: '',
+    description: '',
+    features: '',
+    seoTitle: '',
+    seoDescription: '',
+    hotspots: {},
+  };
+}
+
+export function useProductForm(initial?: Partial<ProductFormValue>) {
+  const [value, setValue] = useState<ProductFormValue>({
+    ...emptyProductForm(),
     ...initial,
+    translationsAr: initial?.translationsAr ?? emptyArabicProduct(),
   });
   const set = <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) =>
     setValue((v) => ({ ...v, [key]: next }));
@@ -140,7 +175,31 @@ export function useProductForm(initial?: Partial<ProductFormValue>) {
 
 export function productFormPayload(value: ProductFormValue) {
   const ar = value.translationsAr;
-  const hasArabic = Boolean(ar.title.trim() || ar.tagline.trim() || ar.description.trim() || ar.features.trim());
+  const hotspotTranslations = Object.fromEntries(
+    Object.entries(ar.hotspots ?? {})
+      // Drop entries the editor left blank, so an untouched pin does not send an empty object that
+      // would read as "translated but empty" in coverage.
+      .filter(([, copy]) => copy.label.trim() || copy.tooltip.trim() || copy.detail.trim())
+      .map(([id, copy]) => [
+        id,
+        {
+          label: copy.label.trim() || undefined,
+          tooltip: copy.tooltip.trim() || undefined,
+          detail: copy.detail.trim() || undefined,
+        },
+      ]),
+  );
+  // Every Arabic field must be considered here, not just the visible ones: an editor who only
+  // filled in the Arabic SEO title would otherwise have it silently dropped on save.
+  const hasArabic = Boolean(
+    ar.title.trim() ||
+      ar.tagline.trim() ||
+      ar.description.trim() ||
+      ar.features.trim() ||
+      ar.seoTitle.trim() ||
+      ar.seoDescription.trim() ||
+      Object.keys(hotspotTranslations).length > 0,
+  );
   return {
     translations: hasArabic
       ? {
@@ -152,6 +211,9 @@ export function productFormPayload(value: ProductFormValue) {
               .split('\n')
               .map((line) => line.trim())
               .filter(Boolean),
+            seoTitle: ar.seoTitle.trim() || undefined,
+            seoDescription: ar.seoDescription.trim() || undefined,
+            ...(Object.keys(hotspotTranslations).length > 0 ? { hotspots: hotspotTranslations } : {}),
           },
         }
       : null,

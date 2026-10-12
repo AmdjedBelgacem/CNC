@@ -36,6 +36,7 @@ import type { ContentLocale } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { GLASS } from './glass';
 import type { Lesson, Section } from './types';
+import { CourseLessonsTranslation } from './CourseLessonsTranslation';
 function renumber(sections: Section[]) {
   sections.forEach((s, i) => {
     s.sortOrder = i;
@@ -265,6 +266,8 @@ export function CurriculumBuilder({
   onOpenLesson,
   onDeleteLesson,
   onDuplicateLesson,
+  onUpdateLesson,
+  onUpdateSection,
 }: {
   sections: Section[];
   locale: ContentLocale;
@@ -276,6 +279,8 @@ export function CurriculumBuilder({
   onOpenLesson: (lesson: Lesson) => void;
   onDeleteLesson: (id: string) => void;
   onDuplicateLesson: (id: string) => void;
+  onUpdateLesson: (id: string, patch: Partial<Lesson>) => void;
+  onUpdateSection: (id: string, patch: Partial<Section>) => void;
 }) {
   const [items, setItems] = useState<Section[]>(sections);
   const t = useTranslations('courses');
@@ -376,7 +381,14 @@ export function CurriculumBuilder({
   };
   return (
     <div className="space-y-4">
-      {' '}
+      {/* English is the translation source, so the bulk action only appears on that tab. */}
+      {locale === 'en' && (
+        <CourseLessonsTranslation
+          sections={sections}
+          onUpdateLesson={onUpdateLesson}
+          onUpdateSection={onUpdateSection}
+        />
+      )}
       <div className="flex items-center justify-between">
         {' '}
         <p className="font-sans text-sm text-muted-foreground">

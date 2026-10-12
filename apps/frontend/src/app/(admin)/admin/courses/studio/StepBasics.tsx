@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { BookOpen, Languages, Layers } from 'lucide-react';
-import type { ContentLocale } from '@titan/shared';
+import { COURSE_BASICS_FIELDS, type ContentLocale } from '@titan/shared';
 import {
   Field,
   FormSection,
@@ -15,7 +15,11 @@ import {
 import { DIFFICULTY_LEVELS, difficultyKey, difficultyFallback } from '@/lib/difficulty';
 import { slugify } from './slugify';
 import type { CourseStudioData } from './types';
-import { TranslateToArabic } from '@/components/admin/translate-to-arabic';
+import {
+  TranslateAction,
+  TranslationCoveragePanel,
+  useTranslateDraft,
+} from '@/components/admin/translation';
 
 interface AcademyOption {
   id: string;
@@ -40,15 +44,18 @@ function translationValue(
  */
 function applyArabicTranslation(course: CourseStudioData, translations: Record<string, string>) {
   const current = course.translations?.ar ?? {};
-  const pick = (label: string, fallback: string) => translations[label] ?? fallback;
+  // `?? current.x` rather than `?? english`: a field the model skipped keeps the Arabic an editor
+  // already reviewed instead of being reset to English.
+  const pick = (label: string, existing: string | null | undefined) =>
+    translations[label] ?? existing ?? '';
   return {
     translations: {
       ...(course.translations ?? {}),
       ar: {
         ...current,
-        title: pick('Title', course.title ?? ''),
-        subtitle: pick('Subtitle', course.subtitle ?? ''),
-        description: pick('Description', course.description ?? ''),
+        title: pick('Title', current.title),
+        subtitle: pick('Subtitle', current.subtitle),
+        description: pick('Description', current.description),
       },
     },
   };
@@ -64,6 +71,24 @@ export function StepBasics({
   locale: ContentLocale;
 }) {
   const [academies, setAcademies] = useState<AcademyOption[] | null>(null);
+  const tTranslate = useTranslations('admin.translate');
+  const { busy, run, coverageFor } = useTranslateDraft({
+    entity: 'course copy',
+    descriptors: COURSE_BASICS_FIELDS,
+    groups: [
+      {
+        key: 'course',
+        fields: {
+          Title: course.title ?? '',
+          Subtitle: course.subtitle ?? '',
+          Description: course.description ?? '',
+        },
+      },
+    ],
+    onApply: (_key, translations) => update(applyArabicTranslation(course, translations)),
+    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
+  });
+  const basicsCoverage = coverageFor(course, course.translations?.ar);
   const t = useTranslations('courses');
   const tDifficulty = useTranslations('admin');
   const slug = course.slug || slugify(course.title || '');
@@ -138,19 +163,15 @@ export function StepBasics({
           </span>
           {/* Always visible on the English tab so it can be found before any field is filled;
               it disables itself when there is nothing to translate. */}
-          {locale === 'en' ? (
-            <TranslateToArabic
-              entity="course copy"
-              fields={{
-                Title: course.title ?? '',
-                Subtitle: course.subtitle ?? '',
-                Description: course.description ?? '',
-              }}
-              hasArabic={Boolean(
-                course.translations?.ar && Object.keys(course.translations.ar).length,
-              )}
-              onTranslated={(tr) => update(applyArabicTranslation(course, tr))}
-            />
+          {locale === 'en' && basicsCoverage ? (
+            <div className="w-full space-y-2 sm:w-72">
+              <TranslateAction
+                coverage={basicsCoverage}
+                busy={busy}
+                onTranslate={(scope) => void run(scope)}
+              />
+              <TranslationCoveragePanel coverage={basicsCoverage} />
+            </div>
           ) : null}
         </div>
       </div>

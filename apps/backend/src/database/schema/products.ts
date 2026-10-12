@@ -1,4 +1,4 @@
-import type { ContentLocale, InteractiveHotspot } from '@titan/shared';
+import type { ContentLocale, InteractiveHotspot, ProductContentTranslation } from '@titan/shared';
 import { pgTable, uuid, varchar, text, integer, boolean, jsonb, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenants } from './tenants';
@@ -15,13 +15,10 @@ export type AcademyContentTranslation = {
   seoTitle?: string | null;
   seoDescription?: string | null;
 };
-export type ProductContentTranslation = {
-  title?: string;
-  tagline?: string | null;
-  description?: string | null;
-  /** Bullet points shown on the product page. */
-  features?: string[] | null;
-};
+// Re-exported from `@titan/shared`; it lived only here, so the frontend re-declared it by hand
+// and the two drifted. `hotspots` is new: image hotspot copy had no locale support at all, so an
+// Arabic visitor saw English labels pinned onto translated product text.
+export type { ProductContentTranslation } from '@titan/shared';
 
 export const productsBundle = pgTable('products', {
   id: uuid('id').defaultRandom().primaryKey(),

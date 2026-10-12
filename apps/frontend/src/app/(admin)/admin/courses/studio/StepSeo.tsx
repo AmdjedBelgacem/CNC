@@ -3,11 +3,15 @@
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, Languages, Link2, Loader2, Search, Share2, Upload } from 'lucide-react';
-import type { ContentLocale } from '@titan/shared';
+import { COURSE_SEO_FIELDS, type ContentLocale } from '@titan/shared';
 import { FormSection, TextField, TextAreaField } from '@/components/admin/admin-form';
 import type { CourseStudioData } from './types';
 import { toast } from '@/components/ui/toast';
-import { TranslateToArabic } from '@/components/admin/translate-to-arabic';
+import {
+  TranslateAction,
+  TranslationCoveragePanel,
+  useTranslateDraft,
+} from '@/components/admin/translation';
 import { uploadFileToStorage } from '@/lib/upload';
 
 function valueFor(
@@ -43,6 +47,25 @@ export function StepLocalization({
    * Only available while the English tab is showing, because the source is the English column —
    * the English values live at the top level and the Arabic ones under `translations.ar`.
    */
+  const tTranslate = useTranslations('admin.translate');
+  const { busy, run, coverageFor } = useTranslateDraft({
+    entity: 'course SEO metadata',
+    descriptors: COURSE_SEO_FIELDS,
+    groups: [
+      {
+        key: 'seo',
+        fields: {
+          'SEO title': course.seoTitle ?? '',
+          'SEO description': course.seoDescription ?? '',
+          'SEO keywords': course.seoKeywords ?? '',
+        },
+      },
+    ],
+    onApply: (_key, translations) => translateToArabic(translations),
+    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
+  });
+  const seoCoverage = coverageFor(course, course.translations?.ar);
+
   const translateToArabic = (translations: Record<string, string>) => {
     const current = course.translations?.ar ?? {};
     update({
@@ -134,18 +157,14 @@ export function StepLocalization({
         </div>
         {locale === 'en' ? (
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-            <TranslateToArabic
-              entity="course SEO metadata"
-              fields={{
-                'SEO title': course.seoTitle ?? '',
-                'SEO description': course.seoDescription ?? '',
-                'SEO keywords': course.seoKeywords ?? '',
-              }}
-              hasArabic={Boolean(
-                course.translations?.ar && Object.keys(course.translations.ar).length,
-              )}
-              onTranslated={translateToArabic}
-            />
+            {seoCoverage && (
+              <TranslateAction
+                coverage={seoCoverage}
+                busy={busy}
+                onTranslate={(scope) => void run(scope)}
+              />
+            )}
+            {seoCoverage && <TranslationCoveragePanel coverage={seoCoverage} className="w-full" />}
             <span className="text-xs text-muted-foreground">
               {t('studio.translateHint', {
                 default: 'Seeds the Arabic tab from English. Review before saving.',

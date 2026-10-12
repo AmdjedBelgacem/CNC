@@ -1,11 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsIn,
   IsObject,
   IsOptional,
   IsString,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class TranslateFieldsDto {
   @ApiProperty({ enum: ['en'], description: 'Only English can be the source' })
@@ -37,5 +41,40 @@ export class TranslateFieldsDto {
   @IsOptional()
   @IsString()
   @MaxLength(120)
+  entity?: string;
+}
+
+
+export class TranslateGroupDto {
+  @ApiProperty({ description: 'Caller-supplied key echoed back on the result, e.g. a lesson id.' })
+  @IsString()
+  @MaxLength(120)
+  key!: string;
+
+  @ApiProperty({ description: 'Label -> English source text.' })
+  @IsObject()
+  fields!: Record<string, string>;
+}
+
+export class TranslateFieldGroupsDto {
+  @ApiProperty({ enum: ['en'] })
+  @IsIn(['en'])
+  sourceLocale!: 'en';
+
+  @ApiProperty({ enum: ['ar'] })
+  @IsIn(['ar'])
+  targetLocale!: 'ar';
+
+  @ApiProperty({ type: [TranslateGroupDto] })
+  @IsArray()
+  @ArrayMaxSize(200, { message: 'Too many items in one request — translate in batches' })
+  @ValidateNested({ each: true })
+  @Type(() => TranslateGroupDto)
+  groups!: TranslateGroupDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
   entity?: string;
 }

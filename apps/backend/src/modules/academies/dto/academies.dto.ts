@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, IsArray, IsIn, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsArray, IsIn, MaxLength, IsObject } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { AcademyContentTranslation } from '@titan/shared';
 
 export class CreateAcademyDto {
   @ApiProperty() @IsString() slug: string;
@@ -25,6 +26,16 @@ export class UpdateAcademyDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() sortOrder?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isPublished?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isArchived?: boolean;
+  /**
+   * Localized copy keyed by locale.
+   *
+   * The column existed and the admin form already sent this, but `forbidNonWhitelisted` turned
+   * every save containing Arabic into a 400 — so academy translations could not be stored at all.
+   */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  translations?: Record<string, AcademyContentTranslation>;
 }
 
 export class AcademyImageUploadDto {

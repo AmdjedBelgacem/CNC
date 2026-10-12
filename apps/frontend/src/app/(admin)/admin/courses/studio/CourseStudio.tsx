@@ -531,7 +531,7 @@ export function CourseStudio({ slug }: { slug: string }) {
 
   const stepContent = [
     <StepBasics key="basics" course={course} update={update} locale={locale} />,
-    <CurriculumBuilder key="curriculum" sections={course.series} locale={locale} onReorder={handleReorder} onAddSection={() => void addSection(t('studio.newSection', { default: 'New section' }))} onRenameSection={renameSection} onDeleteSection={(id) => void deleteSection(id)} onAddLesson={(id) => void addLesson(id)} onOpenLesson={openLesson} onDeleteLesson={(id) => void deleteLesson(id)} onDuplicateLesson={(id) => void duplicateLesson(id)} />,
+    <CurriculumBuilder key="curriculum" sections={course.series} locale={locale} onReorder={handleReorder} onAddSection={() => void addSection(t('studio.newSection', { default: 'New section' }))} onRenameSection={renameSection} onDeleteSection={(id) => void deleteSection(id)} onAddLesson={(id) => void addLesson(id)} onOpenLesson={openLesson} onDeleteLesson={(id) => void deleteLesson(id)} onDuplicateLesson={(id) => void duplicateLesson(id)} onUpdateLesson={updateLessonLocal} onUpdateSection={(id, patch) => { const current = courseRef.current; if (!current) return; update({ series: current.series.map((section) => section.id === id ? { ...section, ...patch } : section) }); }} />,
     <StepMedia key="media" course={course} update={update} />,
     <StepPricing key="pricing" course={course} update={update} />,
     <StepLocalization key="localization" course={course} update={update} locale={locale} />,

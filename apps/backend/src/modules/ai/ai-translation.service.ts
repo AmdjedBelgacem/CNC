@@ -32,6 +32,13 @@ export interface TranslateFieldsResult {
   usedFallback: boolean;
 }
 
+/**
+ * Per-request field cap.
+ *
+ * Kept modest on purpose: one request maps to one model call, and a very large payload raises the
+ * chance of a truncated or unparseable reply. Bulk callers go through `translateGroups`, which
+ * splits work into batches of this size.
+ */
 const MAX_FIELDS = 40;
 const MAX_FIELD_CHARS = 8000;
 
@@ -197,4 +204,136 @@ function firstBalancedObject(input: string): string | null {
     }
   }
   return null;
+}
+
+
+export interface TranslateGroupInput {
+  /** Stable key the caller uses to match results back, e.g. a lesson id. */
+  key: string;
+  /** Label -> English source text. */
+  fields: Record<string, string>;
+}
+
+export interface TranslateGroupResult {
+  key: string;
+  translations: Record<string, string>;
+  /** Set when this group failed; other groups still return. */
+  error?: string;
+}
+
+export interface TranslateGroupsResult {
+  groups: TranslateGroupResult[];
+  /** Fields translated across every group. */
+  translatedCount: number;
+  /** Groups that failed. */
+  failedCount: number;
+  model: string;
+  usedFallback: boolean;
+}
+
+export interface TranslateGroupsInput {
+  sourceLocale: ContentLocale;
+  targetLocale: ContentLocale;
+  groups: TranslateGroupInput[];
+  entity?: string;
+}
+
+/**
+ * Translate many field groups.
+ *
+ * A course is lessons × (title, description, blocks); a page is every string prop in its block
+ * tree. Both exceed the single-request field cap, so work is split into batches and each batch is
+ * a separate model call.
+ *
+ * Failure is per group, not per request. One lesson whose transcript is too long, or a rate limit
+ * hit on batch four, must not discard the three batches that already succeeded — a partial
+ * translation the editor can review and top up is far more useful than an all-or-nothing error.
+ */
+@Injectable()
+export class AiTranslationBatchService {
+  private readonly logger = new Logger(AiTranslationBatchService.name);
+
+  constructor(private readonly translation: AiTranslationService) {}
+
+  async translateGroups(tenantId: string, input: TranslateGroupsInput): Promise<TranslateGroupsResult> {
+    const sourceLocale = input.sourceLocale;
+    const targetLocale = input.targetLocale;
+    if (sourceLocale !== 'en') {
+      throw new BadRequestException('Only English can be used as the translation source');
+    }
+    if (targetLocale !== 'ar') {
+      throw new BadRequestException('Only Arabic is supported as a translation target');
+    }
+
+    const groups = input.groups ?? [];
+    if (groups.length === 0) {
+      throw new BadRequestException('Nothing to translate');
+    }
+    if (groups.length > 200) {
+      throw new BadRequestException('Too many items in one request — translate in batches');
+    }
+
+    const results: TranslateGroupResult[] = [];
+    let translatedCount = 0;
+    let failedCount = 0;
+    let lastModel = '';
+    let anyFallback = false;
+
+    // Flatten into batches that respect the per-request field cap, keeping group boundaries.
+    let batch: Array<{ group: TranslateGroupInput; fields: Record<string, string> }> = [];
+    let batchFields = 0;
+    const flush = async () => {
+      if (batch.length === 0) return;
+      const payload = batch.reduce<Record<string, string>>((acc, item) => ({ ...acc, ...item.fields }), {});
+      try {
+        const result = await this.translation.translateFields(tenantId, {
+          sourceLocale: 'en',
+          targetLocale: 'ar',
+          fields: payload,
+          entity: input.entity,
+        });
+        lastModel = result.model;
+        anyFallback = anyFallback || result.usedFallback;
+        // Split the flat reply back onto the groups that contributed each label.
+        for (const item of batch) {
+          const own: Record<string, string> = {};
+          for (const label of Object.keys(item.fields)) {
+            const value = result.translations[label];
+            if (value) own[label] = value;
+          }
+          results.push({ key: item.group.key, translations: own });
+          translatedCount += Object.keys(own).length;
+        }
+      } catch (error) {
+        failedCount += batch.length;
+        const message = error instanceof Error ? error.message : 'Translation failed';
+        this.logger.warn(`Batch of ${batch.length} group(s) failed: ${message}`);
+        for (const item of batch) results.push({ key: item.group.key, translations: {}, error: message });
+      }
+      batch = [];
+      batchFields = 0;
+    };
+
+    for (const group of groups) {
+      const fields: Record<string, string> = {};
+      for (const [label, value] of Object.entries(group.fields ?? {})) {
+        if (typeof value === 'string' && value.trim()) fields[label] = value;
+      }
+      if (Object.keys(fields).length === 0) {
+        results.push({ key: group.key, translations: {} });
+        continue;
+      }
+      const count = Object.keys(fields).length;
+      if (batchFields + count > MAX_FIELDS && batch.length > 0) await flush();
+      batch.push({ group, fields });
+      batchFields += count;
+    }
+    await flush();
+
+    // Preserve the caller's ordering regardless of how batches interleaved.
+    const order = new Map(groups.map((g, i) => [g.key, i]));
+    results.sort((a, b) => (order.get(a.key) ?? 0) - (order.get(b.key) ?? 0));
+
+    return { groups: results, translatedCount, failedCount, model: lastModel, usedFallback: anyFallback };
+  }
 }

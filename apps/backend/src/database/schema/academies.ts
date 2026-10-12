@@ -1,16 +1,13 @@
 import { pgTable, uuid, varchar, text, integer, boolean, jsonb, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants';
-import type { ContentLocale } from '@titan/shared';
+import type { AcademyContentTranslation, ContentLocale } from '@titan/shared';
 
 /** Per-locale copy. Only human-readable text belongs here; never a price, a
  * capacity, a date or a slug, because those are data and translating them
  * would corrupt the row. Missing keys fall back to the English column. */
-export type AcademyContentTranslation = {
-  title?: string;
-  description?: string | null;
-  seoTitle?: string | null;
-  seoDescription?: string | null;
-};
+// Re-exported from `@titan/shared` so the admin UI and the API share one definition. It lived
+// only here, which is why the frontend could not import it and academies had no translation type.
+export type { AcademyContentTranslation } from '@titan/shared';
 
 
 export const academies = pgTable('academies', {

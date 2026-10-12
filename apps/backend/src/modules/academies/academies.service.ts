@@ -248,6 +248,8 @@ export class AcademiesService {
     for (const key of [
       'title', 'subtitle', 'description',
       'accentColor', 'seoTitle', 'seoDescription', 'sortOrder',
+      // Whitelisted so the admin form can persist Arabic copy.
+      'translations',
     ] as const) {
       if (dto[key] !== undefined) patch[key] = dto[key];
     }

@@ -1,12 +1,23 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Globe, GlobeLock, Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
-import type { ContentLocale } from '@titan/shared';
-import { TranslateToArabic } from '@/components/admin/translate-to-arabic';
+import {
+  PRODUCT_FIELDS,
+  HOTSPOT_FIELDS,
+  coverageOf,
+  type ContentLocale,
+  type ProductContentTranslation,
+  type TranslationCoverage,
+} from '@titan/shared';
+import {
+  TranslateAction,
+  TranslationCoveragePanel,
+  useTranslateDraft,
+} from '@/components/admin/translation';
 import { TextAreaField, TextField } from '@/components/admin/admin-form';
 import { toast } from '@/components/ui/toast';
 import { formatMoney } from '@/lib/api/normalize';
@@ -74,17 +85,8 @@ interface ProductDetail {
   academy?: { id: string; title: string; slug: string } | null;
   course?: { id: string; title: string; slug: string } | null;
   variants?: unknown[];
-  translations?: Partial<
-    Record<
-      ContentLocale,
-      {
-        title?: string;
-        tagline?: string | null;
-        description?: string | null;
-        features?: string[] | null;
-      }
-    >
-  > | null;
+  // The shared type, so product translations cannot drift from the schema the API stores.
+  translations?: Partial<Record<ContentLocale, ProductContentTranslation>> | null;
 }
 
 /** The form value that a saved product corresponds to, used for dirty tracking. */
@@ -123,6 +125,14 @@ function baselineOf(p: ProductDetail): ProductFormValue {
       features: Array.isArray(p.translations?.ar?.features)
         ? p.translations.ar.features!.join('\n')
         : '',
+      seoTitle: p.translations?.ar?.seoTitle ?? '',
+      seoDescription: p.translations?.ar?.seoDescription ?? '',
+      hotspots: Object.fromEntries(
+        Object.entries(p.translations?.ar?.hotspots ?? {}).map(([id, copy]) => [
+          id,
+          { label: copy?.label ?? '', tooltip: copy?.tooltip ?? '', detail: copy?.detail ?? '' },
+        ]),
+      ),
     },
   };
 }
@@ -146,6 +156,86 @@ export default function ProductEditorPage() {
   const endUpload = useCallback(() => setUploadingCount((n) => Math.max(0, n - 1)), []);
 
   const { value, set, reset } = useProductForm();
+
+  /**
+   * Product copy and hotspot copy in one pass.
+   *
+   * Hotspots are their own group per product because their labels are keyed by pin id: sending all
+   * of them under one key would make it impossible to tell which pin a returned label belongs to.
+   */
+  const translateGroups = useMemo(() => {
+    const main: Record<string, string> = {
+      Title: value.title,
+      Tagline: value.tagline,
+      Description: value.description,
+      'Bullet points (one per line)': value.features,
+      'SEO title': value.seoTitle,
+      'SEO description': value.seoDescription,
+    };
+    const groups: Array<{ key: string; fields: Record<string, string> }> = [{ key: 'product', fields: main }];
+    for (const pin of value.pinpoints) {
+      groups.push({
+        key: `pin:${pin.id}`,
+        fields: { Label: pin.label, Tooltip: pin.tooltip ?? '', Detail: pin.detail ?? '' },
+      });
+    }
+    return groups;
+  }, [value.title, value.tagline, value.description, value.features, value.seoTitle, value.seoDescription, value.pinpoints]);
+
+  const { busy: translateBusy, run: runTranslate, coverageFor } = useTranslateDraft({
+    entity: 'product copy',
+    descriptors: PRODUCT_FIELDS,
+    groups: translateGroups,
+    onApply: (key, translations) => {
+      if (key.startsWith('pin:')) {
+        const id = key.slice('pin:'.length);
+        const current = value.translationsAr.hotspots[id] ?? { label: '', tooltip: '', detail: '' };
+        set('translationsAr', {
+          ...value.translationsAr,
+          hotspots: {
+            ...value.translationsAr.hotspots,
+            [id]: {
+              label: translations['Label'] ?? current.label,
+              tooltip: translations['Tooltip'] ?? current.tooltip,
+              detail: translations['Detail'] ?? current.detail,
+            },
+          },
+        });
+        return;
+      }
+      set('translationsAr', {
+        ...value.translationsAr,
+        title: translations['Title'] ?? value.translationsAr.title,
+        tagline: translations['Tagline'] ?? value.translationsAr.tagline,
+        description: translations['Description'] ?? value.translationsAr.description,
+        features: translations['Bullet points (one per line)'] ?? value.translationsAr.features,
+        seoTitle: translations['SEO title'] ?? value.translationsAr.seoTitle,
+        seoDescription: translations['SEO description'] ?? value.translationsAr.seoDescription,
+      });
+    },
+    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
+  });
+
+  const tTranslate = useTranslations('admin.translate');
+  const productCoverage = coverageFor(value, value.translationsAr);
+  const hotspotCoverage = value.pinpoints.map((pin) => ({
+    pin,
+    coverage: coverageOf(pin, value.translationsAr.hotspots?.[pin.id] ?? null, HOTSPOT_FIELDS),
+  }));
+  const totalProductCoverage = useMemo<TranslationCoverage | undefined>(() => {
+    if (!productCoverage) return undefined;
+    // Fold hotspot strings into the product bar: leaving them out would show a product as fully
+    // translated while its image pins were still English.
+    let translated = productCoverage.translated;
+    let total = productCoverage.total;
+    const missing = [...productCoverage.missing];
+    for (const entry of hotspotCoverage) {
+      total += entry.coverage.total;
+      translated += entry.coverage.translated;
+      missing.push(...entry.coverage.missing);
+    }
+    return { total, translated, missing, present: [] };
+  }, [productCoverage, hotspotCoverage]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -431,30 +521,15 @@ export default function ProductEditorPage() {
                   })}
                 </p>
               </div>
-              <TranslateToArabic
-                entity="product copy"
-                hasArabic={Boolean(
-                  value.translationsAr.title ||
-                  value.translationsAr.tagline ||
-                  value.translationsAr.description ||
-                  value.translationsAr.features,
-                )}
-                fields={{
-                  Title: value.title,
-                  Tagline: value.tagline,
-                  Description: value.description,
-                  'Bullet points (one per line)': value.features,
-                }}
-                onTranslated={(tr) => {
-                  set('translationsAr', {
-                    title: tr.Title ?? value.translationsAr.title,
-                    tagline: tr.Tagline ?? value.translationsAr.tagline,
-                    description: tr.Description ?? value.translationsAr.description,
-                    features: tr['Bullet points (one per line)'] ?? value.translationsAr.features,
-                  });
-                }}
+              <TranslateAction
+                coverage={totalProductCoverage}
+                busy={translateBusy}
+                onTranslate={(scope) => void runTranslate(scope)}
               />
             </div>
+            {totalProductCoverage && (
+              <TranslationCoveragePanel coverage={totalProductCoverage} className="mt-3" />
+            )}
             <div className="mt-4 grid gap-4">
               <TextField
                 label={t('arabicTitle', { default: 'Arabic title' })}
