@@ -54,6 +54,24 @@ RUN --mount=type=cache,target=/pnpm/store \
 COPY . .
 RUN pnpm turbo build --filter=@titan/backend
 
+# ── prod-deps ─────────────────────────────────────────────────────────────────────
+# Drop development dependencies from the tree the runtime stage copies.
+#
+# The base stage must install everything because turbo, tsc and the argon2
+# toolchain are build-time needs. Copying that tree verbatim into the runtime
+# shipped the entire frontend toolchain to a server that never imports any of it —
+# next (200 MB), @vercel (216 MB), monaco-editor (98 MB), @payloadcms and
+# @aws-sdk, none of which the backend loads at runtime.
+#
+# The `--filter @titan/backend...` matters: a bare `pnpm install --prod` still
+# keeps every workspace's production dependencies, and the frontend's production
+# dependencies include next, @vercel and monaco-editor — 500 MB the backend never
+# imports. The trailing `...` pulls in the backend's workspace dependencies too,
+# so @titan/shared stays linked. It runs in its own stage so the full tree above
+# stays intact for the build.
+FROM base AS prod-deps
+RUN pnpm install --prod --frozen-lockfile --filter @titan/backend... --config.confirmModulesPurge=false
+
 # ── runtime ────────────────────────────────────────────────────────────────────────
 # argon2's compiled binary is produced for glibc, so the runtime stage must be glibc too.
 # Debian-slim keeps that consistent and avoids a musl/mismatch class of failures.
@@ -67,16 +85,10 @@ ENV PORT=4000
 ENV HOST=0.0.0.0
 WORKDIR /repo
 
-COPY --from=base /repo/node_modules ./node_modules
-COPY --from=base /repo/packages ./packages
-COPY --from=base /repo/apps/backend/dist ./apps/backend/dist
-COPY --from=base /repo/apps/backend/package.json ./apps/backend/package.json
-COPY --from=base /repo/apps/backend/scripts ./apps/backend/scripts
-
 # The node image already ships an unprivileged `node` user (uid 1000). Running as
 # root inside the container is unnecessary and turns any image-level bug into a
 # host-level one. Ownership is fixed at copy time so no chown step is needed.
-COPY --from=base --chown=node:node /repo/node_modules ./node_modules
+COPY --from=prod-deps --chown=node:node /repo/node_modules ./node_modules
 COPY --from=base --chown=node:node /repo/packages ./packages
 COPY --from=base --chown=node:node /repo/apps/backend/dist ./apps/backend/dist
 COPY --from=base --chown=node:node /repo/apps/backend/package.json ./apps/backend/package.json
