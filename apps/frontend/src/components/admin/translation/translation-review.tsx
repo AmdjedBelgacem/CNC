@@ -134,7 +134,7 @@ export function TranslationReviewDialog({
               <div className="min-w-0 space-y-1.5 sm:border-s sm:border-border/70 sm:ps-7">
                 <div className="flex items-center gap-2 sm:justify-end">
                   <ArrowRight
-                    className="size-3 shrink-0 rotate-180 text-border-strong sm:hidden"
+                    className="size-3 shrink-0 rotate-180 rtl:rotate-0 text-border-strong sm:hidden"
                     aria-hidden
                   />
                   <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">

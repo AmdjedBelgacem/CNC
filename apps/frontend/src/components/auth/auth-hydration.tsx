@@ -4,20 +4,21 @@ import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api-client';
 
 /**
- * Restores the client session on app load by calling GET /auth/me.
- * With httpOnly cookie auth the cookie is sent automatically — no localStorage
- * tokens involved. Marks the store hydrated either way so `hasHydrated` gates
- * (nav menus, admin gate) can render correctly.
+ * Restores the client session on app load.
  *
- * One retry is deliberate. The access cookie lives 15 minutes, and a cold page load
- * after it expires has to rotate before /auth/me can succeed. If that rotation loses to
- * a transient failure — a blip, or a cookie that another tab is mid-way through
- * replacing — a single attempt reads as "signed out" and bounces the user to /login
- * mid-session. Retrying once after a short pause lets the rotation settle; only after
- * both attempts fail do we conclude the session is really gone.
+ * Asks GET /auth/session, which answers `{ authenticated: false }` with a 200 when nobody is
+ * signed in. It used to ask `/auth/me`, where an anonymous visitor got a 401 — which the API
+ * client then answered with a `/auth/refresh` that 401'd too. Two doomed requests and two
+ * console errors on every public page load, to learn what the server already knew.
  *
- * This is a safety net, not the fix. The bounce itself came from the refresh call
- * omitting its CSRF header on a cold load — see `csrfHeaderToken` in lib/api-client.ts.
+ * Marks the store hydrated either way so `hasHydrated` gates (nav menus, admin gate) can
+ * render correctly.
+ *
+ * The retry covers a genuine race, not the common case: the access cookie lives 15 minutes,
+ * so a cold load after it expires has to rotate before the session resolves. If that rotation
+ * loses to a blip, or to a cookie another tab is mid-way through replacing, one attempt reads
+ * as "signed out" and bounces the user to /login mid-session. Retrying once lets it settle;
+ * only after both attempts fail is the session really gone.
  */
 const HYDRATION_RETRY_DELAY_MS = 700;
 
@@ -31,8 +32,10 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
     (async () => {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const user = await api.get<any>('/auth/me');
-          if (!cancelled) setUser(user);
+          const session = await api.get<{ authenticated: boolean; user: any }>('/auth/session');
+          if (cancelled) return;
+          setUser(session?.authenticated ? (session.user ?? null) : null);
+          setHydrated(true);
           break;
         } catch {
           if (cancelled) return;

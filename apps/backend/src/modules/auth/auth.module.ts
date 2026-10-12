@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '../../config/config.service';
 import { AuthController } from './auth.controller';
+import { AuthSessionController } from './auth-session.controller';
 import { AuthService } from './services/auth.service';
 import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
@@ -53,7 +54,7 @@ import { SearchModule } from '../search/search.module';
     forwardRef(() => EmailModule),
     SearchModule,
   ],
-  controllers: [AuthController, ProfileController],
+  controllers: [AuthController, AuthSessionController, ProfileController],
   providers: [
     AuthService,
     PasswordService,
