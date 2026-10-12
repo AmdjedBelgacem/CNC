@@ -1505,7 +1505,7 @@
       "sectionDocs": "Extra PDF documents",
       "sectionDocsDesc": "Instruction manuals, spec sheets, setup guides — any PDF added here appears on the product page.",
       "sectionHotspots": "Pinpoints on the product image",
-      "sectionHotspotsDesc": "Explain points of the product image the same way course images use hotspots.",
+      "sectionHotspotsDesc": "Call out specific features on the photo. Each pinpoint can carry a label, a tooltip and detail.",
       "sectionMedia": "Thumbnail",
       "sectionMediaDesc": "Shown in catalog listings and the storefront.",
       "sectionPricing": "Pricing & inventory",

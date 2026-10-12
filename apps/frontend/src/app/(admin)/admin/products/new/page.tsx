@@ -11,12 +11,10 @@ import {
   BarButton,
   BarPrimaryButton,
 } from '@/components/admin/admin-chrome';
-import { FormActions } from '@/components/admin/admin-form';
 import {
   ProductFormSections,
   PublishReadiness,
   productFormPayload,
-  slugify,
   useProductForm,
 } from '../product-form';
 
@@ -107,18 +105,9 @@ export default function NewProductPage() {
             {error}
           </div>
         )}
-        <div className="space-y-5">
-          <ProductFormSections value={value} set={set} />
-        </div>
-        <FormActions
-          saving={busy}
-          onSave={() => void submit()}
-          onCancel={() => router.push('/admin/products')}
-          saveLabel={t('createProduct', { default: 'Create product' })}
-          cancelLabel={t('cancel', { default: 'Cancel' })}
-        >
-          <span className="sr-only">{slugify(value.title)}</span>
-        </FormActions>
+        {/* Two columns, matching the academies create screen. Seven stacked full-width
+            sections turned this into an endless scroll on a laptop. */}
+        <ProductFormSections value={value} set={set} columns={2} />
       </div>
     </div>
   );

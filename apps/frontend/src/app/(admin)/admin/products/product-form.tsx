@@ -386,18 +386,31 @@ export function ImageUploadField({
 export function ProductFormSections({
   value,
   set,
+  columns = 1,
 }: {
   value: ProductFormValue;
   set: <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) => void;
+  /**
+   * Two columns on wide screens, for the create page.
+   *
+   * These seven sections vary a lot in height, so they are flowed with CSS columns and
+   * `break-inside-avoid` rather than a grid: a grid forces every row to the height of its
+   * tallest cell, which left the short SEO card next to a tall pricing card and read as a
+   * layout mistake. Flowing keeps the natural order top-to-bottom and packs the cards.
+   */
+  columns?: 1 | 2;
 }) {
   const t = useTranslations('admin.productForm');
   const { academies, courses } = useRelations();
   const digits = fractionDigits(value.currency);
   const unit = digits === 0 ? t('minorUnitWhole', { default: 'minor units' }) : t('minorUnit', { default: 'cents' });
 
+  const sectionClass = columns === 2 ? 'mb-4 break-inside-avoid' : undefined;
+
   return (
-    <>
+    <div className={columns === 2 ? 'columns-1 gap-4 lg:columns-2' : 'space-y-5'}>
       <FormSection
+        className={sectionClass}
         title={t('sectionBasics', { default: 'Basics' })}
         icon={Package}
         description={t('sectionBasicsDesc', { default: 'How this product appears in your catalog.' })}
@@ -466,6 +479,7 @@ export function ProductFormSections({
       </FormSection>
 
       <FormSection
+        className={sectionClass}
         title={t('sectionPricing', { default: 'Pricing & inventory' })}
         icon={Store}
         description={t('sectionPricingDesc', { default: 'Set the price customers pay and how stock behaves.' })}
@@ -586,6 +600,7 @@ export function ProductFormSections({
       </FormSection>
 
       <FormSection
+        className={sectionClass}
         title={t('sectionRelations', { default: 'Relations' })}
         icon={Link2}
         description={t('sectionRelationsDesc', { default: 'Optionally surface this product inside an academy or course.' })}
@@ -619,6 +634,7 @@ export function ProductFormSections({
       </FormSection>
 
       <FormSection
+        className={sectionClass}
         title={t('sectionSeo', { default: 'SEO' })}
         icon={Search}
         description={t('sectionSeoDesc', { default: 'Overrides for search results. Leave blank to use the title and description above.' })}
@@ -641,6 +657,7 @@ export function ProductFormSections({
       </FormSection>
 
       <FormSection
+        className={sectionClass}
         title={t('sectionMedia', { default: 'Thumbnail' })}
         icon={ImageIcon}
         description={t('sectionMediaDesc', { default: 'Shown in catalog listings and the storefront.' })}
@@ -661,6 +678,7 @@ export function ProductFormSections({
       </FormSection>
 
       <FormSection
+        className={sectionClass}
         title={t('sectionHotspots')}
         icon={ImageIcon}
         description={t('sectionHotspotsDesc')}
@@ -673,6 +691,7 @@ export function ProductFormSections({
       </FormSection>
 
       <FormSection
+        className={sectionClass}
         title={t('sectionDocs')}
         icon={ImageIcon}
         description={t('sectionDocsDesc')}
@@ -682,7 +701,7 @@ export function ProductFormSections({
           onChange={(next) => set('documents', next)}
         />
       </FormSection>
-    </>
+    </div>
   );
 }
 
