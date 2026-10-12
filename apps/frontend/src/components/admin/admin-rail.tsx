@@ -1,9 +1,11 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   ExternalLink,
+  Cog,
   LayoutTemplate,
   Palette,
   LayoutDashboard,
@@ -48,6 +50,24 @@ type NavGroup = 'overview' | 'content' | 'people' | 'commerce' | 'platform';
  * Sorting here makes each group contiguous regardless of how `tabsBase` is written.
  */
 const NAV_GROUP_ORDER: NavGroup[] = ['overview', 'content', 'people', 'commerce', 'platform'];
+
+/**
+ * One rail entry per mechanism, each opening a flyout of its destinations.
+ *
+ * Fifteen icons in a 64px column carried no structure and, at a laptop's height, left no room
+ * to label anything — the rail could only ever be icons plus a tooltip. Grouping them under a
+ * single entry per area fixes both at once: the rail becomes seven rows, which fits any screen
+ * comfortably, and the flyout is wide enough to show a real label beside each icon.
+ */
+const GROUP_META: Record<
+  Exclude<NavGroup, 'overview'>,
+  { icon: typeof LayoutDashboard; labelKey: string }
+> = {
+  content: { icon: LayoutTemplate, labelKey: 'nav.groupContent' },
+  people: { icon: Users, labelKey: 'nav.groupPeople' },
+  commerce: { icon: DollarSign, labelKey: 'nav.groupCommerce' },
+  platform: { icon: Cog, labelKey: 'nav.groupPlatform' },
+};
 interface TabDef {
   href: string;
   title: string;
@@ -199,7 +219,6 @@ const tabKeyMap: Record<string, string> = {
   '/admin/settings': 'settings',
   '/': 'viewSite',
 };
-const cap = (group: string) => group.charAt(0).toUpperCase() + group.slice(1);
 function RailButton({
   href,
   title,
@@ -268,10 +287,48 @@ export function AdminRail() {
   // stays a personal dropdown for everyone else, since `/admin/alerts` is
   // super-admin only.
   const isSuperAdmin = role === 'super_admin';
+  const [openGroup, setOpenGroup] = useState<NavGroup | null>(null);
+
+  // One rail entry per mechanism, each carrying the destinations it owns. Only groups that
+  // still have a destination this role can open are shown, so an instructor never gets a dead
+  // button that opens to nothing.
+  const navGroups = useMemo(
+    () =>
+      NAV_GROUP_ORDER.filter((key) => key !== 'overview').map((key) => ({
+        key,
+        children: visibleTabs.filter((tab) => tab.group === key),
+      })),
+    [visibleTabs],
+  );
+
+  // Navigating should close the flyout: leaving it open over the next screen reads as a stale
+  // menu rather than one that belongs to where you now are.
+  useEffect(() => {
+    setOpenGroup(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!openGroup) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenGroup(null);
+    };
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-nav-root]')) return;
+      setOpenGroup(null);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointerDown);
+    };
+  }, [openGroup]);
+
   return (
     <>
       {' '}
-      <aside className="no-scrollbar fixed inset-y-0 start-0 z-40 hidden w-16 flex-col items-center gap-1 overflow-y-auto border-r border-border bg-card/60 py-2 lg:flex">
+      <aside className="no-scrollbar fixed inset-y-0 start-0 z-40 hidden w-16 flex-col items-center gap-1.5 border-r border-border bg-card/60 py-3 lg:flex">
         {' '}
         <Link
           href="/admin"
@@ -294,27 +351,93 @@ export function AdminRail() {
           by scrolling the mobile bar. Two renderings of one list cannot both stay right;
           this one is derived, so a new entry cannot be left out of a viewport by accident.
         */}
-        {visibleTabs.map((tab, index) => {
-          // A separator before the first item of each group, so the reader can see where one
-          // area ends and the next begins. Skipped for the very first item, which would
-          // otherwise print a rule directly under the logo.
-          const startsGroup = index > 0 && visibleTabs[index - 1]?.group !== tab.group;
+        {visibleTabs
+          .filter((tab) => tab.group === 'overview')
+          .map((tab) => (
+            <RailButton
+              key={tab.href}
+              href={tab.href}
+              title={tab.title}
+              active={Boolean(tab.match(pathname))}
+            >
+              {' '}
+              <tab.icon className="size-[18px]" />{' '}
+            </RailButton>
+          ))}{' '}
+        {navGroups.map((group) => {
+          const meta = GROUP_META[group.key];
+          // A group lights up when the route you are on belongs to it, so you always know which
+          // area the current screen lives in without opening anything.
+          const containsActive = group.children.some((child) => child.match(pathname));
+          const open = openGroup === group.key;
           return (
-            <div key={tab.href} className="flex w-full flex-col items-center">
-              {startsGroup && (
-                <div className="my-0.5 h-px w-8 bg-border" aria-hidden />
-              )}
-              <RailButton
-                href={tab.href}
-                title={`${tAdmin(`nav.group${cap(tab.group)}`)} · ${tab.title}`}
-                active={Boolean(tab.match(pathname))}
+            <div key={group.key} data-nav-root className="relative">
+              <button
+                type="button"
+                onClick={() => setOpenGroup((current) => (current === group.key ? null : group.key))}
+                aria-expanded={open}
+                aria-haspopup="menu"
+                title={tAdmin(meta.labelKey)}
+                className={cn(
+                  'group relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150',
+                  containsActive
+                    ? 'bg-primary/10 text-primary shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
               >
-                {' '}
-                <tab.icon className="size-[18px]" />{' '}
-              </RailButton>
+                <meta.icon className="size-[18px]" />
+                {group.children.length > 0 && (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute -bottom-0.5 -end-0.5 size-1.5 rounded-full bg-primary transition-opacity',
+                      containsActive || open ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                )}
+              </button>
+              {open && (
+                <div
+                  role="menu"
+                  className="absolute start-full top-0 z-50 ms-2 w-60 animate-in overflow-hidden rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-lg"
+                >
+                  <p className="px-2.5 pb-1.5 pt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    {tAdmin(meta.labelKey)}
+                  </p>
+                  {group.children.map((child) => {
+                    const active = Boolean(child.match(pathname));
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        role="menuitem"
+                        onClick={() => setOpenGroup(null)}
+                        className={cn(
+                          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors',
+                          active
+                            ? 'bg-primary/10 font-medium text-primary'
+                            : 'text-foreground hover:bg-muted',
+                        )}
+                      >
+                        <child.icon className="size-4 shrink-0 opacity-80" />
+                        <span className="truncate">{child.title}</span>
+                        {active && <span className="ms-auto size-1.5 rounded-full bg-primary" />}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}{' '}
+        {visibleTabs
+          .filter((tab) => tab.href === '/')
+          .map((tab) => (
+            <RailButton key={tab.href} href={tab.href} title={tab.title} active={false}>
+              {' '}
+              <tab.icon className="size-[18px]" />{' '}
+            </RailButton>
+          ))}{' '}
         <div className="sticky bottom-0 mt-auto flex shrink-0 flex-col items-center gap-1 bg-card/95 pt-2 backdrop-blur-sm">
           {' '}
           <div className="my-1 h-px w-8 bg-border" />{' '}
