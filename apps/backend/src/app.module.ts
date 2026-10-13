@@ -28,6 +28,7 @@ import { RepairModule } from './modules/repair/repair.module';
 import { WsModule } from './modules/ws/ws.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
+import { PartnersModule } from './modules/partners/partners.module';
 import { TitanTvModule } from './modules/titan-tv/titan-tv.module';
 import { StudyGroupsModule } from './modules/study-groups/study-groups.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -91,6 +92,7 @@ import { RedisThrottlerStorage } from './modules/auth/providers/redis-throttler-
     WsModule,
     AdminModule,
     QuotesModule,
+    PartnersModule,
     TitanTvModule,
     StudyGroupsModule,
     ChatModule,

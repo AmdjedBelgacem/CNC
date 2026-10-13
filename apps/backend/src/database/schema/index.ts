@@ -30,6 +30,8 @@ export { financeBudgets } from './finance';
 export { posts, postVotes, comments, commentVotes, tags, postTags } from './posts';
 export { events, eventAttendees } from './events';
 export { sponsors } from './sponsors';
+export { partnerApplications, PARTNER_APPLICATION_STATUSES, PARTNER_APPLICATION_TYPES } from './partner-applications';
+export type { PartnerApplicationStatus, PartnerApplicationType } from './partner-applications';
 export { navigationItems } from './navigation';
 export { themes, themeVersions } from './themes';
 export { pages, pageVersions } from './pages';
