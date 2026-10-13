@@ -27,6 +27,16 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const [done, setDone] = useState(false);
 
+  const revalidate = async () => {
+    try {
+      const session = await api.get<{ authenticated: boolean; user: any }>('/auth/session');
+      setUser(session?.authenticated ? (session.user ?? null) : null);
+      setHydrated(true);
+    } catch {
+      setHydrated(true);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -49,8 +59,16 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
       }
       if (!cancelled) setDone(true);
     })();
+    const onFocus = () => void revalidate();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void revalidate();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [setUser, setHydrated]);
 
