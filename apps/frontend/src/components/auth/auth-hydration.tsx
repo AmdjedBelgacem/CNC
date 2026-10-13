@@ -29,10 +29,13 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
 
   const revalidate = async () => {
     try {
-      const session = await api.get<{ authenticated: boolean; user: any }>('/auth/session');
-      setUser(session?.authenticated ? (session.user ?? null) : null);
+      const user = await api.get<any>('/auth/me');
+      if (user && user.id) setUser(user);
+      else setUser(null);
       setHydrated(true);
     } catch {
+      // 401 after refresh failure means genuinely signed out.
+      setUser(null);
       setHydrated(true);
     }
   };
@@ -42,9 +45,12 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
     (async () => {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const session = await api.get<{ authenticated: boolean; user: any }>('/auth/session');
+          const user = await api.get<any>('/auth/me');
           if (cancelled) return;
-          setUser(session?.authenticated ? (session.user ?? null) : null);
+          if (user && user.id) setUser(user);
+          else {
+            setUser(null);
+          }
           setHydrated(true);
           break;
         } catch {
@@ -54,6 +60,7 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
             continue;
           }
           // Both attempts failed — treat as genuinely unauthenticated.
+          setUser(null);
           setHydrated(true);
         }
       }
