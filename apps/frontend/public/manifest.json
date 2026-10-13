@@ -1,6 +1,6 @@
 {
-  "name": "TITANS of Manufacturing",
-  "short_name": "TITANS",
+  "name": "Baroot CNC Solutions",
+  "short_name": "Baroot CNC",
   "description": "Free CNC machining education platform",
   "start_url": "/",
   "scope": "/",
@@ -10,8 +10,8 @@
   "categories": [
     "education"
   ],
-  "background_color": "#0a0f1e",
-  "theme_color": "#7c3aed",
+  "background_color": "#ffffff",
+  "theme_color": "#0a0f1e",
   "icons": [
     {
       "src": "/icons/icon-192.png",

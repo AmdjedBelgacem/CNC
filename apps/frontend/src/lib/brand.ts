@@ -125,9 +125,9 @@ export function organizationJsonLd(): Record<string, unknown> {
     url: SITE_URL,
     logo: {
       '@type': 'ImageObject',
-      url: absoluteUrl('/icon.svg'),
-      width: 512,
-      height: 512,
+      url: absoluteUrl('/logo.png'),
+      width: 1167,
+      height: 912,
     },
     image: absoluteUrl('/opengraph-image'),
     description:
