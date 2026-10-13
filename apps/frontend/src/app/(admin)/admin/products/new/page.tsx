@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
@@ -12,6 +12,18 @@ import {
   BarButton,
   BarPrimaryButton,
 } from '@/components/admin/admin-chrome';
+import { TextField, TextAreaField } from '@/components/admin/admin-form';
+import {
+  TranslateAction,
+  TranslationCoveragePanel,
+  useTranslateDraft,
+} from '@/components/admin/translation';
+import {
+  PRODUCT_FIELDS,
+  HOTSPOT_FIELDS,
+  coverageOf,
+  type TranslationCoverage,
+} from '@titan/shared';
 import {
   ProductFormSections,
   PublishReadiness,
@@ -25,6 +37,79 @@ export default function NewProductPage() {
   const { value, set } = useProductForm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const tTranslate = useTranslations('admin.translate');
+
+  const translateGroups = useMemo(() => {
+    const main: Record<string, string> = {
+      Title: value.title,
+      Tagline: value.tagline,
+      Description: value.description,
+      'Bullet points (one per line)': value.features,
+      'SEO title': value.seoTitle,
+      'SEO description': value.seoDescription,
+    };
+    const groups: Array<{ key: string; fields: Record<string, string> }> = [{ key: 'product', fields: main }];
+    for (const pin of value.pinpoints) {
+      groups.push({
+        key: `pin:${pin.id}`,
+        fields: { Label: pin.label, Tooltip: pin.tooltip ?? '', Detail: pin.detail ?? '' },
+      });
+    }
+    return groups;
+  }, [value.title, value.tagline, value.description, value.features, value.seoTitle, value.seoDescription, value.pinpoints]);
+
+  const { busy: translateBusy, run: runTranslate, coverageFor } = useTranslateDraft({
+    entity: 'product copy',
+    descriptors: PRODUCT_FIELDS,
+    groups: translateGroups,
+    onApply: (key, translations) => {
+      if (key.startsWith('pin:')) {
+        const id = key.slice('pin:'.length);
+        const current = value.translationsAr.hotspots[id] ?? { label: '', tooltip: '', detail: '' };
+        set('translationsAr', {
+          ...value.translationsAr,
+          hotspots: {
+            ...value.translationsAr.hotspots,
+            [id]: {
+              label: translations['Label'] ?? current.label,
+              tooltip: translations['Tooltip'] ?? current.tooltip,
+              detail: translations['Detail'] ?? current.detail,
+            },
+          },
+        });
+        return;
+      }
+      set('translationsAr', {
+        ...value.translationsAr,
+        title: translations['Title'] ?? value.translationsAr.title,
+        tagline: translations['Tagline'] ?? value.translationsAr.tagline,
+        description: translations['Description'] ?? value.translationsAr.description,
+        features: translations['Bullet points (one per line)'] ?? value.translationsAr.features,
+        seoTitle: translations['SEO title'] ?? value.translationsAr.seoTitle,
+        seoDescription: translations['SEO description'] ?? value.translationsAr.seoDescription,
+      });
+    },
+    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
+  });
+
+  const productCoverage = coverageFor(value, value.translationsAr);
+  const hotspotCoverage = value.pinpoints.map((pin) => ({
+    pin,
+    coverage: coverageOf(pin, value.translationsAr.hotspots?.[pin.id] ?? null, HOTSPOT_FIELDS),
+  }));
+  const totalProductCoverage = useMemo<TranslationCoverage | undefined>(() => {
+    if (!productCoverage) return undefined;
+    let translated = productCoverage.translated;
+    let total = productCoverage.total;
+    const missing = [...productCoverage.missing];
+    for (const entry of hotspotCoverage) {
+      total += entry.coverage.total;
+      translated += entry.coverage.translated;
+      missing.push(...entry.coverage.missing);
+    }
+    return { total, translated, missing, present: [] };
+  }, [productCoverage, hotspotCoverage]);
 
   const priceText = value.priceCents.trim();
   const valid = value.title.trim().length > 0 && (priceText === '' || (Number.isFinite(Number(priceText)) && Number(priceText) >= 0));
@@ -109,6 +194,60 @@ export default function NewProductPage() {
         {/* Two columns, matching the academies create screen. Seven stacked full-width
             sections turned this into an endless scroll on a laptop. */}
         <ProductFormSections value={value} set={set} columns={2} />
+        <div className="rounded-2xl border border-border bg-card p-4" dir="rtl">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {t('arabicCopy', { default: 'Arabic copy' })}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('arabicCopyHint', {
+                  default: 'Shown to Arabic visitors. Leave blank to fall back to English.',
+                })}
+              </p>
+            </div>
+            <TranslateAction
+              coverage={totalProductCoverage}
+              busy={translateBusy}
+              onTranslate={(scope) => void runTranslate(scope)}
+            />
+          </div>
+          {totalProductCoverage && (
+            <TranslationCoveragePanel coverage={totalProductCoverage} className="mt-3" />
+          )}
+          <div className="mt-4 grid gap-4">
+            <TextField
+              label={t('arabicTitle', { default: 'Arabic title' })}
+              value={value.translationsAr.title}
+              onChange={(e) =>
+                set('translationsAr', { ...value.translationsAr, title: e.target.value })
+              }
+            />
+            <TextField
+              label={t('arabicTagline', { default: 'Arabic tagline' })}
+              value={value.translationsAr.tagline}
+              onChange={(e) =>
+                set('translationsAr', { ...value.translationsAr, tagline: e.target.value })
+              }
+            />
+            <TextAreaField
+              label={t('arabicDescription', { default: 'Arabic description' })}
+              value={value.translationsAr.description}
+              onChange={(e) =>
+                set('translationsAr', { ...value.translationsAr, description: e.target.value })
+              }
+              rows={5}
+            />
+            <TextAreaField
+              label={t('arabicFeatures', { default: 'Arabic bullet points (one per line)' })}
+              value={value.translationsAr.features}
+              onChange={(e) =>
+                set('translationsAr', { ...value.translationsAr, features: e.target.value })
+              }
+              rows={4}
+            />
+          </div>
+        </div>
         {/* Mirrors the academies create screen: a plain action row at the foot, repeated
             from the command bar. Deliberately not the shared FormActions — that component
             reports "All changes saved", which is false here, because a product that has not
