@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
@@ -134,6 +135,38 @@ export default async function HomePage() {
             </div>
           ))}
         </dl>
+      </section>{' '}
+      <section
+        aria-labelledby="cnc-guides-heading"
+        className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8"
+      >
+        <h2
+          id="cnc-guides-heading"
+          className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+        >
+          CNC solutions, training and practical guides
+        </h2>
+        <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
+          Start with our CNC training materials, then review CNC solutions, implementation
+          guidance and partner options for your shop or learning centre.
+        </p>
+        <p className="mt-4 text-base leading-7 text-muted-foreground">
+          <Link href="/learn" className="text-primary underline-offset-4 hover:underline">
+            CNC guides
+          </Link>{' '}
+          ·{' '}
+          <Link href="/courses" className="text-primary underline-offset-4 hover:underline">
+            CNC courses
+          </Link>{' '}
+          ·{' '}
+          <Link href="/products" className="text-primary underline-offset-4 hover:underline">
+            CNC tools
+          </Link>{' '}
+          ·{' '}
+          <Link href="/become-a-partner" className="text-primary underline-offset-4 hover:underline">
+            Become a partner
+          </Link>
+        </p>
       </section>{' '}
     </div>
   );

@@ -203,3 +203,28 @@ export function aboutJsonLd(): Record<string, unknown> {
     ],
   };
 }
+
+/** Article / WebPage node for an informational guide such as a Learn article. */
+export function learnArticleJsonLd(input: {
+  title: string;
+  description: string;
+  path: string;
+  faqs?: { question: string; answer: string }[];
+}): Record<string, unknown> {
+  const { title, description, path } = input;
+  const node: Loose = {
+    '@type': 'Article',
+    '@id': `${SITE_URL}${path}#article`,
+    headline: text(title, 120),
+    name: text(title, 120),
+    description: text(description, 300),
+    url: absoluteUrl(path),
+    inLanguage: 'en',
+    author: { '@id': `${SITE_URL}/#organization` },
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    datePublished: '2026-10-13T00:00:00Z',
+    dateModified: '2026-10-13T00:00:00Z',
+    mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(path) },
+  };
+  return withProvider(node);
+}
