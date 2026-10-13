@@ -60,7 +60,7 @@ export default function SponsorsPage() {
           </p>{' '}
           <Button asChild size="lg">
             {' '}
-            <Link href="/contact">{t('becomePartner')}</Link>{' '}
+            <Link href="/partners">{t('becomePartner')}</Link>{' '}
           </Button>{' '}
         </div>{' '}
       </section>{' '}
