@@ -9,10 +9,9 @@ import { allowedPathsFor, getTrigger } from '../src/modules/email/trigger.regist
 /**
  * Database-backed outbox behaviour.
  *
- * Opt-in on purpose. The repo's other integration specs resolve DATABASE_URL
- * implicitly from `apps/backend/.env`, which points at the PRODUCTION Supabase
- * instance — so they create real rows there. This spec refuses to do that: it
- * requires EMAIL_TEST_DATABASE_URL to be set explicitly and skips without it.
+ * Opt-in on purpose. It wants a database it can truncate and recreate without disturbing the
+ * other specs' fixtures, so it takes its own URL rather than sharing DATABASE_URL — which
+ * vitest.config.ts now pins to an isolated test database for the whole suite.
  */
 const TEST_URL = process.env.EMAIL_TEST_DATABASE_URL;
 const describeDb = TEST_URL ? describe : describe.skip;

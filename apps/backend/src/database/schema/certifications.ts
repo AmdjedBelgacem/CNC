@@ -1,4 +1,5 @@
-import { pgTable, uuid, varchar, text, timestamp, jsonb, boolean, index } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { pgTable, uuid, varchar, text, timestamp, jsonb, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants';
 import { users } from './users';
 import { courses } from './courses';
@@ -57,6 +58,23 @@ export const certifications = pgTable('certifications', {
   revokedReason: varchar('revoked_reason', { length: 500 }),
 }, (t) => ({
   tenantUserCourseIdx: index('certifications_tenant_user_course_idx').on(t.tenantId, t.userId, t.courseId),
+  /**
+   * The invariant that makes issuing a certificate safe under concurrency, not merely correct in
+   * the common case. The service reads "has this user already been awarded this course?" before
+   * inserting, but two completion handlers running together both read "no" and both insert. Only
+   * this partial unique index makes the second one fail.
+   *
+   * It is created by `027_cert_academy_scope.sql` but was never declared here, and that mismatch
+   * was destructive rather than merely untidy: `drizzle-kit push` reconciles the live database
+   * against this file and silently DROPS any index it does not find declared. Running `db:push`
+   * against an environment that had migration 027 removed the constraint, leaving concurrent
+   * issuance free to award the same course twice. Declaring it is what makes `push` preserve it.
+   *
+   * The predicate mirrors the migration exactly: a revoked award must not block a re-award.
+   */
+  activeAwardUnique: uniqueIndex('certifications_active_award_unique')
+    .on(t.tenantId, t.userId, t.courseId)
+    .where(sql`revoked_at is null`),
 }));
 
 export const certTemplates = pgTable('cert_templates', {
