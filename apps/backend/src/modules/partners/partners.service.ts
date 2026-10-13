@@ -103,7 +103,7 @@ export class PartnersService {
         entityType: 'partner_application',
         entityId: app.id,
       });
-    } catch (e) {
+    } catch {
       // swallow
     }
 
