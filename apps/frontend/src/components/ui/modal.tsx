@@ -173,7 +173,7 @@ export function Modal({
           className={cn(
             // `.dialog-pop` carries the centring so the scale keyframes can't
             // clobber it — see the note in ui/dialog.tsx.
-            'dialog-pop fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)]',
+            'dialog-pop fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl',
             'data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out data-[state=closed]:pointer-events-none',
             width,
           )}
