@@ -358,7 +358,7 @@ export function FormActions({
   const t = useTranslations('ui.adminForm');
   const tc = useTranslations('common');
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
+    <div className="sticky bottom-14 z-20 -mx-4 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:bottom-0">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         {dirty ? (
           <span className="inline-flex items-center gap-1.5 font-semibold text-warning">

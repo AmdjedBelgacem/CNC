@@ -288,6 +288,7 @@ export function AdminRail() {
   // super-admin only.
   const isSuperAdmin = role === 'super_admin';
   const [openGroup, setOpenGroup] = useState<NavGroup | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // One rail entry per mechanism, each carrying the destinations it owns. Only groups that
   // still have a destination this role can open are shown, so an instructor never gets a dead
@@ -458,42 +459,109 @@ export function AdminRail() {
           </button>{' '}
         </div>{' '}
       </aside>{' '}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
         {' '}
-        <div className="no-scrollbar flex h-14 items-stretch gap-0.5 overflow-x-auto px-2">
+        <div className="grid w-full grid-cols-5 gap-1 px-2">
           {' '}
-          {visibleTabs.map((tab) => {
-            const active = tab.match(pathname);
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                title={tab.title}
-                className={`flex min-w-[3.5rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-2xs font-semibold transition ${active ? 'text-primary' : 'text-muted-foreground'}`}
-              >
-                {' '}
-                <tab.icon className="size-[18px] shrink-0" />{' '}
-                <span className="max-w-full truncate leading-tight">{tab.title}</span>{' '}
-              </Link>
-            );
-          })}{' '}
+          {visibleTabs
+            .filter((tab) => ['/admin', '/admin/courses', '/admin/users', '/admin/products'].includes(tab.href))
+            .slice(0, 4)
+            .map((tab) => {
+              const active = tab.match(pathname);
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`flex h-10 min-w-[2.5rem] flex-col items-center justify-center gap-0.5 rounded-xl text-2xs font-semibold transition ${active ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  {' '}
+                  <tab.icon className="size-[18px] shrink-0" />{' '}
+                  <span className="max-w-full truncate leading-tight">{tab.title}</span>{' '}
+                </Link>
+              );
+            })}
           <button
             type="button"
-            onClick={openAdminSearch}
+            onClick={() => setMobileNavOpen(true)}
             title={tAdmin('searchHint')}
-            className="flex min-w-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-2xs font-semibold text-muted-foreground transition"
+            className="flex h-10 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-2xs font-semibold text-muted-foreground transition hover:text-foreground"
           >
             {' '}
             <Search className="size-[18px] shrink-0" />{' '}
-            <span className="max-w-full truncate leading-tight">{tAdmin('search')}</span>{' '}
-          </button>{' '}
-          {isSuperAdmin ? (
-            <PlatformAlertsRailBell className="h-14 min-w-[3.5rem] rounded-lg" />
-          ) : (
-            <NotificationBell className="h-14 min-w-[3.5rem] rounded-lg" />
-          )}{' '}
+            <span className="max-w-full truncate leading-tight">More</span>{' '}
+          </button>
+        </div>
+        {' '}
+        <div className="absolute -top-14 end-2 flex items-center">
+          {' '}
+          {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}
         </div>{' '}
       </nav>{' '}
+      {mobileNavOpen ? (
+        <>
+          {' '}
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          {' '}
+          <div className="fixed inset-x-0 bottom-0 z-[65] max-h-[82vh] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl lg:hidden">
+            {' '}
+            <div className="mb-3 flex items-center justify-between">
+              {' '}
+              <h2 className="text-base font-bold text-foreground">Admin navigation</h2>{' '}
+              <button
+                type="button"
+                className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                onClick={() => setMobileNavOpen(false)}
+              >
+                Close
+              </button>{' '}
+            </div>{' '}
+            <div className="space-y-5">
+              {' '}
+{navGroups
+                .filter((group) => group.children.length)
+                .map((group) => (
+                <section key={group.key} aria-label={group.key}>
+                  {' '}
+                  <h3 className="mb-2 text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+                    {tAdmin(group.key === 'content' ? 'nav.groupContent' : group.key === 'people' ? 'nav.groupPeople' : group.key === 'commerce' ? 'nav.groupCommerce' : 'nav.groupPlatform')}
+                  </h3>{' '}
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.children.map((tab) => {
+                      const active = tab.match(pathname);
+                      return (
+                        <Link
+                          key={tab.href}
+                          href={tab.href}
+                          onClick={() => setMobileNavOpen(false)}
+                          className={`flex items-center gap-2 rounded-xl border border-border p-3 text-sm font-medium transition ${active ? 'border-primary bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}`}
+                        >
+                          {' '}
+                          <tab.icon className="size-4 shrink-0" />{' '}
+                          <span className="truncate">{tab.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>{' '}
+          </div>
+        </>
+      ) : null}{' '}
+      <button
+        type="button"
+        onClick={openAdminSearch}
+        title={tAdmin('searchHint')}
+        className="fixed bottom-18 end-3 z-[60] flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg lg:hidden"
+      >
+        {' '}
+        <Search className="size-5 shrink-0" />{' '}
+      </button>{' '}
     </>
   );
 }
