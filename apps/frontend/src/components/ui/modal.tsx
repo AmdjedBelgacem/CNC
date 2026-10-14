@@ -34,7 +34,7 @@ export function ModalHeader({
   onClose: () => void;
 }) {
   return (
-    <div className="flex items-center gap-4 border-b border-border bg-card px-6 py-5">
+    <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
       {loading ? (
         <div className="flex flex-1 items-center gap-4">
           <Skeleton className="size-14 rounded-xl" />
@@ -47,14 +47,14 @@ export function ModalHeader({
         <>
           <span
             className={cn(
-              'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl font-sans text-xl font-semibold',
+              'flex size-11 shrink-0 items-center justify-center rounded-xl font-sans text-lg font-semibold sm:size-14 sm:text-xl',
               gradient,
             )}
           >
             {initials}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-[26px] font-semibold leading-tight text-foreground">
+            <p className="truncate font-display text-lg font-semibold leading-tight text-foreground sm:text-[26px]">
               {title}
             </p>
             <p className="truncate font-sans text-sm text-muted-foreground">{subtitle}</p>
@@ -83,7 +83,7 @@ export function ModalTabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div className={cn(GLASS_SUB, 'mx-6 mt-5 flex gap-1 p-1')}>
+    <div className={cn(GLASS_SUB, 'no-scrollbar mx-4 mt-4 flex gap-1 overflow-x-auto p-1 sm:mx-6 sm:mt-5')}>
       {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
@@ -92,7 +92,7 @@ export function ModalTabs({
             type="button"
             onClick={() => onChange(tab.key)}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 font-sans text-sm font-medium transition-all duration-200',
+              'flex min-w-max flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 font-sans text-sm font-medium transition-all duration-200',
               active === tab.key
                 ? 'bg-card text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',
@@ -129,7 +129,7 @@ export function ModalFooter({
   return (
     <div
       className={cn(
-        'flex flex-col-reverse gap-2 border-t border-border bg-surface-sunken/40 px-4 py-3 sm:flex-row sm:justify-end sm:px-5',
+        'flex flex-col-reverse gap-2 border-t border-border bg-surface-sunken/40 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:flex-row sm:justify-end sm:px-5 sm:pb-3',
         className,
       )}
     >

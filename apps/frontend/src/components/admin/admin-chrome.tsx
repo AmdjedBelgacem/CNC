@@ -25,7 +25,7 @@ export interface TrailItem {
 }
 
 const FUSED_BAR =
-  'sticky top-0 z-30 -mx-4 -mt-4 border-b border-border/80 bg-background/85 shadow-none backdrop-blur-xl transition-shadow duration-300 sm:-mx-6 sm:-mt-6 lg:-ms-20 lg:-me-8 lg:-mt-8';
+  'sticky top-0 z-30 -mx-4 -mt-4 border-b border-border/80 bg-background/95 shadow-none backdrop-blur-xl transition-shadow duration-300 sm:-mx-6 sm:-mt-6 lg:-ms-20 lg:-me-8 lg:-mt-8 lg:bg-background/85';
 
 /** Secondary icon-only control for the command bar (h-9, 12px radius). */
 export function BarIconButton({
@@ -51,7 +51,7 @@ export function BarIconButton({
       title={title}
       aria-label={ariaLabel ?? title}
       disabled={disabled}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95 disabled:opacity-50 [&_svg]:size-4"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95 disabled:opacity-50 [&_svg]:size-4"
     >
       <span className={cn('flex', spinning && 'animate-spin')}>{children}</span>
     </button>
@@ -78,7 +78,7 @@ export function BarButton({
       onClick={onClick}
       title={title}
       disabled={disabled}
-      className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-13 font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-[0.98] disabled:opacity-50"
+      className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-13 font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-[0.98] disabled:opacity-50"
     >
       {icon}
       <span className="hidden sm:inline">{children}</span>
@@ -103,7 +103,7 @@ export function BarPrimaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 text-13 font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
+      className="flex h-10 shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 text-13 font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
     >
       {icon}
       {children}
@@ -184,9 +184,12 @@ export function AdminCommandBar({
 
   return (
     <header className={cn(FUSED_BAR, scrolled && 'shadow-[0_12px_32px_-16px_rgba(15,23,42,0.25)]')}>
-      <div className="flex w-full flex-col gap-2.5 px-4 py-3 sm:px-6 lg:h-16 lg:flex-row lg:items-center lg:gap-4 lg:py-0 lg:ps-20 lg:pe-8">
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <nav aria-label={t('breadcrumb')} className="flex min-w-0 items-center gap-1.5 text-13">
+      <div className="flex w-full flex-col gap-2 px-4 py-3 sm:px-6 lg:h-16 lg:flex-row lg:items-center lg:gap-4 lg:py-0 lg:ps-20 lg:pe-8">
+        <div className="no-scrollbar flex min-w-0 shrink items-center gap-2 overflow-x-auto">
+          <nav
+            aria-label={t('breadcrumb')}
+            className="flex min-w-max items-center gap-1.5 whitespace-nowrap text-13"
+          >
             {context.map((item) => (
               <span key={item.label} className="flex shrink-0 items-center gap-1.5">
                 {item.href ? (
@@ -258,7 +261,7 @@ export function AdminCommandBar({
         )}
 
         {(actions || primary || themeToggle) && (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="no-scrollbar -mx-4 flex w-full min-w-0 shrink-0 items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:px-0 sm:pb-0 lg:ms-auto">
             {themeToggle && <ThemeToggle />}
             {actions}
             {actions && primary && (
@@ -285,9 +288,9 @@ export function AdminPageHeader({
   badge?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col justify-between gap-4 pb-1 md:flex-row md:items-end">
-      <div>
-        <h1 className="font-headline-lg text-[32px] leading-tight tracking-tight text-foreground sm:text-[36px]">
+    <div className="flex flex-col items-start justify-between gap-4 pb-1 md:flex-row md:items-end">
+      <div className="w-full min-w-0 md:w-auto">
+        <h1 className="font-headline-lg text-[28px] leading-tight tracking-tight text-foreground sm:text-[36px]">
           {title}
         </h1>
         {description && (
@@ -296,7 +299,7 @@ export function AdminPageHeader({
           </p>
         )}
       </div>
-      {badge}
+      {badge ? <div className="w-full md:w-auto">{badge}</div> : null}
     </div>
   );
 }
@@ -339,14 +342,14 @@ export function AdminKpiCard({
   trendUp?: boolean | null;
 }) {
   return (
-    <div className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-xs transition-all hover:border-border-strong hover:shadow-sm">
+    <div className="group flex flex-col justify-between rounded-xl border border-border bg-card p-4 shadow-xs transition-all hover:border-border-strong hover:shadow-sm sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
             {label}
           </p>
           <div className="mt-2 flex flex-wrap items-baseline gap-2">
-            <span className="font-display text-[26px] font-bold leading-none tracking-tight text-foreground">
+            <span className="font-display text-[22px] font-bold leading-none tracking-tight text-foreground sm:text-[26px]">
               {value}
             </span>
             {meta}

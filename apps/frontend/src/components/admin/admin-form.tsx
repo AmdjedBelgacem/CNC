@@ -288,7 +288,7 @@ export function FormSection({
         className,
       )}
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/30 px-5 py-3.5">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/30 px-4 py-3.5 sm:px-5">
         <div className="min-w-0">
           <Heading className="flex items-center gap-2 text-13 font-semibold text-foreground">
             {Icon && <Icon className="size-4 shrink-0 text-primary" />}
@@ -300,7 +300,7 @@ export function FormSection({
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </header>
-      <div className={cn('flex-1 p-5', bodyClassName)}>{children}</div>
+      <div className={cn('flex-1 p-4 sm:p-5', bodyClassName)}>{children}</div>
     </section>
   );
 }
@@ -358,8 +358,8 @@ export function FormActions({
   const t = useTranslations('ui.adminForm');
   const tc = useTranslations('common');
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <div className="sticky bottom-0 z-20 -mx-4 mt-6 flex flex-col items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground sm:justify-start">
         {dirty ? (
           <span className="inline-flex items-center gap-1.5 font-semibold text-warning">
             <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
@@ -370,13 +370,13 @@ export function FormActions({
         )}
         {extra}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center gap-2 sm:w-auto">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-50 sm:h-auto sm:flex-none"
           >
             {cancelLabel ?? tc('cancel')}
           </button>
@@ -386,7 +386,7 @@ export function FormActions({
             type="button"
             onClick={onReset}
             disabled={saving || !dirty}
-            className="rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-40"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-40 sm:h-auto sm:flex-none"
           >
             {resetLabel ?? t('discard')}
           </button>
@@ -396,7 +396,7 @@ export function FormActions({
             type="button"
             onClick={onSave}
             disabled={saving || !dirty}
-            className="rounded-xl bg-primary px-4 py-2 text-13 font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98] disabled:opacity-40"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-primary px-4 py-2 text-13 font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98] disabled:opacity-40 sm:h-auto sm:flex-none"
           >
             {saving ? tc('saving') : (saveLabel ?? tc('saveChanges'))}
           </button>

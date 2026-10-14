@@ -373,7 +373,7 @@ export default function AdminUsersPage() {
           </TableCard>
         ) : (
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[720px] border-collapse text-start">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -465,7 +465,47 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </div>
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-border bg-muted/40 px-6 py-3.5 text-xs font-medium text-muted-foreground sm:flex-row">
+            <div className="divide-y divide-border sm:hidden">
+              {rows.map((u) => {
+                const key = (u.accountStatus in STATUS_TONE ? u.accountStatus : 'active') as StatusKey;
+                const selected = focusId === u.id;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => push({ focus: u.id })}
+                    className={cn(
+                      'flex w-full items-center gap-3 px-4 py-3.5 text-start transition active:bg-muted/60',
+                      selected && 'bg-primary/[0.06]',
+                    )}
+                  >
+                    <Avatar name={u.name} email={u.email} src={u.avatarUrl} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {u.name || u.email.split('@')[0]}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <StatusPill
+                          label={tStatus(u.accountStatus)}
+                          tone={STATUS_TONE[key] ?? 'slate'}
+                          pulse={u.accountStatus === 'active'}
+                        />
+                        <span className="text-2xs text-muted-foreground">
+                          {formatDate(u.createdAt, locale, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <Eye className="size-4 shrink-0 text-muted-foreground" />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-border bg-muted/40 px-4 py-3.5 text-xs font-medium text-muted-foreground sm:flex-row sm:px-6">
               <span>
                 {tAdmin('learnerAccess.showingOf', {
                   from: (page - 1) * PER_PAGE + 1,

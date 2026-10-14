@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-background">
       {' '}
       <AdminRail />{' '}
-      <main className="p-4 pb-14 sm:p-6 sm:pb-14 lg:p-8 lg:pb-8 lg:ps-20">
+      <main className="p-4 pb-[calc(env(safe-area-inset-bottom)+3.5rem)] sm:p-6 sm:pb-14 lg:p-8 lg:pb-8 lg:ps-20">
         {' '}
         <AdminGate>{children}</AdminGate>{' '}
       </main>{' '}

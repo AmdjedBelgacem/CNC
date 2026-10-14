@@ -64,7 +64,7 @@ const TONE_ICON: Record<Tone, string> = {
  * ------------------------------------------------------------------ */
 export function Toolbar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2 shadow-xs">
+    <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2 shadow-xs [&>*]:min-w-0">
       {children}
     </div>
   );
@@ -85,7 +85,7 @@ export function PillTabs<T extends string>({
   return (
     <div
       role="tablist"
-      className="flex items-center gap-0.5 overflow-x-auto rounded-xl bg-muted p-1"
+      className="no-scrollbar flex w-full items-center gap-0.5 overflow-x-auto overscroll-x-contain rounded-xl bg-muted p-1"
     >
       {options.map((o) => {
         const active = value === o.key;
@@ -143,7 +143,7 @@ export function Select({
       onChange={(e) => onChange(e.target.value)}
       aria-label={label}
       className={cn(
-        'h-9 shrink-0 rounded-xl border border-border bg-background px-2.5 text-13 text-foreground shadow-xs outline-none transition',
+        'h-10 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-13 text-foreground shadow-xs outline-none transition sm:h-9 sm:w-auto',
         'hover:border-border-strong focus:border-primary/60 focus:ring-4 focus:ring-primary/10',
         className,
       )}
@@ -169,7 +169,7 @@ export function SegmentedIconToggle<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex items-center gap-0.5 rounded-xl border border-border bg-card p-0.5 shadow-xs"
+      className="flex h-10 w-full items-center justify-between gap-0.5 rounded-xl border border-border bg-card p-0.5 shadow-xs sm:h-auto sm:w-auto sm:justify-start"
     >
       {options.map((o) => {
         const active = value === o.key;
@@ -389,7 +389,7 @@ export function SkeletonRows({
       {Array.from({ length: rows }).map((_, r) => (
         <div
           key={r}
-          className="flex items-center gap-4 border-b border-border px-6 py-4 last:border-0"
+          className="flex items-center gap-4 border-b border-border px-4 py-4 last:border-0 sm:px-6"
         >
           <Skeleton className="size-10 shrink-0 rounded-xl" />
           <div className="flex-1 space-y-2">
@@ -445,7 +445,7 @@ export function TableCard({
       )}
     >
       {header && (
-        <div className="border-b border-border bg-muted/40 px-5 py-3">
+        <div className="border-b border-border bg-muted/40 px-4 py-3 sm:px-5">
           {/* The header content must be allowed to fill the row. Wrapping it in
               a flex item without min-width collapsed any inner grid, so column
               headings drifted out of line with the body cells below. */}
@@ -456,7 +456,7 @@ export function TableCard({
       )}
       {children}
       {footer && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/40 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/40 px-4 py-3 sm:px-5">
           {footer}
         </div>
       )}
@@ -489,7 +489,7 @@ export function PanelCard({
         className,
       )}
     >
-      <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+      <header className="flex items-start justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
         <div className="min-w-0">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             {Icon && <Icon className="size-4 shrink-0 text-primary" />}
@@ -501,7 +501,7 @@ export function PanelCard({
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </header>
-      <div className={cn('flex-1 p-5', bodyClassName)}>{children}</div>
+      <div className={cn('flex-1 p-4 sm:p-5', bodyClassName)}>{children}</div>
     </section>
   );
 }
@@ -523,18 +523,18 @@ export function Pagination({
   onNext: () => void;
 }) {
   return (
-    <>
+    <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs text-muted-foreground">
         Page <span className="font-semibold text-foreground">{page}</span> of{' '}
         <span className="font-semibold text-foreground">{totalPages}</span> ·{' '}
         <span className="font-medium">{total}</span> total
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center gap-2 sm:w-auto">
         <button
           type="button"
           disabled={page <= 1}
           onClick={onPrev}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-13 font-medium text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-40"
+          className="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-lg border border-border bg-background px-3 text-13 font-medium text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-40 sm:h-9 sm:flex-none"
         >
           <ChevronLeft className="flip-rtl size-4" /> Prev
         </button>
@@ -542,12 +542,12 @@ export function Pagination({
           type="button"
           disabled={page >= totalPages}
           onClick={onNext}
-          className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-13 font-medium text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98] disabled:opacity-40"
+          className="inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-primary px-3 text-13 font-medium text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98] disabled:opacity-40 sm:h-9 sm:flex-none"
         >
           Next <ChevronRight className="flip-rtl size-4" />
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -568,7 +568,7 @@ export function EmptyState({
   tone?: Tone;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-16 text-center">
+    <div className="flex flex-col items-center px-4 py-12 text-center sm:px-6 sm:py-16">
       <div
         className={cn(
           'flex size-12 items-center justify-center rounded-xl border',

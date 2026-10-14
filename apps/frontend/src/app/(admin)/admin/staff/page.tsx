@@ -748,7 +748,7 @@ export default function AdminStaffPage() {
           </TableCard>
         ) : view === 'table' ? (
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[900px] border-collapse text-start">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -907,6 +907,40 @@ export default function AdminStaffPage() {
                 </tbody>
               </table>
             </div>
+            <div className="divide-y divide-border sm:hidden">
+              {rows.map((u) => {
+                const displayName = u.name || u.email.split('@')[0];
+                const rm = roleMeta[u.role] ?? roleMeta.admin!;
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => push({ focus: u.id })}
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-start transition active:bg-muted/60"
+                  >
+                    <Avatar name={u.name} email={u.email} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-foreground">
+                        {displayName}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                      <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <StatusPill label={roleLabel(u.role)} tone={roleTone(u.role)} />
+                        <StatusPill
+                          label={statusLabel(u.accountStatus)}
+                          tone={statusTone(u.accountStatus)}
+                          pulse={u.accountStatus === 'active'}
+                        />
+                      </span>
+                      <span className="mt-1.5 block truncate text-2xs text-muted-foreground">
+                        {tAdmin(`roleDept.${u.role}.title`, { default: rm.deptTitle })}
+                      </span>
+                    </span>
+                    <Pencil className="size-4 shrink-0 text-muted-foreground" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -958,7 +992,7 @@ export default function AdminStaffPage() {
         )}
 
         {!loading && rows && rows.length > 0 && (
-          <div className="rounded-xl border border-border bg-card px-5 py-3 shadow-xs">
+          <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-xs sm:px-5">
             <Pagination
               page={page}
               totalPages={pages}
