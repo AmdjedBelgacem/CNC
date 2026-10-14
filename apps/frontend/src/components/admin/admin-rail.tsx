@@ -288,6 +288,7 @@ export function AdminRail() {
   // super-admin only.
   const isSuperAdmin = role === 'super_admin';
   const [openGroup, setOpenGroup] = useState<NavGroup | null>(null);
+  const [mobileGroup, setMobileGroup] = useState<NavGroup | null>(null);
 
   // One rail entry per mechanism, each carrying the destinations it owns. Only groups that
   // still have a destination this role can open are shown, so an instructor never gets a dead
@@ -460,40 +461,102 @@ export function AdminRail() {
       </aside>{' '}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
         {' '}
-        <div className="no-scrollbar flex h-14 items-stretch gap-0.5 overflow-x-auto px-2">
+        <div className="grid grid-cols-6 gap-1 px-2 py-1">
           {' '}
-          {visibleTabs.map((tab) => {
-            const active = tab.match(pathname);
+          {NAV_GROUP_ORDER.filter((key) => key !== 'overview').map((key) => {
+            const group = navGroups.find((g) => g.key === key);
+            if (!group || !group.children.length) return null;
+            const active = group.children.some((tab) => tab.match(pathname));
+            const Icon = group.children[0]!.icon;
             return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                title={tab.title}
-                className={`flex min-w-[3.5rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-2xs font-semibold transition ${active ? 'text-primary' : 'text-muted-foreground'}`}
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMobileGroup(key)}
+                className={`flex min-w-[2.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-2xs font-semibold transition ${active ? 'text-primary' : 'text-muted-foreground'}`}
               >
                 {' '}
-                <tab.icon className="size-[18px] shrink-0" />{' '}
-                <span className="max-w-full truncate leading-tight">{tab.title}</span>{' '}
-              </Link>
+                <Icon className="size-[18px] shrink-0" />{' '}
+                <span className="max-w-full truncate leading-tight">
+                    {key === 'content'
+                      ? tAdmin('nav.groupContent')
+                      : key === 'people'
+                        ? tAdmin('nav.groupPeople')
+                        : key === 'commerce'
+                          ? tAdmin('nav.groupCommerce')
+                          : tAdmin('nav.groupPlatform')}
+                  </span>{' '}
+              </button>
             );
           })}{' '}
           <button
             type="button"
             onClick={openAdminSearch}
             title={tAdmin('searchHint')}
-            className="flex min-w-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-2xs font-semibold text-muted-foreground transition"
+            className="flex min-w-[2.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-2xs font-semibold text-muted-foreground transition"
           >
             {' '}
             <Search className="size-[18px] shrink-0" />{' '}
             <span className="max-w-full truncate leading-tight">{tAdmin('search')}</span>{' '}
           </button>{' '}
-          {isSuperAdmin ? (
-            <PlatformAlertsRailBell className="h-14 min-w-[3.5rem] rounded-lg" />
-          ) : (
-            <NotificationBell className="h-14 min-w-[3.5rem] rounded-lg" />
-          )}{' '}
+        </div>{' '}
+        <div className="absolute end-2 top-2 hidden">
+          {' '}
+          {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}{' '}
         </div>{' '}
       </nav>{' '}
+      {mobileGroup ? (
+        <>
+          {' '}
+          <button
+            type="button"
+            aria-label="Close navigation group"
+            className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden"
+            onClick={() => setMobileGroup(null)}
+          />
+          {' '}
+          <div className="fixed inset-x-0 bottom-0 z-[65] max-h-[70vh] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl lg:hidden">
+            {' '}
+            <div className="mb-3 flex items-center justify-between">
+              {' '}
+              <h2 className="text-base font-bold text-foreground">
+                {mobileGroup === 'content'
+                  ? tAdmin('nav.groupContent')
+                  : mobileGroup === 'people'
+                    ? tAdmin('nav.groupPeople')
+                    : mobileGroup === 'commerce'
+                      ? tAdmin('nav.groupCommerce')
+                      : tAdmin('nav.groupPlatform')}
+              </h2>{' '}
+              <button
+                type="button"
+                className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+                onClick={() => setMobileGroup(null)}
+              >
+                Close
+              </button>{' '}
+            </div>{' '}
+            <div className="grid grid-cols-1 gap-2">
+              {' '}
+              {(navGroups.find((g) => g.key === mobileGroup)?.children ?? []).map((tab) => {
+                const active = tab.match(pathname);
+                return (
+                  <Link
+                    key={tab.href}
+                    href={tab.href}
+                    onClick={() => setMobileGroup(null)}
+                    className={`flex items-center gap-3 rounded-xl border border-border p-3 text-sm font-medium transition ${active ? 'border-primary bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}`}
+                  >
+                    {' '}
+                    <tab.icon className="size-4 shrink-0" />{' '}
+                    <span>{tab.title}</span>{' '}
+                  </Link>
+                );
+              })}
+            </div>{' '}
+          </div>
+        </>
+      ) : null}
     </>
   );
 }
