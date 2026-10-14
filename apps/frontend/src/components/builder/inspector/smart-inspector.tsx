@@ -22,6 +22,7 @@ import {
   TextareaControl,
   ToggleControl,
 } from './controls';
+import { ImageUploadControl } from './image-upload-control';
 const ROOT_DROPPABLE_ID = 'root:default-zone'; /** The selected node's live props. */
 type SelectedNode = {
   type: string;
@@ -283,6 +284,8 @@ function renderControl(
       return <ColorControl value={String(value ?? '')} onChange={onChange} />;
     case 'icon':
       return <IconControl value={String(value ?? '')} onChange={onChange} />;
+    case 'image-upload':
+      return <ImageUploadControl value={String(value ?? '')} onChange={(v) => onChange(v)} />;
     default:
       return null;
   }

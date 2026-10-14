@@ -412,7 +412,7 @@ export const imageInspector = defineInspector<ImageProps>().groups([
     titleKey: 'content',
     icon: ImageIcon,
     fields: [
-      { key: 'src', label: 'Image URL', control: 'text', placeholder: 'https://…' },
+      { key: 'src', label: 'Image', control: 'image-upload' },
       { key: 'alt', label: 'Alt text', control: 'text' },
     ],
   },
@@ -1106,7 +1106,7 @@ export const sectionInspector = defineInspector<SectionProps>().groups([
         control: 'text',
         hint: 'e.g. linear-gradient(135deg, #0ea5e9, #6366f1)',
       },
-      { key: 'bgImage', label: 'Background image', control: 'text', hint: 'Uploaded image URL' },
+      { key: 'bgImage', label: 'Background image', control: 'image-upload', hint: 'Upload-only (no manual URL)' },
       { key: 'glass', label: 'Frosted glass', control: 'toggle' },
     ],
   },
@@ -1242,7 +1242,7 @@ export const heroInspector = defineInspector<HeroProps>().groups([
     titleKey: 'style',
     icon: ImageIcon,
     fields: [
-      { key: 'imageUrl', label: 'Background image', control: 'text', placeholder: 'https://…' },
+      { key: 'imageUrl', label: 'Background image', control: 'image-upload' },
       { key: 'backgroundColor', label: 'Background color', control: 'color' },
       {
         key: 'backgroundOverlay',
@@ -1510,7 +1510,7 @@ export const featureTilesInspector = defineInspector<FeatureTilesProps>().groups
     titleKey: 'content',
     icon: ImageIcon,
     fields: [
-      { key: 'imageUrl', label: 'Image URL', control: 'text', placeholder: 'https://…' },
+      { key: 'imageUrl', label: 'Image', control: 'image-upload' },
       { key: 'imageAlt', label: 'Image alt text', control: 'text' },
     ],
   },
@@ -1628,7 +1628,7 @@ export const ctaBannerInspector = defineInspector<CtaBannerProps>().groups([
     titleKey: 'content',
     icon: ImageIcon,
     fields: [
-      { key: 'imageUrl', label: 'Background image', control: 'text', placeholder: 'https://…' },
+      { key: 'imageUrl', label: 'Image', control: 'image-upload' },
     ],
   },
   {
@@ -2008,7 +2008,7 @@ export const heroConsoleInspector = defineInspector<HeroConsoleProps>().groups([
     titleKey: 'media',
     icon: ImageIcon,
     fields: [
-      { key: 'imageUrl', label: 'Background image URL', control: 'text', placeholder: 'https://…' },
+      { key: 'imageUrl', label: 'Background image', control: 'image-upload' },
     ],
   },
 ]);

@@ -15,7 +15,8 @@ export type ControlKind =
   | 'slider'
   | 'toggle'
   | 'color'
-  | 'icon';
+  | 'icon'
+  | 'image-upload';
 
 export interface FieldOption {
   label: string;

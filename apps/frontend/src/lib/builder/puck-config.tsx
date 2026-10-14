@@ -48,7 +48,14 @@ import {
   twinSectionDefaults,
   LIVE_ISLAND_VARIANTS,
 } from '@titan/shared';
+import { ImageUploadControl } from '@/components/builder/inspector/image-upload-control';
 import { BLOCK_COMPONENTS } from '@/components/builder/blocks'; // ---------------------------------------------------------------- helpers
+const imageField = (label: string) => ({
+  type: 'custom' as const,
+  label,
+  render: ({ value, onChange }: { value?: string; onChange: (value: string) => void }) =>
+    (createElement(ImageUploadControl, { value: value ?? '', onChange })),
+});
 const textField = (label: string, placeholder?: string) => ({
   type: 'text' as const,
   label,
@@ -223,7 +230,7 @@ const navLink: ComponentConfig = def('nav-link', 'Nav Link', navLinkDefaults, {
   active: booleanSelect('Active (primary colour)'),
 });
 const image: ComponentConfig = def('image', 'Image', imageDefaults, {
-  src: textField('Image URL'),
+  src: imageField('Image'),
   alt: textField('Alt text'),
   width: numberField('Width (px)', 0, 2560),
   height: numberField('Height (px)', 0, 2560),
@@ -390,7 +397,7 @@ const nav: ComponentConfig = def('nav', 'Navbar', navDefaults, {
   ]),
 });
 const hero: ComponentConfig = def('hero', 'Hero', heroDefaults, {
-  imageUrl: textField('Background image URL'),
+  imageUrl: imageField('Image'),
   backgroundColor: textField('Background color (hex)', '#1B4DB1'),
   backgroundOverlay: numberField('Background overlay (%)', 0, 100),
   backgroundOpacity: numberField('Background image opacity (%)', 0, 100),
@@ -484,7 +491,7 @@ const partnerLogos: ComponentConfig = def('partner-logos', 'Partner Logos', part
 });
 const logoItem: ComponentConfig = def('logo-item', 'Logo Item', logoItemDefaults, {});
 const featureTiles: ComponentConfig = def('feature-tiles', 'Feature Tiles', featureTilesDefaults, {
-  imageUrl: textField('Image URL'),
+  imageUrl: imageField('Image'),
   imageAlt: textField('Image alt text'),
   sectionBg: selectField('Section background', [
     { label: 'White', value: 'bg-surface-container-lowest' },
@@ -536,7 +543,7 @@ const academyCard: ComponentConfig = def('academy-card', 'Academy Card', academy
   ]),
 });
 const ctaBanner: ComponentConfig = def('cta-banner', 'CTA Banner', ctaBannerDefaults, {
-  imageUrl: textField('Background image URL'),
+  imageUrl: imageField('Image'),
   overlayColor: textField('Overlay color (hex)', '#1B4DB1'),
   overlayOpacity: numberField('Overlay opacity (%)', 0, 100),
   radialVeil: booleanSelect('Radial veil'),
@@ -628,7 +635,7 @@ const section: ComponentConfig = def(
   { className: textField('Extra classes', 'e.g. bg-secondary/10 border-b') },
 ); // ---------------------------------------------------------------- config
 const heroConsole: ComponentConfig = def('hero-console', 'Hero + Sim Console', heroConsoleDefaults, {
-  imageUrl: textField('Viewport image URL'),
+  imageUrl: imageField('Image'),
   imageAlt: textField('Image alt text'),
   fileName: textField('Console file name'),
   syncLabel: textField('Sync pill label'),
@@ -680,7 +687,7 @@ const programCards: ComponentConfig = def('program-cards', 'Program Cards', prog
   ]),
 });
 const programCard: ComponentConfig = def('program-card', 'Program Card', programCardDefaults, {
-  imageUrl: textField('Image URL'),
+  imageUrl: imageField('Image'),
   imageAlt: textField('Image alt text'),
   level: textField('Level pill'),
   levelTone: selectField('Level tone', [
@@ -759,7 +766,7 @@ const testimonialCard: ComponentConfig = def(
     quote: textareaField('Quote'),
     name: textField('Name'),
     role: textField('Role / company'),
-    avatarUrl: textField('Avatar URL'),
+    avatarUrl: imageField('Avatar image'),
     rating: numberField('Rating (0-5)', 0, 5),
   },
 );
