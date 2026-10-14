@@ -499,10 +499,10 @@ export function AdminRail() {
             <Search className="size-[18px] shrink-0" />{' '}
             <span className="max-w-full truncate leading-tight">{tAdmin('search')}</span>{' '}
           </button>{' '}
-        </div>{' '}
-        <div className="absolute end-2 top-2 hidden">
-          {' '}
-          {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}{' '}
+          <div className="flex min-w-[2.5rem] items-center justify-center">
+            {' '}
+            {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}
+          </div>{' '}
         </div>{' '}
       </nav>{' '}
       {mobileGroup ? (
@@ -536,7 +536,7 @@ export function AdminRail() {
                 Close
               </button>{' '}
             </div>{' '}
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {' '}
               {(navGroups.find((g) => g.key === mobileGroup)?.children ?? []).map((tab) => {
                 const active = tab.match(pathname);

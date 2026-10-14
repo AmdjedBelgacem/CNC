@@ -261,7 +261,7 @@ export function AdminCommandBar({
         )}
 
         {(actions || primary || themeToggle) && (
-          <div className="no-scrollbar -mx-4 flex w-full min-w-0 shrink-0 items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:px-0 sm:pb-0 lg:ms-auto">
+          <div className="no-scrollbar -mx-4 flex w-full min-w-0 shrink-0 items-center justify-end gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:px-0 sm:pb-0 lg:ms-auto">
             {themeToggle && <ThemeToggle />}
             {actions}
             {actions && primary && (
