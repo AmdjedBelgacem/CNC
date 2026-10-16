@@ -882,7 +882,12 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           {page && data && (
             // A page's Arabic copy is a separate layout, so it lives outside the canvas rather
             // than as an inspector tab that would be lost the moment the canvas is remounted.
-            <div className="absolute bottom-4 end-4 z-30 max-w-sm">
+            // Anchored bottom-end and grown upward by its own content, this panel had no height
+            // bound: on a long page the coverage list plus the save row pushed it past the top of
+            // the viewport, and the review dialog on top of that landed off-screen entirely.
+            // `max-h` + scroll keeps every control reachable regardless of how many fields are
+            // still untranslated.
+            <div className="absolute bottom-4 end-4 z-30 max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-lg bg-background/95 p-1 backdrop-blur-sm">
               <button
                 type="button"
                 onClick={() => setShowTranslation((open) => !open)}

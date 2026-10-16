@@ -68,7 +68,11 @@ export function PageTranslationPanel({
     for (const field of fields) {
       const value = readAt(target ?? {}, field.path);
       if (typeof value === 'string' && value.trim() && value !== field.value) translated += 1;
-      else missing.push(field.path);
+      // A human label, not `field.path`. The paths are `n3.props.heading` and the panel used to
+      // join them straight into the "untranslated" sentence, so opening this panel printed a
+      // dotted list of internal locators at the editor instead of naming anything. The path is
+      // still what identifies the field everywhere else — only this display string changes.
+      else missing.push(humanizeFieldPath(field.path));
     }
     return { total: fields.length, translated, missing, present: [] };
   }, [draft, existing, harvested]);
@@ -130,7 +134,14 @@ export function PageTranslationPanel({
           const translation = String(
             readAt(draft?.layout ?? existing?.layout ?? {}, field.path) ?? '',
           );
-          return { label: field.key, source: field.value, translation, missing: !translation.trim() };
+          // Same reason as the coverage list: `field.key` is the dotted path, and it was being
+          // used as the row heading, so every row was titled `n3.props.heading`.
+          return {
+            label: humanizeFieldPath(field.path),
+            source: field.value,
+            translation,
+            missing: !translation.trim(),
+          };
         })}
       />
     </div>
@@ -144,4 +155,41 @@ function readAt(root: unknown, path: string): unknown {
     current = (current as Record<string, unknown>)[key];
   }
   return current;
+}
+
+/**
+ * Turn an internal field path into something an editor can act on.
+ *
+ * Harvested paths look like `n3.props.heading` or `z:hero.1.props.title` — the first segment is
+ * the node's position in the tree, because `PuckNode` carries no stable id and the write-back
+ * addresses positions too.
+ *
+ * The prop name alone is not enough: a realistic page has eight blocks with a `text` prop, so
+ * eight rows all reading "Text" would be no better than the paths. Pairing it with the position
+ * gives "Block 4 · Heading", which an editor can actually match to the canvas.
+ */
+export function humanizeFieldPath(path: string): string {
+  const segments = path.split('.');
+  const prop = segments[segments.length - 1] ?? path;
+  const node = segments[0] ?? '';
+
+  const prettyProp = prop
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/^./, (char) => char.toUpperCase());
+
+  // Zone nodes are keyed `z:<zone>:<index>` — colons, because the dot is the path separator and
+  // the zone id itself can contain dots (`z:hero.main:0`).
+  const zoneMatch = /^z:([\w.-]+):(\d+)$/.exec(node);
+  if (zoneMatch) {
+    return `${zoneMatch[1]} · item ${Number(zoneMatch[2]) + 1} · ${prettyProp}`;
+  }
+
+  const indexMatch = /^n(\d+)$/.exec(node);
+  if (indexMatch) {
+    return `Block ${Number(indexMatch[1]) + 1} · ${prettyProp}`;
+  }
+
+  return prettyProp || path;
 }
