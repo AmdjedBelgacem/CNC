@@ -278,6 +278,10 @@ export class AiProviderService {
       bodyText = await this.readResponse(response);
     } catch (error) {
       if (error instanceof AiProviderError) throw error;
+      // Log the underlying cause so a `network_error` is diagnosable instead of a black box.
+      // eslint-disable-next-line no-console
+      const e = error as { name?: string; message?: string; code?: string; cause?: { message?: string } };
+      console.error('requestJson network_error:', e?.name, e?.message, e?.code, e?.cause?.message);
       throw new AiProviderError('network_error', true);
     } finally {
       clearTimeout(timeout);
