@@ -31,6 +31,7 @@ import { NoPageSelected } from '@/components/builder/builder-shell';
 import { VersionDrawer } from '@/components/builder/version-drawer';
 import { BuilderShortcuts } from '@/components/builder/publish-checklist';
 import { useOpenPage } from '@/components/builder/use-open-page';
+import { readApiError } from '@/lib/api-error';
 import type { PageRecord as SharedPageRecord } from '@titan/shared';
 /**
  * The editor's view of a page.
@@ -635,8 +636,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.message || 'Save failed');
+        throw new Error(await readApiError(res, 'Save failed'));
       }
       const updated = (await res.json()) as PageRecord;
       setPage(updated);
@@ -687,8 +687,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           }),
         });
         if (!res.ok) {
-          const body = await res.json().catch(() => null);
-          throw new Error(body?.message || 'Publish failed');
+          throw new Error(await readApiError(res, 'Publish failed'));
         }
         const updated = (await res.json()) as PageRecord;
         setPage(updated);

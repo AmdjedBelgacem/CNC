@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../database/drizzle.service';
 import { resolveContentLocale } from '../courses/lesson-content';
 import type { ContentLocale } from '@titan/shared';
@@ -56,7 +56,19 @@ export class BuilderService {
   }
 
   private syncSearch(tenantId: string, pageId: string) {
-    void this.search?.indexEntity(tenantId, 'page', pageId);
+    /**
+     * Fire-and-forget, but *caught*.
+     *
+     * `void promise` only discards the value — it does not handle a rejection. This promise
+     * already had an internal try/catch around the Meilisearch work, but `scheduleAiReindex`
+     * runs before that block, so any throw there rejected the promise. On Node 22 an
+     * unhandled rejection terminates the process by default, which took the whole API down
+     * after a publish that had already committed. Search indexing is a side effect and must
+     * never be able to fail a save or publish, so the rejection is absorbed here.
+     */
+    void Promise.resolve(this.search?.indexEntity(tenantId, 'page', pageId)).catch((error: unknown) => {
+      console.warn('Search sync after builder write failed:', error instanceof Error ? error.message : error);
+    });
   }
 
   // ------------------------------------------------------------------
@@ -515,10 +527,38 @@ export class BuilderService {
     const layout = this.parsePageLayout(dto.layout ?? page.layout);
     const title = dto.title?.trim() || page.title;
     const note = dto.note?.trim() || null;
-    const nextVersion = page.version + 1;
     const now = new Date();
 
     const updated = await this.drizzle.db.transaction(async (tx) => {
+      /**
+       * Derive the version from what actually exists, not from `pages.version`.
+       *
+       * This used to be `page.version + 1`, which silently assumes the page's pointer and
+       * its snapshot history are in lockstep. They are not guaranteed to be: migrations seed
+       * `page_versions` rows directly (026 inserts version 1 for `our-machines`), and a page
+       * restored or imported from a backup can carry a `pages.version` behind its own history.
+       * Any such page hits the `page_versions_page_version_idx` unique constraint on every
+       * single publish, and the insert throws a Postgres 23505 that Nest reports as a generic
+       * "Internal server error" — so Publish is permanently broken for that page with nothing
+       * actionable in the UI or the logs. Taking the max of both sources is correct regardless
+       * of how the row drifted, and repairs the pointer because the same value is written back
+       * to `pages.version` below.
+       *
+       * The row lock is taken *before* the history is read, and that ordering is the point:
+       * two publishes arriving together must not both read the same maximum and then race on
+       * the unique index. Locking first blocks the second transaction until the first commits,
+       * so it re-reads and takes the following number instead of colliding.
+       */
+      await tx.select({ id: pages.id }).from(pages).where(eq(pages.id, page.id)).for('update');
+
+      const [history] = await tx
+        .select({ maxVersion: sql<number | null>`max(${pageVersions.version})` })
+        .from(pageVersions)
+        .where(eq(pageVersions.pageId, page.id));
+
+      const highestExisting = Math.max(page.version, Number(history?.maxVersion ?? 0));
+      const nextVersion = highestExisting + 1;
+
       await tx.insert(pageVersions).values({
         pageId: page.id,
         tenantId,
@@ -555,7 +595,7 @@ export class BuilderService {
       entityType: 'page',
       entityId: page.id,
       tenantId,
-      details: { slug, version: nextVersion, blockCount: layout.content.length, note },
+      details: { slug, version: updated.version, blockCount: layout.content.length, note },
       ...ctx,
     });
     return updated;
