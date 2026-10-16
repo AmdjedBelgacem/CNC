@@ -63,10 +63,9 @@ export function BuilderDialogs() {
           <div className="mt-4 flex justify-end gap-2">
             {' '}
             <DialogClose asChild>
-              {' '}
               <Button variant="ghost" size="sm">
                 {tb('dialogs.cancel', { default: 'Cancel' })}
-              </Button>{' '}
+              </Button>
             </DialogClose>{' '}
             <Button
               size="sm"
@@ -105,10 +104,9 @@ export function BuilderDialogs() {
           <div className="mt-4 flex justify-end gap-2">
             {' '}
             <DialogClose asChild>
-              {' '}
               <Button variant="ghost" size="sm">
                 {tb('dialogs.cancel', { default: 'Cancel' })}
-              </Button>{' '}
+              </Button>
             </DialogClose>{' '}
             <Button
               size="sm"
@@ -242,10 +240,9 @@ function SectionDialog() {
         <div className="mt-4 flex justify-end gap-2">
           {' '}
           <DialogClose asChild>
-            {' '}
             <Button variant="ghost" size="sm">
               {tb('dialogs.cancel', { default: 'Cancel' })}
-            </Button>{' '}
+            </Button>
           </DialogClose>{' '}
           <Button
             size="sm"
