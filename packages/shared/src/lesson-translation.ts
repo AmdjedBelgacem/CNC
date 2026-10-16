@@ -26,6 +26,12 @@ const TRANSLATABLE_KEYS = new Set([
   'summary',
   'content',
   'name',
+  // Builder heading / badge fields that are author-facing prose but were missing from the
+  // allowlist, so they were silently skipped (and the coverage bar reported 100% while they
+  // stayed in English on the Arabic page).
+  'accentText',
+  'suffixText',
+  'eyebrow',
 ]);
 
 /** Keys that are ids, urls, types or numbers and must never be sent to a model. */
