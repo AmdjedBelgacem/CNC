@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { JsonInspectorSection } from '../node-inspector';
 import { BLOCK_INSPECTOR } from './fields';
 import { DynamicContentNotice } from './dynamic-content-notice';
+import { BlockTranslationFields } from './block-translation-fields';
 import type { InspectorGroup, InspectorFieldDef } from './types';
 import {
   useInspectorText,
@@ -101,6 +102,7 @@ export function SmartInspector() {
             onUpdate={updateProp}
           />
         ))}{' '}
+        <BlockTranslationFields selected={selected} />
       </div>{' '}
       <JsonInspectorSection />{' '}
     </div>

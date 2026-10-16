@@ -82,7 +82,7 @@ export function PageTranslationPanel({
     setSaving(true);
     try {
       const res = await apiProxyFetch(`/api/proxy/builder/pages/${slug}`, {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify({ translations: { ar: { title: draft.title, layout: draft.layout } } }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.message || 'Save failed');

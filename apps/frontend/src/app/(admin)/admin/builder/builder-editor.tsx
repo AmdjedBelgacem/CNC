@@ -17,6 +17,7 @@ import {
 import { puckConfig } from '@/lib/builder/puck-config';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { PageTranslationPanel } from '@/components/builder/page-translation';
+import { BuilderTranslationProvider } from '@/components/builder/translation-context';
 import { Languages, Loader2 } from 'lucide-react';
 import { BuilderHeader, VIEWPORTS } from '@/components/builder/editor-header';
 import { BuilderDialogs } from '@/components/builder/dialogs';
@@ -225,6 +226,18 @@ export function BuilderEditor() {
   const { slug } = useOpenPage();
 
   const [page, setPage] = useState<PageRecord | null>(null);
+  // Arabic copy of the page, kept in sync with `page.translations.ar` and persisted independently.
+  const [arabicLayout, setArabicLayout] = useState<PageLayout | null>(null);
+  useEffect(() => {
+    setArabicLayout((page?.translations?.ar?.layout as PageLayout | undefined) ?? null);
+  }, [page?.id]);
+  const persistArabic = useCallback(async (layout: PageLayout) => {
+    if (!slug) return;
+    await apiProxyFetch(`/api/proxy/builder/pages/${slug}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ translations: { ar: { title: page?.title, layout } } }),
+    });
+  }, [slug, page?.title]);
   const [showTranslation, setShowTranslation] = useState(false);
   const [data, setData] = useState<Data | null>(null);
   /**
@@ -841,7 +854,12 @@ Stable registration callback (unstable identity would re-run the bridge effect o
     return () => window.removeEventListener('keydown', onKey);
   }, [saveDraft]);
   return (
-    <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-background sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
+    <BuilderTranslationProvider
+      initialArabicLayout={arabicLayout}
+      englishLayout={(page?.layout as PageLayout | undefined) ?? null}
+      onPersist={persistArabic}
+    >
+      <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-background sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
       {' '}
       <style>{HOST_CSS}</style>
       <style>{CANVAS_CSS}</style>{' '}
@@ -924,5 +942,6 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       )}
       <BuilderDialogs /> <ToastViewport />{' '}
     </div>
+    </BuilderTranslationProvider>
   );
 }
