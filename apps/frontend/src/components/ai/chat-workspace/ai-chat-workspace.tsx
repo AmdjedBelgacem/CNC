@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
+import { coerceLocale } from '@/i18n/config';
 import {
   Archive,
   Bot,
@@ -63,7 +64,10 @@ export function AiChatWorkspace({
 }) {
   const t = useTranslations('aiChat');
   const ta = useTranslations('aiAssistant');
-  const locale = useLocale();
+  const cookieLocale = typeof document !== 'undefined'
+    ? document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith('NEXT_LOOLE='))?.split('=')[1]
+    : undefined;
+  const locale = coerceLocale(cookieLocale || useLocale());
   const router = useRouter();
   // `new` is a sentinel for "start a thread", never a real id.
   const activeId = routeConversationId && routeConversationId !== 'new' ? routeConversationId : null;

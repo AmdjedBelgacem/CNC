@@ -223,7 +223,13 @@ export function useReindexAi() {
 }
 
 export function useAiChat(mode: 'public' | 'authenticated' = 'public') {
-  const locale = coerceLocale(useLocale());
+  // Prefer the cookie the locale switcher writes: it is the user's explicit choice and survives
+  // even when the server-rendered locale disagrees (e.g. a stale tab or a CDN that strips the
+  // Cookie header). Fall back to next-intl's resolved locale otherwise.
+  const cookieLocale = typeof document !== 'undefined'
+    ? document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith('NEXT_LOOLE='))?.split('=')[1]
+    : undefined;
+  const locale = coerceLocale(cookieLocale || useLocale());
   return useMutation({
     mutationKey: ['ai-assistant', 'chat', mode],
     mutationFn: (input: AiChatRequest) => {
