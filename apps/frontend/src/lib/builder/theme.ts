@@ -46,10 +46,11 @@ export async function fetchPublishedTheme(tenantSlug: string): Promise<ThemeToke
 export async function fetchPublishedLayout(
   tenantSlug: string,
   slug: string,
+  locale?: string,
 ): Promise<PageLayout | null> {
   try {
     const res = await fetch(`${API_BASE}/content/pages/${slug}`, {
-      headers: tenantHeaders(tenantSlug),
+      headers: { ...tenantHeaders(tenantSlug), ...(locale ? { 'x-locale': locale } : {}) },
       cache: 'no-store',
     });
     if (!res.ok) return null;
@@ -60,8 +61,8 @@ export async function fetchPublishedLayout(
     return null;
   }
 } /** Builds the final layout used for public rendering: published layout, else the hardcoded default. */
-export async function resolvePageLayout(tenantSlug: string, slug: string): Promise<PageLayout> {
-  const published = await fetchPublishedLayout(tenantSlug, slug);
+export async function resolvePageLayout(tenantSlug: string, slug: string, locale?: string): Promise<PageLayout> {
+  const published = await fetchPublishedLayout(tenantSlug, slug, locale);
   return published ?? getDefaultLayout(slug);
 } /** Theme used for public rendering: published tokens, else the built-in defaults. */
 export async function resolveThemeTokens(tenantSlug: string): Promise<ThemeTokens> {

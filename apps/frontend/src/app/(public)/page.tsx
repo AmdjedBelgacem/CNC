@@ -51,7 +51,7 @@ export default async function HomePage() {
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const locale = coerceLocale(await getLocale());
   const [rawLayout, academies, courses, sponsors] = await Promise.all([
-    resolvePageLayout(tenantSlug, 'home'),
+    resolvePageLayout(tenantSlug, 'home', locale),
     fetchPublishedAcademies(tenantSlug),
     fetchPublishedCourses(tenantSlug, 6, locale),
     fetchPublishedSponsors(tenantSlug),

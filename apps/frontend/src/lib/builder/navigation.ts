@@ -55,6 +55,6 @@ export async function getNavContext(): Promise<{ tenantSlug: string; locale: 'en
   const store = await cookies();
   return {
     tenantSlug: store.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG,
-    locale: store.get('locale')?.value === 'ar' ? 'ar' : 'en',
+    locale: store.get('NEXT_LOCALE')?.value === 'ar' ? 'ar' : 'en',
   };
 }

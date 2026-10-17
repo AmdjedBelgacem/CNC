@@ -43,14 +43,25 @@ interface ProviderProps {
 
 export function BuilderTranslationProvider({ initialArabicLayout, englishLayout, onPersist, children }: ProviderProps) {
   const [arabicLayout, setArabicLayout] = useState<PageLayout | null>(initialArabicLayout);
+  const latestLayout = useRef<PageLayout | null>(initialArabicLayout);
   // Keep latestLayout in sync for the debounced persist closure.
   useEffect(() => {
     latestLayout.current = arabicLayout;
   }, [arabicLayout]);
+  // The provider is mounted before `page` resolves in builder-editor, so the initial props are
+  // null. Sync them in once the page loads, otherwise `setArabicField` has no seed tree and
+  // silently no-ops.
+  useEffect(() => {
+    if (initialArabicLayout) {
+      setArabicLayout(initialArabicLayout);
+      latestLayout.current = initialArabicLayout;
+    }
+  }, [initialArabicLayout]);
+  const englishRef = useRef<PageLayout | null>(englishLayout);
+  useEffect(() => { englishRef.current = englishLayout; }, [englishLayout]);
   const [translating, setTranslating] = useState(false);
   const [saving, setSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestLayout = useRef<PageLayout | null>(initialArabicLayout);
   // Flush a pending debounced save when the provider unmounts (e.g. page switch), so an edit
   // made in the last 800ms is not silently lost.
   useEffect(() => {
@@ -81,8 +92,9 @@ export function BuilderTranslationProvider({ initialArabicLayout, englishLayout,
 
     setArabicLayout((prev) => {
       let base: PageLayout | null = prev;
-      if (!base && englishLayout) {
-        base = JSON.parse(JSON.stringify(englishLayout)) as PageLayout;
+      const english = englishRef.current;
+      if (!base && english) {
+        base = JSON.parse(JSON.stringify(english)) as PageLayout;
       }
       if (!base) return base;
 
@@ -120,7 +132,7 @@ export function BuilderTranslationProvider({ initialArabicLayout, englishLayout,
       return { ...base };
     });
     schedulePersist();
-  }, [englishLayout, schedulePersist]);
+  }, [schedulePersist]);
 
   const translateBlock = useCallback(async (_englishNode: unknown, fields: HarvestedField[]) => {
     if (fields.length === 0) return;

@@ -35,7 +35,10 @@ async function loadPublishedPage(
 ): Promise<PublishedPage | null> {
   try {
     const res = await fetch(`${API_BASE}/content/pages/${encodeURIComponent(slug)}`, {
-      headers: { ...tenantHeaders(tenantSlug), cookie: `locale=${locale}` },
+      // `x-locale` is the backend's first precedence (see resolveContentLocale); the cookie
+      // alone was being ignored because the backend only reads `NEXT_LOCALE` from it, not
+      // `locale`. Send both so an Arabic visitor actually gets the Arabic layout.
+      headers: { ...tenantHeaders(tenantSlug), 'x-locale': locale, cookie: `NEXT_LOCALE=${locale}` },
       cache: 'no-store',
     });
     if (!res.ok) return null;
@@ -51,7 +54,7 @@ async function getContext(): Promise<{ tenantSlug: string; locale: string }> {
   return {
     tenantSlug: store.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG,
     // Only `ar` is a translated content locale today; anything else is English.
-    locale: store.get('locale')?.value === 'ar' ? 'ar' : 'en',
+    locale: store.get('NEXT_LOCALE')?.value === 'ar' ? 'ar' : 'en',
   };
 }
 
