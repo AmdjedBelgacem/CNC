@@ -1,6 +1,25 @@
 import type { AiProviderName } from '../../database/schema/ai';
 export type AiLocale = 'en' | 'ar';
 
+/**
+ * How the assistant should speak when it answers in Arabic.
+ *
+ * `auto` means "match the user": the detector may narrow it to a specific
+ * dialect from the message, or the model may mirror an ambiguous mix. The
+ * explicit choices exist so a member can keep one dialect across short turns
+ * where the message itself carries no dialect markers.
+ */
+export const AI_ARABIC_DIALECTS = [
+  'auto',
+  'msa',
+  'egyptian',
+  'gulf',
+  'levantine',
+  'maghrebi',
+  'iraqi',
+] as const;
+export type AiArabicDialect = (typeof AI_ARABIC_DIALECTS)[number];
+
 export interface AiProviderRuntimeConfig {
   tenantId: string;
   provider: AiProviderName;
@@ -98,7 +117,7 @@ export interface AiRetrievedChunk {
  * system prompt, mode instructions or web attribution rules change: it is the
  * only thing that makes "did that make it better?" answerable.
  */
-export const AI_PROMPT_VERSION = 'v2-web';
+export const AI_PROMPT_VERSION = 'v3-dialects-site';
 
 export interface AiChatCitation {
   sourceType: string;

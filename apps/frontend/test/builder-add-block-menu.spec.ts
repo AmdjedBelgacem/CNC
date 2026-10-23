@@ -2,14 +2,15 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BLOCK_CATEGORIES, BLOCK_REGISTRY, BLOCK_TYPES } from '@titan/shared';
+import { BLOCK_INSPECTOR } from '../src/components/builder/inspector/fields';
 import { puckConfig } from '@/lib/builder/puck-config';
 
 /**
- * The insert menu must offer every block the editor can actually render.
+ * The insert menu must offer every content block the editor can render.
  *
- * It used to iterate `puckConfig.categories`, a second hand-maintained list that had drifted:
- * `nav`, `footer`, `footer-col` and `nav-link` were missing, so those blocks could not be added
- * from the UI at all. A test that asserts coverage fails the moment the lists diverge again.
+ * It used to iterate `puckConfig.categories`, a second hand-maintained list that had drifted and
+ * silently lost blocks. The registry is now authoritative. Page chrome (`nav`, `footer`) is the
+ * one intentional exception: the public shell already renders it, so the menu filters it out.
  */
 const menu = readFileSync(
   resolve(__dirname, '../src/components/builder/add-block-menu.tsx'),
@@ -23,19 +24,58 @@ describe('the add-block menu covers the whole registry', () => {
     expect(menu).not.toMatch(/Object\.entries\(puckConfig\.categories/);
   });
 
-  it('every registry block has a component, so every block is insertable', () => {
+  it('every registry block has a renderer, including legacy page chrome', () => {
     const missing = BLOCK_TYPES.filter((type) => !puckConfig.components[type]);
     expect(missing).toEqual([]);
     // Guard against a vacuous pass.
     expect(BLOCK_TYPES.length).toBeGreaterThan(35);
   });
 
-  it('the four blocks previously missing from the menu are reachable', () => {
-    // These are exactly the types absent from puckConfig.categories.
-    for (const type of ['nav', 'footer', 'footer-col', 'nav-link']) {
-      expect(BLOCK_TYPES).toContain(type);
+  it('gives every registered block an inspector', () => {
+    const missing = BLOCK_TYPES.filter((type) => !BLOCK_INSPECTOR[type]);
+    expect(missing).toEqual([]);
+    for (const type of BLOCK_TYPES) {
+      expect(BLOCK_INSPECTOR[type]!.groups.length).toBeGreaterThan(0);
     }
-    expect(menu).toMatch(/isKnownBlockType\(type\)/);
+  });
+
+  it('exposes upload controls on every image-bearing card', () => {
+    const keysFor = (type: string) =>
+      (BLOCK_INSPECTOR[type]?.groups ?? []).flatMap((group) =>
+        group.fields.map((field) => field.key),
+      );
+    for (const [type, key] of [
+      ['program-card', 'imageUrl'],
+      ['testimonial-card', 'avatarUrl'],
+      ['feature-tiles', 'imageUrl'],
+      ['hero', 'imageUrl'],
+      ['hero-console', 'imageUrl'],
+      ['cta-banner', 'imageUrl'],
+    ] as const) {
+      expect(keysFor(type)).toContain(key);
+    }
+  });
+
+  it('keeps page chrome out of the menu while leaving it editable in old layouts', () => {
+    // The public shell owns these; adding one from the menu has no public effect.
+    for (const type of ['nav', 'footer']) {
+      expect(BLOCK_TYPES).toContain(type);
+      expect(puckConfig.components[type]).toBeTruthy();
+      expect(menu).toMatch(/INSERT_MENU_EXCLUDED/);
+      expect(menu).toMatch(new RegExp(`['"]${type}['"]`));
+    }
+    expect(menu).toMatch(/INSERT_MENU_EXCLUDED\.has\(type\)/);
+    // The remaining blocks from the old drifted category list are insertable.
+    for (const type of ['footer-col', 'nav-link']) {
+      expect(puckConfig.components[type]).toBeTruthy();
+    }
+  });
+
+  it('counts only non-chrome registry blocks as insertable', () => {
+    const excluded = new Set(['nav', 'footer']);
+    const insertable = BLOCK_TYPES.filter((type) => !excluded.has(type));
+    expect(insertable).toHaveLength(BLOCK_TYPES.length - 2);
+    for (const type of insertable) expect(puckConfig.components[type]).toBeTruthy();
   });
 
   it('every category in BLOCK_CATEGORIES has a tab filter', () => {

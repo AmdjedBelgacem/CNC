@@ -12,6 +12,7 @@ import {
   slotNamesFor,
   walkLayoutNodes,
   type PageLayout,
+  type PageTranslation,
   type PuckNode,
 } from '@titan/shared';
 import { puckConfig } from '@/lib/builder/puck-config';
@@ -229,15 +230,31 @@ export function BuilderEditor() {
   // Arabic copy of the page, kept in sync with `page.translations.ar` and persisted independently.
   const [arabicLayout, setArabicLayout] = useState<PageLayout | null>(null);
   useEffect(() => {
+    // Only page identity resets this state. A save response carries the server's
+    // copy of `translations`, which may predate the debounced Arabic PATCH; keying
+    // this effect on `page.translations` would then overwrite the editor's newer
+    // Arabic text with that stale tree. Page-level translation saves update
+    // `arabicLayout` explicitly below.
     setArabicLayout((page?.translations?.ar?.layout as PageLayout | undefined) ?? null);
   }, [page?.id]);
-  const persistArabic = useCallback(async (layout: PageLayout) => {
-    if (!slug) return;
-    await apiProxyFetch(`/api/proxy/builder/pages/${slug}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ translations: { ar: { title: page?.title, layout } } }),
-    });
-  }, [slug, page?.title]);
+  const persistArabic = useCallback(
+    async (layout: PageLayout) => {
+      if (!slug) return;
+      const response = await apiProxyFetch(`/api/proxy/builder/pages/${slug}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ translations: { ar: { title: page?.title, layout } } }),
+      });
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        toast({
+          type: 'err',
+          title: 'Arabic copy was not saved',
+          description: detail || `The server returned ${response.status}.`,
+        });
+      }
+    },
+    [slug, page?.title],
+  );
   const [showTranslation, setShowTranslation] = useState(false);
   const [data, setData] = useState<Data | null>(null);
   /**
@@ -672,8 +689,9 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         type: 'ok',
         title: tb('editor.draftSaved', { default: 'Draft saved' }),
         description: tb('editor.draftSavedDetail', {
-          version: updated.version ? `v${updated.version}\n` : '',
-          default: `Saved ${updated.version ? `v${updated.version}\n` : ''}to ${updated.slug}`,
+          slug: updated.slug,
+          version: updated.version ?? '',
+          default: `Saved ${updated.slug}`,
         }),
       });
     } catch (err) {
@@ -726,6 +744,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           type: 'ok',
           title: tb('editor.pagePublished', { default: 'Page published' }),
           description: tb('editor.pagePublishedDetail', {
+            slug: updated.slug,
             version: updated.version,
             default: `${updated.slug} is now live (v${updated.version})`,
           }),
@@ -856,7 +875,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
   return (
     <BuilderTranslationProvider
       initialArabicLayout={arabicLayout}
-      englishLayout={(page?.layout as PageLayout | undefined) ?? null}
+      englishLayout={(data as PageLayout | null | undefined) ?? page?.layout ?? null}
       onPersist={persistArabic}
     >
       <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-background sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
@@ -919,9 +938,22 @@ Stable registration callback (unstable identity would re-run the bridge effect o
                 <div className="mt-2">
                   <PageTranslationPanel
                     slug={page.slug}
-                    layout={page.layout}
+                    layout={(data as PageLayout | null) ?? page.layout}
                     existing={page.translations?.ar ?? null}
-                    onSaved={() => void load(slug)}
+                    onSaved={(translation: PageTranslation) => {
+                      // Update local state instead of re-fetching: a full load would
+                      // replace the canvas with the last saved English layout and
+                      // silently discard unsaved edits.
+                      setPage((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              translations: { ...(prev.translations ?? {}), ar: translation },
+                            }
+                          : prev,
+                      );
+                      if (translation.layout) setArabicLayout(translation.layout);
+                    }}
                   />
                 </div>
               )}

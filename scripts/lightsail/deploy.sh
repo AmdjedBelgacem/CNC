@@ -29,40 +29,42 @@ case "$action" in
 esac
 
 # ---------------------------------------------------------------------------
-# Frontend images are built OFF this box. This is a 2 GB instance and a
-# `next build` here has twice driven the kernel OOM-killer into rebooting the
-# instance, taking the site and SSH offline with it. Availability is a security
+# Images are built OFF this box. This is a 2 GB instance: a `next build` here
+# has twice driven the kernel OOM-killer into rebooting the instance, and a
+# backend build on 22 Oct 2026 exhausted memory until dockerd itself died,
+# taking every container (site included) offline. Availability is a security
 # property, so this refuses instead of warning.
 # ---------------------------------------------------------------------------
 mem_mb() { awk '/MemTotal/ {printf "%d", $2 / 1024}' /proc/meminfo; }
 MEM_MB="$(mem_mb)"
 NEEDED_MB=4096
+ALLOW_ONBOX="${BAROOT_ALLOW_ONBOX_BUILD:-${BAROOT_ALLOW_ONBOX_FRONTEND_BUILD:-0}}"
 
-if [[ "${BAROOT_ALLOW_ONBOX_FRONTEND_BUILD:-0}" != "1" && "$MEM_MB" -lt "$NEEDED_MB" ]]; then
-  echo "REFUSING to build the frontend on this host." >&2
+if [[ "$ALLOW_ONBOX" != "1" && "$MEM_MB" -lt "$NEEDED_MB" ]]; then
+  echo "REFUSING to build images on this host." >&2
   echo "  detected memory: ${MEM_MB} MB   required for a safe build: ${NEEDED_MB} MB" >&2
   cat >&2 <<'BUILDHELP'
 
-A Next.js production build on a 2 GB host has twice driven the kernel
-OOM-killer into rebooting the instance, taking the site and SSH offline.
+Production builds on a 2 GB host have taken this box down:
+  - `next build` twice drove the kernel OOM-killer into rebooting it
+  - a backend build on 22 Oct 2026 killed dockerd, stopping every container
 
-Build the frontend image elsewhere and ship it instead:
+Build both images on a larger machine and ship them:
 
-  # on a build machine or CI, targeting this host's architecture:
-  docker build -f apps/frontend/Dockerfile -t baroot/frontend:<tag> \
-    --build-arg NEXT_PUBLIC_SITE_URL=... .
-  docker save baroot/frontend:<tag> | ssh ubuntu@<host> 'docker load'
+  bash scripts/lightsail/push-backend.sh    # build + transfer + recreate backend
+  bash scripts/lightsail/push-frontend.sh   # build + transfer + recreate frontend
 
-  # then on this host recreate only the frontend service against that image:
-  cd deploy/lightsail && docker compose --project-name titan up -d frontend
+Restart the existing containers without building anything:
+
+  bash scripts/lightsail/deploy.sh --no-build
 
 Override only if you accept the outage risk:
-  BAROOT_ALLOW_ONBOX_FRONTEND_BUILD=1 bash scripts/lightsail/deploy.sh
+  BAROOT_ALLOW_ONBOX_BUILD=1 bash scripts/lightsail/deploy.sh
 BUILDHELP
   exit 1
 fi
 
-echo "> building BACKEND image only (frontend builds are off-box by policy)"
+echo "> building BACKEND image (off-box builds are the supported path)"
 "${COMPOSE[@]}" build --pull backend
 
 echo "> starting the stack"

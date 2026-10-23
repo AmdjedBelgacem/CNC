@@ -45,6 +45,14 @@ export interface UseTranslateDraftOptions {
   scope?: TranslateScope;
   /** Refuse to run when Arabic already exists, unless the caller confirmed. */
   confirmOverwrite?: () => boolean;
+  /**
+   * Optional per-field predicate for the `missing` scope.
+   *
+   * Some callers have a translated draft in a shape the hook cannot inspect (for example a whole
+   * page layout). Without this, "fill missing translations" was really "translate every field and
+   * overwrite reviewed copy"; the caller knows which field keys already have a translation.
+   */
+  filterFields?: (groupKey: string, fieldKey: string, source: string) => boolean;
   /** Merges returned label -> Arabic text into whatever draft the caller holds. */
   onApply: (groupKey: string, translations: Record<string, string>) => void;
   /**
@@ -73,6 +81,7 @@ export function useTranslateDraft({
   groups,
   scope = 'missing',
   confirmOverwrite,
+  filterFields,
   onApply,
   descriptors,
 }: UseTranslateDraftOptions): UseTranslateDraftResult {
@@ -87,11 +96,15 @@ export function useTranslateDraft({
       .map((group) => ({
         key: group.key,
         fields: Object.fromEntries(
-          Object.entries(group.fields).filter(([, value]) => value && value.trim().length > 0),
+          Object.entries(group.fields).filter(
+            ([key, value]) =>
+              Boolean(value && value.trim().length > 0) &&
+              (filterFields?.(group.key, key, value) ?? true),
+          ),
         ),
       }))
       .filter((group) => Object.keys(group.fields).length > 0);
-  }, [groups, scope]);
+  }, [filterFields, groups, scope]);
 
   const coverageFor = useCallback(
     (source: unknown, translated: unknown) => {

@@ -26,7 +26,7 @@ export function IconBlock({ props }: BlockComponentProps<IconProps>) {
     <Icon
       name={icon}
       size={size}
-      className={cn(ICON_BOX[box], isHex ? undefined : color, className)}
+      className={cn(ICON_BOX[box] ?? '', isHex ? undefined : color, className)}
       style={style}
     />
   );

@@ -30,6 +30,34 @@ export interface PageTranslationDraft {
  * Nodes are keyed by their position rather than a stable id because `PuckNode` carries no id —
  * positions are what the write-back addresses too, so the two cannot drift.
  */
+/** Read a harvested field from the node it belongs to, not from the layout root. */
+export function readPageTranslationField(
+  layout: PageLayout | null | undefined,
+  field: HarvestedField,
+): unknown {
+  if (!layout) return undefined;
+  const rootMatch = /^n(\d+):/.exec(field.key);
+  if (rootMatch) {
+    return readAt(layout.content?.[Number(rootMatch[1])]?.props, field.path);
+  }
+  // Zone ids may contain dots; a greedy match backtracks to the index immediately
+  // before the final colon that starts the prop path.
+  const zoneMatch = /^z:(.+):(\d+):/.exec(field.key);
+  if (zoneMatch) {
+    return readAt(layout.zones?.[zoneMatch[1]!]?.[Number(zoneMatch[2])]?.props, field.path);
+  }
+  return undefined;
+}
+
+function readAt(root: unknown, path: string): unknown {
+  let current: unknown = root;
+  for (const key of path.split('.')) {
+    if (current == null || typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
+}
+
 export function harvestPageLayout(layout: PageLayout): PageTranslationDraft {
   const harvested: HarvestedField[] = [];
   layout.content.forEach((node, index) => {

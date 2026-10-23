@@ -45,6 +45,8 @@ import { puckBlockLabel, puckCategoryLabel, puckConfig } from '@/lib/builder/puc
 import {
   BLOCK_CATEGORIES,
   BLOCK_REGISTRY,
+  findNodeById,
+  getBlockDefinition,
   getZoneItems,
   isKnownBlockType,
   type BlockDefinition,
@@ -52,6 +54,15 @@ import {
 } from '@titan/shared';
 import { cn } from '@/lib/utils';
 const ROOT_ZONE = 'root:default-zone';
+/**
+ * Page chrome that the public shell already renders.
+ *
+ * These blocks are still valid in legacy layouts (the public renderer skips
+ * them, and `nav` remains registered with Puck so those layouts stay editable),
+ * but offering them in the insert menu would create a block with no visible
+ * public effect.
+ */
+const INSERT_MENU_EXCLUDED = new Set(['nav', 'footer']);
 const BLOCK_ICONS: Record<string, LucideIcon> = {
   // Five blocks previously fell back to the generic `Puzzle` glyph, which made
   // them look like placeholders in a list where everything else had an icon.
@@ -118,10 +129,37 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
     }
   }, [open]);
   const insert = (componentType: string) => {
+    const layout = appState.data as unknown as PageLayout;
     const sel = appState.ui.itemSelector;
-    const zone = sel?.zone ?? ROOT_ZONE;
-    const items = getZoneItems(appState.data as unknown as PageLayout, zone);
-    const index = sel?.zone === zone ? (sel?.index ?? 0) + 1 : items.length;
+    const rootItems = getZoneItems(layout, ROOT_ZONE);
+    let zone = ROOT_ZONE;
+    let index = rootItems.length;
+
+    if (sel?.zone === ROOT_ZONE) {
+      index = (sel.index ?? rootItems.length - 1) + 1;
+    } else if (sel?.zone) {
+      /**
+       * Insert beside the selected node only when its parent slot actually
+       * accepts this block type. Puck silently drops an insert into a slot
+       * whose `allow` list or `max` rejects it, which made "Add Block" look
+       * broken whenever a seeded item (for example a stat card) happened to
+       * be selected. Falling back to the end of the page is predictable and
+       * guarantees the block is not lost.
+       */
+      const separator = sel.zone.indexOf(':');
+      const ownerId = separator > 0 ? sel.zone.slice(0, separator) : '';
+      const slot = separator > 0 ? sel.zone.slice(separator + 1) : '';
+      const owner = findNodeById(layout, ownerId);
+      const spec = owner ? getBlockDefinition(owner.type)?.zones?.[slot] : undefined;
+      const items = getZoneItems(layout, sel.zone);
+      const allowed = Boolean(spec && (!spec.allow || spec.allow.includes(componentType)));
+      const hasRoom = !spec?.max || items.length < spec.max;
+      if (allowed && hasRoom) {
+        zone = sel.zone;
+        index = (sel.index ?? items.length - 1) + 1;
+      }
+    }
+
     dispatch({
       type: 'insert',
       componentType,
@@ -141,15 +179,20 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
    * Every block the editor can actually insert, taken from the registry.
    *
    * The menu used to iterate `puckConfig.categories`, which is a separate hand-maintained list:
-   * it silently omitted `nav`, `footer`, `footer-col` and `nav-link`, so four real blocks could
-   * never be added from the UI. The registry is the single source of truth and is checked against
-   * the component map so an entry without a renderer is never offered.
+   * it silently omitted `footer-col` and `nav-link` (as well as page chrome), so real blocks
+   * could never be added from the UI. The registry is the single source of truth and is checked
+   * against the component map so an entry without a renderer is never offered. `nav` and `footer`
+   * stay registered for legacy layouts but are deliberately excluded here.
    */
   const allRows = useMemo(() => {
     const defs = BLOCK_REGISTRY as unknown as Record<string, BlockDefinition | undefined>;
     return Object.entries(defs)
       .filter(
-        ([type, def]) => def && isKnownBlockType(type) && Boolean(puckConfig.components[type]),
+        ([type, def]) =>
+          def &&
+          isKnownBlockType(type) &&
+          !INSERT_MENU_EXCLUDED.has(type) &&
+          Boolean(puckConfig.components[type]),
       )
       .map(([type, def]) => ({
         category: def!.category,

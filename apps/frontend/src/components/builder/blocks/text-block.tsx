@@ -48,6 +48,7 @@ export function TextBlock({ props }: BlockComponentProps<TextProps>) {
   const style: CSSProperties = { ...layoutStyle(props) };
   if (opacity !== undefined) style.opacity = opacity / 100;
   const isHex = color?.startsWith('#');
+  if (isHex) style.color = color;
   return (
     <p
       className={cn(

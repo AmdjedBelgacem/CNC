@@ -1,5 +1,5 @@
 import type { PageLayout, PuckNode } from '../types/page';
-import { walkLayoutNodes } from '../blocks/slots';
+import { getSlotChildren, slotNamesFor, walkLayoutNodes } from '../blocks/slots';
 
 /**
  * Rules for "is this page safe to publish?".
@@ -55,11 +55,41 @@ export function isNodeHidden(node: PuckNode): boolean {
 const NON_CONTENT_PROPS =
   /^(id|className|src|href|url|image|icon|iconPosition|variant|size|align|as|direction|directionMobile|gap|align|justify|wrap|columns|order|padding|bg|radius|border|shadow|hover|accent|width|question|items|overlap|columnsMobile|columnsSm|columnsLg|buttonPadding.*|answerPadding.*|visible)$/i;
 
-/** True when a block has at least one piece of author-written text. */
-function hasContent(node: PuckNode): boolean {
-  return Object.entries(node.props ?? {}).some(
+/** True when a block carries a meaningful visual (image, icon, avatar row). */
+function hasVisualContent(node: PuckNode): boolean {
+  const props = node.props ?? {};
+  return ['src', 'imageUrl', 'avatarUrl', 'bgImage', 'icon'].some(
+    (key) => typeof props[key] === 'string' && (props[key] as string).trim().length > 0,
+  ) || (typeof props.count === 'number' && props.count > 0);
+}
+
+/**
+ * True when a block has author-written copy or a visual of its own, anywhere in
+ * its slot subtree.
+ *
+ * The old check only looked at the block's own string props, so every layout
+ * wrapper (`stack`, `stat-item`, `faq-item`, …) counted as empty even when it
+ * contained a heading and body text. A real marketing page produced "43 blocks
+ * have no text", which trained editors to ignore the checklist. Containers now
+ * inherit content from their children; genuinely empty leaves still warn.
+ */
+function hasContent(node: PuckNode, zones?: Record<string, PuckNode[]>): boolean {
+  const own = Object.entries(node.props ?? {}).some(
     ([key, value]) =>
       typeof value === 'string' && value.trim().length > 0 && !NON_CONTENT_PROPS.test(key),
+  );
+  if (own || hasVisualContent(node)) return true;
+  for (const slot of slotNamesFor(node.type)) {
+    const children = getSlotChildren(node, slot, zones);
+    if (children.some((child) => hasContent(child, zones))) return true;
+  }
+  return false;
+}
+
+/** A structural container with any children is judged by those children. */
+function hasChildNodes(node: PuckNode, zones?: Record<string, PuckNode[]>): boolean {
+  return slotNamesFor(node.type).some(
+    (slot) => getSlotChildren(node, slot, zones).length > 0,
   );
 }
 
@@ -94,7 +124,9 @@ export function collectPublishIssues(
         return;
       }
       visible += 1;
-      if (!hasContent(node)) noText += 1;
+      if (!hasContent(node, layout.zones) && !hasChildNodes(node, layout.zones)) {
+        noText += 1;
+      }
     });
   }
 

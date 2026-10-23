@@ -49,7 +49,7 @@ describe('web search evidence', () => {
   it('states the failure when external evidence was wanted but unavailable', () => {
     expect(chat).toMatch(/External verification was unavailable for this answer/);
     // ...but stays silent when web was simply never asked for.
-    expect(chat).toMatch(/if \(reason === 'disabled' \|\| reason === 'mode_not_allowed'\) return ''/);
+    expect(chat).toMatch(/if \(reason === 'disabled' \|\| reason === 'mode_not_allowed' \|\| reason === 'public_mode'\) return ''/);
   });
 
   it('fails closed with a machine-readable reason', () => {
@@ -126,7 +126,7 @@ describe('feedback and evals', () => {
 
   it('stamps the same prompt version on stored answers and on eval runs', () => {
     const types = readFileSync(resolve(__dirname, '../src/modules/ai/ai.types.ts'), 'utf8');
-    expect(types).toMatch(/export const AI_PROMPT_VERSION = 'v2-web'/);
+    expect(types).toMatch(/export const AI_PROMPT_VERSION = 'v3-dialects-site'/);
     // Both sides must read the one constant, or a run and a live answer drift.
     expect(evals).toMatch(/import \{ AI_PROMPT_VERSION \} from '\.\/ai\.types'/);
     expect(chat).toMatch(/promptVersion: AI_PROMPT_VERSION/);

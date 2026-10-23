@@ -19,6 +19,7 @@ import {
   getDefaultLayout,
   BUILDER_PAGE_DEFS,
   migrateLegacyLayout,
+  mergeLayoutStructure,
   inlineSectionZones,
 } from '@titan/shared';
 import type { PageLayout, PageTranslation, ThemeTokens, PuckNode } from '@titan/shared';
@@ -587,6 +588,30 @@ export class BuilderService {
       if (!published) throw new NotFoundException(`Page "${slug}" no longer exists`);
       return published;
     });
+
+    // Keep the Arabic copy in step with the English structure. The translated
+    // tree is a whole alternate layout, so blocks added to English after the
+    // translation existed were invisible to Arabic visitors until someone
+    // rebuilt it by hand. Rebuild it here, preserving every Arabic block prop
+    // that still has an id in the English layout.
+    try {
+      const currentTranslations = (page.translations as Record<string, { title?: string; layout?: any }> | null) || {};
+      const arabic = currentTranslations.ar || {};
+      if (arabic.layout) {
+        const arabicLayout = this.parsePageLayout(arabic.layout);
+        const merged = mergeLayoutStructure(layout, arabicLayout);
+        if (JSON.stringify(merged) !== JSON.stringify(arabicLayout)) {
+          const nextTranslations = { ...currentTranslations, ar: { ...arabic, layout: merged, title: arabic.title || title } };
+          await this.drizzle.db.update(pages).set({ translations: nextTranslations as any, updatedAt: now }).where(eq(pages.id, page.id));
+        }
+      } else {
+        // No Arabic copy yet: seed it from English so it is never empty.
+        const nextTranslations = { ...currentTranslations, ar: { title, layout } };
+        await this.drizzle.db.update(pages).set({ translations: nextTranslations as any, updatedAt: now }).where(eq(pages.id, page.id));
+      }
+    } catch {
+      // Auto-sync is best-effort; never block publish.
+    }
 
     if (updated) this.syncSearch(tenantId, updated.id);
     await this.audit.log({

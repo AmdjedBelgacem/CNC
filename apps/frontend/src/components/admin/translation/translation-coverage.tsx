@@ -123,7 +123,7 @@ export function TranslationCoveragePanel({
         <TranslationCoverageBadge coverage={coverage} />
       </div>
       {coverage.missing.length > 0 && (
-        <p className="text-xs leading-relaxed text-muted-foreground">
+        <p className="min-w-0 break-words text-xs leading-relaxed text-muted-foreground">
           {t('coverage.missing', { fields: coverage.missing.join(' · ') })}
         </p>
       )}

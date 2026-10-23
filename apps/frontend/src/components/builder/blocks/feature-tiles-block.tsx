@@ -1,9 +1,18 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import type { FeatureTilesProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
-import type { BlockComponentProps } from './index'; /** Two-column section: supporting image beside a feature list. */
+import type { BlockComponentProps } from './index';
+import { MediaPlaceholder } from './media-placeholder';
+
+/** Two-column section: supporting image beside a feature list. */
 export function FeatureTilesBlock({ props, puck }: BlockComponentProps<FeatureTilesProps>) {
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [props.imageUrl]);
   const {
+    id,
     imageUrl,
     imageAlt = '',
     sectionBg = 'bg-surface-container-lowest',
@@ -15,6 +24,7 @@ export function FeatureTilesBlock({ props, puck }: BlockComponentProps<FeatureTi
   } = props;
   return (
     <section
+      id={id}
       className={cn('relative overflow-hidden', sectionBg, className)}
       style={layoutStyle(props)}
     >
@@ -33,15 +43,21 @@ export function FeatureTilesBlock({ props, puck }: BlockComponentProps<FeatureTi
             style={{ border: `${imageBorder}px solid #fff` }}
           >
             {' '}
-            {imageUrl && (
+            {!imageUrl || imageFailed ? (
+              <MediaPlaceholder
+                editing={Boolean(puck?.isEditing)}
+                className="rounded-3xl"
+                aspectClass="aspect-[4/3]"
+                label={imageFailed ? 'Image failed to load' : 'Feature image'}
+                detail={imageFailed ? 'Check the URL or upload a new image' : undefined}
+              />
+            ) : (
               <img
                 src={imageUrl}
                 alt={imageAlt}
                 loading="lazy"
                 decoding="async"
-                onError={(e) => {
-                  e.currentTarget.style.visibility = 'hidden';
-                }}
+                onError={() => setImageFailed(true)}
                 className="w-full aspect-[4/3] object-cover"
               />
             )}{' '}

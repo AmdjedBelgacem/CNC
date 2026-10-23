@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import type {
+  AiArabicDialect,
   AiChatHistoryItem,
   AiChatMode,
   AiChatResponse,
@@ -34,6 +35,7 @@ import {
 } from '@/hooks/use-ai-assistant';
 import { positionAbove, triggerBox, visibleViewport, type OverlayPosition } from '@/lib/overlay-position';
 import { useAiAssistantContext } from './ai-assistant-context';
+import { ArabicDialectMenu, useArabicDialectPreference } from './arabic-dialect-menu';
 import { AiReferenceCard, AiTranscript, type AiBubble } from './ai-chat-parts';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
@@ -97,6 +99,7 @@ export function PublicAiAssistant() {
   const conversationId = contextConversationId;
   const [messages, setMessages] = useState<AiBubble[]>([]);
   const [input, setInput] = useState('');
+  const [arabicDialect, setArabicDialect] = useArabicDialectPreference();
   const router = useRouter();
   const [error, setError] = useState('');
   const [chatDisabled, setChatDisabled] = useState(false);
@@ -107,6 +110,7 @@ export function PublicAiAssistant() {
     pageContext?: AiLessonContext;
     mode?: AiChatMode;
     sourceRef?: AiSourceRef;
+    arabicDialect?: AiArabicDialect;
   } | null>(null);
   // History is only fetched for signed-in members and only when the modal has
   // an actual thread to reconcile against.
@@ -251,6 +255,7 @@ export function PublicAiAssistant() {
       pageContext?: AiLessonContext;
       mode?: AiChatMode;
       sourceRef?: AiSourceRef;
+      arabicDialect?: AiArabicDialect;
     },
     addUserMessage: boolean,
   ) => {
@@ -313,6 +318,7 @@ export function PublicAiAssistant() {
       pageContext: lessonContext ?? undefined,
       mode: sourceRef || lessonContext ? mode : undefined,
       sourceRef: sourceRef ?? undefined,
+      arabicDialect,
     };
     setInput('');
     await runRequest(request, true);
@@ -340,7 +346,7 @@ export function PublicAiAssistant() {
   };
 
   const retry = async () => {
-    if (lastRequest) await runRequest(lastRequest, false);
+    if (lastRequest) await runRequest({ ...lastRequest, arabicDialect }, false);
   };
 
   /** "New chat": drops the transcript and the reference, keeping the modal open. */
@@ -530,19 +536,24 @@ export function PublicAiAssistant() {
               aria-label={t('inputLabel')}
             />
             <div className="flex items-center justify-between gap-2">
-              {isAuthenticated ? (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition hover:text-foreground disabled:opacity-50"
-                  onClick={openInChatPage}
-                  disabled={messages.length === 0}
-                >
-                  <RotateCcw className="size-3.5" />
-                  {conversationId ? t('savedThread') : t('notSavedYet')}
-                </button>
-              ) : (
-                <span className="text-xs text-muted-foreground">{t('publicNote')}</span>
-              )}
+              <div className="flex min-w-0 items-center gap-1">
+                <ArabicDialectMenu value={arabicDialect} onChange={setArabicDialect} />
+                {isAuthenticated ? (
+                  <button
+                    type="button"
+                    className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground transition hover:text-foreground disabled:opacity-50"
+                    onClick={openInChatPage}
+                    disabled={messages.length === 0}
+                  >
+                    <RotateCcw className="size-3.5 shrink-0" />
+                    <span className="truncate">
+                      {conversationId ? t('savedThread') : t('notSavedYet')}
+                    </span>
+                  </button>
+                ) : (
+                  <span className="truncate text-xs text-muted-foreground">{t('publicNote')}</span>
+                )}
+              </div>
               <Button
                 type="submit"
                 size="sm"

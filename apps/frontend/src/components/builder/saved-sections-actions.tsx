@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 import { Boxes, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import {
@@ -69,7 +70,15 @@ export function SavedSectionsActions() {
   };
 
   const handleSave = () => {
-    if (!selectedNode || !selectedId) return;
+    if (!selectedNode || !selectedId || selectedNode.type !== 'section') {
+      toast({
+        type: 'err',
+        title: tb('savedSections.saveTooltipBlocked', {
+          default: 'Select a Section container first to save it',
+        }),
+      });
+      return;
+    }
     const suggested = String((selectedNode.props?.title as string | undefined) ?? '');
     const sub = extractSubtree(appState.data as unknown as PageLayout, selectedId);
     if (!sub) {
@@ -145,7 +154,6 @@ export function SavedSectionsActions() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={!canSave}
           title={
             canSave
               ? tb('savedSections.saveTooltip', {
@@ -155,7 +163,12 @@ export function SavedSectionsActions() {
                   default: 'Select a Section container first to save it',
                 })
           }
-          className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          className={cn(
+            'flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition',
+            canSave
+              ? 'bg-primary/10 text-primary hover:bg-primary/20'
+              : 'text-muted-foreground opacity-60 hover:bg-muted hover:text-foreground',
+          )}
         >
           <FolderPlus className="size-3.5" /> {tb('savedSections.save', { default: 'Save' })}
         </button>

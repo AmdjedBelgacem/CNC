@@ -70,7 +70,8 @@ export function SectionBlock({ props, puck }: BlockComponentProps<LayoutProps>) 
     };
   const id = (props as LayoutProps & { id?: string }).id;
 
-  const colour = safeColour(bgColor) ?? safeColour(borderColor);
+  const background = safeColour(bgColor);
+  const frameColour = safeColour(borderColor);
   const gradient = bgGradient?.trim() && SAFE_GRADIENT.test(bgGradient.trim()) ? bgGradient.trim() : undefined;
   const image = safeBackgroundImage(bgImage);
 
@@ -81,10 +82,8 @@ export function SectionBlock({ props, puck }: BlockComponentProps<LayoutProps>) 
    * fine controls is set the preset still provides the base; when none are set this produces
    * exactly what it produced before.
    */
-  if (colour) {
-    if (border && borderColor && colour) style.border = `${border}px solid ${colour}`;
-    if (bgColor) style.backgroundColor = colour;
-  }
+  if (background) style.backgroundColor = background;
+  if (border && frameColour) style.border = `${border}px solid ${frameColour}`;
   if (gradient) style.backgroundImage = gradient;
   if (image) {
     style.backgroundImage = `url("${image}")`;

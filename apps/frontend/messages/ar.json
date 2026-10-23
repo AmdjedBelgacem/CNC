@@ -1271,6 +1271,8 @@
       "kpiRevenueSub": "الطلبات المؤكدة",
       "kpiUsers": "الحسابات",
       "kpiUsersSub": "مسجَّلة",
+      "kpiVisitors": "الزوار",
+      "kpiVisitorsSub": "جلسات نشطة",
       "lastUpdated": "حُدّث {time}",
       "momentum": "الزخم",
       "momentumSub": "الإجماليات اليومية خلال المدى المحدد",
@@ -2120,6 +2122,17 @@
   "aiAssistant": {
     "title": "المساعد الذكي",
     "description": "اضبط مساعدًا خاصًا بالمؤسسة يجيب من محتوى مساحة العمل الموثّق.",
+    "dialect": {
+      "title": "لهجة الرد العربية",
+      "auto": "تلقائي",
+      "autoHint": "طابق لهجتي",
+      "msa": "العربية الفصحى",
+      "egyptian": "المصرية",
+      "gulf": "الخليجية",
+      "levantine": "الشامية",
+      "maghrebi": "المغاربية",
+      "iraqi": "العراقية"
+    },
     "open": "فتح المساعد الذكي",
     "close": "إغلاق المساعد الذكي",
     "loading": "جارٍ التحميل…",
@@ -3185,6 +3198,11 @@
     "activeUsers": "المستخدمون النشطون",
     "activeUsersOverTime": "المستخدمون النشطون عبر الزمن",
     "activeUsersOverTimeDesc": "المستخدمون المتمايزون الذين أتمّوا دروسًا في كل فترة زمنية",
+    "visitors": "الزوار",
+    "descVisited": "الجلسات النشطة",
+    "visitorsOverTime": "الزوار عبر الزمن",
+    "visitorsOverTimeDesc": "الجلسات النشطة المتمايزة في كل فترة زمنية",
+    "noVisitorsInPeriod": "لا يوجد زوار في هذه الفترة",
     "activityEmptyHint": "ستظهر الحسابات الجديدة والتسجيلات والمدفوعات هنا.",
     "adminOnlyShort": "للمسؤولين فقط",
     "alerts": "تنبيهات",
@@ -3885,7 +3903,8 @@
       "actions": "الأزرار",
       "form": "النموذج",
       "instructor": "المدرّب",
-      "media": "الوسائط"
+      "media": "الوسائط",
+      "avatar": "الصورة الرمزية"
     },
     "history": {
       "title": "سجل الإصدارات",
@@ -4827,5 +4846,11 @@
       "statFreeShipping": "شحن مجاني",
       "freeShippingThreshold": "للطلبات فوق ٩٩ $"
     }
+  },
+  "partners": {
+    "submitted": "تم إرسال الطلب",
+    "submitFailed": "تعذّر إرسال الطلب",
+    "successTitle": "شكرًا لك",
+    "successBody": "لقد استلمنا طلبك."
   }
 }

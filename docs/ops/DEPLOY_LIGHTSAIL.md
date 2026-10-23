@@ -367,7 +367,7 @@ Fix it in the console: Networking → Firewall → SSH 22 → Source = your curr
 pinned source silently locks you out, so widen to `0.0.0.0/0` while working and rely on the
 key plus fail2ban, or keep the pin and re-pin when it changes.
 
-## This host is RUNTIME ONLY — never build the frontend here (Oct 7 2026)
+## This host is RUNTIME ONLY — never build images here (Oct 7 & Oct 22 2026)
 
 A Next.js production build on this 2 GB instance has **twice** driven the kernel
 OOM-killer into rebooting the box. Both times the site went down *and* SSH became
@@ -381,28 +381,50 @@ cause.
 21:29  reboot (kernel OOM)
 ```
 
+On **22 Oct 2026** the backend build did the same thing. It had been treated as
+the "safe" on-host build, but the build stage still needs the full toolchain:
+
+```
+22:12  deploy.sh -> docker compose build backend
+22:20  dockerd killed (buildkit RPC: EOF)
+       titan-backend-1 Exited (137), titan-frontend-1 Exited (143),
+       titan-caddy-1 Exited (0), titan-redis-1 Exited (0)
+       https://barootcnc.com/ -> 521
+22:21  docker compose up -d --no-build   -> restored
+```
+
+The build was cancelled before a new image existed, so the site came back on the
+previous backend image. Nothing was lost, but every container was down.
+
 ### Policy
 
-- **Never** run `next build`, `docker compose build frontend`, or any image build
-  that includes the frontend on this host while the stack is serving.
-- Build frontend images in CI or on a larger machine, then `docker save | docker load`.
-- Only the **backend** image is built on the host, and only when its code changed.
-- `scripts/lightsail/deploy.sh` enforces this: it refuses when `MemTotal < 4096 MB`
-  and prints the off-box build recipe. It builds the backend only.
+- **Never** run `next build`, `docker compose build frontend`, `docker compose
+  build backend`, or `deploy.sh` without `--no-build` on this host while the
+  stack is serving.
+- Build **both** images in CI or on a larger machine, then `docker save | docker load`.
+- `scripts/lightsail/deploy.sh` enforces this: it refuses any build when
+  `MemTotal < 4096 MB` and prints the off-box recipes. `--no-build` still works
+  for restarting the existing images.
 - The Dockerfile heap cap (`ENV NODE_OPTIONS=--max-old-space-size=1400` in the build
   stage) is a **safety net only**, not permission to build here.
 
 ```
-# backend-only deploy (the supported path)
-bash scripts/lightsail/deploy.sh
+# backend: build off-box, ship it, switch over
+bash scripts/lightsail/push-backend.sh
 
 # frontend: build off-box, ship it, switch over
 bash scripts/lightsail/push-frontend.sh
+
+# restart the existing containers only
+bash scripts/lightsail/deploy.sh --no-build
 ```
 
-`push-frontend.sh` does the whole off-box path: cross-builds for `linux/amd64`, transfers the
-image **gzipped**, retries the transfer, verifies it landed before touching anything, then
-replaces `FRONTEND_IMAGE` in place and recreates only the frontend.
+`push-backend.sh` and `push-frontend.sh` do the whole off-box path: cross-build for
+`linux/amd64`, transfer the image **gzipped**, retry the transfer, verify it landed
+before touching anything, then replace `BACKEND_IMAGE` / `FRONTEND_IMAGE` in place
+and recreate only that service. The backend script also syncs the source checkout
+so the host stays current for future operations, but the running container never
+needs a compiler.
 
 The retry and verification are the point. The SSH link drops without warning during long
 transfers, and piping `docker save` straight into `ssh docker load` sends a few hundred megabytes

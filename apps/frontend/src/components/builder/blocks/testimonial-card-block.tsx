@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import type { TestimonialCardProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
@@ -8,6 +11,15 @@ import { Icon } from '@/components/ui/icon';
 export function TestimonialCardBlock({ props }: BlockComponentProps<TestimonialCardProps>) {
   const { className, quote = '', name = '', role, avatarUrl, rating = 5 } = props;
   const stars = Math.max(0, Math.min(5, rating ?? 5));
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => setAvatarFailed(false), [avatarUrl]);
+  const initials =
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || '?';
   return (
     <figure
       className={cn(
@@ -24,28 +36,27 @@ export function TestimonialCardBlock({ props }: BlockComponentProps<TestimonialC
             ))}
           </div>
         ) : null}
-        <blockquote className="text-text-primary text-base sm:text-lg leading-relaxed italic mb-6">
-          {quote}
+        <blockquote className="text-body-md leading-relaxed italic text-foreground/80">
+          &ldquo;{quote}&rdquo;
         </blockquote>
       </div>
       <figcaption className="flex items-center gap-4 pt-4 border-t border-glass-border">
-        <div className="size-12 rounded-full overflow-hidden bg-surface-container-low shadow-sm shrink-0">
-          {avatarUrl ? (
+        <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-bold text-primary shadow-sm">
+          <span aria-hidden="true">{initials}</span>
+          {avatarUrl && !avatarFailed ? (
             <img
               src={avatarUrl}
               alt={name}
               loading="lazy"
               decoding="async"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-              className="w-full h-full object-cover"
+              onError={() => setAvatarFailed(true)}
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : null}
         </div>
         <div className="min-w-0">
-          <div className="text-base font-bold text-text-primary">{name}</div>
-          {role ? <div className="text-xs text-text-muted">{role}</div> : null}
+          <div className="font-bold text-foreground">{name}</div>
+          {role ? <div className="text-xs text-muted-foreground mt-0.5">{role}</div> : null}
         </div>
       </figcaption>
     </figure>

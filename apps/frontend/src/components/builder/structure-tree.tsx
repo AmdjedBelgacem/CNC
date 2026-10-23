@@ -4,8 +4,8 @@ import { useTranslations } from 'next-intl';
 import type { Data } from '@measured/puck';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getBlockDefinition, getSlotChildren } from '@titan/shared';
-import type { PuckNode } from '@titan/shared';
+import { findNodeById, getBlockDefinition, getSlotChildren, getZoneItems } from '@titan/shared';
+import type { PageLayout, PuckNode } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 const ROOT_ZONE = 'root:default-zone';
 const CATEGORY_COLORS: Record<string, string> = {
@@ -127,6 +127,7 @@ export function StructureTree() {
       return changed ? next : prev;
     });
   }, [selectedId, tree]);
+  const [dragged, setDragged] = useState<string | null>(null);
   const select = (node: StructureNode) => {
     dispatch({
       type: 'setUi',
@@ -159,10 +160,77 @@ export function StructureTree() {
               isSelected
                 ? 'bg-primary/10 font-semibold text-primary'
                 : 'text-foreground hover:bg-muted',
+              dragged === node.id && 'opacity-50',
             )}
             style={{ paddingLeft: 6 + node.depth * 14 }}
             role="button"
             tabIndex={0}
+            draggable
+            onDragStart={(e) => {
+              setDragged(node.id);
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData(
+                'text/plain',
+                JSON.stringify({
+                  sourceId: node.id,
+                  sourceType: node.type,
+                  sourceIndex: node.index,
+                  sourceZone: node.zone,
+                }),
+              );
+            }}
+            onDragEnd={() => setDragged(null)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              try {
+                const payload = JSON.parse(e.dataTransfer.getData('text/plain')) as {
+                  sourceId?: string;
+                  sourceType?: string;
+                  sourceIndex: number;
+                  sourceZone: string;
+                };
+                if (payload.sourceZone === node.zone && payload.sourceIndex === node.index) return;
+                // Dropping a container into its own subtree would create a cycle
+                // (the node would contain itself), which Puck cannot represent.
+                if (
+                  payload.sourceId &&
+                  node.zone !== payload.sourceZone &&
+                  (tree.ancestors.get(node.id) ?? []).includes(payload.sourceId)
+                ) {
+                  return;
+                }
+                // Cross-zone moves still have to satisfy the destination slot's
+                // allow-list and capacity; Puck rejects invalid moves silently.
+                if (payload.sourceType && node.zone !== payload.sourceZone) {
+                  const separator = node.zone.indexOf(':');
+                  const ownerId = separator > 0 ? node.zone.slice(0, separator) : '';
+                  const slot = separator > 0 ? node.zone.slice(separator + 1) : '';
+                  const owner = ownerId
+                    ? findNodeById(data as unknown as PageLayout, ownerId)
+                    : null;
+                  const spec = owner ? getBlockDefinition(owner.type)?.zones?.[slot] : undefined;
+                  const allowed = !spec?.allow || spec.allow.includes(payload.sourceType);
+                  const hasRoom =
+                    !spec?.max || getZoneItems(data as unknown as PageLayout, node.zone).length < spec.max;
+                  if (spec && (!allowed || !hasRoom)) return;
+                }
+                dispatch({
+                  type: 'move',
+                  sourceIndex: payload.sourceIndex,
+                  sourceZone: payload.sourceZone,
+                  destinationIndex: node.index,
+                  destinationZone: node.zone,
+                } as never);
+              } catch {
+                // ignore malformed drag payload
+              }
+              setDragged(null);
+            }}
             onClick={() => select(node)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {

@@ -20,6 +20,20 @@ import { Reveal } from '@/components/ui/motion'; /** * Public renderer. * * Rend
  */
 const CHROME_BLOCK_TYPES = new Set(['nav', 'footer']);
 
+/**
+ * Public-canvas bridge for leaf blocks.
+ *
+ * Leaf blocks do not render slots, but sharing one implementation with the
+ * editor means they still receive `puck` and may read `isEditing` to decide
+ * whether an empty image should show an authoring hint. Passing `undefined`
+ * made that a type lie and forced placeholder text to leak publicly.
+ */
+const PUBLIC_PUCK: PuckBridge = {
+  renderSlot: () => null,
+  getSlotData: () => [],
+  isEditing: false,
+};
+
 export function BuilderNode({
   node,
   zones,
@@ -53,10 +67,11 @@ export function BuilderNode({
         ));
       },
       getSlotData: (slot: string) => getSlotChildren(nodeWithDefaults, slot, zones),
+      isEditing: false,
     };
     return <Component props={props} puck={puck} />;
   }
-  return <Component props={props} puck={undefined as unknown as PuckBridge} />;
+  return <Component props={props} puck={PUBLIC_PUCK} />;
 }
 export function BlockRenderer({ layout }: { layout: PageLayout }) {
   const nodes = layout.content ?? [];

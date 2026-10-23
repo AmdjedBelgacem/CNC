@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale } from 'next-intl';
 import { api } from '@/lib/api-client';
-import { coerceLocale } from '@/i18n/config';
+import { coerceLocale, LOCALE_COOKIE } from '@/i18n/config';
 import { useAuthStore } from '@/stores/auth-store';
 import type {
   AiAdminStatus,
@@ -72,9 +72,16 @@ function buildChatPayload(input: AiChatRequest) {
           : {}),
       }
     : undefined;
+  const hasArabic = /[\u0600-\u06ff]/u.test(input.message);
+  // `auto` is the absence of a preference, not a value the API needs. An
+  // explicit dialect also forces Arabic even when the prompt itself is English.
+  const arabicDialect = input.arabicDialect && input.arabicDialect !== 'auto'
+    ? input.arabicDialect
+    : undefined;
   return {
     message: input.message.trim().slice(0, MAX_MESSAGE_LENGTH),
-    locale: input.locale === 'ar' ? 'ar' : 'en',
+    locale: input.locale === 'ar' || hasArabic || arabicDialect ? 'ar' : 'en',
+    ...(arabicDialect ? { arabicDialect } : {}),
     ...(pageContext ? { pageContext } : {}),
     ...(history.length > 0 ? { history } : {}),
     ...(conversationId ? { conversationId } : {}),
@@ -227,7 +234,7 @@ export function useAiChat(mode: 'public' | 'authenticated' = 'public') {
   // even when the server-rendered locale disagrees (e.g. a stale tab or a CDN that strips the
   // Cookie header). Fall back to next-intl's resolved locale otherwise.
   const cookieLocale = typeof document !== 'undefined'
-    ? document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith('NEXT_LOOLE='))?.split('=')[1]
+    ? document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${LOCALE_COOKIE}=`))?.split('=')[1]
     : undefined;
   const locale = coerceLocale(cookieLocale || useLocale());
   return useMutation({

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { harvestPageLayout, applyPageTranslations } from '../src/page-translation';
+import {
+  applyPageTranslations,
+  harvestPageLayout,
+  readPageTranslationField,
+} from '../src/page-translation';
 import type { PageLayout } from '../src/types/page';
 
 const layout = (): PageLayout => ({
@@ -28,6 +32,19 @@ describe('harvestPageLayout', () => {
     expect(Object.values(draft.fields).join(' ')).not.toContain('#');
     expect(Object.values(draft.fields).join(' ')).not.toContain('/a.png');
     expect(Object.values(draft.fields).join(' ')).not.toContain('/x');
+  });
+
+  it('reads harvested fields from their node, not from the layout root', () => {
+    const draft = harvestPageLayout(layout());
+    const translated = applyPageTranslations(draft, {
+      'n0:text': 'أهلاً',
+      'z:sidebar:0:title': 'اشترِ',
+    });
+    const heading = draft.harvested.find((field) => field.key === 'n0:text')!;
+    const cta = draft.harvested.find((field) => field.key === 'z:sidebar:0:title')!;
+    expect(readPageTranslationField(translated, heading)).toBe('أهلاً');
+    expect(readPageTranslationField(translated, cta)).toBe('اشترِ');
+    expect(readPageTranslationField(translated, { ...heading, key: 'n4:text' })).toBeUndefined();
   });
 });
 

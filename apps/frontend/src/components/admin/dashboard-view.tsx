@@ -75,6 +75,7 @@ interface Overview {
   updatedAt?: string;
   users?: Metric;
   activeUsers?: Metric;
+  visitors?: Metric;
   enrollments?: Metric;
   revenue?: { cents: number; delta: number | null; sparkline?: number[] };
   coursesPublished?: number;
@@ -527,6 +528,17 @@ export function DashboardView() {
       tone: 'success' as const,
       href: '/admin/analytics',
       sparkLabel: t('kpiActive'),
+    },
+    {
+      icon: Users,
+      label: t('kpiVisitors', { default: 'Visitors' }),
+      sub: t('kpiVisitorsSub', { default: 'Active sessions' }),
+      value: count(overview?.visitors?.value ?? 0),
+      delta: overview?.visitors?.delta ?? null,
+      sparkline: overview?.visitors?.sparkline,
+      tone: 'primary' as const,
+      href: '/admin/analytics',
+      sparkLabel: t('kpiVisitors', { default: 'Visitors' }),
     },
     {
       icon: UserPlus,

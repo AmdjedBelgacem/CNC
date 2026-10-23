@@ -55,7 +55,7 @@ export function TranslateAction({
   const hasCoverage = coverage != null && coverage.total > 0;
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}>
       {hasCoverage && (
         // The count sits inside the trigger's own label rather than beside the button, so the
         // control reads as one object instead of a button next to a button-shaped badge.

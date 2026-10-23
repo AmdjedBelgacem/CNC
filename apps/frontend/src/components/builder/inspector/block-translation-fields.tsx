@@ -1,11 +1,10 @@
 'use client';
-import { useMemo, useState } from 'react';
 
+import { useMemo } from 'react';
 import { Sparkles } from 'lucide-react';
-import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import { useBuilderTranslation } from '@/components/builder/translation-context';
 import { FieldRow } from './controls';
-import { harvestBlock } from '@titan/shared';
+import { findNodeById, harvestBlock, type PuckNode } from '@titan/shared';
 
 interface Props {
   selected: { type: string; props: Record<string, unknown> };
@@ -14,68 +13,44 @@ interface Props {
 /**
  * Per-block Arabic copy.
  *
- * The page stores Arabic as a complete alternate layout, so editing one block's Arabic text
- * means writing into that tree at the same node position. The context owns that tree and the
- * persistence; this component is just the surface for the currently selected block.
+ * The page stores Arabic as a complete alternate layout. Each node is matched by its stable
+ * `props.id` rather than by array position, so inserting or reordering English blocks never
+ * writes a translation into a different block. Harvested field paths are relative to the node's
+ * props and are used unchanged for both read and write.
  */
 export function BlockTranslationFields({ selected }: Props) {
   const ctx = useBuilderTranslation();
-  const data = useBuilderPuck((s) => (s as any).appState?.data ?? null);
-  const [busy, setBusy] = useState(false);
+  const nodeId = typeof selected.props?.id === 'string' ? selected.props.id : null;
 
-  // Find the selected block's positional key in the English layout (n3 / z:content:0).
-  const nodeKey = useMemo(() => {
-    if (!data) return null;
-    const target = selected.props?.id;
-    // Walk content + zones, matching by reference first, then by id.
-    const walk = (nodes: any[], prefix: (i: number) => string): string | null => {
-      for (let i = 0; i < (nodes?.length ?? 0); i++) {
-        const node = nodes[i];
-        if (node === selected || (target && node?.props?.id === target)) {
-          return prefix(i);
-        }
-        // Recurse into slots.
-        for (const [k, v] of Object.entries(node?.props ?? {})) {
-          if (Array.isArray(v) && v.length && v[0]?.type) {
-            const found = walk(v as any[], (j) => `${prefix(i)}.props.${k}.${j}`);
-            if (found) return found;
-          }
-        }
-      }
-      return null;
-    };
-    let found = walk((data as any).content ?? [], (i) => `n${i}`);
-    if (!found) {
-      for (const [zone, nodes] of Object.entries((data as any).zones ?? {})) {
-        found = walk(nodes as any[], (i) => `z:${zone}:${i}`);
-        if (found) break;
-      }
-    }
-    return found;
-  }, [data, selected]);
+  const translatable = useMemo(() => {
+    if (!nodeId) return [];
+    return harvestBlock(
+      {
+        id: nodeId,
+        type: selected.type,
+        sortOrder: 0,
+        content: selected.props ?? {},
+      } as any,
+      {},
+    ).filter((field) => field.value.trim().length > 0);
+  }, [nodeId, selected]);
 
-  const harvested = useMemo(() => {
-    if (!nodeKey) return [];
-    const block = { id: nodeKey, type: selected.type, sortOrder: 0, content: selected.props ?? {} } as any;
-    return harvestBlock(block, {}).map((f) => ({ ...f, key: `${nodeKey}:${f.key}` }));
-  }, [nodeKey, selected]);
+  const arabicNode = useMemo(() => {
+    if (!ctx?.arabicLayout || !nodeId) return null;
+    return findNodeById(ctx.arabicLayout, nodeId);
+  }, [ctx?.arabicLayout, nodeId]);
 
-  const translatable = harvested.filter((f) => f.value.trim().length > 0 || true);
-
-  if (!ctx || !nodeKey || translatable.length === 0) return null;
-
-  const arabicNode = ctx.arabicLayout ? readNode(ctx.arabicLayout, nodeKey) : null;
+  if (!ctx || !nodeId || translatable.length === 0) return null;
 
   const onAi = async () => {
-    setBusy(true);
-    const fields = harvested.filter((f) => f.value.trim().length > 0);
-    if (fields.length === 0) { setBusy(false); return; }
-    await ctx.translateBlock(selected as any, fields);
-    setBusy(false);
+    await ctx.translateBlock(
+      { type: selected.type, props: selected.props } as unknown as PuckNode,
+      translatable,
+    );
   };
 
   return (
-    <div className="border-b border-border px-3 py-3 space-y-3">
+    <div className="space-y-3 border-b border-border px-3 py-3">
       <div className="flex items-center justify-between">
         <span className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
           Arabic version
@@ -83,21 +58,20 @@ export function BlockTranslationFields({ selected }: Props) {
         <button
           type="button"
           onClick={() => void onAi()}
-          disabled={ctx.translating || busy}
+          disabled={ctx.translating}
           className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
         >
           <Sparkles className="size-3.5" />
           AI translate
         </button>
       </div>
-      {harvested.map((field) => {
-        const propPath = field.key.split(':')[1] ?? field.key; // props.text
-        const arValue = arabicNode ? readAt(arabicNode, propPath) : '';
+      {translatable.map((field) => {
+        const arValue = arabicNode ? readAt(arabicNode.props, field.path) : undefined;
         return (
-          <FieldRow key={field.key} label={field.key.split('.').pop() ?? field.key}>
+          <FieldRow key={field.path} label={field.path.split('.').pop() ?? field.path}>
             <textarea
               value={typeof arValue === 'string' ? arValue : ''}
-              onChange={(e) => ctx.setArabicField(field.key, e.target.value)}
+              onChange={(event) => ctx.setArabicField(nodeId, field.path, event.target.value)}
               placeholder={field.value}
               dir="rtl"
               rows={2}
@@ -108,25 +82,6 @@ export function BlockTranslationFields({ selected }: Props) {
       })}
     </div>
   );
-}
-
-function readNode(layout: any, key: string): any {
-  const segments = key.split('.');
-  let cursor: any = layout;
-  // key is like "n3" or "z:content:0" — top-level node index
-  const top = segments[0]!;
-  if (top.startsWith('n')) {
-    const idx = Number(top.slice(1));
-    cursor = layout.content?.[idx];
-  } else if (top.startsWith('z:')) {
-    const parts = top.split(':');
-    const zone = parts[1];
-    const idx = Number(parts[2]);
-    if (zone && layout?.zones?.[zone]) {
-      cursor = layout.zones[zone][idx];
-    }
-  }
-  return cursor?.props ?? null;
 }
 
 function readAt(root: unknown, path: string): unknown {

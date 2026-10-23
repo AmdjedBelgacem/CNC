@@ -194,6 +194,65 @@ export function migrateLegacyLayout(layout: PageLayout): PageLayout {
   };
 }
 
+/**
+ * Rebuilds a translated layout on top of the English structure.
+ *
+ * Pages are translated as a whole alternate tree, so a section added to the
+ * English page after the translation was saved exists only in English. That
+ * used to make new sections invisible to Arabic visitors until someone rebuilt
+ * the Arabic layout by hand.
+ *
+ * The English layout is authoritative for structure (which blocks exist, their
+ * order, and their slots). The translated layout supplies the localized props
+ * for every block whose `props.id` still exists, matched recursively through
+ * slots. Newly added blocks therefore appear in the right place with English
+ * copy until they are translated; deleted blocks disappear from both locales.
+ */
+export function mergeLayoutStructure(english: PageLayout, translated: PageLayout): PageLayout {
+  const byId = (nodes: PuckNode[] | undefined): Map<string, PuckNode> => {
+    const map = new Map<string, PuckNode>();
+    for (const node of nodes ?? []) {
+      const id = node.props?.id;
+      if (typeof id === 'string' && id) map.set(id, node);
+    }
+    return map;
+  };
+
+  const mergeNode = (en: PuckNode, tr: PuckNode | undefined): PuckNode => {
+    if (!tr || tr.type !== en.type) return en;
+    const props: Record<string, unknown> = { ...(tr.props ?? {}) };
+    const enProps = en.props ?? {};
+    // Keep the English id even if the translated copy drifted, and fill in
+    // props that exist only on the English side (new CTA label, new image, ...).
+    for (const [key, value] of Object.entries(enProps)) {
+      if (key === 'id' || !(key in props)) props[key] = value;
+    }
+    // Visibility is structural, not copy: an editor who unhides a block on the
+    // English page expects it to appear for Arabic visitors too.
+    if ('visible' in enProps) props.visible = enProps.visible;
+    else delete props.visible;
+    // Slots are rebuilt from the English tree so newly added children show up.
+    for (const slot of slotNamesFor(en.type)) {
+      if (!(slot in enProps)) continue;
+      const enChildren = isNodeArray(enProps[slot]) ? (enProps[slot] as PuckNode[]) : [];
+      const trChildren = isNodeArray(tr.props?.[slot]) ? (tr.props?.[slot] as PuckNode[]) : [];
+      const translatedChildren = byId(trChildren);
+      props[slot] = enChildren.map((child) => {
+        const id = child.props?.id;
+        return mergeNode(child, typeof id === 'string' ? translatedChildren.get(id) : undefined);
+      });
+    }
+    return { type: en.type, props };
+  };
+
+  const translatedTop = byId(translated.content);
+  const content = (english.content ?? []).map((node) => {
+    const id = node.props?.id;
+    return mergeNode(node, typeof id === 'string' ? translatedTop.get(id) : undefined);
+  });
+  return { ...english, content };
+}
+
 /** Fresh id for cloned nodes (falls back when `crypto.randomUUID` is missing). */
 export function freshNodeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {

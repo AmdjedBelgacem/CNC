@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { coerceLocale } from '@/i18n/config';
+import { coerceLocale, LOCALE_COOKIE } from '@/i18n/config';
 import {
   Archive,
   Bot,
@@ -44,6 +44,7 @@ import {
   useRenameAiConversation,
 } from '@/hooks/use-ai-assistant';
 import { useAiAssistantContext } from '@/components/ai/ai-assistant-context';
+import { ArabicDialectMenu, useArabicDialectPreference } from '@/components/ai/arabic-dialect-menu';
 import {
   AiReferenceCard,
   AiSourceBadge,
@@ -65,7 +66,7 @@ export function AiChatWorkspace({
   const t = useTranslations('aiChat');
   const ta = useTranslations('aiAssistant');
   const cookieLocale = typeof document !== 'undefined'
-    ? document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith('NEXT_LOOLE='))?.split('=')[1]
+    ? document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${LOCALE_COOKIE}=`))?.split('=')[1]
     : undefined;
   const locale = coerceLocale(cookieLocale || useLocale());
   const router = useRouter();
@@ -92,6 +93,7 @@ export function AiChatWorkspace({
   const [debounced, setDebounced] = useState('');
   const [messages, setMessages] = useState<AiBubble[]>([]);
   const [input, setInput] = useState('');
+  const [arabicDialect, setArabicDialect] = useArabicDialectPreference();
   const [error, setError] = useState('');
   const [failedTurn, setFailedTurn] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -255,6 +257,7 @@ export function AiChatWorkspace({
         conversationId: activeId ?? undefined,
         ...(sourceRef ? { sourceRef } : {}),
         locale: locale === 'ar' ? 'ar' : 'en',
+        arabicDialect,
       });
       setMessages((current) => [
         ...current.map((item) => (item.pending ? { ...item, pending: false } : item)),
@@ -632,9 +635,12 @@ export function AiChatWorkspace({
                 aria-label={ta('inputLabel')}
               />
               <div className="flex items-center justify-between gap-3">
-                <p className="font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
-                  {t('groundedNote')}
-                </p>
+                <div className="flex min-w-0 items-center gap-2">
+                  <ArabicDialectMenu value={arabicDialect} onChange={setArabicDialect} />
+                  <p className="hidden truncate font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground sm:block">
+                    {t('groundedNote')}
+                  </p>
+                </div>
                 <Button type="submit" size="sm" disabled={!input.trim() || chat.isPending || !available}>
                   {chat.isPending ? <Loader2 className="animate-spin" /> : <Send />}
                   {t('send')}

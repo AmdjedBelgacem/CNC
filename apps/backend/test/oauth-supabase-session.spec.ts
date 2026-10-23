@@ -366,7 +366,7 @@ describe('OAuth callback responses', () => {
  */
 describe('Supabase password login and the second factor', () => {
   function buildLoginController(opts: { twoFactorEnabled: boolean }) {
-    const calls = { setAuthCookies: [] as any[], pending: [] as any[], signOut: [] as string[] };
+    const calls = { setAuthCookies: [] as any[], pending: [] as any[], signOut: [] as string[], sessionRows: [] as any[] };
     const reply = {
       setCookie: (name: string) => calls.pending.push(name),
       status: () => ({ redirect: () => reply }),
@@ -390,6 +390,11 @@ describe('Supabase password login and the second factor', () => {
             users: { findFirst: async () => ({ id: 'app-user-1', email: SESSION.email, tenantId: 'tenant-1', role: 'learner', authUserId: SESSION.userId, twoFactorEnabled: opts.twoFactorEnabled }) },
             tenants: { findFirst: async () => ({ id: 'tenant-1', slug: 'cnc-fundamentals' }) },
           },
+          insert: vi.fn(() => ({
+            values: async (row: any) => {
+              calls.sessionRows.push(row);
+            },
+          })),
         },
       } as never,
       {} as never,
@@ -425,5 +430,15 @@ describe('Supabase password login and the second factor', () => {
       { access: SESSION.accessToken, refresh: SESSION.refreshToken },
     ]);
     expect(h.calls.signOut).toHaveLength(0);
+    expect(h.calls.sessionRows).toHaveLength(1);
+    expect(h.calls.sessionRows[0]).toMatchObject({ userId: 'app-user-1' });
+    expect(h.calls.sessionRows[0].tokenHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(h.calls.sessionRows[0].expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('does not record a session when the second factor still has to be verified', async () => {
+    const h = buildLoginController({ twoFactorEnabled: true });
+    await h.controller.login({ email: SESSION.email, password: 'pw' }, req, h.reply);
+    expect(h.calls.sessionRows).toHaveLength(0);
   });
 });

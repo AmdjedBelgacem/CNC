@@ -57,6 +57,7 @@ type Overview = {
   updatedAt: string;
   users: Kpi;
   activeUsers: Kpi;
+  visitors: Kpi;
   signups: Kpi;
   enrollments: Kpi;
   revenue: { cents: number; delta: number | null; sparkline: number[] };
@@ -68,6 +69,7 @@ type Trends = {
   signups: TrendPoint[];
   enrollments: TrendPoint[];
   activeUsers: TrendPoint[];
+  visitors: TrendPoint[];
   revenue: { date: string; cents: number }[];
 };
 type Breakdowns = {
@@ -301,6 +303,16 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
         icon: GraduationCap,
         sub: t('descCompletedLesson', { default: 'Completed a lesson' }),
         tone: 'purple' as Tone,
+      },
+      {
+        key: 'visitors',
+        label: t('visitors', { default: 'Visitors' }),
+        value: (overview.visitors?.value ?? 0).toLocaleString(locale),
+        delta: overview.visitors?.delta ?? null,
+        sparkline: overview.visitors?.sparkline ?? [],
+        icon: Users,
+        sub: t('descVisited', { default: 'Active sessions' }),
+        tone: 'blue' as Tone,
       },
       {
         key: 'signups',
@@ -596,6 +608,17 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
               color="success"
               unitLabel={t('activeShort', { default: 'Active' })}
               emptyMessage={t('noActiveUsersInPeriod', { default: 'No active users in this period' })}
+              compareSuffix={compareSuffix}
+              loading={isFetching}
+            />
+            <TrendChart
+              title={t('visitorsOverTime', { default: 'Visitors Over Time' })}
+              description={t('visitorsOverTimeDesc', { default: 'Distinct active sessions per bucket' })}
+              icon={Users}
+              data={trends?.visitors ?? []}
+              color="primary"
+              unitLabel={t('visitors', { default: 'Visitors' })}
+              emptyMessage={t('noVisitorsInPeriod', { default: 'No visitors in this period' })}
               compareSuffix={compareSuffix}
               loading={isFetching}
             />

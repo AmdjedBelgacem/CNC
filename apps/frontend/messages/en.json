@@ -1271,6 +1271,8 @@
       "kpiRevenueSub": "Confirmed orders",
       "kpiUsers": "Accounts",
       "kpiUsersSub": "Registered",
+      "kpiVisitors": "Visitors",
+      "kpiVisitorsSub": "Active sessions",
       "lastUpdated": "Updated {time}",
       "momentum": "Momentum",
       "momentumSub": "Daily totals in the selected window",
@@ -2120,6 +2122,17 @@
   "aiAssistant": {
     "title": "AI Assistant",
     "description": "Configure a tenant-scoped assistant that answers from verified workspace content.",
+    "dialect": {
+      "title": "Arabic dialect",
+      "auto": "Auto",
+      "autoHint": "match me",
+      "msa": "Standard Arabic",
+      "egyptian": "Egyptian",
+      "gulf": "Gulf",
+      "levantine": "Levantine",
+      "maghrebi": "Maghrebi",
+      "iraqi": "Iraqi"
+    },
     "open": "Open AI assistant",
     "close": "Close AI assistant",
     "loading": "Loading…",
@@ -3185,6 +3198,11 @@
     "activeUsers": "Active users",
     "activeUsersOverTime": "Active Users Over Time",
     "activeUsersOverTimeDesc": "Distinct users completing lessons per bucket",
+    "visitors": "Visitors",
+    "descVisited": "Active sessions",
+    "visitorsOverTime": "Visitors Over Time",
+    "visitorsOverTimeDesc": "Distinct active sessions per bucket",
+    "noVisitorsInPeriod": "No visitors in this period",
     "activityEmptyHint": "Signups, enrollments, and payments will appear here.",
     "adminOnlyShort": "Admin only",
     "alerts": "alerts",
@@ -3885,7 +3903,8 @@
       "actions": "Buttons",
       "form": "Form",
       "instructor": "Instructor",
-      "media": "Media"
+      "media": "Media",
+      "avatar": "Avatar"
     },
     "history": {
       "title": "Version history",
@@ -4827,5 +4846,11 @@
       "statFreeShipping": "Free ship",
       "freeShippingThreshold": "over $99"
     }
+  },
+  "partners": {
+    "submitted": "Application submitted",
+    "submitFailed": "Submission failed",
+    "successTitle": "Thank you",
+    "successBody": "We received your application."
   }
 }

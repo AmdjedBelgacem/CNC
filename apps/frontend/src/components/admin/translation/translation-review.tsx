@@ -110,9 +110,9 @@ export function TranslationReviewDialog({
           {items.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">{t('review.nothing')}</p>
           )}
-          {items.map((item) => (
+          {items.map((item, index) => (
             <article
-              key={item.label}
+              key={`${item.label}-${index}`}
               className="relative grid gap-x-7 gap-y-3 rounded-lg border border-border bg-card ps-4 pe-4 py-3.5 transition-colors hover:border-border-strong sm:grid-cols-2"
             >
               <StatusRail missing={item.missing} />

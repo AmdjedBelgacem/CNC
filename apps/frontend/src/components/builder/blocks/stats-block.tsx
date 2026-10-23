@@ -12,6 +12,8 @@ export function StatsBlock({ props, puck }: BlockComponentProps<StatsProps>) {
     columnsLg = 'lg:grid-cols-4',
     gap = 'gap-6',
   } = props;
+  const layout = layoutStyle(props);
+  const authoredMarginTop = typeof props.marginTop === 'number' ? props.marginTop : 0;
   return (
     <section
       id={id}
@@ -19,7 +21,7 @@ export function StatsBlock({ props, puck }: BlockComponentProps<StatsProps>) {
         'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto relative z-20',
         className,
       )}
-      style={{ ...layoutStyle(props), marginTop: -overlap }}
+      style={{ ...layout, marginTop: authoredMarginTop - overlap }}
     >
       {' '}
       <div className={cn('grid', columnsMobile, columnsSm, columnsLg, gap)}>

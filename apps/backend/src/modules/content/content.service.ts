@@ -5,7 +5,12 @@ import { resolveContentLocale } from '../courses/lesson-content';
 import { pages, pageVersions } from '../../database/schema/pages';
 import { themes, themeVersions } from '../../database/schema/themes';
 import { tenants } from '../../database/schema/tenants';
-import { migrateLegacyLayout, type PageLayout, type TenantAnalyticsSettings } from '@titan/shared';
+import {
+  mergeLayoutStructure,
+  migrateLegacyLayout,
+  type PageLayout,
+  type TenantAnalyticsSettings,
+} from '@titan/shared';
 
 function normalizeAnalyticsId(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -89,7 +94,14 @@ export class ContentService {
       publishedAt: page.publishedAt,
     };
     if (copy?.layout) {
-      return { ...base, title: copy.title ?? page.title, layout: copy.layout, locale, resolvedLocale: locale };
+      // The translated layout is a whole alternate tree, so it goes stale as
+      // soon as a section is added to (or removed from) the English page. Rebuild
+      // it against the English structure and keep the Arabic copy for every block
+      // that still exists. New blocks appear in their English position, with
+      // English copy, instead of silently disappearing for Arabic visitors.
+      const arabicLayout = migrateLegacyLayout(copy.layout as PageLayout);
+      const layout = mergeLayoutStructure(englishLayout, arabicLayout);
+      return { ...base, title: copy.title ?? page.title, layout, locale, resolvedLocale: locale };
     }
     return {
       ...base,

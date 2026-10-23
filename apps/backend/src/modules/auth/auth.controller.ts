@@ -10,6 +10,7 @@ import { tenants } from '../../database/schema/tenants';
 import { users } from '../../database/schema/users';
 import { emailEquals } from '../../database/email-match';
 import { oauthStates } from '../../database/schema/oauth-states';
+import { userSessions } from '../../database/schema/auth';
 import { eq } from 'drizzle-orm';
 import { AuthService } from './services/auth.service';
 import { PlatformAlertsService } from '../notifications/platform-alerts.service';
@@ -25,7 +26,7 @@ import { TenantScopeGuard } from './guards/tenant-scope.guard';
 import { SkipCsrf } from './guards/csrf.guard';
 import { UploadService } from './services/upload.service';
 import { CookieService } from './services/cookie.service';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '../../config/config.service';
 import { providerAuthorizeUrl } from './strategies/provider-authorize-url';
@@ -288,6 +289,27 @@ export class AuthController {
           tenantId: tenant.id || undefined,
           ip: req.ip,
           userAgent: req.headers['user-agent'],
+        })
+        .catch(() => undefined);
+
+      /**
+       * Supabase owns the credentials, but the application still needs its own session row:
+       * Settings lists and revokes sessions from `user_sessions`, and the analytics visitor
+       * series reads `last_active_at` from it. This branch previously only wrote an audit log,
+       * so every Supabase login left the visitors chart empty forever. The refresh token is a
+       * stable per-session secret we can hash without storing the credential itself.
+       */
+      await this.drizzle.db
+        .insert(userSessions)
+        .values({
+          userId: linked.id,
+          tokenHash: createHash('sha256').update(session.refreshToken).digest('hex'),
+          deviceInfo: req.headers['user-agent'] || null,
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null,
+          // Supabase refresh sessions default to 30 days; this row is an activity/session
+          // index, not a credential validator, so it follows that lifetime.
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         })
         .catch(() => undefined);
 

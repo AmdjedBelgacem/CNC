@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { ProgramCardProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
@@ -25,7 +28,9 @@ const TILE_TONE: Record<string, string> = {
  * duration chip, meta row, title, description, mono tag chips, and an
  * instructor + syllabus footer row.
  */
-export function ProgramCardBlock({ props }: BlockComponentProps<ProgramCardProps>) {
+export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCardProps>) {
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [props.imageUrl]);
   const {
     className,
     imageUrl,
@@ -60,24 +65,27 @@ export function ProgramCardBlock({ props }: BlockComponentProps<ProgramCardProps
         <div className="relative h-56 w-full overflow-hidden bg-surface-container-low">
           {/* Intentional blueprint backdrop: visible if the remote image fails. */}
           <div className="absolute inset-0 blueprint-grid" aria-hidden="true"></div>
-          {imageUrl ? (
+          {imageUrl && !imageFailed ? (
             <img
               src={imageUrl}
               alt={imageAlt || title}
               loading="lazy"
               decoding="async"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
+              onError={() => setImageFailed(true)}
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
+          ) : null}
+          {puck?.isEditing && (!imageUrl || imageFailed) ? (
+            <span className="absolute bottom-3 start-3 z-10 rounded bg-background/90 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shadow-sm">
+              {imageFailed ? 'Image failed' : 'Add image'}
+            </span>
           ) : null}
           {level ? (
             <div className="absolute top-4 start-4">
               <span
                 className={cn(
                   'px-3 py-1 rounded-full text-xs font-bold shadow-md',
-                  LEVEL_TONE[levelTone ?? 'primary'],
+                  LEVEL_TONE[levelTone ?? 'primary'] ?? LEVEL_TONE.primary,
                 )}
               >
                 {level}
@@ -125,7 +133,7 @@ export function ProgramCardBlock({ props }: BlockComponentProps<ProgramCardProps
             <div
               className={cn(
                 'size-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0',
-                TILE_TONE[levelTone ?? 'primary'],
+                TILE_TONE[levelTone ?? 'primary'] ?? TILE_TONE.primary,
               )}
             >
               {instructorInitials}

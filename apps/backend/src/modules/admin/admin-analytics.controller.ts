@@ -109,6 +109,13 @@ export class AdminAnalyticsController {
     return this.admin.getInsights(tid, range || '30d');
   }
 
+  @Get('visitors')
+  @Roles('super_admin', 'admin')
+  async visitors(@Req() req: any, @Query('range') range?: string, @Query('tenantId') tenantId?: string) {
+    const tid = await this.effectiveTenant(req, tenantId);
+    return this.admin.getVisitorsSeries(tid, range || '30d');
+  }
+
   @Get('activity')
   @Roles('super_admin', 'admin')
   async activity(

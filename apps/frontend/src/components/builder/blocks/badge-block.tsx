@@ -17,7 +17,7 @@ export function BadgeBlock({ props }: BlockComponentProps<BadgeProps>) {
   const { text = '', variant = 'glow', uppercase, icon, iconSize = 12, pulse, className } = props;
   return (
     <span
-      className={cn(BADGE_VARIANTS[variant], pulse && 'inline-flex items-center gap-2.5', uppercase && 'uppercase', className)}
+      className={cn(BADGE_VARIANTS[variant] ?? BADGE_VARIANTS.glow, pulse && 'inline-flex items-center gap-2.5', uppercase && 'uppercase', className)}
       style={layoutStyle(props)}
     >
       {' '}

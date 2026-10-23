@@ -57,8 +57,11 @@ export function ButtonBlock({ props }: BlockComponentProps<ButtonProps>) {
     width = 'auto',
     className,
   } = props;
-  const sizeClass = SIZED.has(variant) ? SIZES[size] : '';
-  const variantClass = BTN_VARIANTS[variant].replace('px-10 py-4', sizeClass);
+  const sizeClass = SIZED.has(variant) ? (SIZES[size] ?? SIZES.md) : '';
+  const variantClass = (BTN_VARIANTS[variant] ?? BTN_VARIANTS.primary).replace(
+    'px-10 py-4',
+    sizeClass,
+  );
   const rootClass = cn(variantClass, width === 'full' && 'w-full', className);
   const resolvedIcon = icon ? resolveIconName(icon) : null;
   const iconEl = resolvedIcon ? (

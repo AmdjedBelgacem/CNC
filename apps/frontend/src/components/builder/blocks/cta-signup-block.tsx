@@ -11,7 +11,7 @@ import { Icon } from '@/components/ui/icon';
  * Gradient email-capture band (mockup final CTA): pill, display headline,
  * supporting copy, an email form that routes to `formAction`, and fine print.
  */
-export function CtaSignupBlock({ props }: BlockComponentProps<CtaSignupProps>) {
+export function CtaSignupBlock({ props, puck }: BlockComponentProps<CtaSignupProps>) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const {
@@ -27,6 +27,9 @@ export function CtaSignupBlock({ props }: BlockComponentProps<CtaSignupProps>) {
   } = props;
   const onSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    // Puck intercepts most canvas clicks, but a real form submit would navigate
+    // the editor away. Editing the block must never enter the signup flow.
+    if (puck?.isEditing) return;
     const target = formAction || '/register';
     const glue = target.includes('?') ? '&' : '?';
     router.push(email ? `${target}${glue}email=${encodeURIComponent(email)}` : target);

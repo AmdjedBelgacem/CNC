@@ -162,6 +162,7 @@ export class AdminService {
       completedPrevRows,
       publishedCourses,
       upcomingEvents,
+      visitorsCurrent,
     ] = await Promise.all([
       this.drizzle.db.select({ n: count() }).from(users).where(eq(users.tenantId, tenantId)).then((r) => r[0]?.n ?? 0).catch(() => 0),
       this.drizzle.db.select({ n: count() }).from(users).where(and(eq(users.tenantId, tenantId), lt(users.createdAt, since))).then((r) => r[0]?.n ?? 0).catch(() => 0),
@@ -177,6 +178,7 @@ export class AdminService {
       this.drizzle.db.execute(sql`SELECT COUNT(*)::int AS n FROM enrollments WHERE tenant_id = ${tenantId} AND status = 'completed' AND started_at >= ${prevSince.toISOString()}::timestamptz AND started_at < ${since.toISOString()}::timestamptz` as any).then((r: any) => { const rows = Array.isArray(r) ? r : r.rows ?? []; return Number(rows[0]?.n ?? rows[0]?.count ?? 0); }).catch(() => 0),
       this.drizzle.db.select({ n: count() }).from(courses).where(and(eq(courses.tenantId, tenantId), eq(courses.isPublished, true))).then((r) => r[0]?.n ?? 0).catch(() => 0),
       this.drizzle.db.select({ n: count() }).from(events).where(and(eq(events.tenantId, tenantId), sql`${events.startDate} >= NOW()`)).then((r) => r[0]?.n ?? 0).catch(() => 0),
+      this.drizzle.db.execute(sql`SELECT COUNT(DISTINCT user_id)::int AS n FROM user_sessions WHERE user_id IN (SELECT id FROM users WHERE tenant_id = ${tenantId}) AND last_active_at >= ${since.toISOString()}::timestamptz` as any).then((r: any) => { const rows = Array.isArray(r) ? r : r.rows ?? []; return Number(rows[0]?.n ?? 0); }).catch(() => 0),
     ]);
 
     // Aggregates for current period
@@ -212,6 +214,7 @@ export class AdminService {
       // backwards compat
       users: { value: totalUsers, delta: totalUsersDelta, sparkline: signupsSparkline },
       activeUsers: { value: activeDistinctCurrent, delta: delta(activeDistinctCurrent, activePrevRows as unknown as number), sparkline: activeSparkline },
+      visitors: { value: visitorsCurrent as unknown as number, delta: null, sparkline: Array(buckets.length).fill(0) },
       enrollments: { value: enrollmentsCurrent, delta: delta(enrollmentsCurrent, enrollmentsPrev as unknown as number), sparkline: enrollmentsSparkline },
       revenue: { cents: revenueCurrent, delta: delta(revenueCurrent, revenuePrev), sparkline: revenueSparkline },
       coursesPublished: publishedCourses,
@@ -261,14 +264,31 @@ export class AdminService {
     }
   }
 
+  async getVisitorsSeries(tenantId: string, range: string) {
+    try {
+      const { since, trunc } = this.rangeFromParam(range);
+      const rows: any = await this.drizzle.db.execute(sql`
+        SELECT date_trunc(${sql.raw(`'${trunc}'`)}, last_active_at) AS bucket, COUNT(DISTINCT user_id)::int AS count
+        FROM user_sessions
+        WHERE user_id IN (SELECT id FROM users WHERE tenant_id = ${tenantId}) AND last_active_at >= ${since.toISOString()}::timestamptz
+        GROUP BY 1 ORDER BY 1
+      ` as any);
+      const list: any[] = Array.isArray(rows) ? rows : (rows as any).rows ?? [];
+      return list.map((r: any) => ({ date: r.bucket instanceof Date ? r.bucket.toISOString().slice(0, 10) : String(r.bucket).slice(0, 10), count: Number(r.count) }));
+    } catch {
+      return [];
+    }
+  }
+
   async getTrends(tenantId: string, range: string) {
-    const [signups, enrollments, activeUsers, revenue] = await Promise.all([
+    const [signups, enrollments, activeUsers, revenue, visitors] = await Promise.all([
       this.getSignupsSeries(tenantId, range),
       this.getEnrollmentsSeries(tenantId, range),
       this.getActiveUsersSeries(tenantId, range),
       this.getRevenueSeries(tenantId, range),
+      this.getVisitorsSeries(tenantId, range),
     ]);
-    return { signups, enrollments, activeUsers, revenue };
+    return { signups, enrollments, activeUsers, revenue, visitors };
   }
 
   async getEnrollmentsSeries(tenantId: string, range: string) {

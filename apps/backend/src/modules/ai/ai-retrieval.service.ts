@@ -1,13 +1,18 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, inArray, isNotNull, ne, or, sql } from 'drizzle-orm';
+import { currencyFractionDigits, isCurrencyCode } from '@titan/shared';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, ne, or, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../database/drizzle.service';
+import { academies } from '../../database/schema/academies';
 import { aiDocumentChunks, aiDocuments } from '../../database/schema/ai';
 import { courses, lessons, series } from '../../database/schema/courses';
+import { events } from '../../database/schema/events';
+import { productsBundle } from '../../database/schema/products';
 import { enrollments } from '../../database/schema/progress';
 import { AiProviderError, AiProviderService } from './ai-provider.service';
 import { AiSettingsService } from './ai-settings.service';
 import { normalizeArabicText, sanitizeUserText } from './ai-safety.service';
-import type { AiPageContext, AiProviderRuntimeConfig, AiRetrievedChunk, AiViewer } from './ai.types';
+import type { AiSiteCatalog, AiSiteCatalogItem } from './ai-site-directory';
+import type { AiLocale, AiPageContext, AiProviderRuntimeConfig, AiRetrievedChunk, AiViewer } from './ai.types';
 
 const ARABIC_SEARCH_ALIASES: Record<string, readonly string[]> = {
   تيتانيوم: ['titanium'],
@@ -54,7 +59,26 @@ const ARABIC_SEARCH_ALIASES: Record<string, readonly string[]> = {
   عرض: ['width'],
   ارتفاع: ['height'],
   زمن: ['cycle time', 'time'],
-  دوره: ['cycle', 'cycle time'],
+  دوره: ['course', 'courses', 'cycle', 'cycle time'],
+  دورات: ['course', 'courses'],
+  كورس: ['course', 'courses'],
+  كورسات: ['course', 'courses'],
+  اكاديميه: ['academy', 'academies'],
+  اكاديميات: ['academy', 'academies'],
+  منتج: ['product', 'products'],
+  منتجات: ['product', 'products'],
+  متجر: ['store', 'shop', 'product', 'products'],
+  متاجر: ['store', 'shop', 'product', 'products'],
+  ستور: ['store', 'shop', 'product', 'products'],
+  فعاليه: ['event', 'events'],
+  فعاليات: ['event', 'events'],
+  مجتمع: ['community', 'post', 'posts'],
+  منشور: ['post', 'posts', 'community'],
+  منشورات: ['post', 'posts', 'community'],
+  درس: ['lesson', 'lessons'],
+  دروس: ['lesson', 'lessons'],
+  شهاده: ['certificate', 'certificates'],
+  شهادات: ['certificate', 'certificates'],
   اختبار: ['test', 'testing'],
   معيار: ['standard', 'standards'],
   جوده: ['quality'],
@@ -72,13 +96,281 @@ export function expandArabicSearchTerms(query: string): string[] {
   return Array.from(new Set(aliases)).slice(0, 20);
 }
 
+const SITE_CATALOG_TTL_MS = 60_000;
+const SITE_CATALOG_ITEM_LIMIT = 8;
+
+function translatedTitle(
+  row: { title: string; translations?: unknown },
+  locale: AiLocale,
+): string {
+  if (locale !== 'ar') return row.title;
+  const translations = row.translations as Record<string, { title?: unknown }> | null | undefined;
+  const translated = translations?.ar?.title;
+  return typeof translated === 'string' && translated.trim() ? translated : row.title;
+}
+
+function formatMoney(minor: number | null | undefined, currency: string | null | undefined): string | null {
+  if (minor == null || !Number.isFinite(minor)) return null;
+  const upper = typeof currency === 'string' ? currency.toUpperCase() : '';
+  const code = isCurrencyCode(upper) ? upper : 'USD';
+  const digits = currencyFractionDigits(code);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: code,
+    currencyDisplay: 'code',
+    numberingSystem: 'latn',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(minor / 10 ** digits);
+}
+
+function courseMeta(
+  row: {
+    accessMode: string;
+    priceCents: number | null;
+    currency: string;
+    difficulty: number | null;
+    estimatedHours: number | null;
+  },
+  locale: AiLocale,
+): string {
+  const ar = locale === 'ar';
+  const parts: string[] = [];
+  if (row.accessMode === 'invite') {
+    parts.push(ar ? 'بدعوة فقط' : 'Invite only');
+  } else if (row.accessMode === 'paid') {
+    const money = formatMoney(row.priceCents, row.currency);
+    parts.push(money ? (ar ? `مدفوعة ${money}` : `Paid ${money}`) : (ar ? 'مدفوعة' : 'Paid'));
+  } else {
+    parts.push(ar ? 'مجانية' : 'Free');
+  }
+  if (row.difficulty != null) {
+    parts.push(ar ? `المستوى ${row.difficulty}` : `Level ${row.difficulty}`);
+  }
+  if (row.estimatedHours != null && row.estimatedHours > 0) {
+    parts.push(ar ? `${row.estimatedHours} ساعة` : `${row.estimatedHours}h`);
+  }
+  return parts.join(' · ');
+}
+
+function productMeta(
+  row: {
+    category: string | null;
+    pricingMode: string;
+    price: number | null;
+    currency: string | null;
+  },
+  locale: AiLocale,
+): string {
+  const ar = locale === 'ar';
+  const parts: string[] = [];
+  if (row.category) parts.push(row.category);
+  if (row.pricingMode === 'request') {
+    parts.push(ar ? 'السعر عند الطلب' : 'Price on request');
+  } else {
+    const money = formatMoney(row.price, row.currency);
+    if (money) {
+      parts.push(`${row.pricingMode === 'from' ? (ar ? 'ابتداءً من' : 'From') : ''} ${money}`.trim());
+    }
+  }
+  return parts.join(' · ');
+}
+
+const MONTHS = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  ar: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+} as const;
+
+const EVENT_TYPE_LABELS: Record<string, { en: string; ar: string }> = {
+  course: { en: 'Course', ar: 'دورة' },
+  workshop: { en: 'Workshop', ar: 'ورشة عمل' },
+  conference: { en: 'Conference', ar: 'مؤتمر' },
+  webinar: { en: 'Webinar', ar: 'ندوة عبر الإنترنت' },
+};
+
+function eventMeta(row: { startDate: Date; eventType: string | null }, locale: AiLocale): string {
+  // Never send an ISO date through `sanitizeRetrievedText`: the phone-number
+  // scrubber sees "2026-11-08" as a phone number and replaces it with
+  // `[redacted-phone]`. A human-readable date keeps the metadata useful.
+  const [year, month, day] = row.startDate.toISOString().slice(0, 10).split('-').map(Number);
+  const monthName = MONTHS[locale][(month ?? 1) - 1] ?? '';
+  const date = locale === 'ar'
+    ? `${day ?? 1} ${monthName} ${year ?? ''}`.trim()
+    : `${monthName} ${day ?? 1}, ${year ?? ''}`.trim();
+  const type = row.eventType
+    ? EVENT_TYPE_LABELS[row.eventType]?.[locale] ?? row.eventType.replace(/_/g, ' ')
+    : '';
+  return [date, type].filter(Boolean).join(' · ');
+}
+
 @Injectable()
 export class AiRetrievalService {
+  private readonly siteCatalogCache = new Map<string, { expiresAt: number; value: AiSiteCatalog }>();
+
   constructor(
     private readonly drizzle: DrizzleService,
     private readonly settings: AiSettingsService,
     private readonly provider: AiProviderService,
   ) {}
+
+  /**
+   * A small, live inventory of the public site.
+   *
+   * Retrieval is excellent at finding a specific lesson once a query resembles
+   * its text, but "what academies do you have?" or "where is the store?" has no
+   * matching document. This directory gives the model verified names, links,
+   * counts and public pricing for the site's own sections without indexing all
+   * of them again. It is deliberately public-only and cached briefly so a chat
+   * turn does not run eight aggregate queries per keystroke.
+   */
+  async siteCatalog(tenantId: string, locale: AiLocale): Promise<AiSiteCatalog> {
+    const cacheKey = `${tenantId}:${locale}`;
+    const cached = this.siteCatalogCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+    const now = new Date();
+    const publishedAcademy = and(
+      eq(academies.tenantId, tenantId),
+      eq(academies.isPublished, true),
+      eq(academies.isArchived, false),
+    );
+    const publishedCourse = and(
+      eq(courses.tenantId, tenantId),
+      eq(courses.isPublished, true),
+      eq(courses.isArchived, false),
+    );
+    const publishedProduct = and(
+      eq(productsBundle.tenantId, tenantId),
+      eq(productsBundle.isPublished, true),
+      eq(productsBundle.isArchived, false),
+    );
+    const upcomingEvent = and(
+      eq(events.tenantId, tenantId),
+      eq(events.isPublished, true),
+      gte(events.startDate, now),
+    );
+
+    const [
+      academyRows,
+      academyCount,
+      courseRows,
+      courseCount,
+      productRows,
+      productCount,
+      eventRows,
+      eventCount,
+    ] = await Promise.all([
+      this.drizzle.db
+        .select({
+          title: academies.title,
+          slug: academies.slug,
+          translations: academies.translations,
+        })
+        .from(academies)
+        .where(publishedAcademy)
+        .orderBy(asc(academies.sortOrder), asc(academies.title))
+        .limit(SITE_CATALOG_ITEM_LIMIT),
+      this.drizzle.db.select({ total: count() }).from(academies).where(publishedAcademy),
+      this.drizzle.db
+        .select({
+          title: courses.title,
+          slug: courses.slug,
+          translations: courses.translations,
+          accessMode: courses.accessMode,
+          priceCents: courses.priceCents,
+          currency: courses.currency,
+          difficulty: courses.difficulty,
+          estimatedHours: courses.estimatedHours,
+        })
+        .from(courses)
+        .where(publishedCourse)
+        .orderBy(asc(courses.sortOrder), asc(courses.title))
+        .limit(SITE_CATALOG_ITEM_LIMIT),
+      this.drizzle.db.select({ total: count() }).from(courses).where(publishedCourse),
+      this.drizzle.db
+        .select({
+          title: productsBundle.title,
+          slug: productsBundle.slug,
+          translations: productsBundle.translations,
+          category: productsBundle.category,
+          pricingMode: productsBundle.pricingMode,
+          price: productsBundle.price,
+          currency: productsBundle.currency,
+        })
+        .from(productsBundle)
+        .where(publishedProduct)
+        .orderBy(asc(productsBundle.sortOrder), asc(productsBundle.title))
+        .limit(SITE_CATALOG_ITEM_LIMIT),
+      this.drizzle.db.select({ total: count() }).from(productsBundle).where(publishedProduct),
+      this.drizzle.db
+        .select({
+          title: events.title,
+          slug: events.slug,
+          translations: events.translations,
+          startDate: events.startDate,
+          eventType: events.eventType,
+        })
+        .from(events)
+        .where(upcomingEvent)
+        .orderBy(asc(events.startDate))
+        .limit(SITE_CATALOG_ITEM_LIMIT),
+      this.drizzle.db.select({ total: count() }).from(events).where(upcomingEvent),
+    ]);
+
+    const academyItems: AiSiteCatalogItem[] = academyRows.map((row) => ({
+      title: translatedTitle(row, locale),
+      href: `/academy/${encodeURIComponent(row.slug)}`,
+    }));
+    const courseItems: AiSiteCatalogItem[] = courseRows.map((row) => ({
+      title: translatedTitle(row, locale),
+      href: `/courses/${encodeURIComponent(row.slug)}`,
+      meta: courseMeta(row, locale),
+    }));
+    const productItems: AiSiteCatalogItem[] = productRows.map((row) => ({
+      title: translatedTitle(row, locale),
+      href: `/products/${encodeURIComponent(row.slug)}`,
+      meta: productMeta(row, locale),
+    }));
+    const eventItems: AiSiteCatalogItem[] = eventRows.map((row) => ({
+      title: translatedTitle(row, locale),
+      href: `/events/${encodeURIComponent(row.slug)}`,
+      meta: eventMeta(row, locale),
+    }));
+
+    const catalog: AiSiteCatalog = {
+      groups: [
+        {
+          key: 'academies',
+          href: '/academy',
+          total: Number(academyCount[0]?.total ?? 0),
+          items: academyItems,
+        },
+        {
+          key: 'courses',
+          href: '/courses',
+          total: Number(courseCount[0]?.total ?? 0),
+          items: courseItems,
+        },
+        {
+          key: 'products',
+          href: '/products',
+          total: Number(productCount[0]?.total ?? 0),
+          items: productItems,
+        },
+        {
+          key: 'events',
+          href: '/events',
+          total: Number(eventCount[0]?.total ?? 0),
+          items: eventItems,
+        },
+      ],
+    };
+    this.siteCatalogCache.set(cacheKey, {
+      expiresAt: Date.now() + SITE_CATALOG_TTL_MS,
+      value: catalog,
+    });
+    return catalog;
+  }
 
   async retrieve(
     tenantId: string,

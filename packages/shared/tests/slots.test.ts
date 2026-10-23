@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { migrateLegacyLayout, getSlotChildren, getZoneItems } from '../src/blocks/slots';
+import {
+  migrateLegacyLayout,
+  getSlotChildren,
+  getZoneItems,
+  mergeLayoutStructure,
+} from '../src/blocks/slots';
 import { validatePageLayout, validateLayoutZones } from '../src/validators/page';
 import type { PageLayout } from '../src/types/page';
 
@@ -53,6 +58,66 @@ describe('migrateLegacyLayout', () => {
     expect(getZoneItems(migrated, 'hero-1:content')).toHaveLength(2);
     expect(getZoneItems(legacyLayout(), 'hero-1:content')).toHaveLength(2);
     expect(getZoneItems(migrated, 'nope:content')).toEqual([]);
+  });
+});
+
+describe('mergeLayoutStructure', () => {
+  const english: PageLayout = {
+    root: { props: {} },
+    content: [
+      {
+        type: 'section',
+        props: {
+          id: 'section-a',
+          visible: true,
+          content: [
+            { type: 'heading', props: { id: 'heading-a', text: 'English heading' } },
+            { type: 'text', props: { id: 'text-new', text: 'New paragraph' } },
+          ],
+        },
+      },
+      { type: 'heading', props: { id: 'heading-b', text: 'Second section' } },
+    ],
+  };
+
+  const arabic: PageLayout = {
+    root: { props: {} },
+    content: [
+      {
+        type: 'section',
+        props: {
+          id: 'section-a',
+          visible: false,
+          content: [{ type: 'heading', props: { id: 'heading-a', text: 'عنوان عربي' } }],
+        },
+      },
+    ],
+  };
+
+  it('keeps Arabic copy on existing ids and pulls in newly added English nodes', () => {
+    const merged = mergeLayoutStructure(english, arabic);
+    const section = merged.content[0]!;
+    const heading = getSlotChildren(section, 'content')[0]!;
+    expect(heading.props?.text).toBe('عنوان عربي');
+    expect(getSlotChildren(section, 'content').map((n) => n.props?.id)).toEqual([
+      'heading-a',
+      'text-new',
+    ]);
+    // A block added to English after the translation existed is present.
+    expect(merged.content[1]?.props?.text).toBe('Second section');
+  });
+
+  it('takes visibility from English rather than a stale translated tree', () => {
+    const merged = mergeLayoutStructure(english, arabic);
+    expect(merged.content[0]?.props?.visible).toBe(true);
+  });
+
+  it('falls back to the English node when the translated block was replaced', () => {
+    const replaced = structuredClone(arabic);
+    replaced.content[0]!.type = 'stats';
+    const merged = mergeLayoutStructure(english, replaced);
+    expect(merged.content[0]?.type).toBe('section');
+    expect(merged.content[0]?.props?.visible).toBe(true);
   });
 });
 

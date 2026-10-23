@@ -122,6 +122,20 @@ describe('every element on a page is individually reachable', () => {
   });
 });
 
+describe('the simulator console stays readable in Arabic', () => {
+  /**
+   * The hero console mirrors into the left column in RTL, but its telemetry is technical LTR UI:
+   * feed/spindle labels, axis values and mode tabs. Inheriting RTL reversed the strings
+   * (`mm/min 4,200 :FEED`) and moved signs to the wrong side (`142.308+`).
+   */
+  const consoleBlock = read('components/builder/blocks/hero-console-block.tsx');
+
+  it('pins the console card and floating metric copy to LTR', () => {
+    expect(consoleBlock).toMatch(/liquid-glass shadow-xl" dir="ltr"/);
+    expect(consoleBlock).toMatch(/<div dir="ltr">/);
+  });
+});
+
 describe('every block is either editable or explains why it is not', () => {
   /**
    * Twelve of the forty-one registered blocks had no `BLOCK_INSPECTOR` entry, so selecting them
@@ -200,5 +214,69 @@ describe('the publish checklist dropdown is not trapped by the inspector', () =>
     expect(checklist).toMatch(/publish\.errorCount/);
     expect(checklist).toMatch(/publish\.warningCount/);
     expect(checklist).toMatch(/aria-expanded=\{open\}/);
+  });
+});
+
+describe('Layers drag-and-drop cannot corrupt the tree', () => {
+  const tree = read('components/builder/structure-tree.tsx');
+
+  it('carries the source node identity, not just a position', () => {
+    expect(tree).toMatch(/sourceId: node\.id/);
+    expect(tree).toMatch(/sourceType: node\.type/);
+  });
+
+  it('refuses to drop a container into its own subtree', () => {
+    expect(tree).toMatch(/tree\.ancestors\.get\(node\.id\).*includes\(payload\.sourceId\)/);
+  });
+
+  it('validates cross-zone moves against the destination allow-list and capacity', () => {
+    expect(tree).toMatch(/getBlockDefinition\(owner\.type\)\?\.zones\?\.\[slot\]/);
+    expect(tree).toMatch(/spec\.allow\.includes\(payload\.sourceType\)/);
+    expect(tree).toMatch(/getZoneItems\(.*\)\.length < spec\.max/);
+  });
+});
+
+describe('builder toasts provide every interpolation variable', () => {
+  const editor = read('app/(admin)/admin/builder/builder-editor.tsx');
+
+  it('passes the saved slug to the draft-saved detail', () => {
+    expect(editor).toMatch(/draftSavedDetail[\s\S]{0,160}slug: updated\.slug/);
+  });
+
+  it('passes the published slug to the published detail', () => {
+    expect(editor).toMatch(/pagePublishedDetail[\s\S]{0,160}slug: updated\.slug/);
+  });
+
+  it('does not reset Arabic state from a save response that may predate the Arabic PATCH', () => {
+    expect(editor).toMatch(/setArabicLayout\([\s\S]{0,120}\n  \}, \[page\?\.id\]\)/);
+  });
+});
+
+describe('filling missing page translations preserves reviewed copy', () => {
+  const page = read('components/builder/page-translation.tsx');
+  const hook = read('components/admin/translation/use-translate-draft.ts');
+
+  it('the translation hook can exclude fields the caller already reviewed', () => {
+    expect(hook).toMatch(/filterFields\?:/);
+    expect(hook).toMatch(/filterFields\?\.\(group\.key, key, value\)/);
+  });
+
+  it('the page panel excludes already-translated field keys from the missing scope', () => {
+    expect(page).toMatch(/filterFields: \(_group, key\) => !reviewedKeys\.has\(key\)/);
+    expect(page).toMatch(/readPageTranslationField\(target, field\)/);
+  });
+
+  it('applies a partial translation onto the existing Arabic tree', () => {
+    expect(page).toMatch(/mergeLayoutStructure\(harvested\.layout, base\)/);
+    expect(page).toMatch(/const base = prev\?\.layout \?\? existingAligned \?\? harvested\.layout/);
+  });
+
+  it('chunks page fields under the translate endpoint\'s 40-field cap', () => {
+    expect(page).toMatch(/index \+= 40/);
+    expect(page).toMatch(/entries\.slice\(index, index \+ 40\)/);
+  });
+
+  it('does not count English fallback copy as a completed translation in review', () => {
+    expect(page).toMatch(/missing: !translation\.trim\(\) \|\| translation\.trim\(\) === field\.value\.trim\(\)/);
   });
 });

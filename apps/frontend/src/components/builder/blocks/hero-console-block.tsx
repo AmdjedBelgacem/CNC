@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import type { HeroConsoleProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
@@ -40,6 +41,8 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
     floatValue,
     floatTag,
   } = props;
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [imageUrl]);
   return (
     <section id={id} className={cn('relative overflow-hidden', className)} style={layoutStyle(props)}>
       <div className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
@@ -49,8 +52,10 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
             {puck.renderSlot('content')}
           </div>
           {/* Right: simulator console card */}
-          <div className="lg:col-span-6 relative">
-            <div className="relative rounded-2xl p-2 liquid-glass shadow-xl">
+          {/* Reserve room under the console for the floating metric badge; without it the badge
+              overlapped the mode selector and hid the view controls. */}
+          <div className="lg:col-span-6 relative md:pb-16">
+            <div className="relative rounded-2xl p-2 liquid-glass shadow-xl" dir="ltr">
               {/* Console header bar */}
               <div className="bg-card rounded-lg p-3 mb-2 flex items-center justify-between border-b border-glass-border">
                 <div className="flex items-center gap-2 min-w-0">
@@ -76,17 +81,20 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
               <div className="relative h-[380px] sm:h-[440px] rounded-lg overflow-hidden group bg-surface-sunken">
                 {/* Intentional blueprint backdrop: visible if the remote image fails. */}
                 <div className="absolute inset-0 blueprint-grid" aria-hidden="true"></div>
-                {imageUrl ? (
+                {imageUrl && !imageFailed ? (
                   <img
                     src={imageUrl}
                     alt={imageAlt}
                     loading="eager"
                     decoding="async"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
+                    onError={() => setImageFailed(true)}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
+                ) : null}
+                {puck?.isEditing && (!imageUrl || imageFailed) ? (
+                  <span className="absolute start-1/2 top-4 z-30 -translate-x-1/2 rounded bg-background/90 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shadow-sm">
+                    {imageFailed ? 'Image failed' : 'Add console image'}
+                  </span>
                 ) : null}
                 {/* Telemetry badges (top-left) */}
                 <div className="absolute top-4 start-4 flex flex-col gap-2 z-20">
@@ -211,7 +219,7 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                 <div className="size-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
                   <Icon name={floatIcon ?? 'speed'} className="size-5" />
                 </div>
-                <div>
+                <div dir="ltr">
                   <div className="text-xs text-text-muted font-medium">{floatLabel}</div>
                   <div className="text-lg font-bold text-text-primary font-mono">
                     {floatValue}

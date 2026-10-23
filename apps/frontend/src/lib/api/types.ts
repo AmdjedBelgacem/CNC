@@ -611,6 +611,16 @@ export interface AiChatCitation {
 
 export type AiChatMode = 'general' | 'fact_check' | 'ask_post' | 'ask_lesson';
 export type AiConversationSource = 'general' | 'lesson' | 'post' | 'admin_test';
+export const AI_ARABIC_DIALECTS = [
+  'auto',
+  'msa',
+  'egyptian',
+  'gulf',
+  'levantine',
+  'maghrebi',
+  'iraqi',
+] as const;
+export type AiArabicDialect = (typeof AI_ARABIC_DIALECTS)[number];
 
 /** What a conversation is grounded in. Always treated as untrusted DATA. */
 export interface AiSourceRef {
@@ -653,6 +663,8 @@ export interface AiChatRequest {
   conversationId?: string;
   pageContext?: AiLessonContext;
   locale?: 'en' | 'ar';
+  /** `auto` mirrors the message; an explicit dialect guarantees an Arabic reply. */
+  arabicDialect?: AiArabicDialect;
   mode?: AiChatMode;
   sourceRef?: AiSourceRef;
 }

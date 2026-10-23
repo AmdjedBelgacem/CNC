@@ -36,6 +36,9 @@ const SECRET_ASSIGNMENT_PATTERN = /((?:api[_ -]?key|password|passcode|secret|tok
 const PROVIDER_SECRET_PATTERN = /\b(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,})\b/g;
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
 const OPAQUE_SECRET_PATTERN = /\b[A-Za-z0-9_-]{40,}\b/g;
+// Internal paths can exceed the opaque-secret length (for example, a long product
+// slug). They are navigation, not secrets, so shield them while redacting output.
+const INTERNAL_PATH_PATTERN = /(?<![A-Za-z0-9:])\/(?:[A-Za-z0-9._~%=-]+\/?)+/g;
 const ARABIC_DIACRITICS_PATTERN = /[\u064B-\u065F\u0670\u0640]/g;
 
 export function normalizeArabicText(value: string): string {
@@ -97,13 +100,24 @@ export function redactAssistantOutput(value: string, secrets: string[] = []): st
   for (const secret of secrets) {
     if (secret.length >= 8) output = output.split(secret).join('[redacted]');
   }
-  return output
+  const paths: string[] = [];
+  output = output.replace(INTERNAL_PATH_PATTERN, (path) => {
+    const token = `\uE000${paths.length}\uE001`;
+    paths.push(path);
+    return token;
+  });
+  output = output
     .replace(PROVIDER_SECRET_PATTERN, '[redacted-secret]')
     .replace(JWT_PATTERN, '[redacted-token]')
     .replace(OPAQUE_SECRET_PATTERN, '[redacted-secret]')
     .replace(SECRET_ASSIGNMENT_PATTERN, '$1[redacted]')
-    .replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1[redacted]')
-    .slice(0, 20000);
+    .replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1[redacted]');
+  for (let index = 0; index < paths.length; index += 1) {
+    const path = paths[index];
+    if (path === undefined) continue;
+    output = output.replace(`\uE000${index}\uE001`, path);
+  }
+  return output.slice(0, 20000);
 }
 
 @Injectable()

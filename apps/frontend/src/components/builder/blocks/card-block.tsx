@@ -15,7 +15,7 @@ const CARD_SHADOW: Record<string, string> = {
   sm: 'shadow-sm',
   md: 'shadow-md',
   lg: 'shadow-lg',
-  xl: 'shadow-sm',
+  xl: 'shadow-xl',
   glow: 'shadow-[0_0_44px_-12px_rgb(var(--c-primary)/0.35)]',
 };
 const CARD_RADIUS: Record<string, string> = {
@@ -25,6 +25,7 @@ const CARD_RADIUS: Record<string, string> = {
   lg: 'rounded-lg',
   xl: 'rounded-xl',
   '2xl': 'rounded-2xl',
+  '3xl': 'rounded-3xl',
   full: 'rounded-full',
 };
 export function CardBlock({ props, puck }: BlockComponentProps<CardProps>) {

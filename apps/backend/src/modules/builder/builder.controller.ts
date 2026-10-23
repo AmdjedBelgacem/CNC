@@ -99,9 +99,11 @@ export class BuilderController {
 
   @Get('pages/:slug')
   @ApiOperation({ summary: 'Get a page (auto-provisions the built-in slugs with the default layout)' })
-  async getPage(@CurrentTenant() tenant: any, @Param('slug') slug: string, @Req() req: any) {
-    // The locale resolver reads the cookie, then `?locale=`, then the header.
-    return this.builder.getPage(this.builder.assertTenant(tenant), slug, req);
+  async getPage(@CurrentTenant() tenant: any, @Param('slug') slug: string) {
+    // The admin editor edits the English tree; Arabic is a separate translation surface. Loading
+    // the visitor's locale here meant an admin whose UI was Arabic could save the Arabic tree back
+    // into the English draft, replacing the canonical copy with a translated layout.
+    return this.builder.getPage(this.builder.assertTenant(tenant), slug, 'en');
   }
 
   @Put('pages/:slug')

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { HeroProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
@@ -8,11 +8,13 @@ import type { BlockComponentProps } from './index'; /** Full-screen hero with so
 import { Icon } from '@/components/ui/icon';
 export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
   const {
+    id,
     imageUrl,
     fullHeight = true,
     scrollIndicator = true,
     backgroundColor,
     contentAlign = 'center',
+    backgroundOverlay = 0,
     backgroundOpacity = 20,
     gradientVeil = true,
     contentMaxWidth = 1024,
@@ -27,6 +29,8 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
     className,
   } = props;
   const contentRef = useRef<HTMLDivElement>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [imageUrl]);
   useEffect(() => {
     const factor = parallaxFactor / 100;
     const onScroll = () => {
@@ -42,6 +46,7 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
   if (!fullHeight) style.minHeight = nonFullHeight;
   return (
     <section
+      id={id}
       className={cn(
         'relative flex items-center justify-center overflow-hidden',
         fullHeight ? 'min-h-screen' : undefined,
@@ -50,7 +55,7 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
       style={style}
     >
       {' '}
-      {imageUrl && (
+      {imageUrl && !imageFailed && (
         <div className="absolute inset-0 z-0">
           {' '}
           <img
@@ -58,17 +63,27 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
             alt=""
             fetchPriority="high"
             decoding="async"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
+            onError={() => setImageFailed(true)}
             className="w-full h-full object-cover filter grayscale soft-blend"
             style={{ opacity: backgroundOpacity / 100 }}
           />{' '}
+          {backgroundOverlay > 0 && (
+            <div
+              className="absolute inset-0 bg-overlay"
+              style={{ opacity: backgroundOverlay / 100 }}
+              aria-hidden="true"
+            ></div>
+          )}
           {gradientVeil && (
             <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background"></div>
           )}{' '}
         </div>
       )}{' '}
+      {puck?.isEditing && imageUrl && imageFailed ? (
+        <span className="absolute end-4 top-4 z-20 rounded bg-background/90 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shadow-sm">
+          Background image failed to load
+        </span>
+      ) : null}{' '}
       {mesh && (
         <div
           className="absolute inset-0 z-[1] overflow-hidden pointer-events-none"

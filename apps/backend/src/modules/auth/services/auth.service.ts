@@ -629,6 +629,12 @@ export class AuthService {
           .where(eq(users.id, user.id));
         user.authUserId = session.userId;
       }
+      await this.recordSupabaseSession(
+        user.id,
+        session.refreshToken,
+        params.ip,
+        params.userAgent,
+      );
       return {
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
@@ -643,6 +649,32 @@ export class AuthService {
       user.id, undefined, params.ip, params.userAgent,
     );
     return { accessToken, refreshToken, provider: 'local' };
+  }
+
+  /**
+   * Mirror a Supabase-issued session into the application's own `user_sessions` table.
+   * Password sign-in records this in AuthController; OAuth, magic-link and post-2FA sign-in
+   * flow through `issueSessionForUser`. Without this row the analytics visitor series and the
+   * Settings session list cannot see those users. Failure must not block sign-in.
+   */
+  private async recordSupabaseSession(
+    userId: string,
+    refreshToken: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<void> {
+    try {
+      await this.drizzle.db.insert(us).values({
+        userId,
+        tokenHash: this.tokenService.hashToken(refreshToken),
+        deviceInfo: userAgent || null,
+        ip: ip || null,
+        userAgent: userAgent || null,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+    } catch {
+      // Session bookkeeping must not make authentication unavailable.
+    }
   }
 
   /**

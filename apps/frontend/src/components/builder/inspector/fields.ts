@@ -24,9 +24,11 @@ import type {
   ProgramCardProps,
   ImageProps,
   LinkProps,
+  LiveIslandProps,
   NavLinkProps,
   NavProps,
   PartnerLogosProps,
+  ProgramCardsProps,
   ProgressCardProps,
   SectionProps,
   StackProps,
@@ -34,9 +36,11 @@ import type {
   StatsProps,
   SpotlightCardsProps,
   TestimonialCardProps,
+  TestimonialsProps,
   TextProps,
   TwinSectionProps,
 } from '@titan/shared';
+import { LIVE_ISLAND_VARIANTS } from '@titan/shared';
 import {
   Square,
   AlignLeft,
@@ -70,6 +74,15 @@ const spacingGroup = <T>(): InspectorGroup<T> => ({
   icon: Box,
   fields: [...PADDING_FIELDS, ...LAYOUT_FIELDS] as unknown as InspectorFieldDef<T>[],
 });
+/** Margin/size fields for blocks that already expose their own padding controls. */
+const layoutOnlyGroup = <T>(): InspectorGroup<T> => ({
+  id: 'layout-adjust',
+  title: 'Layout',
+  titleKey: 'layout',
+  icon: Frame,
+  fields: LAYOUT_FIELDS as unknown as InspectorFieldDef<T>[],
+});
+
 const advancedGroup = <T>(): InspectorGroup<T> => ({
   id: 'advanced',
   title: 'Advanced',
@@ -1871,6 +1884,8 @@ export const spotlightCardsInspector = defineInspector<SpotlightCardsProps>().gr
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
     ],
   },
+  layoutOnlyGroup(),
+  advancedGroup(),
 ]);
 
 export const closingCtaInspector = defineInspector<ClosingCtaProps>().groups([
@@ -1908,6 +1923,8 @@ export const closingCtaInspector = defineInspector<ClosingCtaProps>().groups([
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
     ],
   },
+  layoutOnlyGroup(),
+  advancedGroup(),
 ]);
 
 export const cardGridInspector = defineInspector<CardGridProps>().groups([
@@ -1951,6 +1968,8 @@ export const cardGridInspector = defineInspector<CardGridProps>().groups([
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
     ],
   },
+  layoutOnlyGroup(),
+  advancedGroup(),
 ]);
 
 export const ctaSignupInspector = defineInspector<CtaSignupProps>().groups([
@@ -1987,6 +2006,8 @@ export const ctaSignupInspector = defineInspector<CtaSignupProps>().groups([
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
     ],
   },
+  layoutOnlyGroup(),
+  advancedGroup(),
 ]);
 
 export const heroConsoleInspector = defineInspector<HeroConsoleProps>().groups([
@@ -2011,6 +2032,8 @@ export const heroConsoleInspector = defineInspector<HeroConsoleProps>().groups([
       { key: 'imageUrl', label: 'Background image', control: 'image-upload' },
     ],
   },
+  spacingGroup(),
+  advancedGroup(),
 ]);
 
 export const twinSectionInspector = defineInspector<TwinSectionProps>().groups([
@@ -2035,6 +2058,8 @@ export const twinSectionInspector = defineInspector<TwinSectionProps>().groups([
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
     ],
   },
+  layoutOnlyGroup(),
+  advancedGroup(),
 ]);
 
 export const programCardInspector = defineInspector<ProgramCardProps>().groups([
@@ -2050,6 +2075,27 @@ export const programCardInspector = defineInspector<ProgramCardProps>().groups([
       { key: 'tags', label: 'Tags', control: 'text' },
       { key: 'duration', label: 'Duration', control: 'text' },
       { key: 'metaLabel', label: 'Meta line', control: 'text' },
+      { key: 'metaIcon', label: 'Meta icon', control: 'icon' },
+    ],
+  },
+  {
+    id: 'media',
+    title: 'Media',
+    titleKey: 'media',
+    icon: ImageIcon,
+    fields: [
+      { key: 'imageUrl', label: 'Image', control: 'image-upload' },
+      { key: 'imageAlt', label: 'Image alt text', control: 'text' },
+      {
+        key: 'levelTone',
+        label: 'Level colour',
+        control: 'select',
+        options: [
+          { label: 'Primary', value: 'primary' },
+          { label: 'Secondary', value: 'secondary' },
+          { label: 'Accent', value: 'accent' },
+        ],
+      },
     ],
   },
   {
@@ -2072,6 +2118,8 @@ export const programCardInspector = defineInspector<ProgramCardProps>().groups([
       { key: 'href', label: 'Link', control: 'text', placeholder: '/path' },
     ],
   },
+  spacingGroup(),
+  advancedGroup(),
 ]);
 
 export const testimonialCardInspector = defineInspector<TestimonialCardProps>().groups([
@@ -2087,6 +2135,133 @@ export const testimonialCardInspector = defineInspector<TestimonialCardProps>().
       { key: 'rating', label: 'Rating', control: 'number', min: 0, max: 5 },
     ],
   },
+  {
+    id: 'media',
+    title: 'Avatar',
+    titleKey: 'avatar',
+    icon: ImageIcon,
+    fields: [{ key: 'avatarUrl', label: 'Avatar image', control: 'image-upload' }],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const programCardsInspector = defineInspector<ProgramCardsProps>().groups([
+  {
+    id: 'layout',
+    title: 'Layout',
+    titleKey: 'layout',
+    icon: LayoutTemplate,
+    fields: [
+      {
+        key: 'columnsLg',
+        label: 'Columns (lg+)',
+        labelKey: 'columns-lg',
+        control: 'segmented',
+        options: [
+          { label: '2', value: 'lg:grid-cols-2' },
+          { label: '3', value: 'lg:grid-cols-3' },
+        ],
+      },
+      {
+        key: 'cardsGap',
+        label: 'Card gap',
+        labelKey: 'card-gap',
+        control: 'select',
+        options: [
+          { label: '24px', value: 'gap-6' },
+          { label: '32px', value: 'gap-8' },
+          { label: '40px', value: 'gap-10' },
+        ],
+      },
+      {
+        key: 'headerMarginBottom',
+        label: 'Header space',
+        labelKey: 'header-bottom-margin',
+        control: 'slider',
+        min: 0,
+        max: 320,
+        step: 4,
+        hint: 'Pixels',
+        hintKey: 'pixels',
+      },
+    ],
+  },
+  advancedGroup<ProgramCardsProps>(),
+  spacingGroup<ProgramCardsProps>(),
+]);
+
+export const testimonialsInspector = defineInspector<TestimonialsProps>().groups([
+  {
+    id: 'layout',
+    title: 'Layout',
+    titleKey: 'layout',
+    icon: LayoutTemplate,
+    fields: [
+      {
+        key: 'columnsMd',
+        label: 'Columns (md+)',
+        labelKey: 'columns-md',
+        control: 'segmented',
+        options: [
+          { label: '2', value: 'md:grid-cols-2' },
+          { label: '3', value: 'md:grid-cols-3' },
+        ],
+      },
+      {
+        key: 'cardsGap',
+        label: 'Card gap',
+        labelKey: 'card-gap',
+        control: 'select',
+        options: [
+          { label: '24px', value: 'gap-6' },
+          { label: '32px', value: 'gap-8' },
+          { label: '40px', value: 'gap-10' },
+        ],
+      },
+      {
+        key: 'headerMarginBottom',
+        label: 'Header space',
+        labelKey: 'header-bottom-margin',
+        control: 'slider',
+        min: 0,
+        max: 320,
+        step: 4,
+        hint: 'Pixels',
+        hintKey: 'pixels',
+      },
+    ],
+  },
+  advancedGroup<TestimonialsProps>(),
+  spacingGroup<TestimonialsProps>(),
+]);
+
+const LIVE_ISLAND_OPTIONS = LIVE_ISLAND_VARIANTS.map((value) => ({
+  label: value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' '),
+  value,
+}));
+
+export const liveIslandInspector = defineInspector<LiveIslandProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: LayoutTemplate,
+    fields: [
+      { key: 'variant', label: 'Data source', control: 'select', options: LIVE_ISLAND_OPTIONS },
+      {
+        key: 'label',
+        label: 'Editor label',
+        control: 'text',
+        hint: 'Shown in the canvas placeholder and used as the fallback heading.',
+      },
+    ],
+  },
+  advancedGroup<LiveIslandProps>(),
+  spacingGroup<LiveIslandProps>(),
 ]);
 
 export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
@@ -2102,6 +2277,8 @@ export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
       { key: 'subtitle', label: 'Subtitle', control: 'textarea' },
     ],
   },
+  spacingGroup(),
+  advancedGroup(),
 ]);
 
 export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
@@ -2140,7 +2317,10 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   'cta-signup': { label: 'CTA Signup Band', groups: ctaSignupInspector.groups },
   'hero-console': { label: 'Hero + Sim Console', groups: heroConsoleInspector.groups },
   'twin-section': { label: 'Digital Twin', groups: twinSectionInspector.groups },
+  'program-cards': { label: 'Program Cards', groups: programCardsInspector.groups },
   'program-card': { label: 'Program Card', groups: programCardInspector.groups },
+  testimonials: { label: 'Testimonials', groups: testimonialsInspector.groups },
   'testimonial-card': { label: 'Testimonial Card', groups: testimonialCardInspector.groups },
+  'live-island': { label: 'Live Data Island', groups: liveIslandInspector.groups },
   'catalog-hero': { label: 'Catalog Hero', groups: catalogHeroInspector.groups },
 };

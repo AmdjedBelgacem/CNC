@@ -1,8 +1,12 @@
-import type { CSSProperties } from 'react';
+'use client';
+
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { ImageProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
+import { MediaPlaceholder } from './media-placeholder';
+
 const RADIUS_CLASS: Record<string, string> = {
   none: '',
   sm: 'rounded-sm',
@@ -10,7 +14,8 @@ const RADIUS_CLASS: Record<string, string> = {
   lg: 'rounded-lg',
   full: 'rounded-full',
 };
-export function ImageBlock({ props }: BlockComponentProps<ImageProps>) {
+
+export function ImageBlock({ props, puck }: BlockComponentProps<ImageProps>) {
   const {
     src,
     alt = '',
@@ -21,24 +26,38 @@ export function ImageBlock({ props }: BlockComponentProps<ImageProps>) {
     aspectRatio = 'none',
     className,
   } = props;
+  const [failed, setFailed] = useState(false);
+  // A replaced source deserves a fresh attempt; without this an image that
+  // failed once would stay hidden after the author uploaded a new file.
+  useEffect(() => setFailed(false), [src]);
+
   const style: CSSProperties = { ...layoutStyle(props) };
-  if (!src) {
-    return (
-      <div
-        className="flex h-40 w-full items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground"
-        style={style}
-      >
-        {' '}
-        Image (set src){' '}
-      </div>
-    );
-  }
   const aspectClass =
     aspectRatio === '4/3' ? 'aspect-[4/3]' : aspectRatio === '16/10' ? 'aspect-[16/10]' : '';
   const rounded = RADIUS_CLASS[radius ?? 'none'];
-  const hideOnError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.style.visibility = 'hidden';
-  };
+  const editing = Boolean(puck?.isEditing);
+  const placeholderStyle: CSSProperties =
+    width && height ? { ...style, width, height, maxWidth: '100%' } : style;
+  const placeholderClass = cn(aspectClass || (width && height ? '' : 'min-h-40'), rounded);
+
+  if (!src || failed) {
+    // Authoring hint only. A visitor should never see "Image (set src)" or an
+    // empty dashed box on a live page.
+    if (!editing) return null;
+    return (
+      <MediaPlaceholder
+        editing
+        className={placeholderClass}
+        style={placeholderStyle}
+        label={failed ? 'Image failed to load' : 'Image'}
+        aspectClass={aspectClass || (width && height ? '' : 'min-h-40')}
+        detail={failed ? 'Check the URL or upload a new image' : undefined}
+      />
+    );
+  }
+
+  const hideOnError = () => setFailed(true);
+
   if (width && height) {
     return (
       <img
@@ -50,6 +69,19 @@ export function ImageBlock({ props }: BlockComponentProps<ImageProps>) {
         decoding="async"
         onError={hideOnError}
         className={cn(rounded, className)}
+        style={{ objectFit, ...style }}
+      />
+    );
+  }
+  if (aspectRatio === 'none') {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onError={hideOnError}
+        className={cn('block max-w-full h-auto', rounded, className)}
         style={{ objectFit, ...style }}
       />
     );

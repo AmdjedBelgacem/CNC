@@ -1043,7 +1043,7 @@ const hero: BlockDefinition = {
   category: 'Sections',
   schema: heroPropsSchema,
   defaultProps: heroDefaults,
-  zones: { content: { allow: ['badge', 'heading', 'text', 'stack', 'button'] } },
+  zones: { content: { allow: ['badge', 'heading', 'text', 'stack', 'button', 'image', 'icon'] } },
 };
 
 const stats: BlockDefinition = {

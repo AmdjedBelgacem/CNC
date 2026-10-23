@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import type { AiLocale } from '../ai.types';
+import { AI_ARABIC_DIALECTS, type AiArabicDialect, type AiLocale } from '../ai.types';
 import {
   ArrayMaxSize,
   IsArray,
@@ -99,6 +99,11 @@ export class AiChatDto {
   @IsOptional()
   @IsIn(['en', 'ar'])
   locale?: AiLocale;
+
+  /** `auto` mirrors the message; an explicit dialect also guarantees Arabic. */
+  @IsOptional()
+  @IsIn(AI_ARABIC_DIALECTS)
+  arabicDialect?: AiArabicDialect;
 
   @IsOptional()
   @IsIn(AI_CHAT_MODES)

@@ -46,6 +46,14 @@ export interface PuckBridge {
   /** Raw children of a slot (only the public renderer provides this). */ getSlotData?: (
     slot: string,
   ) => PuckNode[];
+  /**
+   * True only inside the Puck canvas.
+   *
+   * Blocks share one implementation between the editor and the public site, so
+   * editor affordances (empty-image hints, failed-image notices) must be gated
+   * on this rather than leaking placeholder copy to visitors.
+   */
+  isEditing?: boolean;
 } /** Every block component receives `props` (its schema props) and `puck` (to render slots). */
 export interface BlockComponentProps<T = Record<string, unknown>> {
   props: T;

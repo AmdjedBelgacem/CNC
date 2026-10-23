@@ -1,23 +1,42 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
-import type { PageLayout, PuckNode } from '@titan/shared';
-import type { HarvestedField } from '@titan/shared';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  findNodeById,
+  mergeLayoutStructure,
+  type HarvestedField,
+  type PageLayout,
+  type PuckNode,
+} from '@titan/shared';
 import { api } from '@/lib/api-client';
+import { toast } from '@/components/ui/toast';
 
 /**
  * Per-block translation state for the builder.
  *
  * The page stores Arabic as a complete alternate layout (`page.translations.ar.layout`), so
- * editing one block's Arabic text means finding the matching node in that tree and writing
- * there. This context owns that tree and exposes helpers so the inspector can read/write a
- * single block's Arabic fields without knowing the path scheme.
+ * editing one block's Arabic text means writing into that tree at the same node id. This context
+ * owns that tree and exposes helpers so the inspector can read/write a single block's Arabic
+ * fields without knowing the path scheme.
  */
 export interface BuilderTranslationContextValue {
   /** The Arabic layout tree, or null if no Arabic copy exists yet. */
   arabicLayout: PageLayout | null;
-  /** Update one harvested field's Arabic value. `key` is the harvester's label (e.g. `n3.props.text`). */
-  setArabicField: (key: string, value: string) => void;
+  /**
+   * Update one prop path on a node identified by its stable `props.id`.
+   *
+   * `fieldPath` is relative to the node's props (e.g. `text` or `content.0.props.heading`),
+   * matching the paths `harvestBlock` returns.
+   */
+  setArabicField: (nodeId: string, fieldPath: string, value: string) => void;
   /** Translate a single block's harvested fields via AI and merge them into the Arabic layout. */
   translateBlock: (englishNode: PuckNode, fields: HarvestedField[]) => Promise<void>;
   /** Persist the Arabic layout to the server. */
@@ -41,7 +60,31 @@ interface ProviderProps {
   children: ReactNode;
 }
 
-export function BuilderTranslationProvider({ initialArabicLayout, englishLayout, onPersist, children }: ProviderProps) {
+/** Write a harvested prop path into a cloned prop object. */
+function setAtPath(root: Record<string, unknown>, path: string, value: string): void {
+  const keys = path.split('.').filter(Boolean);
+  if (keys.length === 0) return;
+  let current: any = root;
+  for (let i = 0; i < keys.length - 1; i += 1) {
+    const key = keys[i]!;
+    let next = current[key];
+    if (next == null || typeof next !== 'object') {
+      next = /^\d+$/.test(keys[i + 1]!) ? [] : {};
+      current[key] = next;
+    }
+    current = next;
+  }
+  const last = keys[keys.length - 1]!;
+  if (Array.isArray(current) && /^\d+$/.test(last)) current[Number(last)] = value;
+  else current[last] = value;
+}
+
+export function BuilderTranslationProvider({
+  initialArabicLayout,
+  englishLayout,
+  onPersist,
+  children,
+}: ProviderProps) {
   const [arabicLayout, setArabicLayout] = useState<PageLayout | null>(initialArabicLayout);
   const latestLayout = useRef<PageLayout | null>(initialArabicLayout);
   // Keep latestLayout in sync for the debounced persist closure.
@@ -52,13 +95,13 @@ export function BuilderTranslationProvider({ initialArabicLayout, englishLayout,
   // null. Sync them in once the page loads, otherwise `setArabicField` has no seed tree and
   // silently no-ops.
   useEffect(() => {
-    if (initialArabicLayout) {
-      setArabicLayout(initialArabicLayout);
-      latestLayout.current = initialArabicLayout;
-    }
+    setArabicLayout(initialArabicLayout);
+    latestLayout.current = initialArabicLayout;
   }, [initialArabicLayout]);
   const englishRef = useRef<PageLayout | null>(englishLayout);
-  useEffect(() => { englishRef.current = englishLayout; }, [englishLayout]);
+  useEffect(() => {
+    englishRef.current = englishLayout;
+  }, [englishLayout]);
   const [translating, setTranslating] = useState(false);
   const [saving, setSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,6 +111,7 @@ export function BuilderTranslationProvider({ initialArabicLayout, englishLayout,
     return () => {
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
+        saveTimer.current = null;
         const layout = latestLayout.current;
         if (layout) void onPersist(layout);
       }
@@ -77,90 +121,84 @@ export function BuilderTranslationProvider({ initialArabicLayout, englishLayout,
   const schedulePersist = useCallback(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
       const layout = latestLayout.current;
       if (layout) void onPersist(layout);
     }, 800);
   }, [onPersist]);
 
-  const setArabicField = useCallback((fieldKey: string, value: string) => {
-    // fieldKey is the harvester's label, e.g. `n3:props.text` or `z:content:0:props.title`.
-    // Split off the node id first (everything before the first colon), then walk the prop path.
-    const colonIdx = fieldKey.indexOf(':');
-    const nodeKey = colonIdx >= 0 ? fieldKey.slice(0, colonIdx) : fieldKey;
-    const propPath = colonIdx >= 0 ? fieldKey.slice(colonIdx + 1) : '';
-    const propSegments = propPath.split('.').filter(Boolean);
+  const setArabicField = useCallback(
+    (nodeId: string, fieldPath: string, value: string) => {
+      if (!nodeId || !fieldPath) return;
+      setArabicLayout((prev) => {
+        const english = englishRef.current;
+        // English is authoritative for structure. Merging before every write means a block
+        // added on the English page is also addressable in Arabic, and a stale Arabic tree can
+        // never make the inspector write into the wrong node.
+        let base: PageLayout | null;
+        if (english) base = prev ? mergeLayoutStructure(english, prev) : english;
+        else base = prev;
+        if (!base) return prev;
 
-    setArabicLayout((prev) => {
-      let base: PageLayout | null = prev;
-      const english = englishRef.current;
-      if (!base && english) {
-        base = JSON.parse(JSON.stringify(english)) as PageLayout;
-      }
-      if (!base) return base;
-
-      // Resolve the top-level node in the Arabic tree.
-      let cursor: any = base;
-      if (nodeKey.startsWith('n')) {
-        const idx = Number(nodeKey.slice(1));
-        if (!base.content) base.content = [];
-        if (base.content[idx] == null) base.content[idx] = JSON.parse(JSON.stringify((englishLayout as any)?.content?.[idx] ?? {}));
-        cursor = base.content[idx];
-      } else if (nodeKey.startsWith('z:')) {
-        const parts = nodeKey.split(':');
-        const zone = parts[1];
-        const idx = Number(parts[2]);
-        if (zone) {
-          if (!base.zones) base.zones = {};
-          if (!base.zones[zone]) base.zones[zone] = [];
-          if (base.zones[zone][idx] == null) base.zones[zone][idx] = JSON.parse(JSON.stringify((englishLayout as any)?.zones?.[zone]?.[idx] ?? {}));
-          cursor = base.zones[zone][idx];
-        }
-      }
-      if (!cursor) return base;
-      if (!cursor.props) cursor.props = {};
-
-      // Walk the prop path (props.text, props.title, ...).
-      let leaf: any = cursor.props;
-      for (let i = 0; i < propSegments.length - 1; i++) {
-        const seg = propSegments[i]!;
-        if (leaf[seg] == null) leaf[seg] = {};
-        leaf = leaf[seg];
-      }
-      const last = propSegments[propSegments.length - 1];
-      if (last) leaf[last] = value;
-
-      return { ...base };
-    });
-    schedulePersist();
-  }, [schedulePersist]);
-
-  const translateBlock = useCallback(async (_englishNode: unknown, fields: HarvestedField[]) => {
-    if (fields.length === 0) return;
-    setTranslating(true);
-    try {
-      const result = await api.post<{
-        groups: Array<{ key: string; translations: Record<string, string>; error?: string }>;
-      }>('/admin/ai/translate/batch', {
-        sourceLocale: 'en',
-        targetLocale: 'ar',
-        groups: [{ key: 'block', fields: Object.fromEntries(fields.map((f) => [f.key, f.value])) }],
-        entity: 'block content',
+        const next = structuredClone(base);
+        const node = findNodeById(next, nodeId);
+        if (!node) return prev;
+        if (!node.props || typeof node.props !== 'object') node.props = {};
+        setAtPath(node.props as Record<string, unknown>, fieldPath, value);
+        return next;
       });
-      const group = result.groups?.[0];
-      if (group?.translations) {
-        // Each translation key is the harvested field key (e.g. `n3:props.text`), which is exactly
-        // the address setArabicField expects. Writing them one at a time keeps the Arabic tree
-        // in sync without reconstructing block objects.
-        for (const [key, value] of Object.entries(group.translations)) {
-          setArabicField(key, value);
+      schedulePersist();
+    },
+    [schedulePersist],
+  );
+
+  const translateBlock = useCallback(
+    async (englishNode: PuckNode, fields: HarvestedField[]) => {
+      if (fields.length === 0) return;
+      const nodeId = englishNode.props?.id;
+      if (typeof nodeId !== 'string' || !nodeId) return;
+      setTranslating(true);
+      try {
+        const result = await api.post<{
+          groups: Array<{ key: string; translations: Record<string, string>; error?: string }>;
+        }>('/admin/ai/translate/batch', {
+          sourceLocale: 'en',
+          targetLocale: 'ar',
+          groups: [{ key: 'block', fields: Object.fromEntries(fields.map((f) => [f.key, f.value])) }],
+          entity: 'block content',
+        });
+        const group = result.groups?.[0];
+        if (group?.error) throw new Error(group.error);
+        let count = 0;
+        if (group?.translations) {
+          // The API returns the same field keys we sent; write each value into the Arabic node
+          // through the same path-based setter the manual textareas use.
+          for (const field of fields) {
+            const translated = group.translations[field.key];
+            if (translated?.trim()) {
+              setArabicField(nodeId, field.path, translated);
+              count += 1;
+            }
+          }
         }
+        if (count === 0) throw new Error('The translator returned no Arabic text.');
+        toast({
+          type: 'ok',
+          title: `Translated ${count} field${count === 1 ? '' : 's'}`,
+          description: 'Review the Arabic copy before publishing.',
+        });
+      } catch (err) {
+        toast({
+          type: 'err',
+          title: 'Block translation failed',
+          description: err instanceof Error ? err.message : 'Please try again.',
+        });
+      } finally {
+        setTranslating(false);
       }
-    } catch (err) {
-      console.warn('Block translate failed:', err);
-    } finally {
-      setTranslating(false);
-    }
-  }, [setArabicField]);
+    },
+    [setArabicField],
+  );
 
   const persistArabic = useCallback(async () => {
     const layout = latestLayout.current;

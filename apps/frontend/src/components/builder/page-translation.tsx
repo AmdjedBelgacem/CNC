@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import {
   harvestPageLayout,
   applyPageTranslations,
+  mergeLayoutStructure,
+  readPageTranslationField,
   type PageLayout,
   type PageTranslation,
 } from '@titan/shared';
@@ -17,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
+import { useBuilderTranslation } from '@/components/builder/translation-context';
 
 /**
  * Produces the Arabic copy of a page.
@@ -35,23 +38,85 @@ export function PageTranslationPanel({
   slug: string;
   layout: PageLayout;
   existing: PageTranslation | null;
-  onSaved?: () => void;
+  onSaved?: (translation: PageTranslation) => void;
 }) {
   const t = useTranslations('admin.translate');
+  const translationCtx = useBuilderTranslation();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<PageTranslation | null>(null);
   const [saving, setSaving] = useState(false);
 
   const harvested = useMemo(() => harvestPageLayout(layout), [layout]);
+  /**
+   * Saved Arabic may predate the current English structure. Align it by node id
+   * first, otherwise inserting one block shifts every later position and the
+   * coverage panel reads a different block's copy.
+   *
+   * The provider's tree is preferred over the page record: per-block Arabic
+   * saves update it immediately, while the page record only refreshes on a
+   * reload. Without this the coverage panel would keep showing old, untranslated
+   * fields right after an inspector edit.
+   */
+  const existingLayout = translationCtx?.arabicLayout ?? existing?.layout ?? null;
+  const existingAligned = useMemo(
+    () => (existingLayout ? mergeLayoutStructure(layout, existingLayout) : null),
+    [existingLayout, layout],
+  );
+
+  /**
+   * Field keys that already have Arabic copy, for the "fill missing" scope.
+   *
+   * The hook only sees label -> English maps, so it cannot tell a reviewed translation from an
+   * untranslated field. Passing this set keeps "missing" from quietly overwriting reviewed copy
+   * (the full re-translate action is still available, behind its confirmation).
+   */
+  const reviewedKeys = useMemo(() => {
+    const target = draft?.layout ?? existingAligned;
+    if (!target) return new Set<string>();
+    return new Set(
+      harvested.harvested
+        .filter((field) => {
+          const value = readPageTranslationField(target, field);
+          return typeof value === 'string' && value.trim() && value !== field.value;
+        })
+        .map((field) => field.key),
+    );
+  }, [draft, existingAligned, harvested]);
+
+  /**
+   * The translate endpoint accepts at most 40 fields per group. A builder page routinely has more
+   * than that (this audit fixture has 71), so one group silently left the tail of the page
+   * untranslated. Chunking keeps each request inside the cap and lets the hook keep partial
+   * results when a single chunk fails.
+   */
+  const translationGroups = useMemo(() => {
+    const entries = Object.entries(harvested.fields);
+    const groups: { key: string; fields: Record<string, string> }[] = [];
+    for (let index = 0; index < entries.length; index += 40) {
+      groups.push({
+        key: `page-${index / 40}`,
+        fields: Object.fromEntries(entries.slice(index, index + 40)),
+      });
+    }
+    return groups;
+  }, [harvested.fields]);
 
   const { busy, run } = useTranslateDraft({
     entity: 'page content',
-    groups: [{ key: 'page', fields: harvested.fields }],
+    groups: translationGroups,
+    filterFields: (_group, key) => !reviewedKeys.has(key),
     onApply: (_key, translations) => {
-      setDraft((prev) => ({
-        ...(prev ?? {}),
-        layout: applyPageTranslations(harvested, translations),
-      }));
+      setDraft((prev) => {
+        // Start from the Arabic copy that already exists, not from English. A "missing" pass now
+        // sends only untranslated keys, so applying it to the English tree would erase every
+        // translation the editor had already reviewed.
+        const base = prev?.layout ?? existingAligned ?? harvested.layout;
+        const layout = applyPageTranslations(
+          { ...harvested, layout: mergeLayoutStructure(harvested.layout, base) },
+          translations,
+        );
+        return { ...(prev ?? {}), layout };
+      });
     },
     confirmOverwrite: () => window.confirm(t('overwriteConfirm')),
   });
@@ -61,21 +126,20 @@ export function PageTranslationPanel({
    * soon as a translation arrives rather than only after a save.
    */
   const coverage = useMemo(() => {
-    const target = draft?.layout ?? existing?.layout;
+    const target = draft?.layout ?? existingAligned;
     const fields = harvested.harvested;
     let translated = 0;
     const missing: string[] = [];
     for (const field of fields) {
-      const value = readAt(target ?? {}, field.path);
+      const value = readPageTranslationField(target, field);
       if (typeof value === 'string' && value.trim() && value !== field.value) translated += 1;
-      // A human label, not `field.path`. The paths are `n3.props.heading` and the panel used to
-      // join them straight into the "untranslated" sentence, so opening this panel printed a
-      // dotted list of internal locators at the editor instead of naming anything. The path is
-      // still what identifies the field everywhere else — only this display string changes.
-      else missing.push(humanizeFieldPath(field.path));
+      // The field key carries the node address (`n3:` / `z:sidebar:0:`), while the
+      // path is relative to that node's props. Show both so duplicate prop names
+      // such as eight `text` fields remain distinguishable.
+      else missing.push(humanizeFieldPath(field.path, field.key));
     }
     return { total: fields.length, translated, missing, present: [] };
-  }, [draft, existing, harvested]);
+  }, [draft, existingAligned, harvested]);
 
   const save = async () => {
     if (!draft?.layout) return;
@@ -86,9 +150,9 @@ export function PageTranslationPanel({
         body: JSON.stringify({ translations: { ar: { title: draft.title, layout: draft.layout } } }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.message || 'Save failed');
-      toast({ type: 'ok', title: t('done', { count: coverage.total }) });
+      toast({ type: 'ok', title: t('done', { count: coverage.translated }) });
+      onSaved?.({ title: draft.title, layout: draft.layout });
       setDraft(null);
-      onSaved?.();
     } catch (error) {
       toast({ type: 'err', title: t('failed'), description: (error as Error).message });
     } finally {
@@ -96,13 +160,13 @@ export function PageTranslationPanel({
     }
   };
 
-  const hasTranslation = Boolean(existing?.layout) || Boolean(draft?.layout);
+  const hasTranslation = Boolean(existingLayout) || Boolean(draft?.layout);
 
   return (
-    <div className="space-y-3 rounded-lg border border-border p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="min-w-0 max-w-full space-y-3 rounded-lg border border-border p-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-medium text-muted-foreground">{t('page.title')}</p>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {coverage.translated > 0 && (
             <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
               {t('menu.review')}
@@ -132,15 +196,15 @@ export function PageTranslationPanel({
         entityLabel={t('page.entity')}
         items={harvested.harvested.map((field) => {
           const translation = String(
-            readAt(draft?.layout ?? existing?.layout ?? {}, field.path) ?? '',
+            readPageTranslationField(draft?.layout ?? existingAligned, field) ?? '',
           );
-          // Same reason as the coverage list: `field.key` is the dotted path, and it was being
-          // used as the row heading, so every row was titled `n3.props.heading`.
           return {
-            label: humanizeFieldPath(field.path),
+            label: humanizeFieldPath(field.path, field.key),
             source: field.value,
             translation,
-            missing: !translation.trim(),
+            // The aligned Arabic tree keeps English as a fallback for untranslated blocks, so a
+            // non-empty value is not proof of translation. Identical copy is still missing.
+            missing: !translation.trim() || translation.trim() === field.value.trim(),
           };
         })}
       />
@@ -148,48 +212,47 @@ export function PageTranslationPanel({
   );
 }
 
-function readAt(root: unknown, path: string): unknown {
-  let current: unknown = root;
-  for (const key of path.split('.')) {
-    if (current == null || typeof current !== 'object') return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
-  return current;
-}
-
 /**
  * Turn an internal field path into something an editor can act on.
  *
- * Harvested paths look like `n3.props.heading` or `z:hero.1.props.title` — the first segment is
- * the node's position in the tree, because `PuckNode` carries no stable id and the write-back
- * addresses positions too.
- *
- * The prop name alone is not enough: a realistic page has eight blocks with a `text` prop, so
- * eight rows all reading "Text" would be no better than the paths. Pairing it with the position
- * gives "Block 4 · Heading", which an editor can actually match to the canvas.
+ * `path` is relative to the node's props (`text`, `content.0.props.heading`). The optional
+ * `fieldKey` prefix identifies the node: `n3:` or `z:<zone>:<index>:`. The prop name alone is not
+ * enough — a realistic page has eight blocks with a `text` prop — so pair it with that address.
  */
-export function humanizeFieldPath(path: string): string {
-  const segments = path.split('.');
-  const prop = segments[segments.length - 1] ?? path;
-  const node = segments[0] ?? '';
+export function humanizeFieldPath(path: string, fieldKey?: string): string {
+  const pretty = (segment: string) =>
+    segment
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+      .replace(/^./, (char) => char.toUpperCase());
 
-  const prettyProp = prop
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .trim()
-    .replace(/^./, (char) => char.toUpperCase());
+  /**
+   * Keep the slot position in the label, not just the leaf prop name.
+   *
+   * One hero can contain two badges with a `text` prop. Collapsing both to "Block 1 · Text"
+   * makes the review list ambiguous exactly where the editor needs to compare two different
+   * Arabic lines.
+   */
+  const prettyPath = (value: string) =>
+    value
+      .split('.')
+      .flatMap((segment) => {
+        if (!segment || segment === 'props') return [];
+        if (/^\d+$/.test(segment)) return [`item ${Number(segment) + 1}`];
+        return [pretty(segment)];
+      })
+      .join(' · ');
 
-  // Zone nodes are keyed `z:<zone>:<index>` — colons, because the dot is the path separator and
-  // the zone id itself can contain dots (`z:hero.main:0`).
-  const zoneMatch = /^z:([\w.-]+):(\d+)$/.exec(node);
+  const address = fieldKey ?? path;
+  // Zone ids may contain dots; use the final index before the prop separator.
+  const zoneMatch = /^z:(.+):(\d+):(.+)$/.exec(address);
   if (zoneMatch) {
-    return `${zoneMatch[1]} · item ${Number(zoneMatch[2]) + 1} · ${prettyProp}`;
+    return `${zoneMatch[1]} · item ${Number(zoneMatch[2]) + 1} · ${prettyPath(zoneMatch[3]!)}`;
   }
-
-  const indexMatch = /^n(\d+)$/.exec(node);
+  const indexMatch = /^n(\d+):(.+)$/.exec(address);
   if (indexMatch) {
-    return `Block ${Number(indexMatch[1]) + 1} · ${prettyProp}`;
+    return `Block ${Number(indexMatch[1]) + 1} · ${prettyPath(indexMatch[2]!)}`;
   }
-
-  return prettyProp || path;
+  return prettyPath(path) || path;
 }
