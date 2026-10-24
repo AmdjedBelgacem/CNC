@@ -119,6 +119,104 @@ describe('mergeLayoutStructure', () => {
     expect(merged.content[0]?.type).toBe('section');
     expect(merged.content[0]?.props?.visible).toBe(true);
   });
+
+  it('copies English presentation props onto the translated tree but keeps its copy', () => {
+    const english: PageLayout = {
+      root: { props: {} },
+      content: [
+        {
+          type: 'hero',
+          props: {
+            id: 'hero-visual',
+            backgroundOverlay: 35,
+            imageUrl: '/new-hero.jpg',
+            content: [{ type: 'heading', props: { id: 'hero-heading', text: 'New English' } }],
+          },
+        },
+      ],
+    };
+    const translated: PageLayout = {
+      root: { props: {} },
+      content: [
+        {
+          type: 'hero',
+          props: {
+            id: 'hero-visual',
+            backgroundOverlay: 80,
+            imageUrl: '/old-hero.jpg',
+            content: [{ type: 'heading', props: { id: 'hero-heading', text: 'عنوان عربي' } }],
+          },
+        },
+      ],
+    };
+
+    const merged = mergeLayoutStructure(english, translated);
+    const hero = merged.content[0]!;
+    expect(hero.props?.backgroundOverlay).toBe(35);
+    expect(hero.props?.imageUrl).toBe('/new-hero.jpg');
+    expect(getSlotChildren(hero, 'content')[0]?.props?.text).toBe('عنوان عربي');
+  });
+
+  it('keeps short translated labels that are copy rather than presentation', () => {
+    const english: PageLayout = {
+      root: { props: {} },
+      content: [
+        {
+          type: 'hero-console',
+          props: {
+            id: 'console-copy',
+            consoleMode: 'composed',
+            console: [
+              {
+                type: 'console-frame',
+                props: {
+                  id: 'console-copy__frame',
+                  content: [
+                    {
+                      type: 'console-telemetry',
+                      props: { id: 'console-copy__feed', tag: 'G01 SMOOTH', tagTone: 'success' },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const translated: PageLayout = {
+      root: { props: {} },
+      content: [
+        {
+          type: 'hero-console',
+          props: {
+            id: 'console-copy',
+            consoleMode: 'composed',
+            console: [
+              {
+                type: 'console-frame',
+                props: {
+                  id: 'console-copy__frame',
+                  content: [
+                    {
+                      type: 'console-telemetry',
+                      props: { id: 'console-copy__feed', tag: 'ناعم', tagTone: 'normal' },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const merged = mergeLayoutStructure(english, translated);
+    const frame = getSlotChildren(merged.content[0]!, 'console')[0]!;
+    const telemetry = getSlotChildren(frame, 'content')[0]!;
+    expect(telemetry.props?.tag).toBe('ناعم');
+    expect(telemetry.props?.tagTone).toBe('success');
+  });
 });
 
 describe('validateLayoutZones with slots', () => {

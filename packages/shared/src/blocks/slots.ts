@@ -274,10 +274,197 @@ export function expandHeroConsoleLayout(layout: PageLayout): PageLayout {
  * slots. Newly added blocks therefore appear in the right place with English
  * copy until they are translated; deleted blocks disappear from both locales.
  */
-export function mergeLayoutStructure(english: PageLayout, translated: PageLayout): PageLayout {
-  const byId = (nodes: PuckNode[] | undefined): Map<string, PuckNode> => {
+const UNSAFE_PATH_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * Props that describe presentation rather than copy.
+ *
+ * A translated page is a whole alternate tree, so it also carried a frozen copy
+ * of the design. Changing the hero overlay or swapping an image on the English
+ * page therefore never reached Arabic visitors: the translated node already had
+ * the old value, and the merge only filled props that were missing. Presentation
+ * is not copy, so English is authoritative for these keys while every text prop
+ * stays in the translated tree.
+ *
+ * Short labels such as `tag` and `value` are deliberately absent: they are copy
+ * even though the AI harvester does not send them to a model, and an author may
+ * have chosen an Arabic term for them.
+ */
+const PRESENTATION_PROP_KEYS = new Set([
+  'accent',
+  'accentColor',
+  'active',
+  'align',
+  'answerPaddingBottom',
+  'answerPaddingX',
+  'as',
+  'aspectRatio',
+  'avatarUrl',
+  'backgroundColor',
+  'backgroundOpacity',
+  'backgroundOverlay',
+  'band',
+  'barHeight',
+  'bg',
+  'bgColor',
+  'bgGradient',
+  'bgImage',
+  'blueprint',
+  'border',
+  'borderBottom',
+  'borderColor',
+  'borderTop',
+  'bottomGap',
+  'box',
+  'buttonPaddingX',
+  'buttonPaddingY',
+  'cardsColumns',
+  'cardsGap',
+  'className',
+  'color',
+  'columns',
+  'columnsLg',
+  'columnsMd',
+  'columnsMobile',
+  'columnsSm',
+  'containerMaxWidth',
+  'containerPaddingX',
+  'containerPaddingY',
+  'containerRadius',
+  'contentAlign',
+  'contentMaxWidth',
+  'contentPadding',
+  'contentPaddingX',
+  'copyWidth',
+  'count',
+  'decorativeCircles',
+  'direction',
+  'directionMobile',
+  'duration',
+  'floatIcon',
+  'footerMarginTop',
+  'frame',
+  'fullHeight',
+  'gap',
+  'glass',
+  'gradientVeil',
+  'gridGap',
+  'headerMarginBottom',
+  'height',
+  'hidden',
+  'hideOnMobile',
+  'hover',
+  'icon',
+  'iconPosition',
+  'iconSize',
+  'imageBorder',
+  'imageFirstMobile',
+  'imageUrl',
+  'itemsGap',
+  'justify',
+  'leading',
+  'levelTone',
+  'logoGap',
+  'marginBottom',
+  'marginTop',
+  'maxWidth',
+  'mediaAspect',
+  'mesh',
+  'minHeight',
+  'mobileHeight',
+  'objectFit',
+  'opacity',
+  'overflow',
+  'overlap',
+  'overlayColor',
+  'overlayOpacity',
+  'padding',
+  'paddingBottom',
+  'paddingLeft',
+  'paddingRight',
+  'paddingTop',
+  'parallaxFactor',
+  'percent',
+  'placement',
+  'plainCircles',
+  'pulse',
+  'radialVeil',
+  'radius',
+  'rating',
+  'scrollIndicator',
+  'scrollIndicatorBottom',
+  'shadow',
+  'showNumbers',
+  'showTrafficLights',
+  'showTrustChips',
+  'sideWidth',
+  'size',
+  'src',
+  'tagTone',
+  'ticks',
+  'tone',
+  'topOffset',
+  'tracking',
+  'uppercase',
+  'variant',
+  'weight',
+  'width',
+  'widthPercent',
+  'wrap',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Copy presentation props from an English node onto its translated counterpart.
+ *
+ * Text props, ids, block types and slot children are left alone. Nested objects
+ * and lists are visited so design fields inside cards/readouts also follow the
+ * English page, but only presentation keys are written.
+ */
+function syncPresentationProps(
+  english: Record<string, unknown>,
+  translated: Record<string, unknown>,
+  slotNames: Set<string>,
+): void {
+  for (const key of Object.keys(translated)) {
+    if (key === 'id' || slotNames.has(key)) continue;
+    if (PRESENTATION_PROP_KEYS.has(key) && !(key in english)) delete translated[key];
+  }
+  for (const [key, value] of Object.entries(english)) {
+    if (key === 'id' || key === 'type' || slotNames.has(key) || UNSAFE_PATH_KEYS.has(key)) continue;
+    if (PRESENTATION_PROP_KEYS.has(key)) {
+      translated[key] = value;
+      continue;
+    }
+    const current = translated[key];
+    if (isRecord(value) && isRecord(current)) {
+      syncPresentationProps(value, current, slotNames);
+      continue;
+    }
+    if (Array.isArray(value) && Array.isArray(current)) {
+      const length = Math.min(value.length, current.length);
+      for (let index = 0; index < length; index += 1) {
+        const next = value[index];
+        const existing = current[index];
+        if (isRecord(next) && isRecord(existing)) {
+          syncPresentationProps(next, existing, slotNames);
+        }
+      }
+    }
+  }
+}
+
+export function mergeLayoutStructure(
+  english: PageLayout,
+  translated: PageLayout,
+): PageLayout {
+  const byId = (nodes: unknown): Map<string, PuckNode> => {
     const map = new Map<string, PuckNode>();
-    for (const node of nodes ?? []) {
+    if (!isNodeArray(nodes)) return map;
+    for (const node of nodes) {
       const id = node.props?.id;
       if (typeof id === 'string' && id) map.set(id, node);
     }
@@ -288,6 +475,9 @@ export function mergeLayoutStructure(english: PageLayout, translated: PageLayout
     if (!tr || tr.type !== en.type) return en;
     const props: Record<string, unknown> = { ...(tr.props ?? {}) };
     const enProps = en.props ?? {};
+    const slotNames = new Set(slotNamesFor(en.type));
+    // Presentation follows English; copy stays in the translated tree.
+    syncPresentationProps(enProps, props, slotNames);
     // Keep the English id even if the translated copy drifted, and fill in
     // props that exist only on the English side (new CTA label, new image, ...).
     for (const [key, value] of Object.entries(enProps)) {
@@ -298,14 +488,17 @@ export function mergeLayoutStructure(english: PageLayout, translated: PageLayout
     if ('visible' in enProps) props.visible = enProps.visible;
     else delete props.visible;
     // Slots are rebuilt from the English tree so newly added children show up.
-    for (const slot of slotNamesFor(en.type)) {
+    for (const slot of slotNames) {
       if (!(slot in enProps)) continue;
       const enChildren = isNodeArray(enProps[slot]) ? (enProps[slot] as PuckNode[]) : [];
       const trChildren = isNodeArray(tr.props?.[slot]) ? (tr.props?.[slot] as PuckNode[]) : [];
       const translatedChildren = byId(trChildren);
       props[slot] = enChildren.map((child) => {
         const id = child.props?.id;
-        return mergeNode(child, typeof id === 'string' ? translatedChildren.get(id) : undefined);
+        return mergeNode(
+          child,
+          typeof id === 'string' ? translatedChildren.get(id) : undefined,
+        );
       });
     }
     return { type: en.type, props };
@@ -314,7 +507,10 @@ export function mergeLayoutStructure(english: PageLayout, translated: PageLayout
   const translatedTop = byId(translated.content);
   const content = (english.content ?? []).map((node) => {
     const id = node.props?.id;
-    return mergeNode(node, typeof id === 'string' ? translatedTop.get(id) : undefined);
+    return mergeNode(
+      node,
+      typeof id === 'string' ? translatedTop.get(id) : undefined,
+    );
   });
   return { ...english, content };
 }
