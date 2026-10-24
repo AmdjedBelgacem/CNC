@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { toast } from '@/components/ui/toast';
 export default function ResendVerificationPage() {
   const t = useTranslations('auth');
   const { resendVerification } = useAuth();
@@ -15,6 +16,13 @@ export default function ResendVerificationPage() {
     try {
       await resendVerification(email);
       setSent(true);
+      toast({ type: 'ok', title: t('verification.sent') });
+    } catch (err) {
+      toast({
+        type: 'err',
+        title: t('verification.sendFailed'),
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setLoading(false);
     }

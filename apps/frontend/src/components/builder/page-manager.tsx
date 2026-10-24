@@ -32,6 +32,7 @@ import {
 import type { PageRecord } from '@titan/shared';
 import { normalizeSlug, validateSlug } from '@titan/shared';
 import { api } from '@/lib/api-client';
+import { toast } from '@/components/ui/toast';
 import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { useBuilderUI } from '@/components/builder/builder-ui-store';
 import { useOpenPage } from '@/components/builder/use-open-page';
@@ -149,8 +150,14 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
         });
         await refresh();
       }
+      toast({
+        type: 'ok',
+        title: next === 'published' ? tb('pages.enabledToast') : tb('pages.disabledToast'),
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : tb('pages.updateFailed'));
+      const message = e instanceof Error ? e.message : tb('pages.updateFailed');
+      setError(message);
+      toast({ type: 'err', title: tb('pages.updateFailed'), description: message });
     } finally {
       setBusy(null);
     }
@@ -167,8 +174,11 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
       // Deleting the page you are standing on would leave the editor on a
       // 404, so move to the first page that is left.
       if (page.slug === slug && remaining[0]) await go(remaining[0].slug);
+      toast({ type: 'ok', title: tb('pages.deletedToast') });
     } catch (e) {
-      setError(e instanceof Error ? e.message : tb('pages.deleteFailed'));
+      const message = e instanceof Error ? e.message : tb('pages.deleteFailed');
+      setError(message);
+      toast({ type: 'err', title: tb('pages.deleteFailed'), description: message });
     } finally {
       setBusy(null);
     }
@@ -513,9 +523,12 @@ function CreatePageDialog({
         title: title.trim(),
         template,
       });
+      toast({ type: 'ok', title: tb('pages.createdToast') });
       await onCreated(page);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tb('pages.createFailed'));
+      const message = e instanceof Error ? e.message : tb('pages.createFailed');
+      setError(message);
+      toast({ type: 'err', title: tb('pages.createFailed'), description: message });
       setBusy(false);
     }
   };
@@ -656,9 +669,12 @@ function DuplicateDialog({
         slug,
         title: title.trim(),
       });
+      toast({ type: 'ok', title: tb('pages.duplicatedToast') });
       await onDone(created.slug);
     } catch (e) {
-      setError(e instanceof Error ? e.message : tb('pages.duplicateFailed'));
+      const message = e instanceof Error ? e.message : tb('pages.duplicateFailed');
+      setError(message);
+      toast({ type: 'err', title: tb('pages.duplicateFailed'), description: message });
       setBusy(false);
     }
   };

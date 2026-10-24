@@ -6,6 +6,7 @@ import { api } from '@/lib/api-client';
 import { EMAIL_CATEGORY_LABELS, type EmailCategory, type EmailTemplateSummary } from '@titan/shared';
 import { AdminPageHeader } from '@/components/admin/admin-chrome';
 import { BarButton, BarPrimaryButton } from '@/components/admin/admin-chrome';
+import { toast } from '@/components/ui/toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -88,8 +89,11 @@ export function EmailTemplatesList() {
       setSlugTouched(false);
       setCategory('custom');
       await load();
+      toast({ type: 'ok', title: t('createdToast') });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('saveError'));
+      const message = e instanceof Error ? e.message : t('saveError');
+      setError(message);
+      toast({ type: 'err', title: t('saveError'), description: message });
     } finally {
       setSaving(false);
     }

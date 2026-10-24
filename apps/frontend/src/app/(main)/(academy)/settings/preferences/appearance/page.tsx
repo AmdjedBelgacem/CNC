@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { Palette, Sun, Moon, Monitor, Check, Paintbrush, LayoutGrid } from 'lucide-react';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 export default function AppearancePage() {
@@ -47,9 +48,12 @@ export default function AppearancePage() {
         );
       }
       setSaved(true);
+      toast({ type: 'ok', title: t('appearance.savedToast') });
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('appearance.saveFailed'));
+      const message = e instanceof Error ? e.message : t('appearance.saveFailed');
+      setError(message);
+      toast({ type: 'err', title: t('appearance.saveFailed'), description: message });
     } finally {
       setSaving(false);
     }

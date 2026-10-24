@@ -7,6 +7,7 @@ import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { User, Mail, Globe, Clock, Check, AlertCircle, Sparkles } from 'lucide-react';
 export default function AccountGeneralPage() {
   const t = useTranslations('settings');
@@ -59,9 +60,12 @@ export default function AccountGeneralPage() {
       }
       await refreshProfile();
       router.refresh();
+      toast({ type: 'ok', title: t('saved') });
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      const message = err instanceof Error ? err.message : t('saveFailed');
+      setError(message);
+      toast({ type: 'err', title: t('saveFailed'), description: message });
     } finally {
       setSaving(false);
     }

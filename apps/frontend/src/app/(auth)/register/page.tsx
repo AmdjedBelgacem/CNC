@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 // OAuth: fetch a CSRF state from the backend, then redirect with redirect=1
 import { trackSignUp } from '@/lib/analytics';
+import { toast } from '@/components/ui/toast';
 // so the callback sets httpOnly cookies and redirects back to the app.
 async function oauthRedirect(provider: 'google') {
   try {
@@ -55,8 +56,11 @@ await register({
       });
       trackSignUp('password');
       setSuccess(true);
+      toast({ type: 'ok', title: t('checkYourEmail') });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('registrationFailed'));
+      const message = err instanceof Error ? err.message : t('registrationFailed');
+      setError(message);
+      toast({ type: 'err', title: t('registrationFailed'), description: message });
     } finally {
       setLoading(false);
     }

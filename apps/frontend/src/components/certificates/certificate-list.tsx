@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Award, Download, ExternalLink, Loader2, ShieldCheck, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 
 /**
  * A learner's earned certificates.
@@ -67,8 +68,11 @@ export function CertificateList({ className }: { className?: string }) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      toast({ type: 'ok', title: t('downloadStarted') });
     } catch (e: any) {
-      setError(e?.message ?? t('downloadFailed', { default: 'Download failed' }));
+      const message = e?.message ?? t('downloadFailed', { default: 'Download failed' });
+      setError(message);
+      toast({ type: 'err', title: t('downloadFailed'), description: message });
     } finally {
       setDownloading(null);
     }

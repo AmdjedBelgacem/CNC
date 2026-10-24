@@ -20,6 +20,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { getImageSrc } from '@/lib/images';
+import { toast } from '@/components/ui/toast';
 interface EventDetail {
   id: string;
   title: string;
@@ -65,20 +66,24 @@ export default function EventDetailPage() {
       return;
     }
     setRegistering(true);
+    const wasRegistered = !!event.userRegistration;
     try {
-      if (event.userRegistration) {
-        await fetch(`/api/proxy/events/${event.id}/register`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
-      } else {
-        await fetch(`/api/proxy/events/${event.id}/register`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-      }
+      const res = await fetch(`/api/proxy/events/${event.id}/register`, {
+        method: wasRegistered ? 'DELETE' : 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(t('registerFailed'));
       fetchEvent();
-    } catch {
+      toast({
+        type: 'ok',
+        title: wasRegistered ? t('registrationCancelled') : t('registeredOk'),
+      });
+    } catch (error) {
+      toast({
+        type: 'err',
+        title: t('registerFailed'),
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setRegistering(false);
     }

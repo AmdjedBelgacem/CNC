@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/components/ui/toast';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 function VerifyEmailChangeInner() {
   const t = useTranslations('auth');
@@ -27,15 +28,20 @@ function VerifyEmailChangeInner() {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setStatus('success');
-          setMessage(data.message || t('emailChange.success'));
+          const message = data.message || t('emailChange.success');
+          setMessage(message);
+          toast({ type: 'ok', title: t('emailChange.success') });
         } else {
           setStatus('error');
-          setMessage(data.message || t('emailChange.failed'));
+          const message = data.message || t('emailChange.failed');
+          setMessage(message);
+          toast({ type: 'err', title: t('emailChange.failed'), description: message });
         }
       })
       .catch(() => {
         setStatus('error');
         setMessage(t('emailChange.networkError'));
+        toast({ type: 'err', title: t('emailChange.failed'), description: t('emailChange.networkError') });
       });
   }, [token]);
   return (

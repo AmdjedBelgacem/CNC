@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { toast } from '@/components/ui/toast';
 function VerifyEmailContent() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -23,11 +24,14 @@ function VerifyEmailContent() {
     verifyEmail(token)
       .then(() => {
         setStatus('success');
+        toast({ type: 'ok', title: t('verifyEmail.successTitle') });
         setTimeout(() => router.push('/login'), 3000);
       })
       .catch((err) => {
         setStatus('error');
-        setMessage(err instanceof Error ? err.message : t('verifyEmail.failed'));
+        const message = err instanceof Error ? err.message : t('verifyEmail.failed');
+        setMessage(message);
+        toast({ type: 'err', title: t('verifyEmail.failed'), description: message });
       });
   }, [token, verifyEmail, router]);
   return (

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton, SkeletonCircle } from '@/components/ui/skeleton';
 import { Placeholder } from '@/components/ui/states';
+import { toast } from '@/components/ui/toast';
 import {
   MapPin,
   Users,
@@ -264,7 +265,9 @@ export default function ProfilePage() {
     if (!followStatus || followLoading) return;
     try {
       setFollowLoading(true);
-      await fetch(`/api/proxy/profile/${followStatus.targetUserId}/follow`, { credentials: 'include', method: 'POST' });
+      const res = await fetch(`/api/proxy/profile/${followStatus.targetUserId}/follow`, { credentials: 'include', method: 'POST' });
+      if (!res.ok) throw new Error(tProfile('followFailed'));
+      const wasFollowing = followStatus.isFollowing;
       setFollowStatus((prev) => (prev ? { ...prev, isFollowing: !prev.isFollowing } : null));
       setProfile((prev) => {
         if (!prev) return prev;
@@ -278,12 +281,17 @@ export default function ProfilePage() {
           },
         };
       });
+      toast({ type: 'ok', title: wasFollowing ? tProfile('unfollowed') : tProfile('nowFollowing') });
     } catch (err) {
-      console.error(err);
+      toast({
+        type: 'err',
+        title: tProfile('followFailed'),
+        description: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setFollowLoading(false);
     }
-  }, [followStatus, followLoading]);
+  }, [followStatus, followLoading, tProfile]);
   if (loading) return <LoadingSkeleton />;
   if (!profile) {
     return (

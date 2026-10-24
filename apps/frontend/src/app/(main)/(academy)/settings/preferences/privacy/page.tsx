@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { Eye, Users, MessageSquare, UserPlus, Check, Shield, Lock } from 'lucide-react';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 export default function PrivacyPage() {
@@ -53,9 +54,12 @@ export default function PrivacyPage() {
         );
       }
       setSaved(true);
+      toast({ type: 'ok', title: t('privacy.savedToast') });
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('privacy.saveFailed'));
+      const message = e instanceof Error ? e.message : t('privacy.saveFailed');
+      setError(message);
+      toast({ type: 'err', title: t('privacy.saveFailed'), description: message });
     } finally {
       setSaving(false);
     }

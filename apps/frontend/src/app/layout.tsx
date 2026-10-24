@@ -169,7 +169,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </MotionProvider>
             </QueryProvider>
             {/* Toasts are app-wide, not just admin. */}
-            <ToastViewport />
+            <ToastViewport dir={dir} />
             {/* PWA — production-only registration + update prompt */}
             <PWARegister />
             <PWAUpdateToast />

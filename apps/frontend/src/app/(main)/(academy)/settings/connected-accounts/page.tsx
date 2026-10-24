@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { Link2, Shield, Check, X, AlertCircle } from 'lucide-react';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 interface Account {
@@ -43,8 +44,11 @@ export default function ConnectedAccountsPage() {
         );
       }
       await load();
+      toast({ type: 'ok', title: t('connectedAccounts.unlinkedToast', { provider }) });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('unknownError'));
+      const message = err instanceof Error ? err.message : t('unknownError');
+      setError(message);
+      toast({ type: 'err', title: t('connectedAccounts.unlinkFailed'), description: message });
     }
   };
 

@@ -6,6 +6,7 @@ import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
+import { toast } from '@/components/ui/toast';
 import { useShallow } from 'zustand/react/shallow';
 import { useCartStore } from '@/stores/cart-store';
 import { useCurrencyStore } from '@/stores/currency-store';
@@ -118,7 +119,10 @@ export default function CartPage() {
                   size="icon-xs"
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   aria-label={t('removeItem', { title: item.title })}
-                  onClick={() => removeItem(item.productId)}
+                  onClick={() => {
+                    removeItem(item.productId);
+                    toast({ type: 'ok', title: t('removedToast', { title: item.title }) });
+                  }}
                 >
                   <Trash2 />
                 </Button>

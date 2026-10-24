@@ -1,94 +1,78 @@
 'use client';
-import { create } from 'zustand';
-import * as ToastPrimitive from '@radix-ui/react-toast';
-import { AnimatePresence, m } from 'framer-motion';
-import { spring } from '@/lib/motion';
-import { CheckCircle2, Info, TriangleAlert, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
+import { useEffect, useState, type CSSProperties } from 'react';
+import { Toaster, toast as sonnerToast } from 'sonner';
 
 type ToastType = 'ok' | 'err' | 'info';
+
 export interface ToastItem {
-  id: number;
   type: ToastType;
   title: string;
   description?: string;
 }
-interface ToastStore {
-  toasts: ToastItem[];
-  push: (t: Omit<ToastItem, 'id'>) => number;
-  dismiss: (id: number) => void;
-}
-let toastId = 1;
-export const useToasts = create<ToastStore>((set) => ({
-  toasts: [],
-  push: (t) => {
-    const id = toastId++;
-    set((s) => ({ toasts: [...s.toasts, { ...t, id }] }));
-    return id;
-  },
-  dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })),
-}));
 
-/** Fire-and-forget toast; auto-dismisses after 4.5s. */
-export function toast(item: Omit<ToastItem, 'id'>) {
-  const id = useToasts.getState().push(item);
-  if (typeof window !== 'undefined') {
-    window.setTimeout(() => useToasts.getState().dismiss(id), 4500);
+/**
+ * App-wide toast helper.
+ *
+ * The platform standardised on Sonner for transient feedback. This adapter keeps
+ * the existing `toast({ type, title, description })` call sites working while
+ * routing every notification through Sonner, so success/error/info toasts share
+ * one queue, one animation and one accessible live region.
+ */
+export function toast(item: ToastItem) {
+  const options = item.description ? { description: item.description } : undefined;
+  if (item.type === 'ok') {
+    sonnerToast.success(item.title, options);
+    return;
   }
+  if (item.type === 'err') {
+    sonnerToast.error(item.title, options);
+    return;
+  }
+  sonnerToast.info(item.title, options);
 }
 
-const TONE: Record<ToastType, { icon: React.ReactNode; ring: string }> = {
-  ok: { icon: <CheckCircle2 className="size-4 text-success" />, ring: 'bg-success/10' },
-  err: { icon: <TriangleAlert className="size-4 text-destructive" />, ring: 'bg-destructive/10' },
-  info: { icon: <Info className="size-4 text-info" />, ring: 'bg-info/10' },
-};
+/**
+ * Mounts the single Sonner viewport. It is rendered once in the root layout; the
+ * builder no longer mounts its own copy (two viewports duplicated every toast).
+ */
+export function ToastViewport({ dir = 'ltr' }: { dir?: 'ltr' | 'rtl' }) {
+  // Sonner is mounted outside ThemeProvider in the root layout, so observe the
+  // resolved class on <html> rather than importing the provider (which would
+  // create a cycle: ThemeProvider imports this module for its error toast).
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => setTheme(root.classList.contains('dark') ? 'dark' : 'light');
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
-export function ToastViewport() {
-  const toasts = useToasts((s) => s.toasts);
-  const dismiss = useToasts((s) => s.dismiss);
   return (
-    <ToastPrimitive.Provider duration={4500}>
-      <ToastPrimitive.Viewport className="fixed bottom-4 end-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none" />
-      <AnimatePresence>
-        {toasts.map((t) => {
-          const tone = TONE[t.type];
-          return (
-            <m.div
-              key={t.id}
-              initial={{ opacity: 0, y: 16, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.96 }}
-              transition={spring.snappy}
-              className="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg"
-            >
-              <span
-                className={cn(
-                  'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg',
-                  tone.ring,
-                )}
-              >
-                {tone.icon}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-13 font-semibold text-foreground">{t.title}</p>
-                {t.description && (
-                  <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">
-                    {t.description}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => dismiss(t.id)}
-                aria-label="Dismiss"
-                className="shrink-0 rounded-md p-1 text-muted-foreground/60 transition hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            </m.div>
-          );
-        })}
-      </AnimatePresence>
-    </ToastPrimitive.Provider>
+    <Toaster
+      dir={dir}
+      theme={theme}
+      position={dir === 'rtl' ? 'bottom-left' : 'bottom-right'}
+      duration={4500}
+      closeButton
+      richColors
+      toastOptions={{
+        // Match the tenant theme tokens instead of Sonner's stock palette so the
+        // toasts look native in both light and dark mode.
+        style: {
+          '--normal-bg': 'var(--popover)',
+          '--normal-text': 'var(--popover-foreground)',
+          '--normal-border': 'var(--border)',
+          fontFamily: 'var(--font-sans)',
+        } as CSSProperties,
+        classNames: {
+          toast: 'rounded-xl border shadow-lg',
+          title: 'text-13 font-semibold',
+          description: 'text-xs leading-relaxed',
+        },
+      }}
+    />
   );
 }

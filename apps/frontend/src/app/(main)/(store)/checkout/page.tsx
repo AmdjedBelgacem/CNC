@@ -8,6 +8,7 @@ import { AlertCircle, GraduationCap, Loader2, Lock, ShoppingBag, Ticket } from '
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
+import { toast } from '@/components/ui/toast';
 import { useCartStore } from '@/stores/cart-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { trackBeginCheckout } from '@/lib/analytics';
@@ -164,10 +165,13 @@ async function resolveProductRef(item: { productId: string; slug?: string }): Pr
       );
       return result;
     } catch (caught) {
-      const message = (caught as Error)?.message ?? 'Could not start checkout';
+      const message = (caught as Error)?.message ?? t('startFailed');
       // Fail closed: no order, no form, and the cart is untouched.
       if (/not configured|disabled|missing/i.test(message)) setBlocked(message);
-      else setError(message);
+      else {
+        setError(message);
+        toast({ type: 'err', title: t('startFailed'), description: message });
+      }
       return null;
     } finally {
       setCreating(false);

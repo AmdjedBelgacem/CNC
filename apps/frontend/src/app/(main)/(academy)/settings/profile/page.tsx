@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -109,8 +110,10 @@ export default function EditProfilePage() {
       const data = await res.json();
       setAvatarPreview(data.avatarUrl);
       await refreshProfile();
+      toast({ type: 'ok', title: t('profile.avatarUpdatedToast') });
     } catch {
       setError(t('profile.avatarUploadFailed'));
+      toast({ type: 'err', title: t('profile.avatarUploadFailed') });
     } finally {
       setUploading(false);
     }
@@ -129,8 +132,10 @@ export default function EditProfilePage() {
       });
       if (!res.ok) throw new Error(t('profile.uploadFailed'));
       await refreshProfile();
+      toast({ type: 'ok', title: t('profile.coverUpdatedToast') });
     } catch {
       setError(t('profile.coverUploadFailed'));
+      toast({ type: 'err', title: t('profile.coverUploadFailed') });
     } finally {
       setUploading(false);
     }
@@ -152,9 +157,12 @@ export default function EditProfilePage() {
       }
       setSaved(true);
       await refreshProfile();
+      toast({ type: 'ok', title: t('profile.savedToast') });
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('profile.saveFailed'));
+      const message = err instanceof Error ? err.message : t('profile.saveFailed');
+      setError(message);
+      toast({ type: 'err', title: t('profile.saveFailed'), description: message });
     } finally {
       setSaving(false);
     }
@@ -200,8 +208,11 @@ export default function EditProfilePage() {
       }
       await loadPortfolio();
       resetPfForm();
+      toast({ type: 'ok', title: t('profile.portfolioSavedToast') });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('profile.savePortfolioFailed'));
+      const message = err instanceof Error ? err.message : t('profile.savePortfolioFailed');
+      setError(message);
+      toast({ type: 'err', title: t('profile.savePortfolioFailed'), description: message });
     } finally {
       setPfSaving(false);
     }
@@ -211,8 +222,10 @@ export default function EditProfilePage() {
       const res = await apiProxyFetch(`/api/proxy/portfolio/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(t('profile.deleteFailed'));
       await loadPortfolio();
+      toast({ type: 'ok', title: t('profile.portfolioDeletedToast') });
     } catch {
       setError(t('profile.deletePortfolioFailed'));
+      toast({ type: 'err', title: t('profile.deletePortfolioFailed') });
     }
   };
   const handleMovePortfolio = async (id: string, direction: 'up' | 'down') => {
@@ -232,7 +245,10 @@ export default function EditProfilePage() {
         body: JSON.stringify({ items: reordered }),
       });
       if (res.ok) setPortfolio(newPortfolio);
-    } catch {}
+      else throw new Error(t('profile.portfolioReorderFailed'));
+    } catch {
+      toast({ type: 'err', title: t('profile.portfolioReorderFailed') });
+    }
   };
   const handleEditPortfolio = (item: PortfolioItem) => {
     setPfForm({

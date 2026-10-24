@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import type { Content, Data } from '@measured/puck';
 import { getBlockDefinition, isNodeArray, slotNamesFor } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
+import { toast } from '@/components/ui/toast';
 import {
   Braces,
   Check,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react'; /** * JSON Inspector — a coder-grade view of the selected node. * * Shows the node's raw props as JSON, validates them against the block's * zod schema (linter-style), and applies the result back into the live tree. */
 export function JsonInspectorSection() {
   const t = useTranslations('ui.builder');
+  const tc = useTranslations('common');
   const selected = useBuilderPuck((s) => s.selectedItem) as { type: string; props: Record<string, unknown> } | null;
   const data = useBuilderPuck((s) => s.appState.data) as unknown as Data;
   const dispatch = useBuilderPuck((s) => s.dispatch);
@@ -63,7 +65,12 @@ export function JsonInspectorSection() {
   };
   const handleCopy = async () => {
     if (!selected) return;
-    await navigator.clipboard?.writeText(JSON.stringify(selected, null, 2));
+    try {
+      await navigator.clipboard?.writeText(JSON.stringify(selected, null, 2));
+      toast({ type: 'ok', title: tc('copied') });
+    } catch {
+      toast({ type: 'err', title: tc('error') });
+    }
   };
   return (
     <div className="border-t border-border">

@@ -2,10 +2,13 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { BookOpen, LayoutTemplate, LogOut, Settings, Shield, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
-import { api } from '@/lib/api-client'; /** Avatar + dropdown menu shown in the navbar when a user is signed in. */
+import { api } from '@/lib/api-client';
+import { toast } from '@/components/ui/toast'; /** Avatar + dropdown menu shown in the navbar when a user is signed in. */
 export function UserNavMenu() {
+  const t = useTranslations('common');
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -29,6 +32,7 @@ export function UserNavMenu() {
     } finally {
       logout();
       setOpen(false);
+      toast({ type: 'ok', title: t('signedOut') });
       router.push('/');
     }
   };

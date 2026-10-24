@@ -10,6 +10,7 @@ import type {
   EmailTemplateDetail,
 } from '@titan/shared';
 import { AdminPageHeader, BarButton, BarPrimaryButton } from '@/components/admin/admin-chrome';
+import { toast } from '@/components/ui/toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -271,7 +272,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
   }
 
   // ---- actions -----------------------------------------------------------
-  async function saveDraft() {
+  async function saveDraftInternal(showToast: boolean) {
     if (!layout) return;
     setSaving(true);
     setError(null);
@@ -283,10 +284,22 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
       });
       setSavedAt(Date.now());
       setDirty(false);
+      if (showToast) toast({ type: 'ok', title: t('saved') });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('saveError'));
+      const message = e instanceof Error ? e.message : t('saveError');
+      setError(message);
+      if (showToast) toast({ type: 'err', title: t('saveError'), description: message });
+      throw e;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveDraft() {
+    try {
+      await saveDraftInternal(true);
+    } catch {
+      // The inline banner already carries the failure; the toast above mirrors it.
     }
   }
 
@@ -294,15 +307,18 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
     setPublishing(true);
     setError(null);
     try {
-      await saveDraft();
+      await saveDraftInternal(false);
       await api.post(`/admin/email/templates/${templateId}/publish`, {
         triggerKey: boundTrigger || undefined,
       });
       setDirty(false);
       const fresh = await api.get<{ data: EmailTemplateDetail }>(`/admin/email/templates/${templateId}`);
       if (fresh?.data) setTemplate(fresh.data);
+      toast({ type: 'ok', title: t('publishedToast') });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('saveError'));
+      const message = e instanceof Error ? e.message : t('saveError');
+      setError(message);
+      toast({ type: 'err', title: t('publishFailed'), description: message });
     } finally {
       setPublishing(false);
     }

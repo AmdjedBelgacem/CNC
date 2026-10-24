@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
+import { toast } from '@/components/ui/toast';
 import {
   Activity as ActivityIcon,
   AlertCircle,
@@ -413,7 +414,8 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
       rows.push([], ['Activity', 'type', 'title', 'at'], ...activity.items.map((a) => [a.type, a.title, a.at] as (string | number)[]));
     }
     downloadCsv(`analytics-${range}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-  }, [overview, trends, breakdowns, insights, activity, tenantId, range]);
+    toast({ type: 'ok', title: t('exportedToast') });
+  }, [overview, trends, breakdowns, insights, activity, tenantId, range, t]);
 
   /* ------------------------------- loading ------------------------------- */
   if (loading) {

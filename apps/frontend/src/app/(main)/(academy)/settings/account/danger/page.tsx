@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
+import { toast } from '@/components/ui/toast';
 import { AlertTriangle, Download, Trash2, ShieldAlert, KeyRound, CheckCircle2 } from 'lucide-react';
 export default function DangerZonePage() {
   const t = useTranslations('account');
@@ -31,11 +32,11 @@ export default function DangerZonePage() {
       a.remove();
       URL.revokeObjectURL(url);
       setMessage({ type: 'ok', text: t('danger.exportDone') });
+      toast({ type: 'ok', title: t('danger.exportDone') });
     } catch (err) {
-      setMessage({
-        type: 'err',
-        text: err instanceof Error ? err.message : t('danger.exportFailed'),
-      });
+      const text = err instanceof Error ? err.message : t('danger.exportFailed');
+      setMessage({ type: 'err', text });
+      toast({ type: 'err', title: t('danger.exportFailed'), description: text });
     } finally {
       setExportLoading(false);
     }
@@ -43,6 +44,7 @@ export default function DangerZonePage() {
   const handleDelete = async () => {
     if (deleteConfirm !== 'DELETE') {
       setMessage({ type: 'err', text: t('danger.typeDeleteToConfirm') });
+      toast({ type: 'err', title: t('danger.typeDeleteToConfirm') });
       return;
     }
     if (!confirm(t('danger.deleteConfirm'))) return;
@@ -62,12 +64,12 @@ export default function DangerZonePage() {
         );
       }
       setMessage({ type: 'ok', text: t('danger.deleteDone') });
+      toast({ type: 'ok', title: t('danger.deleteDone') });
       window.location.href = '/';
     } catch (err) {
-      setMessage({
-        type: 'err',
-        text: err instanceof Error ? err.message : t('danger.deleteFailed'),
-      });
+      const text = err instanceof Error ? err.message : t('danger.deleteFailed');
+      setMessage({ type: 'err', text });
+      toast({ type: 'err', title: t('danger.deleteFailed'), description: text });
     } finally {
       setDeleteLoading(false);
     }

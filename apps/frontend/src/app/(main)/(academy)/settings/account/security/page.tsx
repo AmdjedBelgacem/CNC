@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { ReauthModal } from '@/components/auth/reauth-modal';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
+import { toast } from '@/components/ui/toast';
 import {
   Shield,
   KeyRound,
@@ -97,9 +98,12 @@ export default function SecuritySettingsPage() {
     try {
       await changePassword(pwForm.currentPassword, pwForm.newPassword);
       setPwSuccess(tSecurity('security.pwChangedShort'));
+      toast({ type: 'ok', title: tSecurity('security.pwChangedShort') });
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setPwError(err instanceof Error ? err.message : tSecurity('security.pwChangeFailed'));
+      const message = err instanceof Error ? err.message : tSecurity('security.pwChangeFailed');
+      setPwError(message);
+      toast({ type: 'err', title: tSecurity('security.pwChangeFailed'), description: message });
     } finally {
       setPwLoading(false);
     }
@@ -122,9 +126,12 @@ export default function SecuritySettingsPage() {
       // made every email change fail with 400 "Password is incorrect".
       await changeEmail(emailForm.newEmail, verifiedPassword);
       setEmailSuccess(tSecurity('security.emailVerificationSentShort'));
+      toast({ type: 'ok', title: tSecurity('security.emailVerificationSentShort') });
       setEmailForm({ newEmail: '', password: '' });
     } catch (err) {
-      setEmailError(err instanceof Error ? err.message : tSecurity('account.unknownError'));
+      const message = err instanceof Error ? err.message : tSecurity('account.unknownError');
+      setEmailError(message);
+      toast({ type: 'err', title: tSecurity('security.emailChangeFailed'), description: message });
     } finally {
       setEmailLoading(false);
     }
@@ -149,8 +156,11 @@ export default function SecuritySettingsPage() {
       const result = await enable2fa(twoFactorToken, twoFactorSecret);
       setTwoFactorBackupCodes(result.backupCodes);
       setTwoFactorStatus('verify');
+      toast({ type: 'ok', title: tSecurity('security.twoFactorEnabledToast') });
     } catch (err) {
-      setTwoFactorError(err instanceof Error ? err.message : tSecurity('security.twoFactorEnableFailed'));
+      const message = err instanceof Error ? err.message : tSecurity('security.twoFactorEnableFailed');
+      setTwoFactorError(message);
+      toast({ type: 'err', title: tSecurity('security.twoFactorEnableFailed'), description: message });
     } finally {
       setTwoFactorLoading(false);
     }
@@ -521,8 +531,17 @@ export default function SecuritySettingsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={async () => {
-                          await revokeSession(session.id);
-                          await loadSessions();
+                          try {
+                            await revokeSession(session.id);
+                            await loadSessions();
+                            toast({ type: 'ok', title: tSecurity('security.sessionRevokedToast') });
+                          } catch (err) {
+                            toast({
+                              type: 'err',
+                              title: tSecurity('security.revokeFailed'),
+                              description: err instanceof Error ? err.message : undefined,
+                            });
+                          }
                         }}
                         className="rounded-full"
                       >
@@ -545,7 +564,10 @@ export default function SecuritySettingsPage() {
                 variant="destructive"
                 size="sm"
                 onClick={async () => {
-                  if (confirm(tSecurity('security.logoutAllConfirm'))) await logoutEverywhere();
+                  if (confirm(tSecurity('security.logoutAllConfirm'))) {
+                    await logoutEverywhere();
+                    toast({ type: 'ok', title: tSecurity('security.loggedOutEverywhereToast') });
+                  }
                 }}
                 className="rounded-full"
               >
@@ -654,10 +676,14 @@ export default function SecuritySettingsPage() {
             if (t) {
               setTwoFactorLoading(true);
               disable2fa(t)
-                .then(() => setTwoFactorStatus('idle'))
-                .catch((e) =>
-                  alert(e instanceof Error ? e.message : tSecurity('account.unknownError')),
-                )
+                .then(() => {
+                  setTwoFactorStatus('idle');
+                  toast({ type: 'ok', title: tSecurity('security.twoFactorDisabledToast') });
+                })
+                .catch((e) => {
+                  const message = e instanceof Error ? e.message : tSecurity('account.unknownError');
+                  toast({ type: 'err', title: tSecurity('security.twoFactorDisableFailed'), description: message });
+                })
                 .finally(() => setTwoFactorLoading(false));
             }
           }

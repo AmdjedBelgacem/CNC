@@ -21,6 +21,7 @@ import { EmptyState, ErrorBanner, SkeletonRows, StatusPill, type Tone } from '@/
 import { PillTabs, Toolbar } from '@/components/admin/admin-ui';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import { toast } from '@/components/ui/toast';
 
 /**
  * Platform-critical alert feed (super admins only).
@@ -117,16 +118,33 @@ export default function PlatformAlertsPage() {
     setItems((prev) =>
       prev?.map((a) => (a.id === id ? { ...a, isRead: true } : a)) ?? prev,
     );
-    await api.post(`/admin/platform-alerts/read/${id}`).catch(() => undefined);
+    try {
+      await api.post(`/admin/platform-alerts/read/${id}`);
+      toast({ type: 'ok', title: t('markedReadToast') });
+    } catch (e) {
+      toast({
+        type: 'err',
+        title: t('saveFailed'),
+        description: e instanceof Error ? e.message : undefined,
+      });
+    }
     void load();
   };
 
   const markAllRead = async () => {
     setBusy(true);
-    await api
-      .post('/admin/platform-alerts/read-all', group ? { group } : {})
-      .catch(() => undefined);
-    setBusy(false);
+    try {
+      await api.post('/admin/platform-alerts/read-all', group ? { group } : {});
+      toast({ type: 'ok', title: t('markedAllReadToast') });
+    } catch (e) {
+      toast({
+        type: 'err',
+        title: t('saveFailed'),
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setBusy(false);
+    }
     void load();
   };
 

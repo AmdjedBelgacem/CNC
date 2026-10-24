@@ -39,6 +39,7 @@ import { ArabicDialectMenu, useArabicDialectPreference } from './arabic-dialect-
 import { AiReferenceCard, AiTranscript, type AiBubble } from './ai-chat-parts';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
+import { toast } from '@/components/ui/toast';
 import {
   Dialog,
   DialogBody,
@@ -77,6 +78,7 @@ function isPublicPath(pathname: string | null): boolean {
 
 export function PublicAiAssistant() {
   const t = useTranslations('aiAssistant');
+  const tChat = useTranslations('aiChat');
   const pathname = usePathname();
   const routeEnabled = isPublicPath(pathname);
   const config = usePublicAiConfig(routeEnabled);
@@ -340,6 +342,7 @@ export function PublicAiAssistant() {
           setMessages((current) =>
             current.map((message) => (message.id === messageId ? { ...message, rating: undefined } : message)),
           );
+          toast({ type: 'err', title: tChat('feedbackFailed') });
         },
       },
     );

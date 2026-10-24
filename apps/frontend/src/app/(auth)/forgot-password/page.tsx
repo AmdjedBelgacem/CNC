@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { toast } from '@/components/ui/toast';
 export default function ForgotPasswordPage() {
   const t = useTranslations('auth');
   const { forgotPassword } = useAuth();
@@ -17,8 +18,10 @@ export default function ForgotPasswordPage() {
     try {
       await forgotPassword(email);
       setSent(true);
+      toast({ type: 'ok', title: t('checkYourEmail') });
     } catch {
       setError(t('forgot.sendFailed'));
+      toast({ type: 'err', title: t('forgot.sendFailed') });
     } finally {
       setLoading(false);
     }

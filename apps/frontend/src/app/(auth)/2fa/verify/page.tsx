@@ -3,6 +3,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { toast } from '@/components/ui/toast';
 function Verify2faForm() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -19,9 +20,12 @@ function Verify2faForm() {
     setLoading(true);
     try {
       await verify2fa(userId, token);
+      toast({ type: 'ok', title: t('twoFactor.verified') });
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('twoFactor.invalidCode'));
+      const message = err instanceof Error ? err.message : t('twoFactor.invalidCode');
+      setError(message);
+      toast({ type: 'err', title: t('twoFactor.invalidCode'), description: message });
     } finally {
       setLoading(false);
     }

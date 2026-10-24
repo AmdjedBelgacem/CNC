@@ -7,9 +7,11 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { useTranslations } from 'next-intl';
 import { DEFAULT_THEME_TOKENS } from '@titan/shared';
 import type { ThemeTokens } from '@titan/shared';
 import { api } from '@/lib/api-client';
+import { toast } from '@/components/ui/toast';
 import { useAuthStore } from '@/stores/auth-store';
 import { mergeThemeTokens, themeTokensToCss } from '@/lib/builder/theme-css';
 
@@ -143,6 +145,7 @@ interface PreferencesPayload {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('common');
   // Both start at the SSR-stable value. Reading localStorage/matchMedia in the
   // initialiser makes the client's first render differ from the server's, which
   // is a hydration mismatch — the theme toggle rendered a Moon where the server
@@ -256,11 +259,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       window.localStorage.setItem(MODE_KEY, mode);
       persistModeCookie(mode);
       if (isAuthenticated) {
-        // Fire-and-forget: a failed preference write must not block the UI.
-        void api.put('/auth/me/preferences', { theme: mode }).catch(() => {});
+        // Fire-and-forget: a failed preference write must not block the UI, but
+        // it should still tell the user the choice was only applied locally.
+        void api.put('/auth/me/preferences', { theme: mode }).catch(() => {
+          toast({ type: 'err', title: t('themeSaveFailed') });
+        });
       }
     },
-    [isAuthenticated],
+    [isAuthenticated, t],
   );
 
   const toggleColorMode = useCallback(() => {

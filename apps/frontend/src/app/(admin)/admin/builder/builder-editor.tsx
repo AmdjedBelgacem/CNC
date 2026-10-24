@@ -24,7 +24,7 @@ import { BuilderTranslationProvider } from '@/components/builder/translation-con
 import { Languages, Loader2 } from 'lucide-react';
 import { BuilderHeader, VIEWPORTS } from '@/components/builder/editor-header';
 import { BuilderDialogs } from '@/components/builder/dialogs';
-import { ToastViewport, toast } from '@/components/ui/toast';
+import { toast } from '@/components/ui/toast';
 import { builderActions } from '@/components/builder/builder-actions';
 import { useBuilderUI } from '@/components/builder/builder-ui-store';
 import { StructureSidebar } from '@/components/builder/structure-sidebar';
@@ -997,7 +997,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
             onRevert={(version) => void revert(version)}
           />
         )}
-        <BuilderDialogs /> <ToastViewport />{' '}
+        <BuilderDialogs />{' '}
       </div>
     </BuilderTranslationProvider>
   );

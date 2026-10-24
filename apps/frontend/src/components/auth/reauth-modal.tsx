@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api-client';
+import { toast } from '@/components/ui/toast';
 interface ReauthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,6 +41,7 @@ export function ReauthModal({
         // `api.post` resolves the parsed body and throws on a non-2xx, carrying `status`.
         await api.post('/auth/verify-password', { password });
         setStatus('success');
+        toast({ type: 'ok', title: t('verified') });
         const verifiedPassword = password;
         setTimeout(() => {
           onOpenChange(false);
@@ -49,11 +51,12 @@ export function ReauthModal({
         // 401/403 mean the password itself was wrong; anything else is transport or server.
         const status = (err as { status?: number })?.status;
         const body = (err as { body?: { message?: unknown } })?.body;
-        setError(
+        const message =
           status === 401 || status === 403
             ? (typeof body?.message === 'string' ? body.message : t('incorrectPassword'))
-            : t('genericError'),
-        );
+            : t('genericError');
+        setError(message);
+        toast({ type: 'err', title: message });
         setStatus('idle');
       }
     },

@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/input';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   getAiErrorMessage,
@@ -117,6 +118,7 @@ export function AiChatWorkspace({
           setMessages((current) =>
             current.map((message) => (message.id === messageId ? { ...message, rating: undefined } : message)),
           );
+          toast({ type: 'err', title: t('feedbackFailed') });
         },
       },
     );
@@ -163,8 +165,11 @@ export function AiChatWorkspace({
     try {
       await rename.mutateAsync({ id: editingId, title });
       setEditingId(null);
-    } catch {
-      setManageError(t('renameFailed'));
+      toast({ type: 'ok', title: t('renamedToast') });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : t('renameFailed');
+      setManageError(message);
+      toast({ type: 'err', title: t('renameFailed'), description: message });
     }
   };
 
@@ -174,8 +179,11 @@ export function AiChatWorkspace({
       await archive.mutateAsync(id);
       // Leaving the thread you just archived reads better than a 404.
       if (activeId === id) router.push('/ai/chat');
-    } catch {
-      setManageError(t('archiveFailed'));
+      toast({ type: 'ok', title: t('archivedToast') });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : t('archiveFailed');
+      setManageError(message);
+      toast({ type: 'err', title: t('archiveFailed'), description: message });
     }
   };
   const active = useAiConversation(activeId, isAuthenticated && !!activeId);

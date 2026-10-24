@@ -3,6 +3,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { toast } from '@/components/ui/toast';
 function ResetPasswordForm() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -33,8 +34,11 @@ function ResetPasswordForm() {
     try {
       await resetPassword(token, password);
       setSuccess(true);
+      toast({ type: 'ok', title: t('reset.successTitle') });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('reset.failed'));
+      const message = err instanceof Error ? err.message : t('reset.failed');
+      setError(message);
+      toast({ type: 'err', title: t('reset.failed'), description: message });
     } finally {
       setLoading(false);
     }

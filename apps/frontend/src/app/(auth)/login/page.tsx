@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { trackLogin } from '@/lib/analytics';
+import { toast } from '@/components/ui/toast';
 
 // OAuth: fetch a CSRF state from the backend, then redirect with redirect=1
 // so the callback sets httpOnly cookies and redirects back to the app.
@@ -52,10 +53,12 @@ const result = await login(email, password, rememberDevice);
         return;
       }
       trackLogin('password');
+      toast({ type: 'ok', title: t('signInTitle') });
       router.push(returnUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('loginFailed');
       setError(msg);
+      toast({ type: 'err', title: t('loginFailed'), description: msg });
       if (msg === 'Please verify your email address before logging in.') {
         setNeedsVerification(true);
       }
@@ -68,8 +71,10 @@ const result = await login(email, password, rememberDevice);
     try {
       await resendVerification(email);
       setVerificationSent(true);
+      toast({ type: 'ok', title: t('verification.sent') });
     } catch {
       setError(t('verification.sendFailed'));
+      toast({ type: 'err', title: t('verification.sendFailed') });
     } finally {
       setResending(false);
     }
