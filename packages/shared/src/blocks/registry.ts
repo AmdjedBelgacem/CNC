@@ -60,7 +60,19 @@ export const headingPropsSchema = layoutPropsSchema.extend({
   color: z.string().max(100).optional(),
   /** Mockup heading treatments. */
   size: z
-    .enum(['hero', 'headline-lg', 'headline-md', 'stats', '2xl', 'xl', 'lg', 'md', 'sm', 'label', 'logo'])
+    .enum([
+      'hero',
+      'headline-lg',
+      'headline-md',
+      'stats',
+      '2xl',
+      'xl',
+      'lg',
+      'md',
+      'sm',
+      'label',
+      'logo',
+    ])
     .optional(),
   /** Letter-spacing override (em). */
   tracking: z.enum(['none', '0.025em', '0.05em', '0.1em', '0.15em', '0.2em']).optional(),
@@ -111,7 +123,14 @@ export const buttonPropsSchema = layoutPropsSchema.extend({
 });
 export type ButtonProps = z.infer<typeof buttonPropsSchema>;
 
-export const buttonDefaults: ButtonProps = { label: 'Button', href: '/', variant: 'primary', iconPosition: 'right', size: 'md', width: 'auto' };
+export const buttonDefaults: ButtonProps = {
+  label: 'Button',
+  href: '/',
+  variant: 'primary',
+  iconPosition: 'right',
+  size: 'md',
+  width: 'auto',
+};
 
 /** Simple text anchor (footer links, inline links, icon circles). */
 export const linkPropsSchema = layoutPropsSchema.extend({
@@ -150,7 +169,13 @@ export const imagePropsSchema = layoutPropsSchema.extend({
 });
 export type ImageProps = z.infer<typeof imagePropsSchema>;
 
-export const imageDefaults: ImageProps = { src: '', alt: '', objectFit: 'cover', radius: 'none', aspectRatio: 'none' };
+export const imageDefaults: ImageProps = {
+  src: '',
+  alt: '',
+  objectFit: 'cover',
+  radius: 'none',
+  aspectRatio: 'none',
+};
 
 /** Material Symbols glyph; optionally wrapped in a link. */
 export const iconPropsSchema = layoutPropsSchema.extend({
@@ -184,7 +209,12 @@ export const badgePropsSchema = layoutPropsSchema.extend({
 });
 export type BadgeProps = z.infer<typeof badgePropsSchema>;
 
-export const badgeDefaults: BadgeProps = { text: 'Eyebrow', variant: 'glow', size: 'md', iconSize: 12 };
+export const badgeDefaults: BadgeProps = {
+  text: 'Eyebrow',
+  variant: 'glow',
+  size: 'md',
+  iconSize: 12,
+};
 
 /** Avatar stack (three overlapping circles + "+80" pill). */
 export const avatarStackPropsSchema = layoutPropsSchema.extend({
@@ -244,7 +274,13 @@ export const stackPropsSchema = layoutPropsSchema.extend({
 });
 export type StackProps = z.infer<typeof stackPropsSchema>;
 
-export const stackDefaults: StackProps = { direction: 'column', gap: 'md', align: 'center', justify: 'center', wrap: false };
+export const stackDefaults: StackProps = {
+  direction: 'column',
+  gap: 'md',
+  align: 'center',
+  justify: 'center',
+  wrap: false,
+};
 
 export const gridPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
@@ -258,7 +294,9 @@ export const gridDefaults: GridProps = { columns: 3, gap: 'lg' };
 export const cardPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
   padding: z.enum(['none', 'sm', 'md', 'lg']).default('md'),
-  bg: z.enum(['transparent', 'muted', 'glass', 'gradient', 'gradient-muted']).default('transparent'),
+  bg: z
+    .enum(['transparent', 'muted', 'glass', 'gradient', 'gradient-muted'])
+    .default('transparent'),
   radius: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', 'full']).default('lg'),
   border: z.boolean().default(true),
   align: z.enum(['left', 'center', 'right']).default('left'),
@@ -271,7 +309,17 @@ export const cardPropsSchema = layoutPropsSchema.extend({
 });
 export type CardProps = z.infer<typeof cardPropsSchema>;
 
-export const cardDefaults: CardProps = { padding: 'md', bg: 'transparent', radius: 'lg', border: true, align: 'left', shadow: 'none', hover: false, accent: false, accentColor: 'bg-primary' };
+export const cardDefaults: CardProps = {
+  padding: 'md',
+  bg: 'transparent',
+  radius: 'lg',
+  border: true,
+  align: 'left',
+  shadow: 'none',
+  hover: false,
+  accent: false,
+  accentColor: 'bg-primary',
+};
 
 // ------------------------------------------------------------------
 // Items — small domain containers
@@ -322,7 +370,10 @@ export const academyCardPropsSchema = layoutPropsSchema.extend({
 });
 export type AcademyCardProps = z.infer<typeof academyCardPropsSchema>;
 
-export const academyCardDefaults: AcademyCardProps = { contentPadding: 'p-8', radius: 'rounded-3xl' };
+export const academyCardDefaults: AcademyCardProps = {
+  contentPadding: 'p-8',
+  radius: 'rounded-3xl',
+};
 
 export const faqItemPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
@@ -339,7 +390,13 @@ export const faqItemPropsSchema = layoutPropsSchema.extend({
 });
 export type FaqItemProps = z.infer<typeof faqItemPropsSchema>;
 
-export const faqItemDefaults: FaqItemProps = { buttonPaddingX: 'px-8', buttonPaddingY: 'py-6', answerPaddingX: 'px-8', answerPaddingBottom: 'pb-6', icon: 'add' };
+export const faqItemDefaults: FaqItemProps = {
+  buttonPaddingX: 'px-8',
+  buttonPaddingY: 'py-6',
+  answerPaddingX: 'px-8',
+  answerPaddingBottom: 'pb-6',
+  icon: 'add',
+};
 
 export const footerColPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
@@ -371,14 +428,24 @@ export const navPropsSchema = layoutPropsSchema.extend({
 });
 export type NavProps = z.infer<typeof navPropsSchema>;
 
-export const navDefaults: NavProps = { topOffset: 16, widthPercent: 95, containerMaxWidth: 1440, containerPaddingX: 'px-6 md:px-8', containerPaddingY: 'py-2.5', containerRadius: 'rounded-2xl' };
+export const navDefaults: NavProps = {
+  topOffset: 16,
+  widthPercent: 95,
+  containerMaxWidth: 1440,
+  containerPaddingX: 'px-6 md:px-8',
+  containerPaddingY: 'py-2.5',
+  containerRadius: 'rounded-2xl',
+};
 
 export const heroPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
   imageUrl: z.string().max(1000).optional(),
   fullHeight: z.boolean().optional().default(true),
   scrollIndicator: z.boolean().optional().default(true),
-  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  backgroundColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
   /** Opacity (0-100) of the veil drawn over the background image. */
   backgroundOverlay: z.number().int().min(0).max(100).optional(),
   /** Opacity (0-100) of the background image itself. */
@@ -408,8 +475,7 @@ export const heroPropsSchema = layoutPropsSchema.extend({
 export type HeroProps = z.infer<typeof heroPropsSchema>;
 
 export const heroDefaults: HeroProps = {
-  imageUrl:
-    '',
+  imageUrl: '',
   fullHeight: true,
   scrollIndicator: true,
   backgroundOverlay: 80,
@@ -442,7 +508,14 @@ export const statsPropsSchema = layoutPropsSchema.extend({
 });
 export type StatsProps = z.infer<typeof statsPropsSchema>;
 
-export const statsDefaults: StatsProps = { overlap: 64, columnsMobile: 'grid-cols-1', columnsSm: 'sm:grid-cols-2', columnsLg: 'lg:grid-cols-4', gap: 'gap-6', paddingBottom: 64 };
+export const statsDefaults: StatsProps = {
+  overlap: 64,
+  columnsMobile: 'grid-cols-1',
+  columnsSm: 'sm:grid-cols-2',
+  columnsLg: 'lg:grid-cols-4',
+  gap: 'gap-6',
+  paddingBottom: 64,
+};
 
 export const partnerLogosPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
@@ -455,14 +528,27 @@ export const partnerLogosPropsSchema = layoutPropsSchema.extend({
 });
 export type PartnerLogosProps = z.infer<typeof partnerLogosPropsSchema>;
 
-export const partnerLogosDefaults: PartnerLogosProps = { logoGap: 'gap-12 md:gap-24', headerMarginBottom: 40, paddingTop: 96, paddingBottom: 96 };
+export const partnerLogosDefaults: PartnerLogosProps = {
+  logoGap: 'gap-12 md:gap-24',
+  headerMarginBottom: 40,
+  paddingTop: 96,
+  paddingBottom: 96,
+};
 
 export const featureTilesPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
   imageUrl: z.string().max(1000).optional(),
   imageAlt: z.string().max(300).optional(),
   /** Section background. */
-  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
+  sectionBg: z
+    .enum([
+      'bg-surface-container-lowest',
+      'bg-surface-container-low',
+      'bg-transparent',
+      'bg-card',
+      'bg-surface-sunken',
+    ])
+    .optional(),
   /** Gap between the image and content columns (px). */
   gap: z.number().int().min(0).max(320).optional(),
   /** Image frame border width (px). */
@@ -475,8 +561,7 @@ export const featureTilesPropsSchema = layoutPropsSchema.extend({
 export type FeatureTilesProps = z.infer<typeof featureTilesPropsSchema>;
 
 export const featureTilesDefaults: FeatureTilesProps = {
-  imageUrl:
-    '',
+  imageUrl: '',
   imageAlt: 'Precision machining detail',
   sectionBg: 'bg-surface-container-lowest',
   gap: 64,
@@ -499,14 +584,32 @@ export const academyGridPropsSchema = layoutPropsSchema.extend({
 });
 export type AcademyGridProps = z.infer<typeof academyGridPropsSchema>;
 
-export const academyGridDefaults: AcademyGridProps = { viewAllHref: '/courses', headerMarginBottom: 64, cardsColumns: 'md:grid-cols-3', cardsGap: 'gap-8', paddingTop: 64, paddingBottom: 64 };
+export const academyGridDefaults: AcademyGridProps = {
+  viewAllHref: '/courses',
+  headerMarginBottom: 64,
+  cardsColumns: 'md:grid-cols-3',
+  cardsGap: 'gap-8',
+  paddingTop: 64,
+  paddingBottom: 64,
+};
 
 export const ctaBannerPropsSchema = layoutPropsSchema.extend({
-  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
+  sectionBg: z
+    .enum([
+      'bg-surface-container-lowest',
+      'bg-surface-container-low',
+      'bg-transparent',
+      'bg-card',
+      'bg-surface-sunken',
+    ])
+    .optional(),
   id: z.string().optional(),
   imageUrl: z.string().max(1000).optional(),
   /** Overlay color (hex). */
-  overlayColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  overlayColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
   /** Overlay opacity (0-100). */
   overlayOpacity: z.number().int().min(0).max(100).optional(),
   /** Radial white veil over the banner. */
@@ -525,8 +628,7 @@ export const ctaBannerPropsSchema = layoutPropsSchema.extend({
 export type CtaBannerProps = z.infer<typeof ctaBannerPropsSchema>;
 
 export const ctaBannerDefaults: CtaBannerProps = {
-  imageUrl:
-    '',
+  imageUrl: '',
   overlayColor: '#C2410C',
   overlayOpacity: 90,
   radialVeil: true,
@@ -540,20 +642,44 @@ export const ctaBannerDefaults: CtaBannerProps = {
 };
 
 export const faqPropsSchema = layoutPropsSchema.extend({
-  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
+  sectionBg: z
+    .enum([
+      'bg-surface-container-lowest',
+      'bg-surface-container-low',
+      'bg-transparent',
+      'bg-card',
+      'bg-surface-sunken',
+    ])
+    .optional(),
   id: z.string().optional(),
   /** Inner column max width (px). */
   maxWidth: z.number().int().min(320).max(2560).optional(),
   /** Space below the header zone. */
   headerMarginBottom: z.number().int().min(0).max(320).optional(),
   /** Vertical gap between items. */
-  itemsGap: z.enum(['space-y-3', 'space-y-4', 'space-y-6', 'flex flex-col gap-3', 'flex flex-col gap-4', 'flex flex-col gap-6']).optional(),
+  itemsGap: z
+    .enum([
+      'space-y-3',
+      'space-y-4',
+      'space-y-6',
+      'flex flex-col gap-3',
+      'flex flex-col gap-4',
+      'flex flex-col gap-6',
+    ])
+    .optional(),
   /** Space above the footer zone. */
   footerMarginTop: z.number().int().min(0).max(320).optional(),
 });
 export type FaqProps = z.infer<typeof faqPropsSchema>;
 
-export const faqDefaults: FaqProps = { maxWidth: 1280, headerMarginBottom: 64, itemsGap: 'flex flex-col gap-4', footerMarginTop: 64, paddingTop: 96, paddingBottom: 96 };
+export const faqDefaults: FaqProps = {
+  maxWidth: 1280,
+  headerMarginBottom: 64,
+  itemsGap: 'flex flex-col gap-4',
+  footerMarginTop: 64,
+  paddingTop: 96,
+  paddingBottom: 96,
+};
 
 export const footerPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
@@ -568,8 +694,14 @@ export const footerPropsSchema = layoutPropsSchema.extend({
 });
 export type FooterProps = z.infer<typeof footerPropsSchema>;
 
-export const footerDefaults: FooterProps = { gridGap: 'gap-12', columnsSm: 'sm:grid-cols-2', columnsLg: 'md:grid-cols-4', bottomGap: 'gap-8', paddingTop: 96, paddingBottom: 48 };
-
+export const footerDefaults: FooterProps = {
+  gridGap: 'gap-12',
+  columnsSm: 'sm:grid-cols-2',
+  columnsLg: 'md:grid-cols-4',
+  bottomGap: 'gap-8',
+  paddingTop: 96,
+  paddingBottom: 48,
+};
 
 // ------------------------------------------------------------------
 // Machinist Pro landing sections (asymmetric hero console, program
@@ -607,13 +739,24 @@ export const heroConsolePropsSchema = layoutPropsSchema.extend({
   vibration: z.string().max(80).optional(),
   axes: z.array(simAxisSchema).max(8).optional(),
   /** Mode selector bar under the viewport (first entry renders active). */
-  modes: z.array(z.object({ label: z.string().max(60) })).max(6).optional(),
+  modes: z
+    .array(z.object({ label: z.string().max(60) }))
+    .max(6)
+    .optional(),
   controllerLabel: z.string().max(80).optional(),
   /** Floating metric badge overlapping the card corner. */
   floatIcon: iconKeySchema.optional(),
   floatLabel: z.string().max(80).optional(),
   floatValue: z.string().max(40).optional(),
   floatTag: z.string().max(40).optional(),
+  /**
+   * Which console renders on the right.
+   *
+   * `auto` uses the composable `console` slot when it has children and falls
+   * back to the legacy prop-driven console otherwise. `composed` always renders
+   * the slot (even when empty) and `legacy` always renders the built-in console.
+   */
+  consoleMode: z.enum(['auto', 'composed', 'legacy']).optional(),
 });
 export type HeroConsoleProps = z.infer<typeof heroConsolePropsSchema>;
 
@@ -645,6 +788,188 @@ export const heroConsoleDefaults: HeroConsoleProps = {
   floatLabel: 'Cycle Time Reduction',
   floatValue: '-34.8%',
   floatTag: 'Optimized',
+  consoleMode: 'auto',
+};
+
+// ------------------------------------------------------------------
+// Composable simulator console
+//
+// The original hero shipped the whole simulator as one block with a
+// dozen props. These smaller blocks make the console frame, viewport,
+// image, telemetry, axis drawer, mode bar and floating metric editable
+// as separate nodes. The legacy props above remain as a render fallback
+// for layouts that have not been migrated yet.
+// ------------------------------------------------------------------
+
+/** Corner placement used by console overlays. */
+export const consoleCornerSchema = z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
+export type ConsoleCorner = z.infer<typeof consoleCornerSchema>;
+
+/** The glass shell around the console: the outer container authors control. */
+export const consoleFramePropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  radius: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl', '3xl']).optional(),
+  padding: z.number().int().min(0).max(64).optional(),
+  glass: z.boolean().optional(),
+});
+export type ConsoleFrameProps = z.infer<typeof consoleFramePropsSchema>;
+export const consoleFrameDefaults: ConsoleFrameProps = { radius: '2xl', padding: 8, glass: true };
+
+/** Window chrome above the viewport. */
+export const consoleHeaderPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  fileName: z.string().max(120).optional(),
+  syncLabel: z.string().max(60).optional(),
+  showTrafficLights: z.boolean().optional(),
+});
+export type ConsoleHeaderProps = z.infer<typeof consoleHeaderPropsSchema>;
+export const consoleHeaderDefaults: ConsoleHeaderProps = {
+  fileName: 'SIM_CELL_5X.cnc',
+  syncLabel: 'SYNCED: 60 FPS',
+  showTrafficLights: true,
+};
+
+/** Viewport container. The image and overlays are separate child blocks. */
+export const consoleScreenPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  height: z.number().int().min(160).max(900).optional(),
+  mobileHeight: z.number().int().min(160).max(900).optional(),
+  blueprint: z.boolean().optional(),
+});
+export type ConsoleScreenProps = z.infer<typeof consoleScreenPropsSchema>;
+export const consoleScreenDefaults: ConsoleScreenProps = {
+  height: 440,
+  mobileHeight: 380,
+  blueprint: true,
+};
+
+/** The simulator image itself. */
+export const consoleImagePropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  src: z.string().max(1000).optional(),
+  alt: z.string().max(300).optional(),
+  objectFit: z.enum(['cover', 'contain']).optional(),
+  opacity: z.number().int().min(0).max(100).optional(),
+});
+export type ConsoleImageProps = z.infer<typeof consoleImagePropsSchema>;
+export const consoleImageDefaults: ConsoleImageProps = {
+  alt: '5-axis CNC machining simulation',
+  objectFit: 'cover',
+  opacity: 100,
+};
+
+/** Absolute container for the telemetry badges in a corner of the viewport. */
+export const consoleTelemetryStackPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  placement: consoleCornerSchema.optional(),
+  gap: z.enum(['sm', 'md', 'lg']).optional(),
+});
+export type ConsoleTelemetryStackProps = z.infer<typeof consoleTelemetryStackPropsSchema>;
+export const consoleTelemetryStackDefaults: ConsoleTelemetryStackProps = {
+  placement: 'top-left',
+  gap: 'md',
+};
+
+/** A single label / value / tag telemetry row. */
+export const consoleTelemetryPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  label: z.string().max(24).optional(),
+  value: z.string().max(60).optional(),
+  tag: z.string().max(60).optional(),
+  tagTone: z.enum(['success', 'muted']).optional(),
+});
+export type ConsoleTelemetryProps = z.infer<typeof consoleTelemetryPropsSchema>;
+export const consoleTelemetryDefaults: ConsoleTelemetryProps = {
+  label: 'FEED:',
+  value: '4,200 mm/min',
+  tag: 'G01 SMOOTH',
+  tagTone: 'success',
+};
+
+/** Safety / audit card. */
+export const consoleAuditPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  title: z.string().max(60).optional(),
+  value: z.string().max(80).optional(),
+  icon: iconKeySchema.optional(),
+  placement: consoleCornerSchema.optional(),
+});
+export type ConsoleAuditProps = z.infer<typeof consoleAuditPropsSchema>;
+export const consoleAuditDefaults: ConsoleAuditProps = {
+  title: 'Collision Audit',
+  value: '100% CLEAR (G00 SAFE)',
+  icon: 'verified_user',
+  placement: 'top-right',
+};
+
+/** Kinematic axis drawer. Axis readouts are separate child blocks. */
+export const consoleAxisDrawerPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  title: z.string().max(80).optional(),
+  vibration: z.string().max(80).optional(),
+  placement: z.enum(['bottom', 'top']).optional(),
+});
+export type ConsoleAxisDrawerProps = z.infer<typeof consoleAxisDrawerPropsSchema>;
+export const consoleAxisDrawerDefaults: ConsoleAxisDrawerProps = {
+  title: 'KINEMATIC AXES [RTCP ACTIVE]',
+  vibration: 'Vibration FFT: 0.18 mm/s²',
+  placement: 'bottom',
+};
+
+/** One axis readout inside the drawer. */
+export const consoleAxisPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  label: z.string().max(24).optional(),
+  value: z.string().max(40).optional(),
+  tone: z.enum(['normal', 'accent']).optional(),
+});
+export type ConsoleAxisProps = z.infer<typeof consoleAxisPropsSchema>;
+export const consoleAxisDefaults: ConsoleAxisProps = {
+  label: 'X',
+  value: '+142.308',
+  tone: 'normal',
+};
+
+/** Mode selector bar below the viewport. Mode buttons are separate children. */
+export const consoleModeBarPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  controllerLabel: z.string().max(80).optional(),
+});
+export type ConsoleModeBarProps = z.infer<typeof consoleModeBarPropsSchema>;
+export const consoleModeBarDefaults: ConsoleModeBarProps = {
+  controllerLabel: 'Siemens Sinumerik 840D SL',
+};
+
+/** One mode button. */
+export const consoleModePropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  label: z.string().max(60).optional(),
+  active: z.boolean().optional(),
+  hideOnMobile: z.boolean().optional(),
+});
+export type ConsoleModeProps = z.infer<typeof consoleModePropsSchema>;
+export const consoleModeDefaults: ConsoleModeProps = {
+  label: 'Iso View',
+  active: false,
+  hideOnMobile: false,
+};
+
+/** Floating metric badge overlapping the console corner. */
+export const consoleMetricPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  icon: iconKeySchema.optional(),
+  label: z.string().max(80).optional(),
+  value: z.string().max(40).optional(),
+  tag: z.string().max(40).optional(),
+  placement: consoleCornerSchema.optional(),
+});
+export type ConsoleMetricProps = z.infer<typeof consoleMetricPropsSchema>;
+export const consoleMetricDefaults: ConsoleMetricProps = {
+  icon: 'speed',
+  label: 'Cycle Time Reduction',
+  value: '-34.8%',
+  tag: 'Optimized',
+  placement: 'bottom-left',
 };
 
 /** A content-managed course card (image, level pill, tags, instructor row). */
@@ -697,7 +1022,13 @@ export const programCardsPropsSchema = layoutPropsSchema.extend({
 });
 export type ProgramCardsProps = z.infer<typeof programCardsPropsSchema>;
 
-export const programCardsDefaults: ProgramCardsProps = { headerMarginBottom: 64, columnsLg: 'lg:grid-cols-3', cardsGap: 'gap-8', paddingTop: 96, paddingBottom: 96 };
+export const programCardsDefaults: ProgramCardsProps = {
+  headerMarginBottom: 64,
+  columnsLg: 'lg:grid-cols-3',
+  cardsGap: 'gap-8',
+  paddingTop: 96,
+  paddingBottom: 96,
+};
 
 /** One G-code line in the digital-twin terminal. */
 export const twinCodeLineSchema = z.object({
@@ -716,7 +1047,15 @@ export type TwinReadout = z.infer<typeof twinReadoutSchema>;
 
 export const twinSectionPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
-  sectionBg: z.enum(['bg-surface-container-lowest', 'bg-surface-container-low', 'bg-transparent', 'bg-card', 'bg-surface-sunken']).optional(),
+  sectionBg: z
+    .enum([
+      'bg-surface-container-lowest',
+      'bg-surface-container-low',
+      'bg-transparent',
+      'bg-card',
+      'bg-surface-sunken',
+    ])
+    .optional(),
   /** Terminal header. */
   fileName: z.string().max(120).optional(),
   statusLabel: z.string().max(60).optional(),
@@ -766,7 +1105,13 @@ export const testimonialsPropsSchema = layoutPropsSchema.extend({
 });
 export type TestimonialsProps = z.infer<typeof testimonialsPropsSchema>;
 
-export const testimonialsDefaults: TestimonialsProps = { headerMarginBottom: 64, columnsMd: 'md:grid-cols-2', cardsGap: 'gap-8', paddingTop: 96, paddingBottom: 96 };
+export const testimonialsDefaults: TestimonialsProps = {
+  headerMarginBottom: 64,
+  columnsMd: 'md:grid-cols-2',
+  cardsGap: 'gap-8',
+  paddingTop: 96,
+  paddingBottom: 96,
+};
 
 /** Gradient email-capture band (mockup final CTA). */
 export const ctaSignupPropsSchema = layoutPropsSchema.extend({
@@ -845,7 +1190,12 @@ export const catalogHeroDefaults: CatalogHeroProps = {
     { label: 'Price', value: '$0' },
     { label: 'Format', value: 'Self-paced' },
   ],
-  primaryCta: { label: 'Browse pathways', href: '#pathways', variant: 'primary', icon: 'arrow_forward' },
+  primaryCta: {
+    label: 'Browse pathways',
+    href: '#pathways',
+    variant: 'primary',
+    icon: 'arrow_forward',
+  },
   secondaryCta: { label: 'How it works', href: '#how-it-works', variant: 'secondary' },
   borderBottom: true,
   paddingTop: 64,
@@ -918,9 +1268,24 @@ export const spotlightCardsDefaults: SpotlightCardsProps = {
   eyebrow: 'Signature paths',
   title: 'Three routes into the floor',
   items: [
-    { tag: 'START HERE', title: 'CNC Machining Fundamentals', meta: '36 Modules · Self-paced · Free', href: '/academy/general' },
-    { tag: 'ADVANCED', title: 'Aerospace Precision Manufacturing', meta: '48 Modules · AS9100-aligned · Free', href: '/academy/aerospace' },
-    { tag: 'INTERMEDIATE', title: 'Automation & Robotics', meta: '30 Modules · PLCs & robots · Free', href: '/academy/automation' },
+    {
+      tag: 'START HERE',
+      title: 'CNC Machining Fundamentals',
+      meta: '36 Modules · Self-paced · Free',
+      href: '/academy/general',
+    },
+    {
+      tag: 'ADVANCED',
+      title: 'Aerospace Precision Manufacturing',
+      meta: '48 Modules · AS9100-aligned · Free',
+      href: '/academy/aerospace',
+    },
+    {
+      tag: 'INTERMEDIATE',
+      title: 'Automation & Robotics',
+      meta: '30 Modules · PLCs & robots · Free',
+      href: '/academy/automation',
+    },
   ],
   columns: 'md:grid-cols-3',
   band: 'none',
@@ -1204,7 +1569,130 @@ const heroConsole: BlockDefinition = {
   category: 'Sections',
   schema: heroConsolePropsSchema,
   defaultProps: heroConsoleDefaults,
-  zones: { content: { allow: ['badge', 'heading', 'text', 'stack', 'button', 'avatar-stack'] } },
+  zones: {
+    content: { allow: ['badge', 'heading', 'text', 'stack', 'button', 'avatar-stack'] },
+    console: { allow: ['console-frame'], max: 1 },
+  },
+};
+
+const consoleFrame: BlockDefinition = {
+  type: 'console-frame',
+  label: 'Console Frame',
+  description: 'The glass container around the simulator console.',
+  category: 'Console',
+  schema: consoleFramePropsSchema,
+  defaultProps: consoleFrameDefaults,
+  zones: {
+    content: {
+      allow: ['console-header', 'console-screen', 'console-mode-bar', 'console-metric'],
+    },
+  },
+};
+
+const consoleHeader: BlockDefinition = {
+  type: 'console-header',
+  label: 'Console Header',
+  description: 'Window chrome with traffic lights, file name and sync state.',
+  category: 'Console',
+  schema: consoleHeaderPropsSchema,
+  defaultProps: consoleHeaderDefaults,
+};
+
+const consoleScreen: BlockDefinition = {
+  type: 'console-screen',
+  label: 'Console Screen',
+  description: 'Viewport container for the console image and telemetry overlays.',
+  category: 'Console',
+  schema: consoleScreenPropsSchema,
+  defaultProps: consoleScreenDefaults,
+  zones: {
+    media: { allow: ['console-image'], max: 1 },
+    overlays: { allow: ['console-telemetry-stack', 'console-audit', 'console-axis-drawer'] },
+  },
+};
+
+const consoleImage: BlockDefinition = {
+  type: 'console-image',
+  label: 'Console Image',
+  description: 'The machine image inside the console viewport.',
+  category: 'Console',
+  schema: consoleImagePropsSchema,
+  defaultProps: consoleImageDefaults,
+};
+
+const consoleTelemetryStack: BlockDefinition = {
+  type: 'console-telemetry-stack',
+  label: 'Telemetry Stack',
+  description: 'Corner stack that groups telemetry badges.',
+  category: 'Console',
+  schema: consoleTelemetryStackPropsSchema,
+  defaultProps: consoleTelemetryStackDefaults,
+  zones: { content: { allow: ['console-telemetry'], max: 4 } },
+};
+
+const consoleTelemetry: BlockDefinition = {
+  type: 'console-telemetry',
+  label: 'Telemetry Badge',
+  description: 'One label, value and tag readout.',
+  category: 'Console',
+  schema: consoleTelemetryPropsSchema,
+  defaultProps: consoleTelemetryDefaults,
+};
+
+const consoleAudit: BlockDefinition = {
+  type: 'console-audit',
+  label: 'Audit Status',
+  description: 'Safety or collision-audit status card.',
+  category: 'Console',
+  schema: consoleAuditPropsSchema,
+  defaultProps: consoleAuditDefaults,
+};
+
+const consoleAxisDrawer: BlockDefinition = {
+  type: 'console-axis-drawer',
+  label: 'Axis Drawer',
+  description: 'Bottom drawer that groups the kinematic axis readouts.',
+  category: 'Console',
+  schema: consoleAxisDrawerPropsSchema,
+  defaultProps: consoleAxisDrawerDefaults,
+  zones: { content: { allow: ['console-axis'], max: 8 } },
+};
+
+const consoleAxis: BlockDefinition = {
+  type: 'console-axis',
+  label: 'Axis Readout',
+  description: 'One axis label and value.',
+  category: 'Console',
+  schema: consoleAxisPropsSchema,
+  defaultProps: consoleAxisDefaults,
+};
+
+const consoleModeBar: BlockDefinition = {
+  type: 'console-mode-bar',
+  label: 'Mode Bar',
+  description: 'Bar below the viewport that holds the view-mode buttons.',
+  category: 'Console',
+  schema: consoleModeBarPropsSchema,
+  defaultProps: consoleModeBarDefaults,
+  zones: { content: { allow: ['console-mode'], max: 6 } },
+};
+
+const consoleMode: BlockDefinition = {
+  type: 'console-mode',
+  label: 'Mode Button',
+  description: 'One view-mode button.',
+  category: 'Console',
+  schema: consoleModePropsSchema,
+  defaultProps: consoleModeDefaults,
+};
+
+const consoleMetric: BlockDefinition = {
+  type: 'console-metric',
+  label: 'Floating Metric',
+  description: 'Metric badge that overlaps the console corner.',
+  category: 'Console',
+  schema: consoleMetricPropsSchema,
+  defaultProps: consoleMetricDefaults,
 };
 
 const programCards: BlockDefinition = {
@@ -1273,7 +1761,6 @@ const ctaSignup: BlockDefinition = {
   defaultProps: ctaSignupDefaults,
 };
 
-
 const stack: BlockDefinition = {
   type: 'stack',
   label: 'Stack',
@@ -1287,7 +1774,17 @@ const stack: BlockDefinition = {
 export const sectionPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
   /** Section background treatment. */
-  bg: z.enum(['transparent', 'white', 'muted', 'secondary', 'primary', 'gradient-primary', 'gradient-muted']).optional(),
+  bg: z
+    .enum([
+      'transparent',
+      'white',
+      'muted',
+      'secondary',
+      'primary',
+      'gradient-primary',
+      'gradient-muted',
+    ])
+    .optional(),
   /** Visibility toggle (renders the section hidden). */
   hidden: z.boolean().optional(),
   /**
@@ -1482,6 +1979,18 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   nav,
   hero,
   'hero-console': heroConsole,
+  'console-frame': consoleFrame,
+  'console-header': consoleHeader,
+  'console-screen': consoleScreen,
+  'console-image': consoleImage,
+  'console-telemetry-stack': consoleTelemetryStack,
+  'console-telemetry': consoleTelemetry,
+  'console-audit': consoleAudit,
+  'console-axis-drawer': consoleAxisDrawer,
+  'console-axis': consoleAxis,
+  'console-mode-bar': consoleModeBar,
+  'console-mode': consoleMode,
+  'console-metric': consoleMetric,
   stats,
   'stat-item': statItem,
   'partner-logos': partnerLogos,
@@ -1524,7 +2033,14 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
 
 export const BLOCK_TYPES = Object.keys(BLOCK_REGISTRY) as readonly string[];
 
-export const BLOCK_CATEGORIES = ['Chrome', 'Sections', 'Items', 'Layout', 'Content'] as const;
+export const BLOCK_CATEGORIES = [
+  'Chrome',
+  'Sections',
+  'Items',
+  'Layout',
+  'Content',
+  'Console',
+] as const;
 
 export function getBlockDefinition(type: string): BlockDefinition | undefined {
   return (BLOCK_REGISTRY as Record<string, BlockDefinition>)[type];
@@ -1550,7 +2066,10 @@ export function slotFieldsFor(type: string): Record<string, { type: 'slot'; allo
 }
 
 /** Lookup helper used by the renderer to fill in default props for partial data. */
-export function mergeBlockProps(type: string, props: Record<string, unknown> | undefined): Record<string, unknown> {
+export function mergeBlockProps(
+  type: string,
+  props: Record<string, unknown> | undefined,
+): Record<string, unknown> {
   const def = getBlockDefinition(type);
   return { ...(def?.defaultProps ?? {}), ...(props ?? {}) };
 }

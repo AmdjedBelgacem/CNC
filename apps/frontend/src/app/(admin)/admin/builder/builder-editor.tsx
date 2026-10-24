@@ -5,6 +5,8 @@ import type { Content, Data } from '@measured/puck';
 import { useTranslations } from 'next-intl';
 import { getBlockDefinition } from '@titan/shared';
 import {
+  consoleNodesFromProps,
+  expandHeroConsoleLayout,
   findNodeById,
   getSlotChildren,
   isNodeArray,
@@ -483,14 +485,22 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       }[] = [];
       for (const node of nodes) {
         const def = node.id ? getBlockDefinition(node.type) : undefined;
-        if (!node.isNew || !def?.seed || !def.zones) continue;
+        if (!node.isNew || !def?.zones) continue;
         const live = findNodeById(layout, node.id);
         const filled =
           live != null &&
           Object.keys(def.zones).some(
             (slot) => getSlotChildren(live, slot, layout.zones).length > 0,
           );
-        if (!filled) missing.push(node);
+        // A freshly inserted hero-console has no seed of its own (the shared
+        // registry cannot import the seed module without a cycle), so build its
+        // console subtree here unless the author explicitly chose legacy.
+        const needsConsoleSeed =
+          node.type === 'hero-console' &&
+          live != null &&
+          live.props?.consoleMode !== 'legacy' &&
+          getSlotChildren(live, 'console', layout.zones).length === 0;
+        if (!filled || needsConsoleSeed) missing.push(node);
       }
       if (missing.length === 0) return next;
       const missingIds = new Set(missing.map((node) => node.id));
@@ -501,6 +511,19 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           const seedSlots = def?.seed?.().node.props ?? {};
           const nextProps: Record<string, unknown> = { ...(item.props ?? {}) };
           let changed = false;
+          if (
+            itemId &&
+            missingIds.has(itemId) &&
+            item.type === 'hero-console' &&
+            nextProps.consoleMode !== 'legacy'
+          ) {
+            const existingConsole = nextProps.console;
+            if (!isNodeArray(existingConsole) || existingConsole.length === 0) {
+              nextProps.console = consoleNodesFromProps(nextProps, itemId);
+              nextProps.consoleMode = 'composed';
+              changed = true;
+            }
+          }
           for (const slot of Object.keys(def?.zones ?? {})) {
             const seedKids = seedSlots[slot];
             if (!isNodeArray(seedKids) || seedKids.length === 0) continue;
@@ -567,7 +590,9 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         // Legacy DropZone-era rows (flat `zones` map) are migrated to inline
         // slot children on load, so the editor store — and the next save —
         // are always in the canonical slot shape.
-        const migrated = migrateLegacyLayout(layout as unknown as PageLayout) as unknown as Data;
+        const migrated = expandHeroConsoleLayout(
+          migrateLegacyLayout(layout as unknown as PageLayout),
+        ) as unknown as Data;
         const loadedIds = new Set<string>();
         walkLayoutNodes(migrated as unknown as PageLayout, (node) => {
           const id = node.props?.id;
@@ -879,101 +904,101 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       onPersist={persistArabic}
     >
       <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-background sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
-      {' '}
-      <style>{HOST_CSS}</style>
-      <style>{CANVAS_CSS}</style>{' '}
-      {!data ? (
-        <div className="flex h-full items-center justify-center gap-3 text-muted-foreground">
-          {' '}
-          {loading && <Loader2 className="size-5 animate-spin" />}
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-              {tb('editor.loadingPage', { default: 'Loading page…' })}
-            </span>
-          ) : (
-            <PageDataView />
-          )}
-        </div>
-      ) : (
-        <div className="flex h-full min-h-0 flex-col">
-          {' '}
-          <div className="min-h-0 flex-1">
+        {' '}
+        <style>{HOST_CSS}</style>
+        <style>{CANVAS_CSS}</style>{' '}
+        {!data ? (
+          <div className="flex h-full items-center justify-center gap-3 text-muted-foreground">
             {' '}
-            <Puck
-              // A page switch remounts the canvas with the new page as Puck's
-              // initial `data`, instead of hoping an imperative setData landed.
-              key={canvasPage ?? 'empty'}
-              config={puckConfig}
-              data={data}
-              onChange={handleChange}
-              viewports={PUCK_VIEWPORTS}
-              iframe={PUCK_IFRAME}
-              /**
-               * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
-                PUCK_UI
-              }
-              overrides={overrides}
-            />{' '}
-          </div>{' '}
-          {page && data && (
-            // A page's Arabic copy is a separate layout, so it lives outside the canvas rather
-            // than as an inspector tab that would be lost the moment the canvas is remounted.
-            // Anchored bottom-end and grown upward by its own content, this panel had no height
-            // bound: on a long page the coverage list plus the save row pushed it past the top of
-            // the viewport, and the review dialog on top of that landed off-screen entirely.
-            // `max-h` + scroll keeps every control reachable regardless of how many fields are
-            // still untranslated.
-            <div className="absolute bottom-4 end-4 z-30 max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-lg bg-background/95 p-1 backdrop-blur-sm">
-              <button
-                type="button"
-                onClick={() => setShowTranslation((open) => !open)}
-                aria-expanded={showTranslation}
-                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium shadow-lg"
-              >
-                <Languages className="size-3.5" aria-hidden="true" />
-                {tb('editor.translatePage', { default: 'Arabic version' })}
-              </button>
-              {showTranslation && (
-                <div className="mt-2">
-                  <PageTranslationPanel
-                    slug={page.slug}
-                    layout={(data as PageLayout | null) ?? page.layout}
-                    existing={page.translations?.ar ?? null}
-                    onSaved={(translation: PageTranslation) => {
-                      // Update local state instead of re-fetching: a full load would
-                      // replace the canvas with the last saved English layout and
-                      // silently discard unsaved edits.
-                      setPage((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              translations: { ...(prev.translations ?? {}), ar: translation },
-                            }
-                          : prev,
-                      );
-                      if (translation.layout) setArabicLayout(translation.layout);
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      {showVersions && (
-        <VersionDrawer
-          versions={versions}
-          saving={saving}
-          onClose={() => {
-            setShowVersions(false);
-            setVersionsOpen(false);
-          }}
-          onRevert={(version) => void revert(version)}
-        />
-      )}
-      <BuilderDialogs /> <ToastViewport />{' '}
-    </div>
+            {loading && <Loader2 className="size-5 animate-spin" />}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+                {tb('editor.loadingPage', { default: 'Loading page…' })}
+              </span>
+            ) : (
+              <PageDataView />
+            )}
+          </div>
+        ) : (
+          <div className="flex h-full min-h-0 flex-col">
+            {' '}
+            <div className="min-h-0 flex-1">
+              {' '}
+              <Puck
+                // A page switch remounts the canvas with the new page as Puck's
+                // initial `data`, instead of hoping an imperative setData landed.
+                key={canvasPage ?? 'empty'}
+                config={puckConfig}
+                data={data}
+                onChange={handleChange}
+                viewports={PUCK_VIEWPORTS}
+                iframe={PUCK_IFRAME}
+                /**
+                 * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
+                  PUCK_UI
+                }
+                overrides={overrides}
+              />{' '}
+            </div>{' '}
+            {page && data && (
+              // A page's Arabic copy is a separate layout, so it lives outside the canvas rather
+              // than as an inspector tab that would be lost the moment the canvas is remounted.
+              // Anchored bottom-end and grown upward by its own content, this panel had no height
+              // bound: on a long page the coverage list plus the save row pushed it past the top of
+              // the viewport, and the review dialog on top of that landed off-screen entirely.
+              // `max-h` + scroll keeps every control reachable regardless of how many fields are
+              // still untranslated.
+              <div className="absolute bottom-4 end-4 z-30 max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-lg bg-background/95 p-1 backdrop-blur-sm">
+                <button
+                  type="button"
+                  onClick={() => setShowTranslation((open) => !open)}
+                  aria-expanded={showTranslation}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium shadow-lg"
+                >
+                  <Languages className="size-3.5" aria-hidden="true" />
+                  {tb('editor.translatePage', { default: 'Arabic version' })}
+                </button>
+                {showTranslation && (
+                  <div className="mt-2">
+                    <PageTranslationPanel
+                      slug={page.slug}
+                      layout={(data as PageLayout | null) ?? page.layout}
+                      existing={page.translations?.ar ?? null}
+                      onSaved={(translation: PageTranslation) => {
+                        // Update local state instead of re-fetching: a full load would
+                        // replace the canvas with the last saved English layout and
+                        // silently discard unsaved edits.
+                        setPage((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                translations: { ...(prev.translations ?? {}), ar: translation },
+                              }
+                            : prev,
+                        );
+                        if (translation.layout) setArabicLayout(translation.layout);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {showVersions && (
+          <VersionDrawer
+            versions={versions}
+            saving={saving}
+            onClose={() => {
+              setShowVersions(false);
+              setVersionsOpen(false);
+            }}
+            onRevert={(version) => void revert(version)}
+          />
+        )}
+        <BuilderDialogs /> <ToastViewport />{' '}
+      </div>
     </BuilderTranslationProvider>
   );
 }

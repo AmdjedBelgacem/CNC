@@ -1,11 +1,14 @@
 'use client';
 import { createElement } from 'react';
-import type { ComponentType } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import type { ComponentConfig, Config } from '@measured/puck';
 import {
   ICON_KEYS,
+  findNodeById,
   getBlockDefinition,
+  getSlotChildren,
   slotFieldsFor,
+  type PageLayout,
   academyCardDefaults,
   academyGridDefaults,
   avatarStackDefaults,
@@ -14,6 +17,18 @@ import {
   cardDefaults,
   cardGridDefaults,
   catalogHeroDefaults,
+  consoleFrameDefaults,
+  consoleHeaderDefaults,
+  consoleScreenDefaults,
+  consoleImageDefaults,
+  consoleTelemetryStackDefaults,
+  consoleTelemetryDefaults,
+  consoleAuditDefaults,
+  consoleAxisDrawerDefaults,
+  consoleAxisDefaults,
+  consoleModeBarDefaults,
+  consoleModeDefaults,
+  consoleMetricDefaults,
   ctaBannerDefaults,
   ctaSignupDefaults,
   closingCtaDefaults,
@@ -54,7 +69,7 @@ const imageField = (label: string) => ({
   type: 'custom' as const,
   label,
   render: ({ value, onChange }: { value?: string; onChange: (value: string) => void }) =>
-    (createElement(ImageUploadControl, { value: value ?? '', onChange })),
+    createElement(ImageUploadControl, { value: value ?? '', onChange }),
 });
 const textField = (label: string, placeholder?: string) => ({
   type: 'text' as const,
@@ -91,6 +106,13 @@ const alignField = selectField('Alignment', [
   { label: 'Center', value: 'center' },
   { label: 'Right', value: 'right' },
 ]);
+const cornerField = (label = 'Placement') =>
+  selectField(label, [
+    { label: 'Top left', value: 'top-left' },
+    { label: 'Top right', value: 'top-right' },
+    { label: 'Bottom left', value: 'bottom-left' },
+    { label: 'Bottom right', value: 'bottom-right' },
+  ]);
 const trackingField = selectField('Letter spacing', [
   { label: 'None', value: 'none' },
   { label: '0.025em (tracking-wide)', value: '0.025em' },
@@ -130,9 +152,17 @@ const render = (type: string) => (editorProps: any) => {
   // don't render in the canvas either.
   if ((props as Record<string, unknown>)?.visible === false) return <></>;
   const definition = getBlockDefinition(type);
-  const renderSlot = (slotName: string) => {
+  const renderSlot = (
+    slotName: string,
+    options?: { className?: string; style?: CSSProperties },
+  ) => {
     const Slot = (editorProps as Record<string, unknown>)[slotName] as
-      | ComponentType<{ allow?: string[]; minEmptyHeight?: number }>
+      | ComponentType<{
+          allow?: string[];
+          minEmptyHeight?: number;
+          className?: string;
+          style?: CSSProperties;
+        }>
       | undefined;
     if (!Slot || typeof Slot !== 'function') return null;
     // Enforce the registry `allow` list and keep empty slots compact so they
@@ -141,9 +171,17 @@ const render = (type: string) => (editorProps: any) => {
     return createElement(Slot, {
       ...(allow ? { allow } : {}),
       minEmptyHeight: 48,
+      className: options?.className,
+      style: options?.style,
     });
   };
-  return <C props={props} puck={{ ...puck, renderSlot }} />;
+  const getSlotData = (slotName: string) => {
+    const data = (puck as { appState?: { data?: PageLayout } } | undefined)?.appState?.data;
+    if (!data) return [];
+    const node = findNodeById(data, props.id as string | undefined);
+    return node ? getSlotChildren(node, slotName, data.zones) : [];
+  };
+  return <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />;
 };
 const def = (
   type: string,
@@ -634,46 +672,177 @@ const section: ComponentConfig = def(
   {},
   { className: textField('Extra classes', 'e.g. bg-secondary/10 border-b') },
 ); // ---------------------------------------------------------------- config
-const heroConsole: ComponentConfig = def('hero-console', 'Hero + Sim Console', heroConsoleDefaults, {
-  imageUrl: imageField('Image'),
-  imageAlt: textField('Image alt text'),
-  fileName: textField('Console file name'),
-  syncLabel: textField('Sync pill label'),
-  feedLabel: textField('Feed label'),
-  feedValue: textField('Feed value'),
-  feedTag: textField('Feed tag'),
-  spindleLabel: textField('Spindle label'),
-  spindleValue: textField('Spindle value'),
-  spindleTag: textField('Spindle tag'),
-  auditTitle: textField('Audit title'),
-  auditValue: textField('Audit value'),
-  axesTitle: textField('Axes drawer title'),
-  vibration: textField('Vibration note'),
-  axes: {
-    type: 'array',
-    label: 'Axis readouts',
-    arrayFields: {
-      label: { type: 'text', label: 'Axis' },
-      value: { type: 'text', label: 'Value' },
-      tone: selectField('Tone', [
-        { label: 'Normal', value: 'normal' },
-        { label: 'Accent', value: 'accent' },
-      ]),
+const heroConsole: ComponentConfig = def(
+  'hero-console',
+  'Hero + Sim Console',
+  heroConsoleDefaults,
+  {
+    imageUrl: imageField('Image'),
+    imageAlt: textField('Image alt text'),
+    fileName: textField('Console file name'),
+    syncLabel: textField('Sync pill label'),
+    feedLabel: textField('Feed label'),
+    feedValue: textField('Feed value'),
+    feedTag: textField('Feed tag'),
+    spindleLabel: textField('Spindle label'),
+    spindleValue: textField('Spindle value'),
+    spindleTag: textField('Spindle tag'),
+    auditTitle: textField('Audit title'),
+    auditValue: textField('Audit value'),
+    axesTitle: textField('Axes drawer title'),
+    vibration: textField('Vibration note'),
+    axes: {
+      type: 'array',
+      label: 'Axis readouts',
+      arrayFields: {
+        label: { type: 'text', label: 'Axis' },
+        value: { type: 'text', label: 'Value' },
+        tone: selectField('Tone', [
+          { label: 'Normal', value: 'normal' },
+          { label: 'Accent', value: 'accent' },
+        ]),
+      },
+      getItemSummary: (item: { label?: string }) => item.label || 'Axis',
     },
-    getItemSummary: (item: { label?: string }) => item.label || 'Axis',
+    modes: {
+      type: 'array',
+      label: 'Mode buttons',
+      arrayFields: { label: { type: 'text', label: 'Label' } },
+      getItemSummary: (item: { label?: string }) => item.label || 'Mode',
+    },
+    controllerLabel: textField('Controller label'),
+    floatIcon: iconField,
+    floatLabel: textField('Floating badge label'),
+    floatValue: textField('Floating badge value'),
+    floatTag: textField('Floating badge tag'),
+    consoleMode: selectField('Console rendering', [
+      { label: 'Auto (components when present)', value: 'auto' },
+      { label: 'Component tree', value: 'composed' },
+      { label: 'Legacy built-in console', value: 'legacy' },
+    ]),
   },
-  modes: {
-    type: 'array',
-    label: 'Mode buttons',
-    arrayFields: { label: { type: 'text', label: 'Label' } },
-    getItemSummary: (item: { label?: string }) => item.label || 'Mode',
-  },
-  controllerLabel: textField('Controller label'),
-  floatIcon: iconField,
-  floatLabel: textField('Floating badge label'),
-  floatValue: textField('Floating badge value'),
-  floatTag: textField('Floating badge tag'),
+);
+const consoleFrame: ComponentConfig = def('console-frame', 'Console Frame', consoleFrameDefaults, {
+  radius: selectField('Corner radius', [
+    { label: 'None', value: 'none' },
+    { label: 'Small', value: 'sm' },
+    { label: 'Medium', value: 'md' },
+    { label: 'Large', value: 'lg' },
+    { label: 'Extra large', value: 'xl' },
+    { label: '2XL', value: '2xl' },
+    { label: '3XL', value: '3xl' },
+  ]),
+  padding: numberField('Inner padding (px)', 0, 64),
+  glass: booleanSelect('Glass treatment'),
 });
+const consoleHeader: ComponentConfig = def(
+  'console-header',
+  'Console Header',
+  consoleHeaderDefaults,
+  {
+    fileName: textField('File name'),
+    syncLabel: textField('Sync label'),
+    showTrafficLights: booleanSelect('Traffic lights'),
+  },
+);
+const consoleScreen: ComponentConfig = def(
+  'console-screen',
+  'Console Screen',
+  consoleScreenDefaults,
+  {
+    height: numberField('Desktop height (px)', 160, 900),
+    mobileHeight: numberField('Mobile height (px)', 160, 900),
+    blueprint: booleanSelect('Blueprint backdrop'),
+  },
+);
+const consoleImage: ComponentConfig = def('console-image', 'Console Image', consoleImageDefaults, {
+  src: imageField('Image'),
+  alt: textField('Image alt text'),
+  objectFit: selectField('Image fit', [
+    { label: 'Cover', value: 'cover' },
+    { label: 'Contain', value: 'contain' },
+  ]),
+  opacity: numberField('Opacity (%)', 0, 100),
+});
+const consoleTelemetryStack: ComponentConfig = def(
+  'console-telemetry-stack',
+  'Telemetry Stack',
+  consoleTelemetryStackDefaults,
+  {
+    placement: cornerField(),
+    gap: selectField('Gap', [
+      { label: '6px', value: 'sm' },
+      { label: '8px', value: 'md' },
+      { label: '12px', value: 'lg' },
+    ]),
+  },
+);
+const consoleTelemetry: ComponentConfig = def(
+  'console-telemetry',
+  'Telemetry Badge',
+  consoleTelemetryDefaults,
+  {
+    label: textField('Label'),
+    value: textField('Value'),
+    tag: textField('Tag'),
+    tagTone: selectField('Tag style', [
+      { label: 'Success badge', value: 'success' },
+      { label: 'Muted text', value: 'muted' },
+    ]),
+  },
+);
+const consoleAudit: ComponentConfig = def('console-audit', 'Audit Status', consoleAuditDefaults, {
+  title: textField('Title'),
+  value: textField('Value'),
+  icon: iconField,
+  placement: cornerField(),
+});
+const consoleAxisDrawer: ComponentConfig = def(
+  'console-axis-drawer',
+  'Axis Drawer',
+  consoleAxisDrawerDefaults,
+  {
+    title: textField('Drawer title'),
+    vibration: textField('Vibration note'),
+    placement: selectField('Placement', [
+      { label: 'Bottom', value: 'bottom' },
+      { label: 'Top', value: 'top' },
+    ]),
+  },
+);
+const consoleAxis: ComponentConfig = def('console-axis', 'Axis Readout', consoleAxisDefaults, {
+  label: textField('Axis label'),
+  value: textField('Value'),
+  tone: selectField('Tone', [
+    { label: 'Normal', value: 'normal' },
+    { label: 'Accent', value: 'accent' },
+  ]),
+});
+const consoleModeBar: ComponentConfig = def(
+  'console-mode-bar',
+  'Mode Bar',
+  consoleModeBarDefaults,
+  {
+    controllerLabel: textField('Controller label'),
+  },
+);
+const consoleMode: ComponentConfig = def('console-mode', 'Mode Button', consoleModeDefaults, {
+  label: textField('Label'),
+  active: booleanSelect('Active'),
+  hideOnMobile: booleanSelect('Hide on mobile'),
+});
+const consoleMetric: ComponentConfig = def(
+  'console-metric',
+  'Floating Metric',
+  consoleMetricDefaults,
+  {
+    icon: iconField,
+    label: textField('Label'),
+    value: textField('Value'),
+    tag: textField('Tag'),
+    placement: cornerField(),
+  },
+);
 const programCards: ComponentConfig = def('program-cards', 'Program Cards', programCardsDefaults, {
   headerMarginBottom: numberField('Header bottom margin (px)', 0, 320),
   columnsLg: selectField('Columns (lg+)', [
@@ -918,6 +1087,18 @@ export const puckConfig: Config = {
     nav,
     hero,
     'hero-console': heroConsole,
+    'console-frame': consoleFrame,
+    'console-header': consoleHeader,
+    'console-screen': consoleScreen,
+    'console-image': consoleImage,
+    'console-telemetry-stack': consoleTelemetryStack,
+    'console-telemetry': consoleTelemetry,
+    'console-audit': consoleAudit,
+    'console-axis-drawer': consoleAxisDrawer,
+    'console-axis': consoleAxis,
+    'console-mode-bar': consoleModeBar,
+    'console-mode': consoleMode,
+    'console-metric': consoleMetric,
     stats,
     'stat-item': statItem,
     'partner-logos': partnerLogos,
@@ -1005,6 +1186,22 @@ export const puckConfig: Config = {
         'badge',
         'avatar-stack',
         'progress-card',
+      ],
+    },
+    Console: {
+      components: [
+        'console-frame',
+        'console-header',
+        'console-screen',
+        'console-image',
+        'console-telemetry-stack',
+        'console-telemetry',
+        'console-audit',
+        'console-axis-drawer',
+        'console-axis',
+        'console-mode-bar',
+        'console-mode',
+        'console-metric',
       ],
     },
   },

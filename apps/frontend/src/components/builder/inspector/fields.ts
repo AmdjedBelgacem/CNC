@@ -8,6 +8,18 @@ import type {
   CardGridProps,
   CatalogHeroProps,
   ClosingCtaProps,
+  ConsoleAxisDrawerProps,
+  ConsoleAxisProps,
+  ConsoleAuditProps,
+  ConsoleFrameProps,
+  ConsoleHeaderProps,
+  ConsoleImageProps,
+  ConsoleMetricProps,
+  ConsoleModeBarProps,
+  ConsoleModeProps,
+  ConsoleScreenProps,
+  ConsoleTelemetryProps,
+  ConsoleTelemetryStackProps,
   CtaSignupProps,
   CtaBannerProps,
   FaqItemProps,
@@ -1119,7 +1131,12 @@ export const sectionInspector = defineInspector<SectionProps>().groups([
         control: 'text',
         hint: 'e.g. linear-gradient(135deg, #0ea5e9, #6366f1)',
       },
-      { key: 'bgImage', label: 'Background image', control: 'image-upload', hint: 'Upload-only (no manual URL)' },
+      {
+        key: 'bgImage',
+        label: 'Background image',
+        control: 'image-upload',
+        hint: 'Upload-only (no manual URL)',
+      },
       { key: 'glass', label: 'Frosted glass', control: 'toggle' },
     ],
   },
@@ -1640,9 +1657,7 @@ export const ctaBannerInspector = defineInspector<CtaBannerProps>().groups([
     title: 'Content',
     titleKey: 'content',
     icon: ImageIcon,
-    fields: [
-      { key: 'imageUrl', label: 'Image', control: 'image-upload' },
-    ],
+    fields: [{ key: 'imageUrl', label: 'Image', control: 'image-upload' }],
   },
   {
     id: 'style',
@@ -2028,11 +2043,326 @@ export const heroConsoleInspector = defineInspector<HeroConsoleProps>().groups([
     title: 'Media',
     titleKey: 'media',
     icon: ImageIcon,
+    fields: [{ key: 'imageUrl', label: 'Background image', control: 'image-upload' }],
+  },
+  {
+    id: 'console',
+    title: 'Console',
+    titleKey: 'content',
+    icon: Layers,
     fields: [
-      { key: 'imageUrl', label: 'Background image', control: 'image-upload' },
+      {
+        key: 'consoleMode',
+        label: 'Console rendering',
+        control: 'select',
+        options: [
+          { label: 'Auto (components when present)', value: 'auto' },
+          { label: 'Component tree', value: 'composed' },
+          { label: 'Legacy built-in console', value: 'legacy' },
+        ],
+      },
     ],
   },
   spacingGroup(),
+  advancedGroup(),
+]);
+
+export const consoleFrameInspector = defineInspector<ConsoleFrameProps>().groups([
+  {
+    id: 'style',
+    title: 'Frame',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      {
+        key: 'radius',
+        label: 'Corner radius',
+        control: 'select',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Small', value: 'sm' },
+          { label: 'Medium', value: 'md' },
+          { label: 'Large', value: 'lg' },
+          { label: 'Extra large', value: 'xl' },
+          { label: '2XL', value: '2xl' },
+          { label: '3XL', value: '3xl' },
+        ],
+      },
+      { key: 'padding', label: 'Inner padding', control: 'slider', min: 0, max: 64, step: 2 },
+      { key: 'glass', label: 'Glass treatment', control: 'toggle' },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleHeaderInspector = defineInspector<ConsoleHeaderProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'fileName', label: 'File name', control: 'text' },
+      { key: 'syncLabel', label: 'Sync label', control: 'text' },
+      { key: 'showTrafficLights', label: 'Traffic lights', control: 'toggle' },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleScreenInspector = defineInspector<ConsoleScreenProps>().groups([
+  {
+    id: 'style',
+    title: 'Viewport',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      { key: 'height', label: 'Desktop height', control: 'slider', min: 160, max: 900, step: 10 },
+      {
+        key: 'mobileHeight',
+        label: 'Mobile height',
+        control: 'slider',
+        min: 160,
+        max: 900,
+        step: 10,
+      },
+      { key: 'blueprint', label: 'Blueprint backdrop', control: 'toggle' },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const consoleImageInspector = defineInspector<ConsoleImageProps>().groups([
+  {
+    id: 'media',
+    title: 'Media',
+    titleKey: 'media',
+    icon: ImageIcon,
+    fields: [
+      { key: 'src', label: 'Console image', control: 'image-upload' },
+      { key: 'alt', label: 'Image alt text', control: 'text' },
+      {
+        key: 'objectFit',
+        label: 'Image fit',
+        control: 'select',
+        options: [
+          { label: 'Cover', value: 'cover' },
+          { label: 'Contain', value: 'contain' },
+        ],
+      },
+      { key: 'opacity', label: 'Opacity', control: 'slider', min: 0, max: 100, step: 1 },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleTelemetryStackInspector = defineInspector<ConsoleTelemetryStackProps>().groups([
+  {
+    id: 'style',
+    title: 'Stack',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      {
+        key: 'placement',
+        label: 'Placement',
+        control: 'select',
+        options: [
+          { label: 'Top left', value: 'top-left' },
+          { label: 'Top right', value: 'top-right' },
+          { label: 'Bottom left', value: 'bottom-left' },
+          { label: 'Bottom right', value: 'bottom-right' },
+        ],
+      },
+      {
+        key: 'gap',
+        label: 'Gap',
+        control: 'select',
+        options: [
+          { label: '6px', value: 'sm' },
+          { label: '8px', value: 'md' },
+          { label: '12px', value: 'lg' },
+        ],
+      },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleTelemetryInspector = defineInspector<ConsoleTelemetryProps>().groups([
+  {
+    id: 'content',
+    title: 'Readout',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'label', label: 'Label', control: 'text' },
+      { key: 'value', label: 'Value', control: 'text' },
+      { key: 'tag', label: 'Tag', control: 'text' },
+      {
+        key: 'tagTone',
+        label: 'Tag style',
+        control: 'select',
+        options: [
+          { label: 'Success badge', value: 'success' },
+          { label: 'Muted text', value: 'muted' },
+        ],
+      },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleAuditInspector = defineInspector<ConsoleAuditProps>().groups([
+  {
+    id: 'content',
+    title: 'Audit',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'value', label: 'Value', control: 'text' },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      { key: 'icon', label: 'Icon', control: 'icon' },
+      {
+        key: 'placement',
+        label: 'Placement',
+        control: 'select',
+        options: [
+          { label: 'Top left', value: 'top-left' },
+          { label: 'Top right', value: 'top-right' },
+          { label: 'Bottom left', value: 'bottom-left' },
+          { label: 'Bottom right', value: 'bottom-right' },
+        ],
+      },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleAxisDrawerInspector = defineInspector<ConsoleAxisDrawerProps>().groups([
+  {
+    id: 'content',
+    title: 'Drawer',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'vibration', label: 'Vibration note', control: 'text' },
+      {
+        key: 'placement',
+        label: 'Placement',
+        control: 'select',
+        options: [
+          { label: 'Bottom', value: 'bottom' },
+          { label: 'Top', value: 'top' },
+        ],
+      },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const consoleAxisInspector = defineInspector<ConsoleAxisProps>().groups([
+  {
+    id: 'content',
+    title: 'Axis',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'label', label: 'Axis label', control: 'text' },
+      { key: 'value', label: 'Value', control: 'text' },
+      {
+        key: 'tone',
+        label: 'Tone',
+        control: 'select',
+        options: [
+          { label: 'Normal', value: 'normal' },
+          { label: 'Accent', value: 'accent' },
+        ],
+      },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleModeBarInspector = defineInspector<ConsoleModeBarProps>().groups([
+  {
+    id: 'content',
+    title: 'Mode bar',
+    titleKey: 'content',
+    icon: Type,
+    fields: [{ key: 'controllerLabel', label: 'Controller label', control: 'text' }],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleModeInspector = defineInspector<ConsoleModeProps>().groups([
+  {
+    id: 'content',
+    title: 'Mode button',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'label', label: 'Label', control: 'text' },
+      { key: 'active', label: 'Active', control: 'toggle' },
+      { key: 'hideOnMobile', label: 'Hide on mobile', control: 'toggle' },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const consoleMetricInspector = defineInspector<ConsoleMetricProps>().groups([
+  {
+    id: 'content',
+    title: 'Metric',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'label', label: 'Label', control: 'text' },
+      { key: 'value', label: 'Value', control: 'text' },
+      { key: 'tag', label: 'Tag', control: 'text' },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [
+      { key: 'icon', label: 'Icon', control: 'icon' },
+      {
+        key: 'placement',
+        label: 'Placement',
+        control: 'select',
+        options: [
+          { label: 'Top left', value: 'top-left' },
+          { label: 'Top right', value: 'top-right' },
+          { label: 'Bottom left', value: 'bottom-left' },
+          { label: 'Bottom right', value: 'bottom-right' },
+        ],
+      },
+    ],
+  },
+  layoutOnlyGroup(),
   advancedGroup(),
 ]);
 
@@ -2316,6 +2646,24 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   'card-grid': { label: 'Card Grid', groups: cardGridInspector.groups },
   'cta-signup': { label: 'CTA Signup Band', groups: ctaSignupInspector.groups },
   'hero-console': { label: 'Hero + Sim Console', groups: heroConsoleInspector.groups },
+  'console-frame': { label: 'Console Frame', groups: consoleFrameInspector.groups },
+  'console-header': { label: 'Console Header', groups: consoleHeaderInspector.groups },
+  'console-screen': { label: 'Console Screen', groups: consoleScreenInspector.groups },
+  'console-image': { label: 'Console Image', groups: consoleImageInspector.groups },
+  'console-telemetry-stack': {
+    label: 'Telemetry Stack',
+    groups: consoleTelemetryStackInspector.groups,
+  },
+  'console-telemetry': { label: 'Telemetry Badge', groups: consoleTelemetryInspector.groups },
+  'console-audit': { label: 'Audit Status', groups: consoleAuditInspector.groups },
+  'console-axis-drawer': {
+    label: 'Axis Drawer',
+    groups: consoleAxisDrawerInspector.groups,
+  },
+  'console-axis': { label: 'Axis Readout', groups: consoleAxisInspector.groups },
+  'console-mode-bar': { label: 'Mode Bar', groups: consoleModeBarInspector.groups },
+  'console-mode': { label: 'Mode Button', groups: consoleModeInspector.groups },
+  'console-metric': { label: 'Floating Metric', groups: consoleMetricInspector.groups },
   'twin-section': { label: 'Digital Twin', groups: twinSectionInspector.groups },
   'program-cards': { label: 'Program Cards', groups: programCardsInspector.groups },
   'program-card': { label: 'Program Card', groups: programCardInspector.groups },

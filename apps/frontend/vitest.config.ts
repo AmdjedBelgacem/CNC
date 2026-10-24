@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['test/**/*.spec.ts'],
+    include: ['test/**/*.spec.{ts,tsx}'],
     pool: 'forks',
     testTimeout: 20000,
   },

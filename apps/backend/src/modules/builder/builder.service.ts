@@ -19,6 +19,7 @@ import {
   getDefaultLayout,
   BUILDER_PAGE_DEFS,
   migrateLegacyLayout,
+  expandHeroConsoleLayout,
   mergeLayoutStructure,
   inlineSectionZones,
 } from '@titan/shared';
@@ -67,9 +68,14 @@ export class BuilderService {
      * after a publish that had already committed. Search indexing is a side effect and must
      * never be able to fail a save or publish, so the rejection is absorbed here.
      */
-    void Promise.resolve(this.search?.indexEntity(tenantId, 'page', pageId)).catch((error: unknown) => {
-      console.warn('Search sync after builder write failed:', error instanceof Error ? error.message : error);
-    });
+    void Promise.resolve(this.search?.indexEntity(tenantId, 'page', pageId)).catch(
+      (error: unknown) => {
+        console.warn(
+          'Search sync after builder write failed:',
+          error instanceof Error ? error.message : error,
+        );
+      },
+    );
   }
 
   // ------------------------------------------------------------------
@@ -81,8 +87,8 @@ export class BuilderService {
     if (!result.ok) {
       throw new BadRequestException(`Invalid layout: ${result.issues.join('; ')}`);
     }
-    // Persist the canonical slot shape.
-    return migrateLegacyLayout(result.data);
+    // Persist the canonical slot shape and decompose legacy hero consoles.
+    return expandHeroConsoleLayout(migrateLegacyLayout(result.data));
   }
 
   private parseThemeTokens(tokens: unknown): ThemeTokens {
@@ -171,17 +177,29 @@ export class BuilderService {
    * seeing the English layout regardless of the request language.
    */
   private localizedPage<
-    T extends { title: string; layout: unknown; translations?: Record<string, { title?: string; layout?: PageLayout }> | null },
-  >(page: T, localeInput?: unknown): Omit<T, 'layout' | 'title'> & { title: string; layout: PageLayout; locale: ContentLocale; resolvedLocale: ContentLocale } {
+    T extends {
+      title: string;
+      layout: unknown;
+      translations?: Record<string, { title?: string; layout?: PageLayout }> | null;
+    },
+  >(
+    page: T,
+    localeInput?: unknown,
+  ): Omit<T, 'layout' | 'title'> & {
+    title: string;
+    layout: PageLayout;
+    locale: ContentLocale;
+    resolvedLocale: ContentLocale;
+  } {
     const locale = resolveContentLocale(localeInput);
-    const englishLayout = migrateLegacyLayout(page.layout as PageLayout);
+    const englishLayout = expandHeroConsoleLayout(migrateLegacyLayout(page.layout as PageLayout));
     const copy = locale === 'en' ? undefined : page.translations?.[locale];
     if (copy?.layout) {
       const { title: _ignoredTitle, layout: _ignoredLayout, ...rest } = page;
       return {
         ...rest,
         title: copy.title ?? page.title,
-        layout: copy.layout,
+        layout: expandHeroConsoleLayout(migrateLegacyLayout(copy.layout as PageLayout)),
         locale,
         resolvedLocale: locale,
       };
@@ -248,7 +266,7 @@ export class BuilderService {
         where: and(eq(pages.tenantId, tenantId), eq(pages.slug, dto.copyFromSlug)),
       });
       if (!source) throw new BadRequestException(`Source page "${dto.copyFromSlug}" was not found`);
-      layout = migrateLegacyLayout(source.layout as PageLayout);
+      layout = expandHeroConsoleLayout(migrateLegacyLayout(source.layout as PageLayout));
     } else {
       layout = getTemplateLayout(dto.template);
     }
@@ -363,7 +381,9 @@ export class BuilderService {
         );
       }
       if (page.isSystem && dto.status === 'draft') {
-        throw new BadRequestException(`"${slug}" is live — disable it instead of putting it back in draft.`);
+        throw new BadRequestException(
+          `"${slug}" is live — disable it instead of putting it back in draft.`,
+        );
       }
       patch.status = dto.status;
     }
@@ -446,7 +466,11 @@ export class BuilderService {
 
     const created = await this.createPage(
       tenantId,
-      { slug: dto.slug, title: dto.title ?? `${source.title} (copy)`, template: source.template ?? undefined },
+      {
+        slug: dto.slug,
+        title: dto.title ?? `${source.title} (copy)`,
+        template: source.template ?? undefined,
+      },
       actor,
       ctx,
     );
@@ -454,7 +478,7 @@ export class BuilderService {
     const [updated] = await this.drizzle.db
       .update(pages)
       .set({
-        layout: migrateLegacyLayout(source.layout as PageLayout),
+        layout: expandHeroConsoleLayout(migrateLegacyLayout(source.layout as PageLayout)),
         seoTitle: source.seoTitle,
         seoDescription: source.seoDescription,
         translations: source.translations,
@@ -595,19 +619,29 @@ export class BuilderService {
     // rebuilt it by hand. Rebuild it here, preserving every Arabic block prop
     // that still has an id in the English layout.
     try {
-      const currentTranslations = (page.translations as Record<string, { title?: string; layout?: any }> | null) || {};
+      const currentTranslations =
+        (page.translations as Record<string, { title?: string; layout?: any }> | null) || {};
       const arabic = currentTranslations.ar || {};
       if (arabic.layout) {
         const arabicLayout = this.parsePageLayout(arabic.layout);
         const merged = mergeLayoutStructure(layout, arabicLayout);
         if (JSON.stringify(merged) !== JSON.stringify(arabicLayout)) {
-          const nextTranslations = { ...currentTranslations, ar: { ...arabic, layout: merged, title: arabic.title || title } };
-          await this.drizzle.db.update(pages).set({ translations: nextTranslations as any, updatedAt: now }).where(eq(pages.id, page.id));
+          const nextTranslations = {
+            ...currentTranslations,
+            ar: { ...arabic, layout: merged, title: arabic.title || title },
+          };
+          await this.drizzle.db
+            .update(pages)
+            .set({ translations: nextTranslations as any, updatedAt: now })
+            .where(eq(pages.id, page.id));
         }
       } else {
         // No Arabic copy yet: seed it from English so it is never empty.
         const nextTranslations = { ...currentTranslations, ar: { title, layout } };
-        await this.drizzle.db.update(pages).set({ translations: nextTranslations as any, updatedAt: now }).where(eq(pages.id, page.id));
+        await this.drizzle.db
+          .update(pages)
+          .set({ translations: nextTranslations as any, updatedAt: now })
+          .where(eq(pages.id, page.id));
       }
     } catch {
       // Auto-sync is best-effort; never block publish.
@@ -626,7 +660,13 @@ export class BuilderService {
     return updated;
   }
 
-  async revertPage(tenantId: string, slug: string, version: number, actor: Actor, ctx: AuditContext = {}) {
+  async revertPage(
+    tenantId: string,
+    slug: string,
+    version: number,
+    actor: Actor,
+    ctx: AuditContext = {},
+  ) {
     const page = await this.getPage(tenantId, slug);
     const snapshot = await this.drizzle.db.query.pageVersions.findFirst({
       where: and(eq(pageVersions.pageId, page.id), eq(pageVersions.version, version)),
@@ -839,7 +879,12 @@ export class BuilderService {
     return created;
   }
 
-  async saveTheme(tenantId: string, dto: { tokens: unknown; name?: string }, actor: Actor, ctx: AuditContext = {}) {
+  async saveTheme(
+    tenantId: string,
+    dto: { tokens: unknown; name?: string },
+    actor: Actor,
+    ctx: AuditContext = {},
+  ) {
     const tokens = this.parseThemeTokens(dto.tokens);
     const theme = await this.getTheme(tenantId);
 

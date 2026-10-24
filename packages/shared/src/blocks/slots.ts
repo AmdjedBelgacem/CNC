@@ -1,4 +1,5 @@
 import { getBlockDefinition } from './registry';
+import { consoleNodesFromProps } from './console-composition';
 import type { PageLayout, PuckNode } from '../types/page';
 
 /**
@@ -21,7 +22,8 @@ export function isNodeArray(value: unknown): value is PuckNode[] {
   return (
     Array.isArray(value) &&
     value.every(
-      (item) => typeof item === 'object' && item !== null && typeof (item as PuckNode).type === 'string',
+      (item) =>
+        typeof item === 'object' && item !== null && typeof (item as PuckNode).type === 'string',
     )
   );
 }
@@ -60,7 +62,10 @@ export function walkLayoutNodes(layout: PageLayout, visit: (node: PuckNode) => v
 }
 
 /** Finds a node anywhere in the layout by its `props.id`. */
-export function findNodeById(layout: PageLayout, nodeId: string | undefined | null): PuckNode | null {
+export function findNodeById(
+  layout: PageLayout,
+  nodeId: string | undefined | null,
+): PuckNode | null {
   if (!nodeId) return null;
   let found: PuckNode | null = null;
   walkLayoutNodes(layout, (node) => {
@@ -125,7 +130,10 @@ export function insertNodeAtZone(
     const kids = getSlotChildren(n, slot, layout.zones);
     const pos = at === -1 ? kids.length : at;
     at = pos;
-    return { type: n.type, props: { ...(n.props ?? {}), [slot]: [...kids.slice(0, pos), node, ...kids.slice(pos)] } };
+    return {
+      type: n.type,
+      props: { ...(n.props ?? {}), [slot]: [...kids.slice(0, pos), node, ...kids.slice(pos)] },
+    };
   };
   const content = (layout.content ?? []).map(place);
   if (at === -1) {
@@ -192,6 +200,64 @@ export function migrateLegacyLayout(layout: PageLayout): PageLayout {
     content,
     zones: Object.keys(remaining).length > 0 ? remaining : undefined,
   };
+}
+
+/**
+ * Expands a legacy prop-driven `hero-console` into the composable console tree.
+ *
+ * Old pages stored the image, telemetry, axes and mode buttons as props on one
+ * block. If the author has not chosen `legacy` and has never supplied a
+ * `console` slot, this adds a `console-frame` subtree derived from those props.
+ * The original props stay in place as a fallback and the generated ids are
+ * stable, so subsequent reads, saves and Arabic structure merges address the
+ * same nodes.
+ */
+export function expandHeroConsoleLayout(layout: PageLayout): PageLayout {
+  const legacyZones = layout.zones ?? {};
+  let changed = false;
+
+  const expandNode = (node: PuckNode): PuckNode => {
+    const props = node.props ?? {};
+    let nextProps: Record<string, unknown> | null = null;
+    const set = (key: string, value: unknown) => {
+      if (!nextProps) nextProps = { ...props };
+      nextProps[key] = value;
+    };
+
+    if (node.type === 'hero-console' && props.consoleMode !== 'legacy' && !('console' in props)) {
+      const legacyChildren = getSlotChildren(node, 'console', legacyZones);
+      if (legacyChildren.length > 0) {
+        set('console', legacyChildren);
+      } else {
+        const baseId = typeof props.id === 'string' && props.id ? props.id : 'hero-console';
+        set('console', consoleNodesFromProps(props, baseId));
+      }
+      set('consoleMode', 'composed');
+      changed = true;
+    }
+
+    for (const slot of slotNamesFor(node.type)) {
+      const children = getSlotChildren(node, slot, legacyZones);
+      if (children.length === 0) continue;
+      let slotChanged = false;
+      const rewritten = children.map((child) => {
+        const expanded = expandNode(child);
+        if (expanded !== child) slotChanged = true;
+        return expanded;
+      });
+      if (slotChanged) set(slot, rewritten);
+    }
+
+    return nextProps ? { type: node.type, props: nextProps } : node;
+  };
+
+  const content = (layout.content ?? []).map((node) => {
+    const expanded = expandNode(node);
+    if (expanded !== node) changed = true;
+    return expanded;
+  });
+
+  return changed ? { ...layout, content } : layout;
 }
 
 /**

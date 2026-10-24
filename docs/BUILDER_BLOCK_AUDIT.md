@@ -4,7 +4,7 @@
 
 The audit covers the live `/admin/builder` editor:
 
-- all 41 blocks registered in `packages/shared/src/blocks/registry.ts` and rendered by
+- all 53 blocks registered in `packages/shared/src/blocks/registry.ts` and rendered by
   `apps/frontend/src/components/builder/blocks/*`;
 - the insert menu, canvas selection/drag behaviour, Layers tree, inspector controls;
 - save, section save, publish, per-block Arabic translation and page-level Arabic translation;
@@ -27,6 +27,24 @@ filtered out of the insert menu because the public page shell already renders th
   blueprint art) are unchanged.
 - Added image/alt controls to Program Card and an avatar upload control to Testimonial Card.
 - Added the missing `program-cards`, `testimonials`, and `live-island` inspectors.
+
+### Composable simulator console
+
+- The homepage hero console is no longer one monolithic block. Its frame, header, viewport,
+  image, telemetry stack/readouts, audit card, axis drawer/readouts, mode bar/buttons and floating
+  metric are now separate registry blocks in the `Console` category, each with its own inspector.
+- `hero-console` gained a `console` slot and renders it when the page has a composed console.
+  `consoleMode` can force the component tree, force the legacy built-in console, or use auto:
+  components when the slot has children, legacy otherwise.
+- Existing pages are expanded on read and on save. The expansion derives stable child ids from the
+  hero's id, keeps the original console props as a fallback, and is idempotent.
+- Slots inside the console use the same inline child model as every other builder block. Editor
+  slot wrappers receive the parent's flex classes so the axis and telemetry rows lay out
+  identically in the canvas and on the public page. They also neutralise Puck's relative wrapper
+  for the screen's absolute media/overlays and the frame's floating metric, so the canvas matches
+  the published coordinates instead of collapsing them to zero height.
+- The simulator image, every telemetry value, every axis, every mode button and the floating
+  metric can be edited, reordered, hidden or replaced without touching the other details.
 
 ### Selection and structure
 

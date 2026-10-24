@@ -3981,6 +3981,18 @@
         "footer-col": "Footer Column",
         "section": "Section",
         "hero-console": "Hero + Sim Console",
+        "console-frame": "Console Frame",
+        "console-header": "Console Header",
+        "console-screen": "Console Screen",
+        "console-image": "Console Image",
+        "console-telemetry-stack": "Telemetry Stack",
+        "console-telemetry": "Telemetry Badge",
+        "console-audit": "Audit Status",
+        "console-axis-drawer": "Axis Drawer",
+        "console-axis": "Axis Readout",
+        "console-mode-bar": "Mode Bar",
+        "console-mode": "Mode Button",
+        "console-metric": "Floating Metric",
         "program-cards": "Program Cards",
         "program-card": "Program Card",
         "twin-section": "Digital Twin",
@@ -3998,7 +4010,8 @@
         "items": "Items",
         "layout": "Layout",
         "sections": "Sections",
-        "chrome": "Page chrome"
+        "chrome": "Page chrome",
+        "console": "Console"
       }
     },
     "savedSections": {

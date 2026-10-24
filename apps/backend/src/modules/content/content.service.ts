@@ -6,6 +6,7 @@ import { pages, pageVersions } from '../../database/schema/pages';
 import { themes, themeVersions } from '../../database/schema/themes';
 import { tenants } from '../../database/schema/tenants';
 import {
+  expandHeroConsoleLayout,
   mergeLayoutStructure,
   migrateLegacyLayout,
   type PageLayout,
@@ -83,8 +84,15 @@ export class ContentService {
     if (!snapshot) throw new NotFoundException(`Published version for "${slug}" was not found`);
 
     const locale = resolveContentLocale(localeInput);
-    const englishLayout = migrateLegacyLayout(snapshot.layout as PageLayout);
-    const copy = locale === 'en' ? undefined : (page.translations as Record<string, { title?: string; layout?: PageLayout }> | null)?.[locale];
+    const englishLayout = expandHeroConsoleLayout(
+      migrateLegacyLayout(snapshot.layout as PageLayout),
+    );
+    const copy =
+      locale === 'en'
+        ? undefined
+        : (page.translations as Record<string, { title?: string; layout?: PageLayout }> | null)?.[
+            locale
+          ];
     const base = {
       id: page.id,
       tenantId: page.tenantId,
@@ -99,7 +107,7 @@ export class ContentService {
       // it against the English structure and keep the Arabic copy for every block
       // that still exists. New blocks appear in their English position, with
       // English copy, instead of silently disappearing for Arabic visitors.
-      const arabicLayout = migrateLegacyLayout(copy.layout as PageLayout);
+      const arabicLayout = expandHeroConsoleLayout(migrateLegacyLayout(copy.layout as PageLayout));
       const layout = mergeLayoutStructure(englishLayout, arabicLayout);
       return { ...base, title: copy.title ?? page.title, layout, locale, resolvedLocale: locale };
     }

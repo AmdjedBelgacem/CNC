@@ -3981,6 +3981,18 @@
         "footer-col": "عمود التذييل",
         "section": "قسم",
         "hero-console": "لوحة البطل",
+        "console-frame": "إطار الكونسول",
+        "console-header": "رأس الكونسول",
+        "console-screen": "شاشة الكونسول",
+        "console-image": "صورة الكونسول",
+        "console-telemetry-stack": "مجموعة القياسات",
+        "console-telemetry": "شارة القياس",
+        "console-audit": "حالة التدقيق",
+        "console-axis-drawer": "درج المحاور",
+        "console-axis": "قراءة المحور",
+        "console-mode-bar": "شريط الأوضاع",
+        "console-mode": "زر الوضع",
+        "console-metric": "المقياس العائم",
         "program-cards": "بطاقات البرامج",
         "program-card": "بطاقة برنامج",
         "twin-section": "قسم مزدوج",
@@ -3998,7 +4010,8 @@
         "items": "العناصر",
         "layout": "التخطيط",
         "sections": "الأقسام",
-        "chrome": "هيكل الصفحة"
+        "chrome": "هيكل الصفحة",
+        "console": "الكونسول"
       }
     },
     "savedSections": {

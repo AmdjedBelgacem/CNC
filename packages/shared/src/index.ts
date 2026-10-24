@@ -4,6 +4,7 @@ export * from './constants';
 export * from './validators';
 export * from './utils';
 export * from './blocks/registry';
+export * from './blocks/console-composition';
 export * from './types/translations';
 export * from './types/translatable-entities';
 export * from './lesson-translation';

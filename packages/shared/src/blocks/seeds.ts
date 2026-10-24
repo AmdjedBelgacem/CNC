@@ -9,6 +9,7 @@ import {
   spotlightCardsDefaults,
 } from './registry';
 import { heroDefaults, ctaBannerDefaults } from './registry';
+import { consoleNodesFromProps } from './console-composition';
 
 // ------------------------------------------------------------------
 // Node builders — every generated id is unique per call so copies can
@@ -55,7 +56,9 @@ function pick(props: Record<string, unknown>, keys: string[]): Record<string, un
 }
 
 function itemsOf(overrides: Record<string, unknown>): Record<string, unknown>[] | undefined {
-  return Array.isArray(overrides.items) ? (overrides.items as Record<string, unknown>[]) : undefined;
+  return Array.isArray(overrides.items)
+    ? (overrides.items as Record<string, unknown>[])
+    : undefined;
 }
 
 // ------------------------------------------------------------------
@@ -163,8 +166,12 @@ export function seedHero(overrides: HeroSeedInput = {}): SeedResult {
   };
 
   const children: SeedResult[] = [];
-  if (opts.eyebrow) children.push(leaf('badge', { text: opts.eyebrow, variant: 'glow', size: 'md', marginBottom: 32 }));
-  if (opts.title) children.push(leaf('heading', { as: 'h1', size: 'hero', text: opts.title, marginBottom: 24 }));
+  if (opts.eyebrow)
+    children.push(
+      leaf('badge', { text: opts.eyebrow, variant: 'glow', size: 'md', marginBottom: 32 }),
+    );
+  if (opts.title)
+    children.push(leaf('heading', { as: 'h1', size: 'hero', text: opts.title, marginBottom: 24 }));
   if (opts.subtitle)
     children.push(
       leaf('text', {
@@ -177,18 +184,56 @@ export function seedHero(overrides: HeroSeedInput = {}): SeedResult {
       }),
     );
   const ctaChildren: SeedResult[] = [];
-  if (opts.primaryCta) ctaChildren.push(leaf('button', { label: opts.primaryCta.label, href: opts.primaryCta.href, variant: 'primary' }));
-  if (opts.secondaryCta) ctaChildren.push(leaf('button', { label: opts.secondaryCta.label, href: opts.secondaryCta.href, variant: 'glass' }));
+  if (opts.primaryCta)
+    ctaChildren.push(
+      leaf('button', {
+        label: opts.primaryCta.label,
+        href: opts.primaryCta.href,
+        variant: 'primary',
+      }),
+    );
+  if (opts.secondaryCta)
+    ctaChildren.push(
+      leaf('button', {
+        label: opts.secondaryCta.label,
+        href: opts.secondaryCta.href,
+        variant: 'glass',
+      }),
+    );
   if (ctaChildren.length)
     children.push(
       pack(
-        n('stack', { direction: 'column', gap: 'md', align: 'center', justify: 'center', className: 'cta-row' }),
+        n('stack', {
+          direction: 'column',
+          gap: 'md',
+          align: 'center',
+          justify: 'center',
+          className: 'cta-row',
+        }),
         'content',
         ctaChildren,
       ),
     );
 
-  return pack(n('hero', { paddingTop: 96, ...pick(opts as Record<string, unknown>, ['imageUrl', 'fullHeight', 'scrollIndicator', 'backgroundOverlay', 'contentAlign', 'backgroundColor', 'showTrustChips', 'trustNote', 'trustNoteHref', 'mesh']) }), 'content', children);
+  return pack(
+    n('hero', {
+      paddingTop: 96,
+      ...pick(opts as Record<string, unknown>, [
+        'imageUrl',
+        'fullHeight',
+        'scrollIndicator',
+        'backgroundOverlay',
+        'contentAlign',
+        'backgroundColor',
+        'showTrustChips',
+        'trustNote',
+        'trustNoteHref',
+        'mesh',
+      ]),
+    }),
+    'content',
+    children,
+  );
 }
 
 // ------------------------------------------------------------------
@@ -207,10 +252,36 @@ export interface StatItemInput {
 
 // Capability statements, not fabricated metrics — the demo must not ship fake stats.
 export const STAT_ITEMS: StatItemInput[] = [
-  { icon: 'groups', value: 'Cohort-led', label: 'Learning Community', tag: 'Active', tagVariant: 'secondary', tagIcon: 'trending_up', tagUppercase: false },
-  { icon: 'verified', value: 'Project-based', label: 'Certification Path', tag: 'Hands-on', tagVariant: 'primary' },
-  { icon: 'public', value: 'Remote-first', label: 'Global Classroom', tag: 'Online', tagVariant: 'neutral' },
-  { icon: 'monetization_on', value: 'Free to start', label: 'Core Curriculum', tag: 'Open', tagVariant: 'secondary' },
+  {
+    icon: 'groups',
+    value: 'Cohort-led',
+    label: 'Learning Community',
+    tag: 'Active',
+    tagVariant: 'secondary',
+    tagIcon: 'trending_up',
+    tagUppercase: false,
+  },
+  {
+    icon: 'verified',
+    value: 'Project-based',
+    label: 'Certification Path',
+    tag: 'Hands-on',
+    tagVariant: 'primary',
+  },
+  {
+    icon: 'public',
+    value: 'Remote-first',
+    label: 'Global Classroom',
+    tag: 'Online',
+    tagVariant: 'neutral',
+  },
+  {
+    icon: 'monetization_on',
+    value: 'Free to start',
+    label: 'Core Curriculum',
+    tag: 'Open',
+    tagVariant: 'secondary',
+  },
 ];
 
 export function seedStatItem(overrides: StatItemInput = {}): SeedResult {
@@ -256,7 +327,11 @@ export function seedStatItem(overrides: StatItemInput = {}): SeedResult {
 
 export function seedStats(overrides: Record<string, unknown> = {}): SeedResult {
   const list = itemsOf(overrides) ?? (STAT_ITEMS as Record<string, unknown>[]);
-  return pack(n('stats', { paddingBottom: 64 }), 'content', list.map((item) => seedStatItem(item as StatItemInput)));
+  return pack(
+    n('stats', { paddingBottom: 64 }),
+    'content',
+    list.map((item) => seedStatItem(item as StatItemInput)),
+  );
 }
 
 // ------------------------------------------------------------------
@@ -310,7 +385,12 @@ export function seedLogoItem(overrides: LogoItemInput = {}): SeedResult {
       'content',
       [
         leaf('icon', { icon: item.icon ?? 'precision_manufacturing', size: 28 }),
-        leaf('heading', { as: 'span', size: 'xl', text: item.wordmark ?? '', className: 'font-bold tracking-tighter' }),
+        leaf('heading', {
+          as: 'span',
+          size: 'xl',
+          text: item.wordmark ?? '',
+          className: 'font-bold tracking-tighter',
+        }),
       ],
     ),
   ]);
@@ -406,7 +486,13 @@ export function seedFeatureTiles(overrides: Record<string, unknown> = {}): SeedR
       color: 'text-primary',
       marginBottom: 16,
     }),
-    leaf('heading', { as: 'h2', size: 'headline-lg', text: heading, marginBottom: 32, className: 'leading-tight' }),
+    leaf('heading', {
+      as: 'h2',
+      size: 'headline-lg',
+      text: heading,
+      marginBottom: 32,
+      className: 'leading-tight',
+    }),
     ...(subtitle
       ? [
           leaf('text', {
@@ -421,7 +507,15 @@ export function seedFeatureTiles(overrides: Record<string, unknown> = {}): SeedR
       : []),
     ...list.map((item) => seedFeatureItem(item as FeatureItemInput)),
   ];
-  return pack(n('feature-tiles', { paddingTop: 96, paddingBottom: 96, ...pick(overrides, ['imageUrl', 'imageAlt', 'sectionBg']) }), 'content', children);
+  return pack(
+    n('feature-tiles', {
+      paddingTop: 96,
+      paddingBottom: 96,
+      ...pick(overrides, ['imageUrl', 'imageAlt', 'sectionBg']),
+    }),
+    'content',
+    children,
+  );
 }
 
 // ------------------------------------------------------------------
@@ -442,7 +536,8 @@ export const ACADEMIES: AcademyCardInput[] = [
   {
     imageUrl: heroDefaults.imageUrl,
     title: 'CNC Machining Fundamentals',
-    description: 'The complete roadmap from machine setup to G-code mastery — built for beginners and refreshers alike.',
+    description:
+      'The complete roadmap from machine setup to G-code mastery — built for beginners and refreshers alike.',
     level: 'Beginner to Advanced',
     modules: '36 Modules',
     count: '+80',
@@ -451,7 +546,8 @@ export const ACADEMIES: AcademyCardInput[] = [
   {
     imageUrl: ctaBannerDefaults.imageUrl,
     title: 'Advanced Multi-Axis Programming',
-    description: 'Five-axis strategies, collision avoidance, and post-processor tuning for production-ready toolpaths.',
+    description:
+      'Five-axis strategies, collision avoidance, and post-processor tuning for production-ready toolpaths.',
     level: 'Advanced',
     modules: '60 Modules',
     count: '+40',
@@ -460,7 +556,8 @@ export const ACADEMIES: AcademyCardInput[] = [
   {
     imageUrl: heroDefaults.imageUrl,
     title: 'Precision Grinding & Finishing',
-    description: 'Surface and cylindrical grinding techniques for sub-micron finishes on aerospace-grade components.',
+    description:
+      'Surface and cylindrical grinding techniques for sub-micron finishes on aerospace-grade components.',
     level: 'Intermediate',
     modules: '48 Modules',
     count: '+25',
@@ -493,10 +590,21 @@ export function seedAcademyCard(overrides: AcademyCardInput = {}): SeedResult {
         'content',
         [
           leaf('badge', { text: item.level ?? '', variant: 'card', size: 'sm' }),
-          leaf('text', { text: item.modules ?? '', size: 'xs', weight: 'medium', color: 'text-text-muted' }),
+          leaf('text', {
+            text: item.modules ?? '',
+            size: 'xs',
+            weight: 'medium',
+            color: 'text-text-muted',
+          }),
         ],
       ),
-      leaf('heading', { as: 'h3', size: '2xl', text: item.title ?? '', marginBottom: 16, className: 'leading-tight' }),
+      leaf('heading', {
+        as: 'h3',
+        size: '2xl',
+        text: item.title ?? '',
+        marginBottom: 16,
+        className: 'leading-tight',
+      }),
       leaf('text', {
         text: item.description ?? '',
         size: 'md',
@@ -518,7 +626,13 @@ export function seedAcademyCard(overrides: AcademyCardInput = {}): SeedResult {
           leaf('avatar-stack', { count: item.count ?? '+80' }),
           // The card itself is the anchor; the label is decorative (ButtonBlock
           // renders it as a `<span>` when href is empty, so no nested `<a>`).
-          leaf('button', { label: 'Enroll Now', href: '', variant: 'enroll', icon: 'arrow_forward', iconPosition: 'right' }),
+          leaf('button', {
+            label: 'Enroll Now',
+            href: '',
+            variant: 'enroll',
+            icon: 'arrow_forward',
+            iconPosition: 'right',
+          }),
         ],
       ),
     ],
@@ -528,7 +642,11 @@ export function seedAcademyCard(overrides: AcademyCardInput = {}): SeedResult {
 export function seedAcademyGrid(overrides: Record<string, unknown> = {}): SeedResult {
   const list = itemsOf(overrides) ?? (ACADEMIES as Record<string, unknown>[]);
   return packMulti(
-    n('academy-grid', { paddingTop: 64, paddingBottom: 64, ...pick(overrides, ['viewAllHref', 'id']) }),
+    n('academy-grid', {
+      paddingTop: 64,
+      paddingBottom: 64,
+      ...pick(overrides, ['viewAllHref', 'id']),
+    }),
     {
       header: [
         pack(
@@ -610,7 +728,13 @@ export function seedCtaBanner(overrides: Record<string, unknown> = {}): SeedResu
     href: '#',
   };
   const copyChildren: SeedResult[] = [
-    leaf('heading', { as: 'h2', size: 'headline-lg', text: title, color: 'text-white', marginBottom: 32 }),
+    leaf('heading', {
+      as: 'h2',
+      size: 'headline-lg',
+      text: title,
+      color: 'text-white',
+      marginBottom: 32,
+    }),
     leaf('text', {
       text: subtitle,
       size: 'lg',
@@ -620,18 +744,31 @@ export function seedCtaBanner(overrides: Record<string, unknown> = {}): SeedResu
       align: 'center',
     }),
     pack(
-      n('stack', { direction: 'column', gap: 'md', align: 'center', justify: 'center', className: 'cta-row' }),
+      n('stack', {
+        direction: 'column',
+        gap: 'md',
+        align: 'center',
+        justify: 'center',
+        className: 'cta-row',
+      }),
       'content',
       [
         leaf('button', { label: primaryCta.label, href: primaryCta.href, variant: 'white' }),
-        leaf('button', { label: secondaryCta.label, href: secondaryCta.href, variant: 'white-outline' }),
+        leaf('button', {
+          label: secondaryCta.label,
+          href: secondaryCta.href,
+          variant: 'white-outline',
+        }),
       ],
     ),
   ];
-  return packMulti(n('cta-banner', { paddingTop: 96, paddingBottom: 96, ...pick(overrides, ['imageUrl']) }), {
-    copy: copyChildren,
-    side: [seedProgressCard()],
-  });
+  return packMulti(
+    n('cta-banner', { paddingTop: 96, paddingBottom: 96, ...pick(overrides, ['imageUrl']) }),
+    {
+      copy: copyChildren,
+      side: [seedProgressCard()],
+    },
+  );
 }
 
 // ------------------------------------------------------------------
@@ -686,35 +823,44 @@ export function seedFaqItem(overrides: FaqItemInput = {}): SeedResult {
 
 export function seedFaq(overrides: Record<string, unknown> = {}): SeedResult {
   const list = itemsOf(overrides) ?? (FAQ_ITEMS as Record<string, unknown>[]);
-  return packMulti(n('faq', { paddingTop: 96, paddingBottom: 96, ...pick(overrides, ['sectionBg', 'id']) }), {
-    header: [
-      leaf('text', {
-        text: (overrides.eyebrow as string | undefined) ?? 'Before you start',
-        size: 'sm',
-        uppercase: true,
-        tracking: '0.2em',
-        weight: 'bold',
-        color: 'text-primary',
-        marginBottom: 16,
-      }),
-      leaf('heading', {
-        as: 'h2',
-        size: 'headline-lg',
-        text: (overrides.title as string | undefined) ?? 'Questions machinists ask us',
-      }),
-    ],
-    items: list.map((item) => seedFaqItem(item as FaqItemInput)),
-    footer: [
-      leaf('text', {
-        text: 'Still have questions?',
-        size: 'md',
-        align: 'center',
-        color: 'text-text-muted',
-        marginBottom: 24,
-      }),
-      leaf('button', { label: 'Contact Technical Support', href: '#', variant: 'link', icon: 'arrow_forward', iconPosition: 'right' }),
-    ],
-  });
+  return packMulti(
+    n('faq', { paddingTop: 96, paddingBottom: 96, ...pick(overrides, ['sectionBg', 'id']) }),
+    {
+      header: [
+        leaf('text', {
+          text: (overrides.eyebrow as string | undefined) ?? 'Before you start',
+          size: 'sm',
+          uppercase: true,
+          tracking: '0.2em',
+          weight: 'bold',
+          color: 'text-primary',
+          marginBottom: 16,
+        }),
+        leaf('heading', {
+          as: 'h2',
+          size: 'headline-lg',
+          text: (overrides.title as string | undefined) ?? 'Questions machinists ask us',
+        }),
+      ],
+      items: list.map((item) => seedFaqItem(item as FaqItemInput)),
+      footer: [
+        leaf('text', {
+          text: 'Still have questions?',
+          size: 'md',
+          align: 'center',
+          color: 'text-text-muted',
+          marginBottom: 24,
+        }),
+        leaf('button', {
+          label: 'Contact Technical Support',
+          href: '#',
+          variant: 'link',
+          icon: 'arrow_forward',
+          iconPosition: 'right',
+        }),
+      ],
+    },
+  );
 }
 
 // ------------------------------------------------------------------
@@ -735,7 +881,13 @@ export const FOOTER_COLUMNS: FooterColInput[] = [
 export function seedFooterCol(overrides: FooterColInput = {}): SeedResult {
   const item: FooterColInput = { ...FOOTER_COLUMNS[0], ...overrides };
   const children: SeedResult[] = [
-    leaf('heading', { as: 'h4', size: 'label', text: item.title ?? '', color: 'text-text-primary', marginBottom: 16 }),
+    leaf('heading', {
+      as: 'h4',
+      size: 'label',
+      text: item.title ?? '',
+      color: 'text-text-primary',
+      marginBottom: 16,
+    }),
   ];
   for (const label of item.links ?? []) {
     children.push(leaf('link', { label, href: '#' }));
@@ -746,7 +898,13 @@ export function seedFooterCol(overrides: FooterColInput = {}): SeedResult {
 export function seedFooterBrand(): SeedResult {
   return packMulti(n('footer-col'), {
     content: [
-      leaf('heading', { as: 'span', size: 'logo', text: 'Ahmad CNC', color: 'text-primary', marginBottom: 24 }),
+      leaf('heading', {
+        as: 'span',
+        size: 'logo',
+        text: 'Ahmad CNC',
+        color: 'text-primary',
+        marginBottom: 24,
+      }),
       leaf('text', {
         text: 'Precision manufacturing education for the next generation of machinists.',
         size: 'md',
@@ -757,7 +915,13 @@ export function seedFooterBrand(): SeedResult {
         marginBottom: 32,
       }),
       pack(
-        n('stack', { direction: 'row', gap: 'md', align: 'center', justify: 'start', className: 'flex gap-4' }),
+        n('stack', {
+          direction: 'row',
+          gap: 'md',
+          align: 'center',
+          justify: 'start',
+          className: 'flex gap-4',
+        }),
         'content',
         [
           leaf('link', { label: '', href: '#', icon: 'public' }),
@@ -773,19 +937,42 @@ export function seedFooter(overrides: Record<string, unknown> = {}): SeedResult 
   return packMulti(n('footer', { paddingTop: 96, paddingBottom: 48 }), {
     columns: [seedFooterBrand(), ...cols.map((col) => seedFooterCol(col as FooterColInput))],
     bottom: [
-      leaf('text', { text: '© 2026 Machinist Pro Educational Systems. All rights reserved.', size: 'sm', color: 'text-text-muted' }),
+      leaf('text', {
+        text: '© 2026 Machinist Pro Educational Systems. All rights reserved.',
+        size: 'sm',
+        color: 'text-text-muted',
+      }),
       pack(
-        n('stack', { direction: 'row', gap: 'lg', align: 'center', justify: 'start', className: 'flex gap-8' }),
+        n('stack', {
+          direction: 'row',
+          gap: 'lg',
+          align: 'center',
+          justify: 'start',
+          className: 'flex gap-8',
+        }),
         'content',
         [
-          leaf('text', { text: 'Designed for sub-micron precision.', size: 'sm', uppercase: true, tracking: '0.05em', weight: 'medium', color: 'text-text-muted' }),
-          leaf('text', { text: 'Engineered in ISO-9001.', size: 'sm', uppercase: true, tracking: '0.05em', weight: 'medium', color: 'text-text-muted' }),
+          leaf('text', {
+            text: 'Designed for sub-micron precision.',
+            size: 'sm',
+            uppercase: true,
+            tracking: '0.05em',
+            weight: 'medium',
+            color: 'text-text-muted',
+          }),
+          leaf('text', {
+            text: 'Engineered in ISO-9001.',
+            size: 'sm',
+            uppercase: true,
+            tracking: '0.05em',
+            weight: 'medium',
+            color: 'text-text-muted',
+          }),
         ],
       ),
     ],
   });
 }
-
 
 // ------------------------------------------------------------------
 // Machinist Pro landing sections (hero console, stats deck, OEM strip,
@@ -842,92 +1029,95 @@ export function seedHeroConsole(overrides: HeroConsoleSeedInput = {}): SeedResul
     fileName: 'SIM_CELL_DMG_DUOBODY_5X.cnc',
     ...overrides,
   };
-  return packMulti(
-    n('hero-console', {
-      paddingTop: 80,
-      paddingBottom: 112,
-      imageUrl: opts.imageUrl,
-      fileName: opts.fileName,
-    }),
-    {
-      content: [
-        leaf('badge', {
-          text: opts.eyebrow,
-          variant: 'glow',
-          size: 'md',
-          pulse: true,
-          className: 'border border-primary/20 shadow-sm',
-          marginBottom: 24,
-        }),
-        leaf('heading', {
-          as: 'h1',
-          size: 'hero',
-          text: opts.title,
-          accentText: opts.titleAccent,
-          suffixText: opts.titleSuffix,
-          marginBottom: 24,
-        }),
-        leaf('text', {
-          text: opts.subtitle,
-          size: 'lg',
-          color: 'text-text-secondary',
-          maxWidth: 576,
+  const parent = n('hero-console', {
+    paddingTop: 80,
+    paddingBottom: 112,
+    imageUrl: opts.imageUrl,
+    fileName: opts.fileName,
+    consoleMode: 'composed',
+  });
+  const consoleNodes = consoleNodesFromProps(
+    { imageUrl: opts.imageUrl, fileName: opts.fileName },
+    String(parent.props?.id ?? 'hero-console'),
+  );
+  return packMulti(parent, {
+    content: [
+      leaf('badge', {
+        text: opts.eyebrow,
+        variant: 'glow',
+        size: 'md',
+        pulse: true,
+        className: 'border border-primary/20 shadow-sm',
+        marginBottom: 24,
+      }),
+      leaf('heading', {
+        as: 'h1',
+        size: 'hero',
+        text: opts.title,
+        accentText: opts.titleAccent,
+        suffixText: opts.titleSuffix,
+        marginBottom: 24,
+      }),
+      leaf('text', {
+        text: opts.subtitle,
+        size: 'lg',
+        color: 'text-text-secondary',
+        maxWidth: 576,
+        marginBottom: 40,
+      }),
+      pack(
+        n('stack', {
+          direction: 'row',
+          directionMobile: 'column',
+          gap: 'md',
+          align: 'center',
+          justify: 'start',
+          wrap: true,
+          className: 'w-full sm:w-auto',
           marginBottom: 40,
         }),
-        pack(
-          n('stack', {
-            direction: 'row',
-            directionMobile: 'column',
-            gap: 'md',
-            align: 'center',
-            justify: 'start',
-            wrap: true,
-            className: 'w-full sm:w-auto',
-            marginBottom: 40,
+        'content',
+        [
+          leaf('button', {
+            label: opts.primaryCta.label,
+            href: opts.primaryCta.href,
+            variant: 'primary',
+            icon: 'arrow_forward',
           }),
-          'content',
-          [
-            leaf('button', {
-              label: opts.primaryCta.label,
-              href: opts.primaryCta.href,
-              variant: 'primary',
-              icon: 'arrow_forward',
-            }),
-            leaf('button', {
-              label: opts.secondaryCta.label,
-              href: opts.secondaryCta.href,
-              variant: 'glass',
-              icon: 'view_in_ar',
-              iconPosition: 'left',
-            }),
-          ],
-        ),
-        pack(
-          n('stack', {
-            direction: 'row',
-            directionMobile: 'column',
-            gap: 'md',
-            align: 'center',
-            justify: 'start',
-            className:
-              'flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-6 border-t border-glass-border w-full',
+          leaf('button', {
+            label: opts.secondaryCta.label,
+            href: opts.secondaryCta.href,
+            variant: 'glass',
+            icon: 'view_in_ar',
+            iconPosition: 'left',
           }),
-          'content',
-          [
-            leaf('avatar-stack', { count: opts.trustCount, size: 40, plainCircles: 4 }),
-            leaf('text', {
-              text: opts.trustNote,
-              size: 'sm',
-              color: 'text-text-secondary',
-              maxWidth: 448,
-            }),
-          ],
-        ),
-      ],
-    },
-  );
+        ],
+      ),
+      pack(
+        n('stack', {
+          direction: 'row',
+          directionMobile: 'column',
+          gap: 'md',
+          align: 'center',
+          justify: 'start',
+          className:
+            'flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-6 border-t border-glass-border w-full',
+        }),
+        'content',
+        [
+          leaf('avatar-stack', { count: opts.trustCount, size: 40, plainCircles: 4 }),
+          leaf('text', {
+            text: opts.trustNote,
+            size: 'sm',
+            color: 'text-text-secondary',
+            maxWidth: 448,
+          }),
+        ],
+      ),
+    ],
+    console: consoleNodes.map((node) => ({ node })),
+  });
 }
-
 
 // ------------------------------------------------------------------
 // Stats deck (Machinist Pro quick-stats cards)
@@ -1019,7 +1209,12 @@ export function seedStatCard(overrides: StatCardInput = {}): SeedResult {
           ],
         ),
         leaf('heading', { as: 'h3', size: 'stats', text: item.value ?? '', marginBottom: 4 }),
-        leaf('text', { text: item.sub ?? '', size: 'sm', weight: 'medium', color: 'text-text-secondary' }),
+        leaf('text', {
+          text: item.sub ?? '',
+          size: 'sm',
+          weight: 'medium',
+          color: 'text-text-secondary',
+        }),
         leaf('text', {
           text: item.note ?? '',
           size: 'xs',
@@ -1039,7 +1234,6 @@ export function seedStatsDeck(overrides: Record<string, unknown> = {}): SeedResu
     list.map((item) => seedStatCard(item as StatCardInput)),
   );
 }
-
 
 // ------------------------------------------------------------------
 // OEM partner strip (bare wordmark grid)
@@ -1161,7 +1355,11 @@ export const LANDING_PROGRAMS: ProgramCardInput[] = [
 ];
 
 export function seedProgramCard(overrides: ProgramCardInput = {}): SeedResult {
-  const item: ProgramCardInput = { ctaLabel: 'View Syllabus', ...LANDING_PROGRAMS[0], ...overrides };
+  const item: ProgramCardInput = {
+    ctaLabel: 'View Syllabus',
+    ...LANDING_PROGRAMS[0],
+    ...overrides,
+  };
   return leaf('program-card', { ...item });
 }
 
@@ -1264,18 +1462,19 @@ export const LANDING_TWIN_FEATURES: TwinFeatureInput[] = [
   },
 ];
 
-export const LANDING_TWIN_CODE: { text: string; tone: 'comment' | 'code' | 'highlight' | 'ok' }[] = [
-  { text: '// INITIALIZE 5-AXIS VECTOR TRANSFORM (TRAORI / RTCP)', tone: 'comment' },
-  { text: 'N100 G00 G90 G40 G17 G80 G49', tone: 'code' },
-  { text: 'N110 G54.1 P1 (FIXTURE_DATUM_AIRCRAFT_DATUM)', tone: 'code' },
-  { text: 'N120 T04 M06 (12MM 5-FLUTE SOLID CARBIDE BALLNOSE)', tone: 'code' },
-  { text: 'N130 S18500 M03 M08 (THROUGH-SPINDLE COOLANT 70 BAR)', tone: 'code' },
-  { text: 'N140 G43.4 H04 // DYNAMIC TOOL CENTER POINT (TCPM) ACTIVATED', tone: 'highlight' },
-  { text: 'N150 G01 X+142.308 Y-84.119 Z+12.004 B-22.450 C+180.000 F4200.', tone: 'code' },
-  { text: 'N160 X+144.110 Y-82.503 Z+11.890 B-21.980 C+181.250', tone: 'code' },
-  { text: 'N170 X+146.002 Y-80.750 Z+11.750 B-21.200 C+182.900', tone: 'code' },
-  { text: 'N180 >> COLLISION CLEARANCE: OK [TOLERANCE DELTA: +0.0018mm]', tone: 'ok' },
-];
+export const LANDING_TWIN_CODE: { text: string; tone: 'comment' | 'code' | 'highlight' | 'ok' }[] =
+  [
+    { text: '// INITIALIZE 5-AXIS VECTOR TRANSFORM (TRAORI / RTCP)', tone: 'comment' },
+    { text: 'N100 G00 G90 G40 G17 G80 G49', tone: 'code' },
+    { text: 'N110 G54.1 P1 (FIXTURE_DATUM_AIRCRAFT_DATUM)', tone: 'code' },
+    { text: 'N120 T04 M06 (12MM 5-FLUTE SOLID CARBIDE BALLNOSE)', tone: 'code' },
+    { text: 'N130 S18500 M03 M08 (THROUGH-SPINDLE COOLANT 70 BAR)', tone: 'code' },
+    { text: 'N140 G43.4 H04 // DYNAMIC TOOL CENTER POINT (TCPM) ACTIVATED', tone: 'highlight' },
+    { text: 'N150 G01 X+142.308 Y-84.119 Z+12.004 B-22.450 C+180.000 F4200.', tone: 'code' },
+    { text: 'N160 X+144.110 Y-82.503 Z+11.890 B-21.980 C+181.250', tone: 'code' },
+    { text: 'N170 X+146.002 Y-80.750 Z+11.750 B-21.200 C+182.900', tone: 'code' },
+    { text: 'N180 >> COLLISION CLEARANCE: OK [TOLERANCE DELTA: +0.0018mm]', tone: 'ok' },
+  ];
 
 export const LANDING_TWIN_READOUTS: {
   label: string;
@@ -1501,8 +1700,6 @@ export function seedHomeLayout(): PageLayout {
   return toLayout(sections);
 }
 
-
-
 /** Academy-specific quick stats — capability statements paired with live catalog counts. */
 export const ACADEMY_LANDING_STATS: StatCardInput[] = [
   {
@@ -1664,7 +1861,12 @@ export function seedAcademyLandingLayout(): PageLayout {
         { label: 'Price', value: '$0' },
         { label: 'Format', value: 'Self-paced' },
       ],
-      primaryCta: { label: 'Browse pathways', href: '#pathways', variant: 'primary', icon: 'arrow_forward' },
+      primaryCta: {
+        label: 'Browse pathways',
+        href: '#pathways',
+        variant: 'primary',
+        icon: 'arrow_forward',
+      },
       secondaryCta: { label: 'How it works', href: '#how-it-works', variant: 'secondary' },
       borderBottom: true,
     }),
@@ -1703,9 +1905,24 @@ export function seedAcademyLandingLayout(): PageLayout {
       eyebrow: 'Signature paths',
       title: 'Three routes into the floor',
       items: [
-        { tag: 'START HERE', title: 'CNC Machining Fundamentals', meta: '36 Modules · Self-paced · Free', href: '/academy/general' },
-        { tag: 'ADVANCED', title: 'Aerospace Precision Manufacturing', meta: '48 Modules · AS9100-aligned · Free', href: '/academy/aerospace' },
-        { tag: 'INTERMEDIATE', title: 'Automation & Robotics', meta: '30 Modules · PLCs & robots · Free', href: '/academy/automation' },
+        {
+          tag: 'START HERE',
+          title: 'CNC Machining Fundamentals',
+          meta: '36 Modules · Self-paced · Free',
+          href: '/academy/general',
+        },
+        {
+          tag: 'ADVANCED',
+          title: 'Aerospace Precision Manufacturing',
+          meta: '48 Modules · AS9100-aligned · Free',
+          href: '/academy/aerospace',
+        },
+        {
+          tag: 'INTERMEDIATE',
+          title: 'Automation & Robotics',
+          meta: '30 Modules · PLCs & robots · Free',
+          href: '/academy/automation',
+        },
       ],
       columns: 'md:grid-cols-3',
       band: 'none',
@@ -1744,7 +1961,12 @@ export function seedProductsLayout(): PageLayout {
         { label: 'Price range', value: '—' },
         { label: 'Free ship at', value: '$99' },
       ],
-      primaryCta: { label: 'Search inventory', href: '#inventory', variant: 'primary', icon: 'search' },
+      primaryCta: {
+        label: 'Search inventory',
+        href: '#inventory',
+        variant: 'primary',
+        icon: 'search',
+      },
       secondaryCta: { label: 'Browse departments', href: '#departments', variant: 'secondary' },
       borderBottom: true,
     }),
@@ -1817,7 +2039,12 @@ export function seedFeedLayout(): PageLayout {
         { label: 'Active authors', value: '—' },
         { label: 'Reactions', value: '—' },
       ],
-      primaryCta: { label: 'Open the live wire', href: '#live-wire', variant: 'primary', icon: 'radio' },
+      primaryCta: {
+        label: 'Open the live wire',
+        href: '#live-wire',
+        variant: 'primary',
+        icon: 'radio',
+      },
       secondaryCta: { label: 'Learn the craft', href: '/academy', variant: 'secondary' },
       borderBottom: false,
     }),
@@ -1885,7 +2112,12 @@ export function seedEventsLayout(): PageLayout {
         { label: 'Cities', value: 'Online' },
         { label: 'Free seats', value: '—' },
       ],
-      primaryCta: { label: 'View schedule', href: '#schedule', variant: 'primary', icon: 'event_available' },
+      primaryCta: {
+        label: 'View schedule',
+        href: '#schedule',
+        variant: 'primary',
+        icon: 'event_available',
+      },
       secondaryCta: { label: 'Browse all events', href: '#browse', variant: 'secondary' },
       borderBottom: false,
     }),
@@ -1984,22 +2216,55 @@ interface LegalSectionInput {
 }
 
 /** Legal-style pages: title + "last updated" line, then heading/paragraph/bullet blocks. */
-export function seedLegalLayout(title: string, updatedAt: string, sections: LegalSectionInput[]): PageLayout {
+export function seedLegalLayout(
+  title: string,
+  updatedAt: string,
+  sections: LegalSectionInput[],
+): PageLayout {
   const children: SeedResult[] = [
     leaf('heading', { as: 'h1', size: 'headline-lg', text: title }),
     leaf('text', { text: updatedAt, size: 'sm', color: 'text-text-muted', marginBottom: 40 }),
   ];
   for (const section of sections) {
-    children.push(leaf('heading', { as: 'h2', size: '2xl', text: section.heading, marginTop: 48, marginBottom: 16 }));
+    children.push(
+      leaf('heading', {
+        as: 'h2',
+        size: '2xl',
+        text: section.heading,
+        marginTop: 48,
+        marginBottom: 16,
+      }),
+    );
     for (const paragraph of section.paragraphs ?? []) {
-      children.push(leaf('text', { text: paragraph, size: 'md', color: 'text-text-muted', marginBottom: 16, className: 'leading-relaxed' }));
+      children.push(
+        leaf('text', {
+          text: paragraph,
+          size: 'md',
+          color: 'text-text-muted',
+          marginBottom: 16,
+          className: 'leading-relaxed',
+        }),
+      );
     }
     for (const bullet of section.bullets ?? []) {
-      children.push(leaf('text', { text: `• ${bullet}`, size: 'md', color: 'text-text-muted', marginBottom: 8, className: 'leading-relaxed' }));
+      children.push(
+        leaf('text', {
+          text: `• ${bullet}`,
+          size: 'md',
+          color: 'text-text-muted',
+          marginBottom: 8,
+          className: 'leading-relaxed',
+        }),
+      );
     }
   }
   const body = pack(
-    n('section', { className: 'container mx-auto px-4', maxWidth: 768, paddingTop: 64, paddingBottom: 96 }),
+    n('section', {
+      className: 'container mx-auto px-4',
+      maxWidth: 768,
+      paddingTop: 64,
+      paddingBottom: 96,
+    }),
     'content',
     children,
   );
@@ -2052,7 +2317,9 @@ export function seedPrivacyLayout(): PageLayout {
     },
     {
       heading: 'Contact',
-      paragraphs: ['For questions about this privacy policy, contact us at privacy@titansofcnc.com.'],
+      paragraphs: [
+        'For questions about this privacy policy, contact us at privacy@titansofcnc.com.',
+      ],
     },
   ]);
 }
@@ -2080,7 +2347,9 @@ export function seedRefundsLayout(): PageLayout {
     },
     {
       heading: 'Refund Process',
-      paragraphs: ['Approved refunds are processed within 5-10 business days to the original payment method.'],
+      paragraphs: [
+        'Approved refunds are processed within 5-10 business days to the original payment method.',
+      ],
     },
     {
       heading: 'Exceptions',
@@ -2183,15 +2452,36 @@ export function seedEduPurchasesLayout(): PageLayout {
 
 /** The about page: story band, intro, DNA cards, stats, journey timeline, team, trust badges. */
 export function seedAboutLayout(): PageLayout {
-  const section = (className: string, paddingTop: number, paddingBottom: number, children: SeedResult[]): SeedResult =>
+  const section = (
+    className: string,
+    paddingTop: number,
+    paddingBottom: number,
+    children: SeedResult[],
+  ): SeedResult =>
     pack(n('section', { className, paddingTop, paddingBottom }), 'content', children);
   const container = (children: SeedResult[], extra = 'container mx-auto px-4'): SeedResult =>
-    pack(n('stack', { direction: 'column', gap: 'none', align: 'stretch', justify: 'start', className: extra }), 'content', children);
+    pack(
+      n('stack', {
+        direction: 'column',
+        gap: 'none',
+        align: 'stretch',
+        justify: 'start',
+        className: extra,
+      }),
+      'content',
+      children,
+    );
 
   const hero = section('border-b bg-surface-sunken/60 blueprint-grid', 96, 96, [
     container(
       [
-        leaf('heading', { as: 'h1', size: 'headline-lg', text: 'Our Story', align: 'center', marginBottom: 16 }),
+        leaf('heading', {
+          as: 'h1',
+          size: 'headline-lg',
+          text: 'Our Story',
+          align: 'center',
+          marginBottom: 16,
+        }),
         leaf('text', {
           text: 'From a single CNC shop to a global education movement — TITANS of Manufacturing is on a mission to save manufacturing education and inspire the next generation of makers.',
           size: 'lg',
@@ -2219,30 +2509,55 @@ export function seedAboutLayout(): PageLayout {
   ]);
 
   const dnaCards = [
-    { icon: 'school', title: '100% Free Education', desc: 'Our core mission is to make world-class manufacturing education accessible to everyone, regardless of location or budget.' },
-    { icon: 'groups', title: 'Committed to Community', desc: 'We build more than courses — we build a global community of machinists, engineers, and manufacturers helping each other grow.' },
-    { icon: 'star', title: 'World-Class Content', desc: 'Every course is produced with cinematic quality, real-world projects, and input from industry experts across every discipline.' },
-  ].map(
-    (item) =>
-      pack(
-        n('card', { padding: 'lg', bg: 'muted', radius: 'xl', border: true, align: 'center', hover: true }),
-        'content',
-        [
-          leaf('icon', {
-            icon: item.icon,
-            size: 24,
-            color: 'text-primary',
-            className: 'mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10',
-          }),
-          leaf('heading', { as: 'h3', size: 'xl', text: item.title, marginBottom: 8 }),
-          leaf('text', { text: item.desc, size: 'sm', color: 'text-text-muted' }),
-        ],
-      ),
+    {
+      icon: 'school',
+      title: '100% Free Education',
+      desc: 'Our core mission is to make world-class manufacturing education accessible to everyone, regardless of location or budget.',
+    },
+    {
+      icon: 'groups',
+      title: 'Committed to Community',
+      desc: 'We build more than courses — we build a global community of machinists, engineers, and manufacturers helping each other grow.',
+    },
+    {
+      icon: 'star',
+      title: 'World-Class Content',
+      desc: 'Every course is produced with cinematic quality, real-world projects, and input from industry experts across every discipline.',
+    },
+  ].map((item) =>
+    pack(
+      n('card', {
+        padding: 'lg',
+        bg: 'muted',
+        radius: 'xl',
+        border: true,
+        align: 'center',
+        hover: true,
+      }),
+      'content',
+      [
+        leaf('icon', {
+          icon: item.icon,
+          size: 24,
+          color: 'text-primary',
+          className:
+            'mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10',
+        }),
+        leaf('heading', { as: 'h3', size: 'xl', text: item.title, marginBottom: 8 }),
+        leaf('text', { text: item.desc, size: 'sm', color: 'text-text-muted' }),
+      ],
+    ),
   );
 
   const dna = section('', 80, 80, [
     container([
-      leaf('heading', { as: 'h2', size: 'headline-lg', text: 'Our DNA', align: 'center', marginBottom: 48 }),
+      leaf('heading', {
+        as: 'h2',
+        size: 'headline-lg',
+        text: 'Our DNA',
+        align: 'center',
+        marginBottom: 48,
+      }),
       pack(n('grid', { columns: 3, gap: 'lg' }), 'items', dnaCards),
     ]),
   ]);
@@ -2253,22 +2568,21 @@ export function seedAboutLayout(): PageLayout {
     { icon: 'public', value: 'Global', label: 'Remote-first Classroom' },
     { icon: 'school', value: 'Project-based', label: 'Curriculum Design' },
     { icon: 'verified', value: 'Industry-led', label: 'Instruction & Review' },
-  ].map(
-    (item) =>
-      pack(
-        n('stack', { direction: 'column', gap: 'none', align: 'center', justify: 'center' }),
-        'content',
-        [
-          leaf('icon', {
-            icon: item.icon,
-            size: 20,
-            color: 'text-primary',
-            className: 'mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10',
-          }),
-          leaf('heading', { as: 'span', size: 'stats', text: item.value, align: 'center' }),
-          leaf('text', { text: item.label, size: 'sm', color: 'text-text-muted', align: 'center' }),
-        ],
-      ),
+  ].map((item) =>
+    pack(
+      n('stack', { direction: 'column', gap: 'none', align: 'center', justify: 'center' }),
+      'content',
+      [
+        leaf('icon', {
+          icon: item.icon,
+          size: 20,
+          color: 'text-primary',
+          className: 'mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10',
+        }),
+        leaf('heading', { as: 'span', size: 'stats', text: item.value, align: 'center' }),
+        leaf('text', { text: item.label, size: 'sm', color: 'text-text-muted', align: 'center' }),
+      ],
+    ),
   );
 
   const statsBand = section('bg-secondary/10', 64, 64, [
@@ -2276,40 +2590,72 @@ export function seedAboutLayout(): PageLayout {
   ]);
 
   const timeline = [
-    { year: '2012', title: 'Defying The Odds', desc: 'TITANS of CNC is founded with a mission to save manufacturing education.' },
-    { year: '2014', title: 'No Ordinary Job Shop', desc: 'The TITANS shop establishes itself as a cutting-edge precision CNC facility.' },
-    { year: '2017', title: 'Education Revolution', desc: 'Launch of free online CNC courses — the first of their kind.' },
-    { year: '2020', title: 'Driving Awareness', desc: 'Global campaign to bring manufacturing careers to the forefront.' },
-    { year: '2022', title: 'Global Expansion', desc: 'Academies launch for Aerospace, Grinding, and Swiss Machining.' },
-    { year: '2024', title: 'Rise to Greatness', desc: 'A global community of learners and partnerships with industry leaders.' },
-  ].map(
-    (item) =>
-      pack(
-        n('stack', { direction: 'column', gap: 'none', align: 'stretch', justify: 'start' }),
-        'content',
-        [
-          leaf('heading', { as: 'span', size: 'lg', text: item.year, color: 'text-primary' }),
-          leaf('heading', { as: 'h3', size: 'xl', text: item.title, marginTop: 4 }),
-          leaf('text', { text: item.desc, size: 'sm', color: 'text-text-muted', marginTop: 4 }),
-        ],
-      ),
+    {
+      year: '2012',
+      title: 'Defying The Odds',
+      desc: 'TITANS of CNC is founded with a mission to save manufacturing education.',
+    },
+    {
+      year: '2014',
+      title: 'No Ordinary Job Shop',
+      desc: 'The TITANS shop establishes itself as a cutting-edge precision CNC facility.',
+    },
+    {
+      year: '2017',
+      title: 'Education Revolution',
+      desc: 'Launch of free online CNC courses — the first of their kind.',
+    },
+    {
+      year: '2020',
+      title: 'Driving Awareness',
+      desc: 'Global campaign to bring manufacturing careers to the forefront.',
+    },
+    {
+      year: '2022',
+      title: 'Global Expansion',
+      desc: 'Academies launch for Aerospace, Grinding, and Swiss Machining.',
+    },
+    {
+      year: '2024',
+      title: 'Rise to Greatness',
+      desc: 'A global community of learners and partnerships with industry leaders.',
+    },
+  ].map((item) =>
+    pack(
+      n('stack', { direction: 'column', gap: 'none', align: 'stretch', justify: 'start' }),
+      'content',
+      [
+        leaf('heading', { as: 'span', size: 'lg', text: item.year, color: 'text-primary' }),
+        leaf('heading', { as: 'h3', size: 'xl', text: item.title, marginTop: 4 }),
+        leaf('text', { text: item.desc, size: 'sm', color: 'text-text-muted', marginTop: 4 }),
+      ],
+    ),
   );
 
   const journey = section('', 80, 80, [
-    container([
-      leaf('heading', { as: 'h2', size: 'headline-lg', text: 'Our Journey', align: 'center', marginBottom: 48 }),
-      pack(
-        n('stack', {
-          direction: 'column',
-          gap: 'none',
-          align: 'stretch',
-          justify: 'start',
-          className: 'relative pl-8 border-l-2 border-primary/30',
+    container(
+      [
+        leaf('heading', {
+          as: 'h2',
+          size: 'headline-lg',
+          text: 'Our Journey',
+          align: 'center',
+          marginBottom: 48,
         }),
-        'content',
-        timeline,
-      ),
-    ], 'container mx-auto px-4 max-w-3xl'),
+        pack(
+          n('stack', {
+            direction: 'column',
+            gap: 'none',
+            align: 'stretch',
+            justify: 'start',
+            className: 'relative pl-8 border-l-2 border-primary/30',
+          }),
+          'content',
+          timeline,
+        ),
+      ],
+      'container mx-auto px-4 max-w-3xl',
+    ),
   ]);
 
   const team = [
@@ -2321,28 +2667,41 @@ export function seedAboutLayout(): PageLayout {
     { name: 'Emily Foster', role: 'Curriculum Designer', initials: 'EF' },
     { name: 'Alex Thompson', role: 'Technical Director', initials: 'AT' },
     { name: 'Lisa Wang', role: 'Partnerships Lead', initials: 'LW' },
-  ].map(
-    (member) =>
-      pack(
-        n('card', { padding: 'md', bg: 'muted', radius: 'xl', border: true, align: 'center', hover: true }),
-        'content',
-        [
-          leaf('heading', {
-            as: 'span',
-            size: 'xl',
-            text: member.initials,
-            color: 'text-primary',
-            className: 'mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-lg font-bold',
-          }),
-          leaf('heading', { as: 'h3', size: 'xl', text: member.name }),
-          leaf('text', { text: member.role, size: 'sm', color: 'text-text-muted' }),
-        ],
-      ),
+  ].map((member) =>
+    pack(
+      n('card', {
+        padding: 'md',
+        bg: 'muted',
+        radius: 'xl',
+        border: true,
+        align: 'center',
+        hover: true,
+      }),
+      'content',
+      [
+        leaf('heading', {
+          as: 'span',
+          size: 'xl',
+          text: member.initials,
+          color: 'text-primary',
+          className:
+            'mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-lg font-bold',
+        }),
+        leaf('heading', { as: 'h3', size: 'xl', text: member.name }),
+        leaf('text', { text: member.role, size: 'sm', color: 'text-text-muted' }),
+      ],
+    ),
   );
 
   const teamBand = section('bg-secondary/10', 80, 80, [
     container([
-      leaf('heading', { as: 'h2', size: 'headline-lg', text: 'Our Team', align: 'center', marginBottom: 48 }),
+      leaf('heading', {
+        as: 'h2',
+        size: 'headline-lg',
+        text: 'Our Team',
+        align: 'center',
+        marginBottom: 48,
+      }),
       pack(n('grid', { columns: 4, gap: 'md' }), 'items', team),
     ]),
   ]);
@@ -2352,22 +2711,27 @@ export function seedAboutLayout(): PageLayout {
     { icon: 'school', title: 'Free Education', desc: '100% free academy courses, forever.' },
     { icon: 'wrench', title: 'Online Support', desc: 'Expert support within 24 hours.' },
     { icon: 'public', title: 'Global Community', desc: 'Members learning worldwide.' },
-  ].map(
-    (item) =>
-      pack(
-        n('stack', { direction: 'column', gap: 'none', align: 'center', justify: 'center' }),
-        'content',
-        [
-          leaf('icon', {
-            icon: item.icon,
-            size: 24,
-            color: 'text-primary',
-            className: 'mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10',
-          }),
-          leaf('heading', { as: 'h3', size: 'sm', text: item.title, align: 'center' }),
-          leaf('text', { text: item.desc, size: 'sm', color: 'text-text-muted', align: 'center', marginTop: 4 }),
-        ],
-      ),
+  ].map((item) =>
+    pack(
+      n('stack', { direction: 'column', gap: 'none', align: 'center', justify: 'center' }),
+      'content',
+      [
+        leaf('icon', {
+          icon: item.icon,
+          size: 24,
+          color: 'text-primary',
+          className: 'mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10',
+        }),
+        leaf('heading', { as: 'h3', size: 'sm', text: item.title, align: 'center' }),
+        leaf('text', {
+          text: item.desc,
+          size: 'sm',
+          color: 'text-text-muted',
+          align: 'center',
+          marginTop: 4,
+        }),
+      ],
+    ),
   );
 
   const badges = section('border-t bg-secondary/10', 64, 64, [
@@ -2404,10 +2768,12 @@ const SEEDABLE: Record<string, SeedFn> = {
   footer: seedFooter,
   'footer-col': seedFooterCol as SeedFn,
   'catalog-hero': ((overrides) => seedCatalogHero(overrides)) as SeedFn,
-  'card-grid': ((overrides) => leaf('card-grid', { ...cardGridDefaults, ...(overrides ?? {}) })) as SeedFn,
+  'card-grid': ((overrides) =>
+    leaf('card-grid', { ...cardGridDefaults, ...(overrides ?? {}) })) as SeedFn,
   'spotlight-cards': ((overrides) =>
     leaf('spotlight-cards', { ...spotlightCardsDefaults, ...(overrides ?? {}) })) as SeedFn,
-  'closing-cta': ((overrides) => leaf('closing-cta', { ...closingCtaDefaults, ...(overrides ?? {}) })) as SeedFn,
+  'closing-cta': ((overrides) =>
+    leaf('closing-cta', { ...closingCtaDefaults, ...(overrides ?? {}) })) as SeedFn,
   'live-island': ((overrides) =>
     leaf('live-island', { ...liveIslandDefaults, ...(overrides ?? {}) })) as SeedFn,
 };

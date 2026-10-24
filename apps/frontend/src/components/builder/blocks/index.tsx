@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import type { PuckNode } from '@titan/shared';
 import { HeadingBlock } from './heading-block';
 import { TextBlock } from './text-block';
@@ -17,6 +17,18 @@ import { SectionBlock } from './section-block';
 import { NavBlock } from './nav-block';
 import { HeroBlock } from './hero-block';
 import { HeroConsoleBlock } from './hero-console-block';
+import { ConsoleFrameBlock } from './console-frame-block';
+import { ConsoleHeaderBlock } from './console-header-block';
+import { ConsoleScreenBlock } from './console-screen-block';
+import { ConsoleImageBlock } from './console-image-block';
+import { ConsoleTelemetryStackBlock } from './console-telemetry-stack-block';
+import { ConsoleTelemetryBlock } from './console-telemetry-block';
+import { ConsoleAuditBlock } from './console-audit-block';
+import { ConsoleAxisDrawerBlock } from './console-axis-drawer-block';
+import { ConsoleAxisBlock } from './console-axis-block';
+import { ConsoleModeBarBlock } from './console-mode-bar-block';
+import { ConsoleModeBlock } from './console-mode-block';
+import { ConsoleMetricBlock } from './console-metric-block';
 import { StatsBlock } from './stats-block';
 import { StatItemBlock } from './stat-item-block';
 import { PartnerLogosBlock } from './partner-logos-block';
@@ -42,7 +54,12 @@ import { SpotlightCardsBlock } from './spotlight-cards-block';
 import { ClosingCtaBlock } from './closing-cta-block';
 import { LiveIslandBlock } from './live-island-block'; /** Puck-like slot bridge injected by the public renderer (or Puck itself in the editor). */
 export interface PuckBridge {
-  renderSlot: (slot: string) => ReactNode;
+  /**
+   * Renders a slot's children. The optional options are used by the editor to
+   * make Puck's slot wrapper share the parent's flex/grid layout; the public
+   * renderer returns the children directly and ignores them.
+   */
+  renderSlot: (slot: string, options?: { className?: string; style?: CSSProperties }) => ReactNode;
   /** Raw children of a slot (only the public renderer provides this). */ getSlotData?: (
     slot: string,
   ) => PuckNode[];
@@ -63,6 +80,18 @@ export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<
   nav: NavBlock,
   hero: HeroBlock,
   'hero-console': HeroConsoleBlock,
+  'console-frame': ConsoleFrameBlock,
+  'console-header': ConsoleHeaderBlock,
+  'console-screen': ConsoleScreenBlock,
+  'console-image': ConsoleImageBlock,
+  'console-telemetry-stack': ConsoleTelemetryStackBlock,
+  'console-telemetry': ConsoleTelemetryBlock,
+  'console-audit': ConsoleAuditBlock,
+  'console-axis-drawer': ConsoleAxisDrawerBlock,
+  'console-axis': ConsoleAxisBlock,
+  'console-mode-bar': ConsoleModeBarBlock,
+  'console-mode': ConsoleModeBlock,
+  'console-metric': ConsoleMetricBlock,
   stats: StatsBlock,
   'stat-item': StatItemBlock,
   'partner-logos': PartnerLogosBlock,
