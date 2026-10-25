@@ -12,18 +12,22 @@ export function ConsoleTelemetryBlock({ props, puck }: BlockComponentProps<Conso
     <div
       className={cn(
         CONSOLE_DARK_GLASS,
-        'px-3 py-2 rounded-lg font-mono text-xs flex items-center gap-3',
+        // On phones the badge shares the top edge with the audit card, so it has to wrap
+        // its label / value / tag instead of forcing a single very wide line.
+        'flex min-w-0 max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg px-2.5 py-1.5 font-mono text-[10px] sm:gap-3 sm:px-3 sm:py-2 sm:text-xs',
         className,
       )}
       style={layoutStyle(props)}
     >
-      <span className="text-white/60">{label}</span>
-      <span className="font-bold text-sm">{value || 'Value'}</span>
+      <span className="shrink-0 text-white/60">{label}</span>
+      <span className="text-xs font-bold sm:text-sm">{value || 'Value'}</span>
       {tag ? (
         tagTone === 'muted' ? (
-          <span className="text-[10px] text-white/70">{tag}</span>
+          <span className="text-[9px] text-white/70 sm:text-[10px]">{tag}</span>
         ) : (
-          <span className="text-[10px] bg-success/40 text-white px-1.5 py-0.5 rounded">{tag}</span>
+          <span className="rounded bg-success/40 px-1.5 py-0.5 text-[9px] text-white sm:text-[10px]">
+            {tag}
+          </span>
         )
       ) : null}
     </div>

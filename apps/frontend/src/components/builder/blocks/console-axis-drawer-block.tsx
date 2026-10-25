@@ -23,7 +23,7 @@ export function ConsoleAxisDrawerBlock({
     <div
       className={cn(
         CONSOLE_DARK_GLASS,
-        'absolute p-3.5 rounded-xl z-20 !pointer-events-auto',
+        'absolute rounded-xl p-2.5 z-20 !pointer-events-auto sm:p-3.5',
         PLACEMENT[placement] ?? PLACEMENT.bottom,
         className,
       )}
@@ -32,7 +32,9 @@ export function ConsoleAxisDrawerBlock({
       <div className="flex items-center justify-between mb-2 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Icon name="tune" className="size-3.5 text-white/70 shrink-0" />
-          <span className="text-xs font-mono font-medium text-white/90 truncate">{title}</span>
+          <span className="text-[10px] font-mono font-medium text-white/90 truncate sm:text-xs">
+            {title}
+          </span>
         </div>
         {vibration ? (
           <span className="text-[11px] font-mono text-success shrink-0 hidden sm:inline">
@@ -40,8 +42,13 @@ export function ConsoleAxisDrawerBlock({
           </span>
         ) : null}
       </div>
-      <div className="flex gap-2 text-center font-mono">
-        {puck.renderSlot('content', { className: 'flex flex-1 gap-2' })}
+      {/*
+        Five axes in a single row leave ~40px per cell on a phone, which truncated every
+        value to `+14…`. Three columns on mobile keeps the full readout legible; the
+        editor slot wrapper uses `contents` so its children become the grid items too.
+      */}
+      <div className="grid grid-cols-3 gap-1.5 text-center font-mono sm:flex sm:gap-2">
+        {puck.renderSlot('content', { className: 'contents sm:flex sm:flex-1 sm:gap-2' })}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import type { HeroConsoleProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
@@ -107,19 +108,20 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                         {imageFailed ? 'Image failed' : 'Add console image'}
                       </span>
                     ) : null}
-                    {/* Telemetry badges (top-left) */}
-                    <div className="absolute top-4 start-4 flex flex-col gap-2 z-20">
+                    {/* Telemetry badges (top-left). Capped on phones so they never run into
+                        the audit card pinned to the opposite corner. */}
+                    <div className="absolute top-4 start-4 z-20 flex max-w-[calc(50%-1.25rem)] flex-col gap-2 sm:max-w-none">
                       {feedValue ? (
                         <div
                           className={cn(
                             DARK_GLASS,
-                            'px-3 py-2 rounded-lg font-mono text-xs flex items-center gap-3',
+                            'flex min-w-0 max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg px-2.5 py-1.5 font-mono text-[10px] sm:gap-3 sm:px-3 sm:py-2 sm:text-xs',
                           )}
                         >
-                          <span className="text-white/60">{feedLabel}</span>
-                          <span className="font-bold text-sm">{feedValue}</span>
+                          <span className="shrink-0 text-white/60">{feedLabel}</span>
+                          <span className="text-xs font-bold sm:text-sm">{feedValue}</span>
                           {feedTag ? (
-                            <span className="text-[10px] bg-success/40 text-white px-1.5 py-0.5 rounded">
+                            <span className="rounded bg-success/40 px-1.5 py-0.5 text-[9px] text-white sm:text-[10px]">
                               {feedTag}
                             </span>
                           ) : null}
@@ -129,32 +131,39 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                         <div
                           className={cn(
                             DARK_GLASS,
-                            'px-3 py-2 rounded-lg font-mono text-xs flex items-center gap-3',
+                            'flex min-w-0 max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg px-2.5 py-1.5 font-mono text-[10px] sm:gap-3 sm:px-3 sm:py-2 sm:text-xs',
                           )}
                         >
-                          <span className="text-white/60">{spindleLabel}</span>
-                          <span className="font-bold text-sm">{spindleValue}</span>
+                          <span className="shrink-0 text-white/60">{spindleLabel}</span>
+                          <span className="text-xs font-bold sm:text-sm">{spindleValue}</span>
                           {spindleTag ? (
-                            <span className="text-[10px] text-white/70">{spindleTag}</span>
+                            <span className="text-[9px] text-white/70 sm:text-[10px]">
+                              {spindleTag}
+                            </span>
                           ) : null}
                         </div>
                       ) : null}
                     </div>
                     {/* Safety status (top-right) */}
                     {auditValue ? (
-                      <div className="absolute top-4 end-4 z-20">
+                      <div className="absolute top-4 end-4 z-20 max-w-[calc(50%-1.25rem)] sm:max-w-none">
                         <div
                           className={cn(
                             DARK_GLASS,
-                            'px-3.5 py-2 rounded-lg flex items-center gap-2',
+                            'flex min-w-0 max-w-full items-start gap-1.5 rounded-lg px-2.5 py-1.5 sm:items-center sm:gap-2 sm:px-3.5 sm:py-2',
                           )}
                         >
-                          <Icon name="verified_user" className="size-4 text-success" />
-                          <div className="text-left">
-                            <div className="text-[10px] text-success tracking-wider uppercase font-bold">
+                          <Icon
+                            name="verified_user"
+                            className="mt-0.5 size-3.5 shrink-0 text-success sm:mt-0 sm:size-4"
+                          />
+                          <div className="min-w-0 text-left">
+                            <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-success sm:text-[10px]">
                               {auditTitle}
                             </div>
-                            <div className="text-xs font-mono font-bold">{auditValue}</div>
+                            <div className="break-words text-[10px] font-mono font-bold leading-tight sm:text-xs">
+                              {auditValue}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -164,13 +173,13 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                       <div
                         className={cn(
                           DARK_GLASS,
-                          'absolute bottom-4 inset-x-4 p-3.5 rounded-xl z-20',
+                          'absolute bottom-4 inset-x-4 rounded-xl p-2.5 z-20 sm:p-3.5',
                         )}
                       >
                         <div className="flex items-center justify-between mb-2 gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <Icon name="tune" className="size-3.5 text-white/70 shrink-0" />
-                            <span className="text-xs font-mono font-medium text-white/90 truncate">
+                            <span className="text-[10px] font-mono font-medium text-white/90 truncate sm:text-xs">
                               {axesTitle}
                             </span>
                           </div>
@@ -181,26 +190,28 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                           ) : null}
                         </div>
                         <div
-                          className="grid gap-2 text-center font-mono"
-                          style={{ gridTemplateColumns: `repeat(${axes.length}, minmax(0, 1fr))` }}
+                          className="grid grid-cols-3 gap-1.5 text-center font-mono sm:grid-cols-[repeat(var(--axis-count),minmax(0,1fr))] sm:gap-2"
+                          style={{ '--axis-count': axes.length } as CSSProperties}
                         >
                           {axes.map((axis, i) => (
                             <div
                               key={i}
                               className={cn(
-                                'bg-white/10 p-1.5 rounded border',
+                                'rounded border bg-white/10 p-1 sm:p-1.5',
                                 axis.tone === 'accent' ? 'border-primary/50' : 'border-white/10',
                               )}
                             >
                               <span
                                 className={cn(
-                                  'text-[10px] block',
+                                  'block text-[9px] sm:text-[10px]',
                                   axis.tone === 'accent' ? 'text-white' : 'text-white/60',
                                 )}
                               >
                                 {axis.label}
                               </span>
-                              <span className="text-xs font-bold text-white">{axis.value}</span>
+                              <span className="text-[11px] font-bold text-white sm:text-xs">
+                                {axis.value}
+                              </span>
                             </div>
                           ))}
                         </div>

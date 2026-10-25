@@ -186,7 +186,10 @@ describe('composable console rendering', () => {
       />,
     );
     expect(drawer).toContain('data-slot="axis-children"');
-    expect(axisSlotClass).toContain('flex flex-1 gap-2');
+    // Mobile: `contents` lets the axis cells join the drawer's 3-column grid. Desktop:
+    // the wrapper becomes the original single flex row.
+    expect(axisSlotClass).toContain('contents');
+    expect(axisSlotClass).toContain('sm:flex sm:flex-1 sm:gap-2');
     expect(drawer).toContain('!pointer-events-auto');
 
     let telemetrySlotClass = '';

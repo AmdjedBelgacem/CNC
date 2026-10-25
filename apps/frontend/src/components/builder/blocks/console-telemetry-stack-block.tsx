@@ -20,7 +20,10 @@ export function ConsoleTelemetryStackBlock({
   return (
     <div
       className={cn(
-        'absolute z-20 flex flex-col !pointer-events-auto',
+        // Cap the stack on phones so it can never run into the audit card pinned to the
+        // opposite corner. The audit gets the same half-width cap; together they leave a
+        // gutter instead of overlapping the feed badge.
+        'absolute z-20 flex min-w-0 max-w-[calc(50%-1.25rem)] flex-col !pointer-events-auto sm:max-w-none',
         CONSOLE_CORNER[placement] ?? CONSOLE_CORNER['top-left'],
         gapClass,
         className,
