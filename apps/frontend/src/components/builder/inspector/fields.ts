@@ -1606,6 +1606,14 @@ export const academyGridInspector = defineInspector<AcademyGridProps>().groups([
     icon: Link2,
     fields: [
       { key: 'viewAllHref', label: 'View all link', control: 'text', placeholder: '/courses' },
+      {
+        key: 'limit',
+        label: 'Card limit',
+        control: 'number',
+        min: 1,
+        max: 24,
+        hint: 'Leave empty to show every published academy. The homepage uses 4.',
+      },
     ],
   },
   {
@@ -2581,12 +2589,18 @@ export const liveIslandInspector = defineInspector<LiveIslandProps>().groups([
     titleKey: 'content',
     icon: LayoutTemplate,
     fields: [
-      { key: 'variant', label: 'Data source', control: 'select', options: LIVE_ISLAND_OPTIONS },
+      {
+        key: 'variant',
+        label: 'Data source',
+        control: 'select',
+        options: LIVE_ISLAND_OPTIONS,
+        hint: 'Live variants read tenant data. Homepage FAQ/Guides and About facts are fixed repository-managed sections.',
+      },
       {
         key: 'label',
         label: 'Editor label',
         control: 'text',
-        hint: 'Shown in the canvas placeholder and used as the fallback heading.',
+        hint: 'Shown on the canvas badge and used as the fallback heading.',
       },
     ],
   },

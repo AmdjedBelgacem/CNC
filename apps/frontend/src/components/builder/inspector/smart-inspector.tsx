@@ -66,7 +66,7 @@ export function SmartInspector() {
       <div key={selected.props.id} className="flex min-h-0 flex-1 flex-col">
         {' '}
         <InspectorHeader type={selected.type} label={selected.type} />{' '}
-        <DynamicContentNotice type={selected.type} />{' '}
+        <DynamicContentNotice type={selected.type} props={selected.props} />{' '}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
           {' '}
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -90,7 +90,7 @@ export function SmartInspector() {
         type={selected.type}
         label={groupText.label(undefined, def.label ?? selected.type)}
       />{' '}
-      <DynamicContentNotice type={selected.type} />{' '}
+      <DynamicContentNotice type={selected.type} props={selected.props} />{' '}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         {' '}
         {def.groups.map((group) => (

@@ -61,6 +61,73 @@ export function walkLayoutNodes(layout: PageLayout, visit: (node: PuckNode) => v
   walk(layout.content ?? []);
 }
 
+/**
+ * Gives every node a stable `props.id`.
+ *
+ * Puck uses `props.id` as the identity of a component in its store. Legacy rows
+ * (and hand-authored layouts like the `our-machines` demo page) can contain
+ * section/stack nodes without one; Puck then treats every render as a new node,
+ * which can drive an unbounded mount loop and crash the editor tab. The public
+ * renderer never needed ids, so the data was valid — only the editor was not.
+ *
+ * Existing ids are preserved, and generated ids are deterministic (`auto-1`,
+ * `auto-2`, …) so a reload of an unsaved page produces the same tree. The
+ * builder persists them the next time the page is saved.
+ */
+export function ensureNodeIds(layout: PageLayout): PageLayout {
+  const existing = new Set<string>();
+  walkLayoutNodes(layout, (node) => {
+    const id = node.props?.id;
+    if (typeof id === 'string' && id) existing.add(id);
+  });
+
+  let nextId = 1;
+  const makeId = () => {
+    let id: string;
+    do {
+      id = `auto-${nextId++}`;
+    } while (existing.has(id));
+    existing.add(id);
+    return id;
+  };
+
+  const seen = new WeakSet<PuckNode>();
+  const walk = (nodes: PuckNode[] | undefined): PuckNode[] | undefined => {
+    if (!nodes) return nodes;
+    let changed = false;
+    const rewritten = nodes.map((node) => {
+      if (seen.has(node)) return node;
+      seen.add(node);
+
+      const props: Record<string, unknown> = { ...(node.props ?? {}) };
+      let nodeChanged = false;
+      if (typeof props.id !== 'string' || !props.id) {
+        props.id = makeId();
+        nodeChanged = true;
+      }
+
+      for (const slot of slotNamesFor(node.type)) {
+        const children = props[slot];
+        if (!isNodeArray(children)) continue;
+        const nextChildren = walk(children) ?? children;
+        if (nextChildren !== children) {
+          props[slot] = nextChildren;
+          nodeChanged = true;
+        }
+      }
+
+      if (!nodeChanged) return node;
+      changed = true;
+      return { type: node.type, props };
+    });
+    return changed ? rewritten : nodes;
+  };
+
+  const content = walk(layout.content);
+  if (!content || content === layout.content) return layout;
+  return { ...layout, content };
+}
+
 /** Finds a node anywhere in the layout by its `props.id`. */
 export function findNodeById(
   layout: PageLayout,

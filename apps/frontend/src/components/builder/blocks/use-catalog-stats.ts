@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
  */
 
 import { coerceCurrency, formatMinorUnits } from '@/lib/money';
+import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
 
 export interface HeroStat {
   label: string;
@@ -32,8 +33,12 @@ function isPlaceholder(value: string | undefined): boolean {
 
 export function useCatalogStats(stats: HeroStat[] | undefined): HeroStat[] | undefined {
   const [live, setLive] = useState<HeroStat[] | null>(null);
+  const preview = useBuilderLivePreview();
+  const liveHero = preview?.heroStats ?? null;
+  const waitingForLive = Boolean(preview?.loading) && !liveHero;
 
   useEffect(() => {
+    if (waitingForLive || liveHero) return;
     if (!stats?.length) return;
     // Nothing to do unless the layout actually carries placeholders.
     if (!stats.some((s) => isPlaceholder(s.value))) return;
@@ -79,8 +84,10 @@ export function useCatalogStats(stats: HeroStat[] | undefined): HeroStat[] | und
     return () => {
       active = false;
     };
-  }, [stats]);
+  }, [stats, waitingForLive, liveHero]);
 
+  if (waitingForLive) return stats;
+  if (liveHero) return liveHero;
   if (!stats?.length) return stats;
   if (!live) return stats;
 

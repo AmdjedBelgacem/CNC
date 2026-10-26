@@ -148,7 +148,7 @@ export async function middleware(request: NextRequest) {
  * emits, and the policy then only trusts scripts carrying this request's nonce. An
  * injected inline script has no way to know it.
  */
-function buildCsp(nonce: string): string {
+function buildCsp(nonce: string, allowSelfFrame = false): string {
   const isDev = process.env.NODE_ENV !== 'production';
   const explicit = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
   let mediaOrigin = '';
@@ -193,7 +193,7 @@ function buildCsp(nonce: string): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    `frame-ancestors ${allowSelfFrame ? "'self'" : "'none'"}`,
     ...(isDev ? [] : ['upgrade-insecure-requests']),
   ].join('; ');
 }
@@ -201,11 +201,18 @@ function buildCsp(nonce: string): string {
   // A fresh nonce per request. It goes on the REQUEST so Next.js can stamp it onto the
   // scripts it renders, and on the RESPONSE so the browser only trusts that nonce.
   const nonce = randomBytes(16).toString('base64');
+  const isPreviewSurface = pathname.startsWith('/preview/');
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  if (isPreviewSurface) requestHeaders.set('x-preview-surface', '1');
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set('Content-Security-Policy', buildCsp(nonce));
+  response.headers.set('Content-Security-Policy', buildCsp(nonce, isPreviewSurface));
+  if (isPreviewSurface) {
+    // The builder embeds live-island previews in a same-origin iframe. The
+    // global policy denies framing outright, so this one route opts back in.
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  }
   response.headers.set('x-tenant-slug', tenantSlug);
   // Cookie-based locale resolution — no URL prefix, no redirect.
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;

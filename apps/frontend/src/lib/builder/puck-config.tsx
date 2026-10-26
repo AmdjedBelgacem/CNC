@@ -551,6 +551,7 @@ const featureItem: ComponentConfig = def('feature-item', 'Feature Row', featureI
 });
 const academyGrid: ComponentConfig = def('academy-grid', 'Academy Grid', academyGridDefaults, {
   viewAllHref: textField('View all link'),
+  limit: numberField('Card limit', 1, 24),
   headerMarginBottom: numberField('Header bottom margin (px)', 0, 320),
   cardsColumns: selectField('Card columns (md+)', [
     { label: '2', value: 'md:grid-cols-2' },

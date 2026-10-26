@@ -11,6 +11,8 @@ import {
   getSlotChildren,
   isNodeArray,
   migrateLegacyLayout,
+  ensureNodeIds,
+  ensureParitySections,
   slotNamesFor,
   walkLayoutNodes,
   type PageLayout,
@@ -21,6 +23,7 @@ import { puckConfig } from '@/lib/builder/puck-config';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { PageTranslationPanel } from '@/components/builder/page-translation';
 import { BuilderTranslationProvider } from '@/components/builder/translation-context';
+import { BuilderLivePreviewProvider } from '@/components/builder/live-preview-context';
 import { Languages, Loader2 } from 'lucide-react';
 import { BuilderHeader, VIEWPORTS } from '@/components/builder/editor-header';
 import { BuilderDialogs } from '@/components/builder/dialogs';
@@ -56,6 +59,7 @@ interface VersionRecord {
 const PUCK_IFRAME = {
   enabled: true,
 };
+
 const PUCK_VIEWPORTS = VIEWPORTS.map(({ label, width }) => ({
   label,
   width,
@@ -590,8 +594,11 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         // Legacy DropZone-era rows (flat `zones` map) are migrated to inline
         // slot children on load, so the editor store — and the next save —
         // are always in the canonical slot shape.
-        const migrated = expandHeroConsoleLayout(
-          migrateLegacyLayout(layout as unknown as PageLayout),
+        const migrated = ensureNodeIds(
+          ensureParitySections(
+            expandHeroConsoleLayout(migrateLegacyLayout(layout as unknown as PageLayout)),
+            slug,
+          ),
         ) as unknown as Data;
         const loadedIds = new Set<string>();
         walkLayoutNodes(migrated as unknown as PageLayout, (node) => {
@@ -925,21 +932,23 @@ Stable registration callback (unstable identity would re-run the bridge effect o
             {' '}
             <div className="min-h-0 flex-1">
               {' '}
-              <Puck
-                // A page switch remounts the canvas with the new page as Puck's
-                // initial `data`, instead of hoping an imperative setData landed.
-                key={canvasPage ?? 'empty'}
-                config={puckConfig}
-                data={data}
-                onChange={handleChange}
-                viewports={PUCK_VIEWPORTS}
-                iframe={PUCK_IFRAME}
-                /**
-                 * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
-                  PUCK_UI
-                }
-                overrides={overrides}
-              />{' '}
+              <BuilderLivePreviewProvider pageSlug={page?.slug ?? slug}>
+                <Puck
+                  // A page switch remounts the canvas with the new page as Puck's
+                  // initial `data`, instead of hoping an imperative setData landed.
+                  key={canvasPage ?? 'empty'}
+                  config={puckConfig}
+                  data={data}
+                  onChange={handleChange}
+                  viewports={PUCK_VIEWPORTS}
+                  iframe={PUCK_IFRAME}
+                  /**
+                   * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
+                    PUCK_UI
+                  }
+                  overrides={overrides}
+                />{' '}
+              </BuilderLivePreviewProvider>
             </div>{' '}
             {page && data && (
               // A page's Arabic copy is a separate layout, so it lives outside the canvas rather

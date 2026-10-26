@@ -2,7 +2,8 @@ import type { CSSProperties } from 'react';
 import type { TextProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
-import type { BlockComponentProps } from './index'; /** Mockup label/body treatments: 2xs = 10px, xs = 11px, sm = 12px, md = 16px, lg = 18px. */
+import type { BlockComponentProps } from './index';
+import { useBuilderLivePreview } from '@/components/builder/live-preview-context'; /** Mockup label/body treatments: 2xs = 10px, xs = 11px, sm = 12px, md = 16px, lg = 18px. */
 const TEXT_SIZE: Record<string, string> = {
   '2xs': 'font-label-sm text-2xs',
   xs: 'font-label-sm text-2xs',
@@ -32,7 +33,7 @@ const LEADING_CLASS: Record<string, string> = {
   relaxed: 'leading-relaxed',
   loose: 'leading-loose',
 };
-export function TextBlock({ props }: BlockComponentProps<TextProps>) {
+export function TextBlock({ props, puck }: BlockComponentProps<TextProps>) {
   const {
     text = '',
     align,
@@ -45,6 +46,14 @@ export function TextBlock({ props }: BlockComponentProps<TextProps>) {
     leading,
     className,
   } = props;
+  const preview = useBuilderLivePreview();
+  const liveText =
+    puck?.isEditing &&
+    preview?.pageSlug === 'home' &&
+    preview.homeMetrics &&
+    text.includes('17,400')
+      ? preview.homeMetrics.trustNote
+      : text;
   const style: CSSProperties = { ...layoutStyle(props) };
   if (opacity !== undefined) style.opacity = opacity / 100;
   const isHex = color?.startsWith('#');
@@ -65,7 +74,7 @@ export function TextBlock({ props }: BlockComponentProps<TextProps>) {
       style={style}
     >
       {' '}
-      {text}{' '}
+      {liveText}{' '}
     </p>
   );
 }

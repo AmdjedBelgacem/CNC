@@ -160,13 +160,110 @@ export class BuilderService {
     });
     // Serve the canonical slot shape: legacy DropZone-era rows (flat `zones`
     // map) are migrated on read until they are re-saved.
-    if (page) return this.localizedPage(page, localeInput);
+    if (page) {
+      const reconciled = await this.reconcileDraftParity(page);
+      return this.localizedPage(reconciled, localeInput);
+    }
     // Only the seeded slugs auto-provision (see provisionPage). Anything else is
     // a page that does not exist, and the editor's create dialog is how you make
     // one — a GET that silently inserts a row hides typos until publish time.
     const created = await this.provisionPage(tenantId, slug);
     if (!created) throw new NotFoundException(`Page "${slug}" not found`);
     return { ...created, layout: created.layout };
+  }
+
+  /**
+   * Bring an un-published system draft up to the current public baseline.
+   *
+   * Public pages fall back to `getDefaultLayout(slug)` when nothing is published. A
+   * draft created against an older default can therefore show fewer sections in the
+   * builder than the site actually renders — the clearest case was `home`, whose draft
+   * predated the academy grid and the repository-managed FAQ/guides islands.
+   *
+   * This is deliberately additive and narrow:
+   *  - only system pages with no published version (`version === 0`),
+   *  - only the parity sections that are safe to append (home FAQ/guides, About facts),
+   *  - the home academy grid is inserted before the programme cards, matching the seed,
+   *  - seed testimonials are removed because the public renderer intentionally drops
+   *    them (there is no public testimonial API).
+   *
+   * It never replaces the whole layout, so an admin's copy and design edits survive.
+   */
+  private async reconcileDraftParity<
+    T extends { id: string; slug: string; version: number; isSystem: boolean; layout: unknown },
+  >(page: T): Promise<T> {
+    if (!page.isSystem || page.version > 0) return page;
+
+    let current: PageLayout;
+    try {
+      current =
+        typeof page.layout === 'string'
+          ? (JSON.parse(page.layout) as PageLayout)
+          : (page.layout as PageLayout);
+    } catch {
+      return page;
+    }
+    if (!current || !Array.isArray(current.content)) return page;
+
+    const defaultLayout = getDefaultLayout(page.slug);
+    let content = [...current.content];
+    let changed = false;
+    const hasNode = (predicate: (node: PuckNode) => boolean) => content.some(predicate);
+
+    const withoutTestimonials = content.filter(
+      (node) => node.type !== 'testimonials' && node.type !== 'testimonial-card',
+    );
+    if (withoutTestimonials.length !== content.length) {
+      content = withoutTestimonials;
+      changed = true;
+    }
+
+    if (page.slug === 'home') {
+      const existingGrid = content.find((node) => node.type === 'academy-grid');
+      if (!existingGrid) {
+        const academyGrid = defaultLayout.content.find((node) => node.type === 'academy-grid');
+        if (academyGrid) {
+          const programIndex = content.findIndex((node) => node.type === 'program-cards');
+          content.splice(programIndex === -1 ? content.length : programIndex, 0, academyGrid);
+          changed = true;
+        }
+      } else if (existingGrid.props?.limit === undefined) {
+        // The homepage shows the first four academies; the seed now carries that
+        // limit explicitly so the builder and the public slice agree.
+        existingGrid.props = { ...existingGrid.props, limit: 4 };
+        changed = true;
+      }
+    }
+
+    const requiredVariants =
+      page.slug === 'home'
+        ? ['home-faq', 'home-guides']
+        : page.slug === 'about'
+          ? ['about-facts']
+          : [];
+    for (const variant of requiredVariants) {
+      const present = hasNode(
+        (node) => node.type === 'live-island' && node.props?.variant === variant,
+      );
+      if (present) continue;
+      const node = defaultLayout.content.find(
+        (candidate) =>
+          candidate.type === 'live-island' && candidate.props?.variant === variant,
+      );
+      if (node) {
+        content.push(node);
+        changed = true;
+      }
+    }
+
+    if (!changed) return page;
+
+    const [updated] = await this.drizzle.db
+      .update(pages)
+      .set({ layout: { ...current, content } })
+      .where(eq(pages.id, page.id))
+      .returning();
+    return updated ? ({ ...page, ...updated } as T) : page;
   }
 
   /**

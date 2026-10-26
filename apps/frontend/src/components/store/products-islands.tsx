@@ -193,33 +193,10 @@ export async function ProductsDepartments({ categories }: { categories: { name: 
   );
 }
 
-/** Hero stats helper shared by the products route (live counters). */
 /**
- * Labels come from the caller (the async route page) so they can be translated without
- * this helper having to become a component.
+ * Hero stats helper shared by the products route (live counters).
+ *
+ * The implementation lives in `lib/catalog-stats` so the builder canvas can use
+ * the exact same arithmetic without importing this server module.
  */
-export function productsHeroStats(
-  t: (key: string) => string,
-  products: ApiProduct[],
-  categories: { name: string; count: number }[],
-): { label: string; value: string }[] {
-  // Hero stats are server-rendered before the shopper picks a currency, so they
-  // stay in the primary workspace currency (SAR).
-  const money = (cents: number | null | undefined) =>
-    formatMinorUnits(cents, coerceCurrency(products[0]?.currency), 'en-US');
-  const minPrice = products.reduce(
-    (min, p) => Math.min(min, p.price ?? Number.POSITIVE_INFINITY),
-    Number.POSITIVE_INFINITY,
-  );
-  const maxPrice = products.reduce((max, p) => Math.max(max, p.price ?? 0), 0);
-  const range =
-    Number.isFinite(minPrice) && maxPrice > 0
-      ? `${money(minPrice)} – ${money(maxPrice)}`
-      : '—';
-  return [
-    { label: t('statSkus'), value: String(products.length) },
-    { label: t('statDepartments'), value: String(categories.length) },
-    { label: t('statPriceRange'), value: range },
-    { label: t('statFreeShipping'), value: t('freeShippingThreshold') },
-  ];
-}
+export { productsHeroStats } from '@/lib/catalog-stats';

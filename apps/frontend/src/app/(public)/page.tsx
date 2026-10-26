@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
@@ -9,11 +8,13 @@ import { fetchPublishedCourses } from '@/lib/courses';
 import { fetchPublishedSponsors } from '@/lib/sponsors';
 import { applyLiveHomeMetrics, buildLiveHomeMetrics } from '@/lib/home-metrics';
 import { resolvePageLayout } from '@/lib/builder/theme';
+import { ensureParitySections } from '@titan/shared';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
 import { BRAND_NAME, OG_IMAGE, SITE_URL, absoluteUrl, organizationJsonLd, webSiteJsonLd } from '@/lib/brand';
 import { faqJsonLd, breadcrumbJsonLd } from '@/lib/schema';
 import { HOMEPAGE_FAQ } from '@/lib/faq-content';
+import { HomeFaqSection, HomeGuidesSection } from '@/components/home/home-extras';
 export const metadata: Metadata = {
   title: 'CNC Machining Courses & Certification',
   description:
@@ -61,7 +62,7 @@ export default async function HomePage() {
   // Bake live counts into the layout on the server so SSR HTML and client
   // hydration always match (no client-side text rewrites).
   const layout = applyLiveHomeMetrics(
-    rawLayout,
+    ensureParitySections(rawLayout, 'home'),
     buildLiveHomeMetrics({
       academyCount: academies.length,
       courseCount: courseTotal,
@@ -111,63 +112,11 @@ export default async function HomePage() {
         academyLimit={4}
         courses={courses}
         sponsors={sponsors}
+        islands={{
+          'home-faq': <HomeFaqSection />,
+          'home-guides': <HomeGuidesSection />,
+        }}
       />{' '}
-      {/* Server-rendered Q&A. This is the only part of the page that ships literal
-          question-and-answer text, and it is what the FAQPage schema above describes.
-          Hiding it behind client state meant answer engines had nothing to quote. */}
-      <section
-        aria-labelledby="faq-heading"
-        className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8"
-      >
-        <h2
-          id="faq-heading"
-          className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
-        >
-          Frequently asked questions about CNC machining training
-        </h2>
-        <dl className="mt-8 space-y-8">
-          {HOMEPAGE_FAQ.map((item) => (
-            <div key={item.question} className="border-b border-border pb-6 last:border-b-0">
-              <dt className="font-display text-lg font-semibold text-foreground">
-                {item.question}
-              </dt>
-              <dd className="mt-2 text-base leading-7 text-muted-foreground">{item.answer}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>{' '}
-      <section
-        aria-labelledby="cnc-guides-heading"
-        className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8"
-      >
-        <h2
-          id="cnc-guides-heading"
-          className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
-        >
-          CNC solutions, training and practical guides
-        </h2>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-          Start with our CNC training materials, then review CNC solutions, implementation
-          guidance and partner options for your shop or learning centre.
-        </p>
-        <p className="mt-4 text-base leading-7 text-muted-foreground">
-          <Link href="/learn" className="text-primary underline-offset-4 hover:underline">
-            CNC guides
-          </Link>{' '}
-          ·{' '}
-          <Link href="/courses" className="text-primary underline-offset-4 hover:underline">
-            CNC courses
-          </Link>{' '}
-          ·{' '}
-          <Link href="/products" className="text-primary underline-offset-4 hover:underline">
-            CNC tools
-          </Link>{' '}
-          ·{' '}
-          <Link href="/become-a-partner" className="text-primary underline-offset-4 hover:underline">
-            Become a partner
-          </Link>
-        </p>
-      </section>{' '}
     </div>
   );
 }

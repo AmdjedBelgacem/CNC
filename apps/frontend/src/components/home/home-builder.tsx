@@ -118,7 +118,10 @@ export function HomeBuilder({
       if (variant && islands && Object.prototype.hasOwnProperty.call(islands, variant)) {
         return islands[variant];
       }
-      return undefined;
+      // Never expose the builder's preview iframe on the public site. An
+      // unmapped island is a configuration error; hiding it is safer than
+      // rendering editor chrome to visitors.
+      return null;
     }
     // Fake social proof has no public API — never render seed testimonials.
     if (node.type === 'testimonials' || node.type === 'testimonial-card') return null;
@@ -212,7 +215,8 @@ export function HomeBuilder({
       type: node.type,
       props: props as unknown as Record<string, unknown>,
     };
-    const visibleAcademies = academyLimit ? academies.slice(0, academyLimit) : academies;
+    const limit = props.limit ?? academyLimit;
+    const visibleAcademies = limit ? academies.slice(0, limit) : academies;
     const renderBuilderSlot = (slot: string) =>
       getSlotChildren(nodeWithDefaults, slot, zones).map((child, index) => (
         <BuilderNode

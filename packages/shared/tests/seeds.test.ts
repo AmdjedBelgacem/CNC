@@ -94,6 +94,13 @@ describe('seeds', () => {
     expect(stack[1].props).toMatchObject({ variant: 'glass' });
   });
 
+  it('home academy grid carries the four-card limit the public page uses', () => {
+    expect(seedAcademyGrid({ limit: 4 }).node.props).toMatchObject({ limit: 4 });
+    const home = seedHomeLayout();
+    const grid = home.content?.find((node) => node.type === 'academy-grid');
+    expect(grid?.props?.limit).toBe(4);
+  });
+
   it('stats seed builds four stat-item cards with icon, tag, number and label', () => {
     const seed = seedStats();
     const items = slot(seed.node, 'content');
@@ -206,7 +213,7 @@ describe('seeds', () => {
     }
   });
 
-  it('home layout contains all nine sections in mockup order (nav/footer live in the app shell, not the seed)', () => {
+  it('home layout contains the parity sections in mockup order (nav/footer live in the app shell, not the seed)', () => {
     const layout = seedHomeLayout();
     expect(layout.content.map((node) => node.type)).toEqual([
       'hero-console',
@@ -215,9 +222,14 @@ describe('seeds', () => {
       'academy-grid',
       'program-cards',
       'twin-section',
-      'testimonials',
       'faq',
       'cta-signup',
+      'live-island',
+      'live-island',
+    ]);
+    expect(layout.content.slice(-2).map((node) => node.props?.variant)).toEqual([
+      'home-faq',
+      'home-guides',
     ]);
     expect(validatePageLayout(layout).ok).toBe(true);
   });

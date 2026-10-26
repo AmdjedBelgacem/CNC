@@ -4,6 +4,7 @@ import {
   getSlotChildren,
   getZoneItems,
   mergeLayoutStructure,
+  ensureNodeIds,
 } from '../src/blocks/slots';
 import { validatePageLayout, validateLayoutZones } from '../src/validators/page';
 import type { PageLayout } from '../src/types/page';
@@ -58,6 +59,61 @@ describe('migrateLegacyLayout', () => {
     expect(getZoneItems(migrated, 'hero-1:content')).toHaveLength(2);
     expect(getZoneItems(legacyLayout(), 'hero-1:content')).toHaveLength(2);
     expect(getZoneItems(migrated, 'nope:content')).toEqual([]);
+  });
+});
+
+describe('ensureNodeIds', () => {
+  it('gives every node a stable id without disturbing existing ids', () => {
+    const layout: PageLayout = {
+      root: { props: {} },
+      content: [
+        {
+          type: 'section',
+          props: {
+            content: [
+              {
+                type: 'stack',
+                props: {
+                  content: [
+                    { type: 'heading', props: { text: 'Our Machines' } },
+                    { type: 'text', props: { id: 'keep-me', text: 'A paragraph' } },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const out = ensureNodeIds(layout);
+    const section = out.content[0]!;
+    const stack = getSlotChildren(section, 'content')[0]!;
+    const [heading, text] = getSlotChildren(stack, 'content');
+    expect(section.props?.id).toMatch(/^auto-/);
+    expect(stack.props?.id).toMatch(/^auto-/);
+    expect(heading?.props?.id).toMatch(/^auto-/);
+    expect(text?.props?.id).toBe('keep-me');
+  });
+
+  it('is idempotent and returns the same reference when every node has an id', () => {
+    const layout: PageLayout = {
+      root: { props: {} },
+      content: [{ type: 'heading', props: { id: 'heading-1', text: 'Hello' } }],
+    };
+    expect(ensureNodeIds(layout)).toBe(layout);
+  });
+
+  it('leaves the generated tree stable across a second pass', () => {
+    const layout: PageLayout = {
+      root: { props: {} },
+      content: [
+        { type: 'section', props: { content: [{ type: 'heading', props: { text: 'Hello' } }] } },
+      ],
+    };
+    const once = ensureNodeIds(layout);
+    const twice = ensureNodeIds(once);
+    expect(twice).toBe(once);
   });
 });
 

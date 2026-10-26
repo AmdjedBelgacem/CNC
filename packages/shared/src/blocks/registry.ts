@@ -581,6 +581,8 @@ export const academyGridPropsSchema = layoutPropsSchema.extend({
   cardsColumns: z.enum(['md:grid-cols-2', 'md:grid-cols-3']).optional(),
   /** Gap between cards. */
   cardsGap: z.enum(['gap-6', 'gap-8', 'gap-10']).optional(),
+  /** Maximum cards to render. Unset shows every published academy. */
+  limit: z.number().int().min(1).max(24).optional(),
 });
 export type AcademyGridProps = z.infer<typeof academyGridPropsSchema>;
 
@@ -1019,6 +1021,8 @@ export const programCardsPropsSchema = layoutPropsSchema.extend({
   columnsLg: z.enum(['lg:grid-cols-2', 'lg:grid-cols-3']).optional(),
   /** Gap between cards. */
   cardsGap: z.enum(['gap-6', 'gap-8', 'gap-10']).optional(),
+  /** Maximum cards to render. Unset shows every published academy. */
+  limit: z.number().int().min(1).max(24).optional(),
 });
 export type ProgramCardsProps = z.infer<typeof programCardsPropsSchema>;
 
@@ -1102,6 +1106,8 @@ export const testimonialsPropsSchema = layoutPropsSchema.extend({
   columnsMd: z.enum(['md:grid-cols-2', 'md:grid-cols-3']).optional(),
   /** Gap between cards. */
   cardsGap: z.enum(['gap-6', 'gap-8', 'gap-10']).optional(),
+  /** Maximum cards to render. Unset shows every published academy. */
+  limit: z.number().int().min(1).max(24).optional(),
 });
 export type TestimonialsProps = z.infer<typeof testimonialsPropsSchema>;
 
@@ -1324,7 +1330,7 @@ export const closingCtaDefaults: ClosingCtaProps = {
   paddingBottom: 80,
 };
 
-/** Live-data island variants substituted by the public renderer. */
+/** Island variants substituted by the public renderer (live tenant data and fixed editorial sections). */
 export const LIVE_ISLAND_VARIANTS = [
   'academy-pathways',
   'products-featured',
@@ -1337,13 +1343,22 @@ export const LIVE_ISLAND_VARIANTS = [
   'events-next-up',
   'events-schedule',
   'events-browse',
+  // Repository-managed fixed sections. These are not tenant data, but they are
+  // rendered through the same substitution/preview path so the builder and the
+  // public page share one implementation.
+  'home-faq',
+  'home-guides',
+  'about-facts',
 ] as const;
 export type LiveIslandVariant = (typeof LIVE_ISLAND_VARIANTS)[number];
 
 /**
- * Placeholder section for a live tenant-data island (catalog rows, feed wire,
- * event board, …). The Puck editor shows a labeled stub; the public renderer
- * substitutes the real interactive section keyed by `variant`.
+ * Section substituted by the public renderer.
+ *
+ * Most variants are live tenant data (catalog rows, feed wire, event board, …).
+ * A few are repository-managed fixed sections (homepage FAQ/guides, About facts).
+ * The editor previews the exact public component in an iframe and the public
+ * renderer substitutes it by `variant`.
  */
 export const liveIslandPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),

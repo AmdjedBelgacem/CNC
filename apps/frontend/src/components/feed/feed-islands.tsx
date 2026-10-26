@@ -178,14 +178,10 @@ export async function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
  * Labels come from the caller: this runs in the async route page, and taking a
  * translator keeps the numbers locale-aware instead of hardcoded English.
  */
-export function feedHeroStats(
-  snapshot: WireSnapshot,
-  t: (key: string) => string,
-): { label: string; value: string }[] {
-  return [
-    { label: t('postsOnWire'), value: String(snapshot.postCount) },
-    { label: t('topics'), value: String(snapshot.topics.length) },
-    { label: t('activeAuthors'), value: String(snapshot.activeAuthors) },
-    { label: t('reactions'), value: String(snapshot.likeCount + snapshot.commentCount) },
-  ];
-}
+/**
+ * Hero stats helper shared by the feed route (live counters).
+ *
+ * The implementation lives in `lib/catalog-stats` so the builder canvas can use
+ * the exact same arithmetic without importing this server module.
+ */
+export { feedHeroStats } from '@/lib/catalog-stats';

@@ -478,29 +478,10 @@ export function EventsBrowse() {
   );
 }
 
-/** Hero stats helper shared by the events route (live counters). */
 /**
- * Labels come from the caller: this runs in the async route page, so the translator is
- * passed in rather than pulled from a hook.
+ * Hero stats helper shared by the events route (live counters).
+ *
+ * The implementation lives in `lib/catalog-stats` so the builder canvas can use
+ * the exact same arithmetic without importing this server module.
  */
-export function eventsHeroStats(
-  t: Translator,
-  events: CatalogEvent[],
-  upcoming: CatalogEvent[],
-): { label: string; value: string }[] {
-  const list = upcomingList(events, upcoming);
-  const typeCount = new Set(events.map((e) => e.eventType)).size;
-  const cityCount = new Set(
-    events
-      .filter((e) => !e.isVirtual)
-      .map((e) => e.location?.city)
-      .filter(Boolean),
-  ).size;
-  const freeCount = events.filter((e) => !e.price || e.price === 0).length;
-  return [
-    { label: t('statUpcoming'), value: String(list.length) },
-    { label: t('statFormats'), value: String(typeCount || '—') },
-    { label: t('statCities'), value: String(cityCount || t('online')) },
-    { label: t('statFreeSeats'), value: String(freeCount) },
-  ];
-}
+export { eventsHeroStats } from '@/lib/catalog-stats';

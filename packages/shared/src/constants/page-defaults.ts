@@ -30,6 +30,69 @@ export function getDefaultLayout(slug: string): PageLayout {
   return (DEFAULT_LAYOUTS[slug] ?? { root: { props: {} }, content: [] }) as PageLayout;
 }
 
+/**
+ * Repository-managed sections that are not tenant data.
+ *
+ * Published layouts authored before these sections existed cannot be mutated in
+ * place (that would silently overwrite an admin's page). Instead both the public
+ * renderer and the builder append the missing fixed islands at read time, in the
+ * same position, so the canvas and the live page stay identical until the admin
+ * chooses to save the draft.
+ */
+const PARITY_ISLANDS: Readonly<
+  Record<string, ReadonlyArray<{ variant: string; label: string; id: string }>>
+> = {
+  home: [
+    { variant: 'home-faq', label: 'Homepage FAQ — repository-managed', id: 'home-faq' },
+    { variant: 'home-guides', label: 'CNC guides — repository-managed', id: 'home-guides' },
+  ],
+  about: [
+    { variant: 'about-facts', label: 'About facts — repository-managed', id: 'about-facts' },
+  ],
+};
+
+export function ensureParitySections(layout: PageLayout, slug: string): PageLayout {
+  const defs = PARITY_ISLANDS[slug];
+  if (!defs?.length) return layout;
+
+  const content = layout.content ?? [];
+  // The homepage always shows four academy cards. Older published layouts were
+  // authored before the block had a `limit` prop, so normalise it here instead
+  // of showing every academy in the builder while the public page shows four.
+  let changed = false;
+  const normalised =
+    slug === 'home'
+      ? content.map((node) => {
+          if (node.type === 'academy-grid' && typeof node.props?.limit !== 'number') {
+            changed = true;
+            return { ...node, props: { ...node.props, limit: 4 } };
+          }
+          return node;
+        })
+      : content;
+  const present = new Set(
+    normalised
+      .filter((node) => node.type === 'live-island')
+      .map((node) => node.props?.variant)
+      .filter((variant): variant is string => typeof variant === 'string'),
+  );
+  const missing = defs.filter((def) => !present.has(def.variant));
+  if (missing.length === 0 && !changed) return layout;
+
+  const nodes = missing.map((def) => ({
+    type: 'live-island',
+    props: {
+      id: def.id,
+      variant: def.variant,
+      label: def.label,
+      paddingTop: 64,
+      paddingBottom: 64,
+    },
+  }));
+
+  return { ...layout, content: [...normalised, ...nodes] };
+}
+
 export interface BuilderPageDef {
   slug: BuilderPageSlug;
   title: string;

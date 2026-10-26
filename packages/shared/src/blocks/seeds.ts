@@ -645,7 +645,7 @@ export function seedAcademyGrid(overrides: Record<string, unknown> = {}): SeedRe
     n('academy-grid', {
       paddingTop: 64,
       paddingBottom: 64,
-      ...pick(overrides, ['viewAllHref', 'id']),
+      ...pick(overrides, ['viewAllHref', 'id', 'limit']),
     }),
     {
       header: [
@@ -1659,10 +1659,9 @@ export function seedHomeLayout(): PageLayout {
     seedHeroConsole(),
     seedStatsDeck(),
     seedPartnerStrip(),
-    seedAcademyGrid(),
+    seedAcademyGrid({ limit: 4 }),
     seedProgramCards(),
     seedTwinSection(),
-    seedTestimonials(),
     seedFaq({
       id: 'faq',
       sectionBg: 'bg-surface-container-lowest',
@@ -1696,6 +1695,8 @@ export function seedHomeLayout(): PageLayout {
       ],
     }),
     seedCtaSignup(),
+    seedLiveIsland('home-faq', 'Homepage FAQ — repository-managed', 'home-faq'),
+    seedLiveIsland('home-guides', 'CNC guides — repository-managed', 'home-guides'),
   ];
   return toLayout(sections);
 }
@@ -2738,7 +2739,16 @@ export function seedAboutLayout(): PageLayout {
     container([pack(n('grid', { columns: 4, gap: 'lg' }), 'items', trustBadges)]),
   ]);
 
-  return toLayout([hero, intro, dna, statsBand, journey, teamBand, badges]);
+  return toLayout([
+    hero,
+    intro,
+    dna,
+    statsBand,
+    journey,
+    teamBand,
+    badges,
+    seedLiveIsland('about-facts', 'About facts — repository-managed', 'about-facts'),
+  ]);
 }
 
 function toLayout(sections: SeedResult[]): PageLayout {

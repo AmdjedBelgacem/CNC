@@ -97,7 +97,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   // Set by the middleware on the request; Next.js only stamps the CSP nonce on scripts it emits itself.
   // See HydrationRecovery — an inline script without it is blocked entirely.
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const requestHeaders = await headers();
+  const nonce = requestHeaders.get('x-nonce') ?? undefined;
+  const isPreviewSurface = requestHeaders.get('x-preview-surface') === '1';
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const rawLocale = await getLocale();
@@ -149,30 +151,36 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen bg-background font-sans text-foreground antialiased overflow-x-hidden">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <MediaLoadProvider>
-            <Suspense>
-              <AnalyticsProvider
-                gaMeasurementId={analytics.gaMeasurementId}
-                snapchatPixelId={analytics.snapchatPixelId}
-              />
-            </Suspense>
+            {!isPreviewSurface && (
+              <Suspense>
+                <AnalyticsProvider
+                  gaMeasurementId={analytics.gaMeasurementId}
+                  snapchatPixelId={analytics.snapchatPixelId}
+                />
+              </Suspense>
+            )}
             <QueryProvider>
               <MotionProvider>
                 <NotificationSocketProvider>
                   <ThemeProvider>
                     <AiAssistantProvider>
                       <AuthHydration>{children}</AuthHydration>
-                      <PublicAiAssistant />
-                      <PublicSearchPalette />
+                      {!isPreviewSurface && (
+                        <>
+                          <PublicAiAssistant />
+                          <PublicSearchPalette />
+                        </>
+                      )}
                     </AiAssistantProvider>
                   </ThemeProvider>
                 </NotificationSocketProvider>
               </MotionProvider>
             </QueryProvider>
             {/* Toasts are app-wide, not just admin. */}
-            <ToastViewport dir={dir} />
+            {!isPreviewSurface && <ToastViewport dir={dir} />}
             {/* PWA — production-only registration + update prompt */}
-            <PWARegister />
-            <PWAUpdateToast />
+            {!isPreviewSurface && <PWARegister />}
+            {!isPreviewSurface && <PWAUpdateToast />}
           </MediaLoadProvider>
         </NextIntlClientProvider>
       </body>

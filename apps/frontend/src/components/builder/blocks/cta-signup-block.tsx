@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
+import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
 
 /**
  * Gradient email-capture band (mockup final CTA): pill, display headline,
@@ -25,6 +26,13 @@ export function CtaSignupBlock({ props, puck }: BlockComponentProps<CtaSignupPro
     note,
     formAction = '/register',
   } = props;
+  const preview = useBuilderLivePreview();
+  const isHome = puck?.isEditing && preview?.pageSlug === 'home';
+  const livePill =
+    isHome && preview?.homeMetrics && typeof pill === 'string' && pill.includes('Cohort')
+      ? (preview.homeMetrics.ctaPill ?? pill)
+      : pill;
+  const liveSubtitle = isHome && preview?.homeMetrics ? preview.homeMetrics.ctaSubtitle : subtitle;
   const onSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     // Puck intercepts most canvas clicks, but a real form submit would navigate
@@ -49,16 +57,16 @@ export function CtaSignupBlock({ props, puck }: BlockComponentProps<CtaSignupPro
             </svg>
           </div>
           <div className="relative z-10 max-w-2xl">
-            {pill ? (
+            {livePill ? (
               <span className="inline-block px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider mb-6 backdrop-blur-md">
-                {pill}
+                {livePill}
               </span>
             ) : null}
             <h2 className="font-display-hero text-3xl sm:text-5xl font-bold tracking-tight mb-6 leading-tight">
               {title}
             </h2>
-            {subtitle ? (
-              <p className="text-white/80 text-base sm:text-lg mb-8 leading-relaxed">{subtitle}</p>
+            {liveSubtitle ? (
+              <p className="text-white/80 text-base sm:text-lg mb-8 leading-relaxed">{liveSubtitle}</p>
             ) : null}
             <form className="flex flex-col sm:flex-row gap-3 max-w-md" onSubmit={onSubmit}>
               <input
