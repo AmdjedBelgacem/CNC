@@ -142,7 +142,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
       }
     >
       {' '}
-      <div className="space-y-5 p-6">
+      <div className="space-y-5 p-4 sm:p-6">
         {' '}
         <div className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5 flex gap-2">
           {' '}

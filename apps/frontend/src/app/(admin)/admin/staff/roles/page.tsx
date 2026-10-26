@@ -397,7 +397,7 @@ function RoleEditor({
       }
     >
       {' '}
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-6">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
         {' '}
         <section className="space-y-3">
           {' '}
@@ -575,7 +575,7 @@ function RoleEditor({
             )}{' '}
           </div>{' '}
         </section>{' '}
-        <div className="sticky bottom-0 -mx-6 flex items-center justify-between gap-3 border-t border-border bg-card px-6 py-4">
+        <div className="sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-4 sm:-mx-6 sm:px-6">
           {' '}
           <div>
             {' '}

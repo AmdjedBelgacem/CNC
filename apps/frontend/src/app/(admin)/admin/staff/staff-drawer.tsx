@@ -1320,20 +1320,20 @@ export function StaffDrawer({
         tAdmin('drawer.staffDetails', { default: 'Staff details' })
       }
       header={
-        <div className="border-b border-border bg-card px-6 py-5">
+        <div className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5">
           {loading ? (
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-14 w-14 rounded-xl" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Skeleton className="size-12 rounded-xl sm:size-14" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-40 rounded" />
                 <Skeleton className="h-3 w-56 rounded" />
               </div>
             </div>
           ) : user ? (
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3 sm:gap-4">
               <span
                 className={cn(
-                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl font-sans text-xl font-semibold',
+                  'flex size-12 shrink-0 items-center justify-center rounded-xl font-sans text-lg font-semibold sm:size-14 sm:text-xl',
                   roleGrad[user.role] ??
                     (user.accountStatus === 'suspended'
                       ? 'bg-destructive text-destructive-foreground'
@@ -1344,7 +1344,7 @@ export function StaffDrawer({
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-display text-[26px] font-semibold leading-tight text-foreground">
+                  <p className="truncate font-display text-xl font-semibold leading-tight text-foreground sm:text-[26px]">
                     {user.name || user.email.split('@')[0] || user.email}
                   </p>
                   {statusMeta && (
@@ -1393,7 +1393,7 @@ export function StaffDrawer({
         </div>
       }
     >
-      <div className="flex-1 space-y-0 overflow-y-auto px-6 py-6">
+      <div className="flex-1 space-y-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
         {loadError && (
           <ErrorState
             title={tAdmin('drawer.couldNotLoadStaff', { default: 'Could not load staff member' })}

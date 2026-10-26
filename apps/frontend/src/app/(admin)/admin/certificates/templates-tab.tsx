@@ -1786,7 +1786,7 @@ function TemplateStudioSheet({
     >
       {' '}
       {/* preset strip */}{' '}
-      <div className="border-b border-border px-6 py-4">
+      <div className="border-b border-border px-4 py-4 sm:px-6">
         {' '}
         <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
           {' '}
@@ -1866,7 +1866,7 @@ function TemplateStudioSheet({
       <div className="grid gap-0 lg:grid-cols-[400px_1fr]">
         {' '}
         {/* form column */}{' '}
-        <div className="space-y-5 p-6">
+        <div className="space-y-5 p-4 sm:p-6">
           {' '}
           {tab === 'design' && (
             <>
