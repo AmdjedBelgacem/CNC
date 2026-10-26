@@ -5,8 +5,10 @@ import { Rocket, RotateCcw, FolderPlus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -27,7 +29,7 @@ export function BuilderDialogs() {
       {' '}
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
         {' '}
-        <DialogContent className="max-h-[calc(100dvh_-_4rem)] max-w-md overflow-y-auto">
+        <DialogContent className="max-w-md">
           {' '}
           <DialogHeader>
             {' '}
@@ -37,7 +39,7 @@ export function BuilderDialogs() {
               {tb('dialogs.publishTitle', { default: 'Publish this page' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
-          <div className="-mt-2 space-y-4">
+          <DialogBody className="space-y-4">
             {' '}
             <p className="text-sm leading-relaxed text-muted-foreground">
               {tb('dialogs.publishDescription', {
@@ -59,8 +61,8 @@ export function BuilderDialogs() {
                 className="h-20 w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
               />{' '}
             </label>{' '}
-          </div>{' '}
-          <div className="mt-4 flex justify-end gap-2">
+          </DialogBody>{' '}
+          <DialogFooter>
             {' '}
             <DialogClose asChild>
               <Button variant="ghost" size="sm">
@@ -80,12 +82,12 @@ export function BuilderDialogs() {
               <Rocket className="me-1.5 size-3.5" />{' '}
               {tb('dialogs.publish', { default: 'Publish' })}{' '}
             </Button>{' '}
-          </div>{' '}
+          </DialogFooter>{' '}
         </DialogContent>{' '}
       </Dialog>{' '}
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         {' '}
-        <DialogContent className="max-h-[calc(100dvh_-_4rem)] max-w-md overflow-y-auto">
+        <DialogContent className="max-w-md">
           {' '}
           <DialogHeader>
             {' '}
@@ -95,13 +97,15 @@ export function BuilderDialogs() {
               {tb('dialogs.resetTitle', { default: 'Reset page?' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
-          <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
-            {tb('dialogs.resetDescription', {
-              default:
-                'The current draft will be replaced with the default layout. Your latest published version is unaffected.',
-            })}{' '}
-          </p>{' '}
-          <div className="mt-4 flex justify-end gap-2">
+          <DialogBody>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {tb('dialogs.resetDescription', {
+                default:
+                  'The current draft will be replaced with the default layout. Your latest published version is unaffected.',
+              })}{' '}
+            </p>
+          </DialogBody>{' '}
+          <DialogFooter>
             {' '}
             <DialogClose asChild>
               <Button variant="ghost" size="sm">
@@ -120,7 +124,7 @@ export function BuilderDialogs() {
               {' '}
               {tb('dialogs.resetAction', { default: 'Reset page' })}{' '}
             </Button>{' '}
-          </div>{' '}
+          </DialogFooter>{' '}
         </DialogContent>{' '}
       </Dialog>{' '}
       <SectionDialog />{' '}
@@ -189,7 +193,7 @@ function SectionDialog() {
   return (
     <Dialog open onOpenChange={(open) => !open && setSectionDialog(null)}>
       {' '}
-      <DialogContent className="max-h-[calc(100dvh_-_4rem)] max-w-md overflow-y-auto">
+      <DialogContent className="max-w-md">
         {' '}
         <DialogHeader>
           {' '}
@@ -205,39 +209,41 @@ function SectionDialog() {
             {title}{' '}
           </DialogTitle>{' '}
         </DialogHeader>{' '}
-        {isDelete ? (
-          <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
-            {tb('dialogs.deleteConfirm', {
-              name: dialog.name,
-              default: `Delete saved section “${dialog.name}”? This cannot be undone.`,
-            })}{' '}
-          </p>
-        ) : (
-          <div className="-mt-2">
-            {' '}
-            <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-              {dialog.mode === 'save'
-                ? tb('dialogs.saveDescription', {
-                    default:
-                      'Saves the selected Section container (and everything inside it) as a reusable block you can insert anywhere.',
-                  })
-                : tb('dialogs.renameDescription', {
-                    default: 'Choose a new name for this saved section.',
-                  })}{' '}
-            </p>{' '}
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && name.trim()) void confirm();
-              }}
-              placeholder={tb('dialogs.sectionNamePlaceholder', { default: 'Section name' })}
-              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />{' '}
-          </div>
-        )}{' '}
-        <div className="mt-4 flex justify-end gap-2">
+        <DialogBody>
+          {isDelete ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {tb('dialogs.deleteConfirm', {
+                name: dialog.name,
+                default: `Delete saved section “${dialog.name}”? This cannot be undone.`,
+              })}{' '}
+            </p>
+          ) : (
+            <div>
+              {' '}
+              <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
+                {dialog.mode === 'save'
+                  ? tb('dialogs.saveDescription', {
+                      default:
+                        'Saves the selected Section container (and everything inside it) as a reusable block you can insert anywhere.',
+                    })
+                  : tb('dialogs.renameDescription', {
+                      default: 'Choose a new name for this saved section.',
+                    })}{' '}
+              </p>{' '}
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && name.trim()) void confirm();
+                }}
+                placeholder={tb('dialogs.sectionNamePlaceholder', { default: 'Section name' })}
+                className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />{' '}
+            </div>
+          )}{' '}
+        </DialogBody>{' '}
+        <DialogFooter>
           {' '}
           <DialogClose asChild>
             <Button variant="ghost" size="sm">
@@ -257,7 +263,7 @@ function SectionDialog() {
                 ? tb('dialogs.saveSection', { default: 'Save section' })
                 : tb('dialogs.rename', { default: 'Rename' })}{' '}
           </Button>{' '}
-        </div>{' '}
+        </DialogFooter>{' '}
       </DialogContent>{' '}
     </Dialog>
   );

@@ -83,7 +83,12 @@ export function ModalTabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div className={cn(GLASS_SUB, 'no-scrollbar mx-4 mt-4 flex gap-1 overflow-x-auto p-1 sm:mx-6 sm:mt-5')}>
+    <div
+      className={cn(
+        GLASS_SUB,
+        'no-scrollbar mx-4 mt-4 flex gap-1 overflow-x-auto p-1 sm:mx-6 sm:mt-5',
+      )}
+    >
       {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
@@ -119,13 +124,7 @@ export function ModalTabs({
  * first when stacked on mobile. Panels that hand-place buttons in the body drift
  * apart, so route actions through this.
  */
-export function ModalFooter({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function ModalFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(
@@ -173,7 +172,7 @@ export function Modal({
           className={cn(
             // `.dialog-pop` carries the centring so the scale keyframes can't
             // clobber it — see the note in ui/dialog.tsx.
-            'dialog-pop fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl',
+            'dialog-pop fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl focus:outline-none',
             'data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out data-[state=closed]:pointer-events-none',
             width,
           )}
@@ -185,7 +184,9 @@ export function Modal({
           {tabs && activeTab !== undefined && onTabChange && (
             <ModalTabs tabs={tabs} active={activeTab} onChange={onTabChange} />
           )}
-          <div className={cn('flex-1 overflow-y-auto', bodyClassName)}>{children}</div>
+          <div className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain', bodyClassName)}>
+            {children}
+          </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

@@ -33,7 +33,12 @@ import {
   usePublicAiConfig,
   useRateAiMessage,
 } from '@/hooks/use-ai-assistant';
-import { positionAbove, triggerBox, visibleViewport, type OverlayPosition } from '@/lib/overlay-position';
+import {
+  positionAbove,
+  triggerBox,
+  visibleViewport,
+  type OverlayPosition,
+} from '@/lib/overlay-position';
 import { useAiAssistantContext } from './ai-assistant-context';
 import { ArabicDialectMenu, useArabicDialectPreference } from './arabic-dialect-menu';
 import { AiReferenceCard, AiTranscript, type AiBubble } from './ai-chat-parts';
@@ -143,7 +148,9 @@ export function PublicAiAssistant() {
   const groundingKey = `${sourceRef?.type ?? ''}:${sourceRef?.id ?? ''}:${lessonContext?.lessonId ?? ''}:${mode}`;
   const previousContextRef = useRef(groundingKey);
 
-  const authIdentity = isAuthenticated ? `${authUser?.id || 'user'}:${authUser?.tenantId || 'tenant'}` : 'public';
+  const authIdentity = isAuthenticated
+    ? `${authUser?.id || 'user'}:${authUser?.tenantId || 'tenant'}`
+    : 'public';
   const previousAuthIdentityRef = useRef(authIdentity);
 
   useEffect(() => {
@@ -222,10 +229,7 @@ export function PublicAiAssistant() {
         setPanelPosition(null);
         return;
       }
-      const box = positionAbove(
-        triggerBox(trigger.getBoundingClientRect()),
-        visibleViewport(),
-      );
+      const box = positionAbove(triggerBox(trigger.getBoundingClientRect()), visibleViewport());
       setPanelPosition(box);
     };
     updatePosition();
@@ -267,29 +271,33 @@ export function PublicAiAssistant() {
     setLastRequest(request);
     if (addUserMessage) {
       // Optimistic append: the bubble is marked so a failure can offer retry.
-      setMessages((current) => [
-        ...current,
-        {
-          id: createId('message'),
-          role: 'user' as const,
-          content: request.message,
-          pending: true,
-        },
-      ].slice(-MAX_MESSAGES));
+      setMessages((current) =>
+        [
+          ...current,
+          {
+            id: createId('message'),
+            role: 'user' as const,
+            content: request.message,
+            pending: true,
+          },
+        ].slice(-MAX_MESSAGES),
+      );
     }
     try {
       const result: AiChatResponse = await chat.mutateAsync(request);
       if (requestGeneration !== requestGenerationRef.current) return;
-      setMessages((current) => [
-        ...current.map((message) => (message.pending ? { ...message, pending: false } : message)),
-        {
-          id: createId('message'),
-          role: 'assistant' as const,
-          content: result.answer.slice(0, 20000),
-          citations: result.citations,
-          usedWeb: result.usedWeb === true,
-        },
-      ].slice(-MAX_MESSAGES));
+      setMessages((current) =>
+        [
+          ...current.map((message) => (message.pending ? { ...message, pending: false } : message)),
+          {
+            id: createId('message'),
+            role: 'assistant' as const,
+            content: result.answer.slice(0, 20000),
+            citations: result.citations,
+            usedWeb: result.usedWeb === true,
+          },
+        ].slice(-MAX_MESSAGES),
+      );
       // The server owns the id: the first turn creates the conversation and
       // every later turn continues it.
       if (result.conversationId) setConversationId(result.conversationId);
@@ -332,7 +340,9 @@ export function PublicAiAssistant() {
   const rateMessage = (messageId: string, rating: number) => {
     setMessages((current) =>
       current.map((message) =>
-        message.id === messageId ? { ...message, rating: rating === 0 ? undefined : rating } : message,
+        message.id === messageId
+          ? { ...message, rating: rating === 0 ? undefined : rating }
+          : message,
       ),
     );
     rateMessageMutation.mutate(
@@ -340,7 +350,9 @@ export function PublicAiAssistant() {
       {
         onError: () => {
           setMessages((current) =>
-            current.map((message) => (message.id === messageId ? { ...message, rating: undefined } : message)),
+            current.map((message) =>
+              message.id === messageId ? { ...message, rating: undefined } : message,
+            ),
           );
           toast({ type: 'err', title: tChat('feedbackFailed') });
         },
@@ -420,7 +432,7 @@ export function PublicAiAssistant() {
         }
         className="!left-[var(--panel-left)] !top-[var(--panel-top)] !h-[var(--panel-height)] !w-[var(--panel-width)] !max-h-none !max-w-none"
       >
-        <DialogHeader className="flex-row items-center justify-between gap-3">
+        <DialogHeader className="flex-row items-center justify-between gap-3 px-4 py-3 pe-4 sm:px-5 sm:py-4 sm:pe-5">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Sparkles className="size-4" />
@@ -472,7 +484,11 @@ export function PublicAiAssistant() {
             aria-live="polite"
           >
             {sourceRef && (
-              <AiReferenceCard sourceRef={sourceRef} className="mb-4" onClear={clearLessonContext} />
+              <AiReferenceCard
+                sourceRef={sourceRef}
+                className="mb-4"
+                onClear={clearLessonContext}
+              />
             )}
             <AiTranscript
               messages={messages}

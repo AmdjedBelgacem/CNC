@@ -42,6 +42,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -541,7 +542,7 @@ function CreatePageDialog({
           <DialogDescription>{tb('pages.createDescription')}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="pm-title">{tb('pages.fieldTitle')}</Label>
             <Input
@@ -624,7 +625,7 @@ function CreatePageDialog({
               {error}
             </p>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -687,7 +688,7 @@ function DuplicateDialog({
           <DialogDescription>{tb('pages.duplicateDescription')}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="dup-title">{tb('pages.fieldTitle')}</Label>
             <Input
@@ -731,7 +732,7 @@ function DuplicateDialog({
               {error}
             </p>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

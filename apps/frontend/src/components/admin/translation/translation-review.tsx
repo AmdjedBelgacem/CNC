@@ -84,7 +84,7 @@ export function TranslationReviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0">
-        <DialogHeader className="border-b border-border px-6 py-5 pe-14 sm:pe-6">
+        <DialogHeader className="border-b border-border px-4 py-4 pe-12 sm:px-6 sm:py-5 sm:pe-14">
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
             <div className="min-w-0">
               <DialogTitle className="flex items-center gap-2 font-display text-lg">
@@ -106,7 +106,7 @@ export function TranslationReviewDialog({
           </div>
         </DialogHeader>
 
-        <DialogBody className="max-h-[58vh] space-y-2 overflow-y-auto px-6 py-5">
+        <DialogBody className="space-y-2">
           {items.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">{t('review.nothing')}</p>
           )}
@@ -181,9 +181,13 @@ export function TranslationReviewDialog({
           ))}
         </DialogBody>
 
-        <DialogFooter className="flex-col items-stretch gap-2 border-t border-border px-6 py-4 sm:flex-row sm:items-center sm:gap-3">
+        <DialogFooter className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
           <p className="text-xs text-muted-foreground sm:mr-auto">{t('review.hint')}</p>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto"
+          >
             {t('review.close')}
           </Button>
         </DialogFooter>

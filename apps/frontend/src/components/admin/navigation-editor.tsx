@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -84,9 +85,10 @@ export function NavigationEditor() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [editing, setEditing] = useState<{ node: NavNode; parentId: string | null } | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ node: NavNode; parentId: string | null } | null>(
-    null,
-  );
+  const [confirmDelete, setConfirmDelete] = useState<{
+    node: NavNode;
+    parentId: string | null;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,7 +135,8 @@ export function NavigationEditor() {
     mutate((draft) => {
       if (parentId) {
         const parent = findNode(draft, parentId);
-        if (parent) parent.children = (parent.children ?? []).filter((c) => (c.id ?? newIdOf(c)) !== id);
+        if (parent)
+          parent.children = (parent.children ?? []).filter((c) => (c.id ?? newIdOf(c)) !== id);
       } else {
         return draft.filter((n) => (n.id ?? newIdOf(n)) !== id);
       }
@@ -260,9 +263,7 @@ export function NavigationEditor() {
 
       {tree.length === 0 ? (
         <div className="rounded-md border border-dashed border-border px-6 py-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            {t('empty')}
-          </p>
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
           <div className="mt-4 flex justify-center gap-2">
             <Button
               variant="outline"
@@ -273,7 +274,11 @@ export function NavigationEditor() {
               <Plus className="size-4" />
               {t('addLink')}
             </Button>
-            <Button onClick={() => setEditing({ node: { id: newId(), label: '', type: 'group' }, parentId: null })}>
+            <Button
+              onClick={() =>
+                setEditing({ node: { id: newId(), label: '', type: 'group' }, parentId: null })
+              }
+            >
               <Plus className="size-4" />
               {t('addDropdown')}
             </Button>
@@ -294,14 +299,21 @@ export function NavigationEditor() {
               }
               onMove={(dir) => move(null, node.id ?? newIdOf(node), dir)}
               onAddChild={() =>
-                setEditing({ node: { id: newId(), label: '', type: 'url' }, parentId: node.id ?? newIdOf(node) })
+                setEditing({
+                  node: { id: newId(), label: '', type: 'url' },
+                  parentId: node.id ?? newIdOf(node),
+                })
               }
               onEditChild={(child, parentId) => setEditing({ node: child, parentId })}
               onDeleteChild={(child, parentId) => setConfirmDelete({ node: child, parentId })}
               onToggleChild={(child, parentId) =>
-                updateNode(parentId, child.id ?? newIdOf(child), { visible: child.visible === false })
+                updateNode(parentId, child.id ?? newIdOf(child), {
+                  visible: child.visible === false,
+                })
               }
-              onMoveChild={(child, parentId, dir) => move(parentId, child.id ?? newIdOf(child), dir)}
+              onMoveChild={(child, parentId, dir) =>
+                move(parentId, child.id ?? newIdOf(child), dir)
+              }
             />
           ))}
         </ul>
@@ -312,14 +324,18 @@ export function NavigationEditor() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setEditing({ node: { id: newId(), label: '', type: 'url' }, parentId: null })}
+            onClick={() =>
+              setEditing({ node: { id: newId(), label: '', type: 'url' }, parentId: null })
+            }
           >
             <Plus className="size-4" />
             {t('addLink')}
           </Button>
           <Button
             size="sm"
-            onClick={() => setEditing({ node: { id: newId(), label: '', type: 'group' }, parentId: null })}
+            onClick={() =>
+              setEditing({ node: { id: newId(), label: '', type: 'group' }, parentId: null })
+            }
           >
             <Plus className="size-4" />
             {t('addDropdown')}
@@ -367,7 +383,10 @@ export function NavigationEditor() {
               <Button
                 variant="destructive"
                 onClick={() => {
-                  removeNode(confirmDelete.parentId, confirmDelete.node.id ?? newIdOf(confirmDelete.node));
+                  removeNode(
+                    confirmDelete.parentId,
+                    confirmDelete.node.id ?? newIdOf(confirmDelete.node),
+                  );
                   setConfirmDelete(null);
                 }}
               >
@@ -433,7 +452,11 @@ function NavRow({
             onClick={() => setOpen((v) => !v)}
             className="rounded p-0.5 text-muted-foreground hover:text-foreground"
           >
-            {open ? <ChevronDown className="size-4" /> : <ChevronRight className="flip-rtl size-4" />}
+            {open ? (
+              <ChevronDown className="size-4" />
+            ) : (
+              <ChevronRight className="flip-rtl size-4" />
+            )}
           </button>
         ) : (
           <GripVertical className="size-4 shrink-0 text-muted-foreground/40" aria-hidden />
@@ -568,7 +591,7 @@ function ItemDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="nav-label">{t('labelEn')}</Label>
             <Input
@@ -590,16 +613,17 @@ function ItemDialog({
               onChange={(e) => set({ labelAr: e.target.value })}
               placeholder={t('labelArPlaceholder')}
             />
-            <p className="text-xs text-muted-foreground">
-              {t('labelArHint')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('labelArHint')}</p>
           </div>
 
           {!isGroup && (
             <>
               <div className="space-y-2">
                 <Label>{t('linkType')}</Label>
-                <Select value={draft.type} onValueChange={(v) => set({ type: v as NavNode['type'] })}>
+                <Select
+                  value={draft.type}
+                  onValueChange={(v) => set({ type: v as NavNode['type'] })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -613,10 +637,7 @@ function ItemDialog({
               {draft.type === 'page' ? (
                 <div className="space-y-2">
                   <Label htmlFor="nav-page">{t('page')}</Label>
-                  <Select
-                    value={draft.pageSlug ?? ''}
-                    onValueChange={(v) => set({ pageSlug: v })}
-                  >
+                  <Select value={draft.pageSlug ?? ''} onValueChange={(v) => set({ pageSlug: v })}>
                     <SelectTrigger id="nav-page">
                       <SelectValue placeholder={t('choosePage')} />
                     </SelectTrigger>
@@ -628,9 +649,7 @@ function ItemDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {t('pageHint')}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('pageHint')}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -665,7 +684,7 @@ function ItemDialog({
             />
             {t('visible')}
           </label>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -678,7 +697,7 @@ function ItemDialog({
                 ...draft,
                 label: draft.label.trim(),
                 href: draft.type === 'url' ? draft.href?.trim() : null,
-                pageSlug: draft.type === 'page' ? draft.pageSlug ?? null : null,
+                pageSlug: draft.type === 'page' ? (draft.pageSlug ?? null) : null,
               })
             }
           >

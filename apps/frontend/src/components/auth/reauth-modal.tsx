@@ -2,7 +2,13 @@
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Lock } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,7 +59,9 @@ export function ReauthModal({
         const body = (err as { body?: { message?: unknown } })?.body;
         const message =
           status === 401 || status === 403
-            ? (typeof body?.message === 'string' ? body.message : t('incorrectPassword'))
+            ? typeof body?.message === 'string'
+              ? body.message
+              : t('incorrectPassword')
             : t('genericError');
         setError(message);
         toast({ type: 'err', title: message });
@@ -79,7 +87,7 @@ export function ReauthModal({
       {' '}
       <DialogContent className="sm:max-w-md">
         {' '}
-        <DialogHeader className="flex flex-col items-center gap-2 pt-4">
+        <DialogHeader className="flex flex-col items-center gap-2 px-4 pt-4 pe-4 sm:px-6 sm:pe-6">
           {' '}
           <div className="flex size-12 items-center justify-center rounded-full border border-border bg-muted">
             {' '}
@@ -87,56 +95,55 @@ export function ReauthModal({
           </div>{' '}
           <DialogTitle className="text-center">{title ?? t('defaultTitle')}</DialogTitle>{' '}
           {shownDescription && (
-            <p className="text-center text-sm text-muted-foreground">
-              {' '}
-              {shownDescription}{' '}
-            </p>
+            <p className="text-center text-sm text-muted-foreground"> {shownDescription} </p>
           )}{' '}
         </DialogHeader>{' '}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {' '}
-          <div className="space-y-2">
+        <DialogBody className="pt-0">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {' '}
-            <Label htmlFor="reauth-password">{ta('password')}</Label>{' '}
-            <Input
-              id="reauth-password"
-              type="password"
-              placeholder={t('passwordPlaceholder')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={status !== 'idle'}
-              autoFocus
-            />{' '}
-          </div>{' '}
-          {error && <p className="text-sm text-destructive">{error}</p>}{' '}
-          <div className="flex gap-3 pt-2">
-            {' '}
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1"
-              onClick={() => handleOpenChange(false)}
-              disabled={status !== 'idle'}
-            >
+            <div className="space-y-2">
               {' '}
-              {tc('cancel')}
-            </Button>{' '}
-            <Button type="submit" className="flex-1" disabled={!password || status !== 'idle'}>
+              <Label htmlFor="reauth-password">{ta('password')}</Label>{' '}
+              <Input
+                id="reauth-password"
+                type="password"
+                placeholder={t('passwordPlaceholder')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={status !== 'idle'}
+                autoFocus
+              />{' '}
+            </div>{' '}
+            {error && <p className="text-sm text-destructive">{error}</p>}{' '}
+            <div className="flex gap-3 pt-2">
               {' '}
-              {status === 'loading' ? (
-                <span className="flex items-center gap-2">
-                  {' '}
-                  <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />{' '}
-                  {t('verifying')}{' '}
-                </span>
-              ) : status === 'success' ? (
-                t('verified')
-              ) : (
-                tc('continue')
-              )}{' '}
-            </Button>{' '}
-          </div>{' '}
-        </form>{' '}
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => handleOpenChange(false)}
+                disabled={status !== 'idle'}
+              >
+                {' '}
+                {tc('cancel')}
+              </Button>{' '}
+              <Button type="submit" className="flex-1" disabled={!password || status !== 'idle'}>
+                {' '}
+                {status === 'loading' ? (
+                  <span className="flex items-center gap-2">
+                    {' '}
+                    <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />{' '}
+                    {t('verifying')}{' '}
+                  </span>
+                ) : status === 'success' ? (
+                  t('verified')
+                ) : (
+                  tc('continue')
+                )}{' '}
+              </Button>{' '}
+            </div>{' '}
+          </form>{' '}
+        </DialogBody>{' '}
       </DialogContent>{' '}
     </Dialog>
   );

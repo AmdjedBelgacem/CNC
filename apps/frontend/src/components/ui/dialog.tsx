@@ -42,8 +42,9 @@ const dialogSizes = {
   full: 'max-w-[min(96vw,1400px)]',
 };
 
-export interface DialogContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+export interface DialogContentProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {
   size?: keyof typeof dialogSizes;
   hideClose?: boolean;
   /** Accessible name when no visible DialogTitle is present in children. */
@@ -101,7 +102,8 @@ const DialogContent = React.forwardRef<
     },
     ref,
   ) => {
-    const needsTitle = !hasElement(children, DialogTitle) && !hasElement(children, DialogPrimitive.Title);
+    const needsTitle =
+      !hasElement(children, DialogTitle) && !hasElement(children, DialogPrimitive.Title);
     const needsDescription =
       ariaDescribedBy === undefined &&
       !hasElement(children, DialogDescription) &&
@@ -114,7 +116,7 @@ const DialogContent = React.forwardRef<
           ref={ref}
           aria-describedby={needsDescription ? undefined : ariaDescribedBy}
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-xl',
+            'fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-xl focus:outline-none',
             // `scale-in`/`scale-out` both keyframe `transform: scale()`, which
             // would clobber the centring `-translate-x-1/2 -translate-y-1/2`
             // above and throw the dialog into the corner mid-animation. The
@@ -136,7 +138,7 @@ const DialogContent = React.forwardRef<
           {!hideClose && (
             <DialogPrimitive.Close
               aria-label="Close"
-              className="absolute end-4 top-4 z-10 rounded-md p-1.5 text-muted-foreground opacity-70 transition hover:bg-muted hover:text-foreground hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="absolute end-2 top-2 z-10 rounded-lg p-2 text-muted-foreground/70 transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:end-3 sm:top-3"
             >
               <X className="size-4" />
             </DialogPrimitive.Close>
@@ -150,19 +152,30 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn('flex flex-col gap-1.5 border-b border-border px-6 py-5', className)}
+    className={cn(
+      // `pe-*` reserves room for the absolutely-positioned close button, so a long
+      // title or description can never slide underneath it.
+      'flex shrink-0 flex-col gap-1.5 border-b border-border px-4 py-4 pe-12 sm:px-6 sm:py-5 sm:pe-14',
+      className,
+    )}
     {...props}
   />
 );
 
 const DialogBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex-1 overflow-y-auto px-6 py-5', className)} {...props} />
+  <div
+    className={cn(
+      'min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5',
+      className,
+    )}
+    {...props}
+  />
 );
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'flex flex-col-reverse gap-2 border-t border-border bg-surface-sunken/40 px-6 py-4 sm:flex-row sm:justify-end',
+      'flex shrink-0 flex-col-reverse gap-2 border-t border-border bg-surface-sunken/40 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:flex-row sm:justify-end sm:px-6 sm:py-4',
       className,
     )}
     {...props}

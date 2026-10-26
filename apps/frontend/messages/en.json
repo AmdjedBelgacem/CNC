@@ -1949,6 +1949,7 @@
       "hotspotsEmpty": "No hotspots on this image yet.",
       "clickToPlaceHotspot": "Click to place hotspot",
       "hotspotsFailed": "Could not save hotspots",
+      "hotspotsSaved": "Hotspots saved",
       "studioTitle": "Hotspots",
       "studioDescription": "Click the image to drop a numbered marker, then give it a label. Markers belong to this image only.",
       "selected": "Selected marker",

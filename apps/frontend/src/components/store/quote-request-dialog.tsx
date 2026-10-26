@@ -7,6 +7,7 @@ import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -58,8 +59,14 @@ export function QuoteRequestDialog({
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
-    if (name.trim().length < 2) { setError(t('nameRequired')); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) { setError(t('emailInvalid')); return; }
+    if (name.trim().length < 2) {
+      setError(t('nameRequired'));
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
+      setError(t('emailInvalid'));
+      return;
+    }
 
     setSending(true);
     try {
@@ -73,7 +80,10 @@ export function QuoteRequestDialog({
       });
       toast({ type: 'ok', title: t('sent'), description: t('sentHint') });
       // Clear only on success, so a failure leaves what the shopper typed intact.
-      setName(''); setEmail(''); setCompany(''); setMessage('');
+      setName('');
+      setEmail('');
+      setCompany('');
+      setMessage('');
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('failed'));
@@ -88,53 +98,78 @@ export function QuoteRequestDialog({
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>
-            {t('subtitleFor', { product: productTitle, variant: variantTitle ? ` (${variantTitle})` : '' })}
+            {t('subtitleFor', {
+              product: productTitle,
+              variant: variantTitle ? ` (${variantTitle})` : '',
+            })}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="quote-name">{t('name')}</Label>
-              <Input id="quote-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <DialogBody className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="quote-name">{t('name')}</Label>
+                <Input
+                  id="quote-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="quote-email">{t('email')}</Label>
+                <Input
+                  id="quote-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </div>
             </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="quote-email">{t('email')}</Label>
-              <Input id="quote-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+              <Label htmlFor="quote-company">{t('company')}</Label>
+              <Input
+                id="quote-company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                autoComplete="organization"
+              />
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="quote-company">{t('company')}</Label>
-            <Input id="quote-company" value={company} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="quote-message">{t('message')}</Label>
-            {/* No shared Textarea component exists; this matches the styling used by the
+            <div className="space-y-1.5">
+              <Label htmlFor="quote-message">{t('message')}</Label>
+              {/* No shared Textarea component exists; this matches the styling used by the
                 other free-text fields in the app. */}
-            <textarea
-              id="quote-message"
-              rows={4}
-              value={message}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
-              placeholder={t('messagePlaceholder')}
-              className="flex w-full resize-y rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+              <textarea
+                id="quote-message"
+                rows={4}
+                value={message}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
+                placeholder={t('messagePlaceholder')}
+                className="flex w-full resize-y rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
 
-          {error ? (
-            <p role="alert" className="text-xs font-medium text-destructive">
-              {error}
-            </p>
-          ) : null}
+            {error ? (
+              <p role="alert" className="text-xs font-medium text-destructive">
+                {error}
+              </p>
+            ) : null}
+          </DialogBody>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={close} disabled={sending}>
               {t('cancel')}
             </Button>
             <Button type="submit" disabled={sending}>
-              {sending ? <Loader2 className={cn('size-4 animate-spin')} /> : <Send className={cn('size-4 rtl:-scale-x-100')} />}
+              {sending ? (
+                <Loader2 className={cn('size-4 animate-spin')} />
+              ) : (
+                <Send className={cn('size-4 rtl:-scale-x-100')} />
+              )}
               {t('submit')}
             </Button>
           </DialogFooter>

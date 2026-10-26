@@ -54,7 +54,8 @@ export function ProductGalleryManager({
     body?: unknown,
   ): Promise<T> => {
     if (method === 'DELETE') return api.delete<T>(`/admin/products/${slug}/images${path}`);
-    if (method === 'PATCH') return api.patch<T>(`/admin/products/${slug}/images${path}`, body ?? {});
+    if (method === 'PATCH')
+      return api.patch<T>(`/admin/products/${slug}/images${path}`, body ?? {});
     return api.post<T>(`/admin/products/${slug}/images${path}`, body ?? {});
   };
 
@@ -63,7 +64,10 @@ export function ProductGalleryManager({
     if (!files?.length) return;
     const room = MAX_IMAGES - images.length;
     if (room <= 0) {
-      toast({ type: 'err', title: t('limitReached', { max: MAX_IMAGES, default: 'Maximum {max} images reached.' }) });
+      toast({
+        type: 'err',
+        title: t('limitReached', { max: MAX_IMAGES, default: 'Maximum {max} images reached.' }),
+      });
       return;
     }
     const accepted = Array.from(files).slice(0, room);
@@ -73,11 +77,19 @@ export function ProductGalleryManager({
       let next = [...images];
       for (const file of accepted) {
         if (!/^image\/(jpeg|png|webp|avif|gif)$/.test(file.type)) {
-          toast({ type: 'err', title: t('badType', { default: 'Unsupported image type' }), description: file.name });
+          toast({
+            type: 'err',
+            title: t('badType', { default: 'Unsupported image type' }),
+            description: file.name,
+          });
           continue;
         }
         if (file.size > 10 * 1024 * 1024) {
-          toast({ type: 'err', title: t('tooLarge', { default: 'Image too large' }), description: file.name });
+          toast({
+            type: 'err',
+            title: t('tooLarge', { default: 'Image too large' }),
+            description: file.name,
+          });
           continue;
         }
         // Direct to storage: a gallery photo is routinely over the 2 MB JSON ceiling,
@@ -123,7 +135,9 @@ export function ProductGalleryManager({
     onChange(ordered); // optimistic: the controls stay responsive
     setBusy(true);
     try {
-      const saved = await call<ProductImage[]>('PATCH', '/reorder', { imageIds: ordered.map((i) => i.id) });
+      const saved = await call<ProductImage[]>('PATCH', '/reorder', {
+        imageIds: ordered.map((i) => i.id),
+      });
       onChange(saved);
     } catch (error) {
       onChange(images); // roll back to the server's truth
@@ -161,7 +175,10 @@ export function ProductGalleryManager({
       const remaining = images.filter((i) => i.id !== image.id);
       // The server promotes another image when the primary is deleted; reflect that.
       onChange(
-        remaining.map((i) => ({ ...i, isPrimary: result?.nextPrimaryUrl ? i.url === result.nextPrimaryUrl : i.isPrimary })),
+        remaining.map((i) => ({
+          ...i,
+          isPrimary: result?.nextPrimaryUrl ? i.url === result.nextPrimaryUrl : i.isPrimary,
+        })),
       );
       toast({ type: 'ok', title: t('removed', { default: 'Image removed' }) });
     } catch (error) {
@@ -182,10 +199,24 @@ export function ProductGalleryManager({
    */
   const setHotspots = async (image: ProductImage, hotspots: InteractiveHotspot[]) => {
     const previous = images;
-    onChange(images.map((i) => (i.id === image.id ? { ...i, hotspots } : i)));
+    const optimistic = images.map((i) => (i.id === image.id ? { ...i, hotspots } : i));
+    onChange(optimistic);
     try {
-      const saved = await call('PATCH', `/${image.id}`, { hotspots });
-      onChange(Array.isArray(saved) ? saved : previous);
+      /*
+       * `PATCH /images/:id` returns the updated image row, not the whole gallery.
+       *
+       * The old code treated every non-array response as a failure and restored
+       * `previous`, so the save succeeded on the server but the gallery immediately
+       * forgot the markers. Reopening the studio then read an image without
+       * `hotspots` and showed an empty editor. Merge the returned row instead.
+       */
+      const saved = await call<ProductImage | undefined>('PATCH', `/${image.id}`, { hotspots });
+      onChange(
+        saved && !Array.isArray(saved)
+          ? optimistic.map((i) => (i.id === image.id ? { ...i, ...saved } : i))
+          : optimistic,
+      );
+      toast({ type: 'ok', title: t('hotspotsSaved', { default: 'Hotspots saved' }) });
     } catch (error) {
       onChange(previous); // roll back to the server's truth
       toast({
@@ -193,6 +224,8 @@ export function ProductGalleryManager({
         title: t('hotspotsFailed', { default: 'Could not save hotspots' }),
         description: error instanceof Error ? error.message : undefined,
       });
+      // Let the studio keep the dialog open so the edit is not silently discarded.
+      throw error;
     }
   };
 
@@ -253,7 +286,11 @@ export function ProductGalleryManager({
                 <div className="min-w-0 flex-1 space-y-2">
                   <input
                     value={image.alt ?? ''}
-                    onChange={(e) => onChange(images.map((i) => (i.id === image.id ? { ...i, alt: e.target.value } : i)))}
+                    onChange={(e) =>
+                      onChange(
+                        images.map((i) => (i.id === image.id ? { ...i, alt: e.target.value } : i)),
+                      )
+                    }
                     onBlur={(e) => void setAlt(image, e.target.value)}
                     placeholder={t('alt', { default: 'Alt text (describe the image)' })}
                     className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-xs outline-none focus:border-primary/60"
@@ -271,7 +308,9 @@ export function ProductGalleryManager({
                       )}
                     >
                       <Star className="size-3" />
-                      {image.isPrimary ? t('primary', { default: 'Primary' }) : t('makePrimary', { default: 'Make primary' })}
+                      {image.isPrimary
+                        ? t('primary', { default: 'Primary' })
+                        : t('makePrimary', { default: 'Make primary' })}
                     </button>
                     <button
                       type="button"

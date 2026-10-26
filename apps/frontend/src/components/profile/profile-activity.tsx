@@ -4,11 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Users } from 'lucide-react';
 import { PostCard } from '@/components/feed/post-card';
 import { useVotePost } from '@/hooks/use-feed';
-import {
-  useFollowSuggestions,
-  useProfileConnections,
-  useProfilePosts,
-} from '@/hooks/use-profile';
+import { useFollowSuggestions, useProfileConnections, useProfilePosts } from '@/hooks/use-profile';
 import { FollowButton } from '@/components/profile/follow-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -109,11 +105,13 @@ export function ProfileConnectionsDialog({
 
   return (
     <Dialog open={!!kind} onOpenChange={(open) => !open && onOpenChange(null)}>
-      <DialogContent size="md" className="max-h-[80vh]">
+      <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>
             {kind === 'following' ? t('following') : t('followers')}
-            {total ? <span className="ms-2 font-mono text-2xs text-muted-foreground">{total}</span> : null}
+            {total ? (
+              <span className="ms-2 font-mono text-2xs text-muted-foreground">{total}</span>
+            ) : null}
           </DialogTitle>
           <DialogDescription>{t('connectionsDescription')}</DialogDescription>
         </DialogHeader>
@@ -146,7 +144,9 @@ export function ProfileConnectionsDialog({
                       >
                         <Avatar className="size-10">
                           <AvatarImage src={person.avatarUrl || undefined} alt="" />
-                          <AvatarFallback>{initialsOf(person.name, person.username)}</AvatarFallback>
+                          <AvatarFallback>
+                            {initialsOf(person.name, person.username)}
+                          </AvatarFallback>
                         </Avatar>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-foreground">
