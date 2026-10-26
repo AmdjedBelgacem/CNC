@@ -306,6 +306,13 @@
       "when": 1787361699672,
       "tag": "039_backfill_group_members",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1787361700672,
+      "tag": "042_product_type",
+      "breakpoints": true
     }
   ]
 }

@@ -138,6 +138,8 @@ export interface Product {
   isPublished?: boolean;
   isArchived?: boolean;
   category?: string | null;
+  /** The kind of product within its category, e.g. Vertical Machining Center. */
+  productType?: string | null;
   tags?: string[] | null;
   featured?: boolean;
   sortOrder?: number | null;

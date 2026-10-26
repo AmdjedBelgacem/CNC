@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ALL_CATEGORIES, buildCategoryHref, readCategoryFromSearch } from '@/lib/store-category';
+import { ALL_CATEGORIES, ALL_TYPES, buildCategoryHref, buildTypeHref, readCategoryFromSearch, readTypeFromSearch } from '@/lib/store-category';
 import { useLocale, useTranslations } from 'next-intl';
 import { CURRENCY_NAMES, DEFAULT_CURRENCY } from '@titan/shared';
 import {
@@ -97,7 +97,9 @@ export function ProductsCatalog({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const requestedCategory = readCategoryFromSearch(searchParams.toString());
+  const requestedType = readTypeFromSearch(searchParams.toString());
   const [category, setCategory] = useState(requestedCategory);
+  const [productType, setProductType] = useState(requestedType);
   const [sort, setSort] = useState<SortKey>('featured');
   const [format, setFormat] = useState<FormatFilter>('all');
   const [stock, setStock] = useState<StockFilter>('all');
@@ -157,6 +159,11 @@ export function ProductsCatalog({
     setPage(1);
   }, [requestedCategory]);
 
+  useEffect(() => {
+    setProductType(requestedType);
+    setPage(1);
+  }, [requestedType]);
+
   /**
    * Department links in the `products-departments` island drive this filter.
    * The island is server-rendered and cannot touch router state, so it
@@ -175,11 +182,26 @@ export function ProductsCatalog({
   const applyCategory = useCallback(
     (next: string) => {
       setCategory(next);
+      // Types are category-specific, so switching department clears the type
+      // filter instead of silently producing an empty grid.
+      setProductType(ALL_TYPES);
       setPage(1);
       // `replace` keeps the department grid from filling the history stack:
       // a shopper clicking four departments should go back to where they came
       // from, not through four near-identical store pages.
-      router.replace(buildCategoryHref(pathname, searchParams.toString(), next), { scroll: false });
+      router.replace(
+        buildCategoryHref(pathname, searchParams.toString(), next, { clearType: true }),
+        { scroll: false },
+      );
+    },
+    [pathname, router, searchParams],
+  );
+
+  const applyType = useCallback(
+    (next: string) => {
+      setProductType(next);
+      setPage(1);
+      router.replace(buildTypeHref(pathname, searchParams.toString(), next), { scroll: false });
     },
     [pathname, router, searchParams],
   );
@@ -199,6 +221,40 @@ export function ProductsCatalog({
     });
     return counts;
   }, [products]);
+
+  // Type is a second level under the selected category: the dropdown shows only
+  // types that actually exist in that department, and the counts are computed
+  // from the same set so the label cannot promise products the grid will not show.
+  const typeOptions = useMemo(() => {
+    const names = new Set<string>();
+    products.forEach((p) => {
+      const name = p.productType?.trim();
+      if (!name) return;
+      if (category !== ALL_CATEGORIES && p.category !== category) return;
+      names.add(name);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [products, category]);
+
+  const typeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    products.forEach((p) => {
+      const name = p.productType?.trim();
+      if (!name) return;
+      if (category !== ALL_CATEGORIES && p.category !== category) return;
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    });
+    return counts;
+  }, [products, category]);
+
+  // A hand-edited URL can name a type from another department. Once the catalog
+  // has loaded, drop it rather than showing an empty grid with no explanation.
+  useEffect(() => {
+    if (loading || productType === ALL_TYPES) return;
+    if (typeOptions.includes(productType)) return;
+    setProductType(ALL_TYPES);
+    router.replace(buildTypeHref(pathname, searchParams.toString(), ALL_TYPES), { scroll: false });
+  }, [loading, productType, typeOptions, pathname, router, searchParams]);
 
   // Every price below is expressed in the selected display currency so the
   // filters, the sort and the cards all agree on one number.
@@ -233,6 +289,7 @@ export function ProductsCatalog({
 
     const result = products.filter((product) => {
       if (category !== ALL_CATEGORIES && product.category !== category) return false;
+      if (productType !== ALL_TYPES && product.productType !== productType) return false;
       if (format === 'digital' && !product.isDigital) return false;
       if (format === 'physical' && product.isDigital) return false;
       if (stock === 'in' && !isInStock(product)) return false;
@@ -249,6 +306,7 @@ export function ProductsCatalog({
           product.tagline,
           product.description,
           product.category,
+          product.productType,
           ...(product.tags ?? []),
         ]
           .filter(Boolean)
@@ -294,6 +352,7 @@ export function ProductsCatalog({
     products,
     query,
     category,
+    productType,
     format,
     stock,
     saleOnly,
@@ -317,6 +376,7 @@ export function ProductsCatalog({
 
   const activeFilterCount =
     (category !== ALL_CATEGORIES ? 1 : 0) +
+    (productType !== ALL_TYPES ? 1 : 0) +
     (format !== 'all' ? 1 : 0) +
     (stock !== 'all' ? 1 : 0) +
     (saleOnly ? 1 : 0) +
@@ -407,6 +467,33 @@ export function ProductsCatalog({
             {categoryOptions.map((name) => (
               <SelectItem key={name} value={name}>
                 {name} · {categoryCounts.get(name) ?? 0}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label
+          htmlFor="catalog-type"
+          className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground"
+        >
+          {t('productType')}
+        </Label>
+        <Select value={productType} onValueChange={applyType}>
+          <SelectTrigger
+            id="catalog-type"
+            className="h-9 bg-card"
+            aria-label={t('productType')}
+            disabled={typeOptions.length === 0}
+          >
+            <SelectValue placeholder={t('allTypes')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('allTypes')}</SelectItem>
+            {typeOptions.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name} · {typeCounts.get(name) ?? 0}
               </SelectItem>
             ))}
           </SelectContent>

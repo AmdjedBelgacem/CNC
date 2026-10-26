@@ -53,6 +53,7 @@ export interface ProductFormValue {
     hotspots: Record<string, { label: string; tooltip: string; detail: string }>;
   };
   category: string;
+  productType: string;
   priceCents: string;
   pricingMode: 'fixed' | 'from' | 'request';
   compareAtCents: string;
@@ -124,6 +125,7 @@ export function emptyProductForm(): ProductFormValue {
     // empty Arabic block is the normal initial state rather than an error.
     translationsAr: emptyArabicProduct(),
     category: '',
+    productType: '',
     priceCents: '',
     pricingMode: 'fixed',
     compareAtCents: '',
@@ -222,6 +224,7 @@ export function productFormPayload(value: ProductFormValue) {
     tagline: value.tagline.trim() || null,
     description: value.description.trim() || null,
     category: value.category.trim() || null,
+    productType: value.productType.trim() || null,
     price: value.priceCents.trim() ? Math.round(Number(value.priceCents)) : null,
     pricingMode: value.pricingMode,
     compareAtPrice: value.compareAtCents ? Math.round(Number(value.compareAtCents)) : null,
@@ -461,13 +464,24 @@ export function ProductFormSections({
               placeholder={t('categoryPlaceholder', { default: 'e.g. Tool Kits, Workholding' })}
             />
             <TextField
-              label={t('fieldTags', { default: 'Tags' })}
-              hint={t('fieldTagsHint', { default: 'Comma separated.' })}
-              value={value.tags}
-              onChange={(e) => set('tags', e.target.value)}
-              placeholder="milling, endmill, starter"
+              label={t('fieldProductType', { default: 'Product type' })}
+              hint={t('fieldProductTypeHint', {
+                default: 'The kind of product within the category, e.g. Vertical Machining Center.',
+              })}
+              value={value.productType}
+              onChange={(e) => set('productType', e.target.value)}
+              placeholder={t('productTypePlaceholder', {
+                default: 'e.g. Vertical Machining Center, Collet Systems',
+              })}
             />
           </FieldGrid>
+          <TextField
+            label={t('fieldTags', { default: 'Tags' })}
+            hint={t('fieldTagsHint', { default: 'Comma separated.' })}
+            value={value.tags}
+            onChange={(e) => set('tags', e.target.value)}
+            placeholder="milling, endmill, starter"
+          />
           <TextAreaField
             label={t('fieldFeatures', { default: 'Features' })}
             hint={t('fieldFeaturesHint', { default: 'One per line.' })}

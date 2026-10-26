@@ -156,6 +156,7 @@ function courseMeta(
 function productMeta(
   row: {
     category: string | null;
+    productType?: string | null;
     pricingMode: string;
     price: number | null;
     currency: string | null;
@@ -165,6 +166,7 @@ function productMeta(
   const ar = locale === 'ar';
   const parts: string[] = [];
   if (row.category) parts.push(row.category);
+  if (row.productType) parts.push(row.productType);
   if (row.pricingMode === 'request') {
     parts.push(ar ? 'السعر عند الطلب' : 'Price on request');
   } else {
@@ -293,6 +295,7 @@ export class AiRetrievalService {
           slug: productsBundle.slug,
           translations: productsBundle.translations,
           category: productsBundle.category,
+          productType: productsBundle.productType,
           pricingMode: productsBundle.pricingMode,
           price: productsBundle.price,
           currency: productsBundle.currency,

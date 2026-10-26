@@ -113,8 +113,13 @@ export class DrizzleService implements OnModuleInit {
         await this.client.unsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "track_inventory" boolean DEFAULT true`);
         await this.client.unsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "is_archived" boolean DEFAULT false`);
         await this.client.unsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "status" varchar(20) DEFAULT 'draft'`);
+        // Product type is the second taxonomy dimension beside category. The
+        // migration backfills known rows; this boot-time DDL only guarantees the
+        // column exists on hosts that never run `db:migrate`.
+        await this.client.unsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "product_type" varchar(100)`);
         await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "prod_academy_idx" ON "products" ("academy_id")`);
         await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "prod_course_idx" ON "products" ("course_id")`);
+        await this.client.unsafe(`CREATE INDEX IF NOT EXISTS "prod_type_idx" ON "products" ("tenant_id", "product_type")`);
       } catch (err) {
         console.warn('[DrizzleService] ensure product relation columns failed (non-fatal)', err);
       }

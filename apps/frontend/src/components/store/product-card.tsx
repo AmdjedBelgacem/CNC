@@ -112,6 +112,11 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
 
       <CardHeader className="flex-1">
+        {(product.category || product.productType) && (
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            {[product.category, product.productType].filter(Boolean).join(' · ')}
+          </p>
+        )}
         <CardTitle className="font-display text-base leading-snug">
           <Link href={href} className="transition-colors hover:text-primary">
             {product.title}

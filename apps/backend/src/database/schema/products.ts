@@ -56,6 +56,15 @@ export const productsBundle = pgTable('products', {
   isArchived: boolean('is_archived').default(false),
   status: varchar('status', { length: 20 }).default('draft'),
   category: varchar('category', { length: 100 }),
+  /**
+   * The kind of product within its category.
+   *
+   * Category answers "which department?" ("CNC Machines"), type answers "what
+   * is it?" ("Vertical Machining Center"). Both are nullable and free text: the
+   * catalogue predates a taxonomy table, and a product that has not been
+   * classified should say so rather than inherit a guessed value.
+   */
+  productType: varchar('product_type', { length: 100 }),
   tags: varchar('tags').array(),
   pinpoints: jsonb('pinpoints').$type<InteractiveHotspot[]>(),
   documents: jsonb('documents').$type<Array<{ title: string; url: string; name?: string; size?: number }>>(),
@@ -71,6 +80,7 @@ export const productsBundle = pgTable('products', {
 }, (table) => ({
   tenantPublishedIdx: index('prod_tenant_pub_idx').on(table.tenantId, table.isPublished),
   categoryIdx: index('prod_category_idx').on(table.tenantId, table.category),
+  typeIdx: index('prod_type_idx').on(table.tenantId, table.productType),
   academyIdx: index('prod_academy_idx').on(table.academyId),
   courseIdx: index('prod_course_idx').on(table.courseId),
 }));

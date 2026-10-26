@@ -6,6 +6,7 @@ import type { Product as CatalogProduct } from '@/components/store/product-card'
 import { DepartmentLink } from '@/components/store/department-link';
 import { getImageSrc } from '@/lib/images';
 import { coerceCurrency, formatMinorUnits } from '@/lib/money';
+import { cardPrice, isQuoteOnly } from '@/lib/product-pricing';
 import type { Product as ApiProduct } from '@/lib/api/types';
 
 /** Live featured strip — the `products-featured` island (On the bench). */
@@ -61,9 +62,9 @@ export async function ProductsFeatured({ products }: { products: ApiProduct[] })
                 </span>
               </div>
               <div className="flex flex-1 flex-col gap-1 p-4">
-                {product.category ? (
+                {product.category || product.productType ? (
                   <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-                    {product.category}
+                    {[product.category, product.productType].filter(Boolean).join(' · ')}
                   </span>
                 ) : null}
                 <h3 className="font-display text-sm font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary">
@@ -71,7 +72,9 @@ export async function ProductsFeatured({ products }: { products: ApiProduct[] })
                 </h3>
                 <div className="mt-auto flex items-center justify-between pt-3">
                   <span className="font-mono text-sm font-semibold text-foreground tabular-nums">
-                    {money(product.price, product.currency || 'USD')}
+                    {isQuoteOnly(product)
+                      ? t('priceOnRequest')
+                      : money(cardPrice(product), product.currency || 'USD')}
                   </span>
                   <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
                     {t('view')}

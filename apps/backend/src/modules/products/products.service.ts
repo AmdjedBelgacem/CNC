@@ -27,7 +27,7 @@ export class ProductsService {
   async findByTenant(
     tenantId: string,
     opts?: {
-      category?: string; featured?: boolean; search?: string;
+      category?: string; productType?: string; featured?: boolean; search?: string;
       page?: number; limit?: number;
       academyId?: string; courseId?: string;
       /** Request or explicit locale; the resolver also reads the cookie/header. */
@@ -37,9 +37,10 @@ export class ProductsService {
     const conditions: any[] = [eq(productsBundle.tenantId, tenantId)];
     if (opts?.featured) conditions.push(eq(productsBundle.featured, true));
     if (opts?.category) conditions.push(eq(productsBundle.category, opts.category));
+    if (opts?.productType) conditions.push(eq(productsBundle.productType, opts.productType));
     if (opts?.search) {
       conditions.push(
-        sql`(${like(productsBundle.title, `%${opts.search}%`)} or ${sql`${productsBundle.translations}::text`} ilike ${`%${opts.search}%`})`,
+        sql`(${like(productsBundle.title, `%${opts.search}%`)} or ${like(productsBundle.productType, `%${opts.search}%`)} or ${sql`${productsBundle.translations}::text`} ilike ${`%${opts.search}%`})`,
       );
     }
     if (opts?.academyId) conditions.push(eq(productsBundle.academyId, opts.academyId));
@@ -194,20 +195,29 @@ export class ProductsService {
     tenantId: string,
     opts?: {
       search?: string; status?: string; academyId?: string; courseId?: string;
-      category?: string; page?: number; limit?: number;
+      category?: string; productType?: string; page?: number; limit?: number;
     },
   ) {
     // Shared, status-agnostic filters. The status facet counts reuse these so a
     // tab can report how many products it would yield.
-    const baseConditions: any[] = [eq(productsBundle.tenantId, tenantId)];
+    //
+    // Taxonomy conditions deliberately stop before `category`/`productType`:
+    // the category dropdown must still offer the other departments, and the
+    // type dropdown must still offer sibling types inside the selected
+    // department. Filtering those option lists by the current value would
+    // leave a dropdown with exactly one choice.
+    const taxonomyConditions: any[] = [eq(productsBundle.tenantId, tenantId)];
     if (opts?.search) {
-      baseConditions.push(
-        sql`(${like(productsBundle.title, `%${opts.search}%`)} or ${sql`${productsBundle.translations}::text`} ilike ${`%${opts.search}%`})`,
+      taxonomyConditions.push(
+        sql`(${like(productsBundle.title, `%${opts.search}%`)} or ${like(productsBundle.productType, `%${opts.search}%`)} or ${sql`${productsBundle.translations}::text`} ilike ${`%${opts.search}%`})`,
       );
     }
-    if (opts?.academyId) baseConditions.push(eq(productsBundle.academyId, opts.academyId));
-    if (opts?.courseId) baseConditions.push(eq(productsBundle.courseId, opts.courseId));
+    if (opts?.academyId) taxonomyConditions.push(eq(productsBundle.academyId, opts.academyId));
+    if (opts?.courseId) taxonomyConditions.push(eq(productsBundle.courseId, opts.courseId));
+
+    const baseConditions: any[] = [...taxonomyConditions];
     if (opts?.category) baseConditions.push(eq(productsBundle.category, opts.category));
+    if (opts?.productType) baseConditions.push(eq(productsBundle.productType, opts.productType));
 
     const statusConditions = (status?: string): any[] => {
       if (status === 'published') {
@@ -239,7 +249,7 @@ export class ProductsService {
       },
     });
 
-    const [totalArr, facetRows] = await Promise.all([
+    const [totalArr, facetRows, categoryRows, typeRows] = await Promise.all([
       this.db
         .select({ count: count() })
         .from(productsBundle)
@@ -262,6 +272,28 @@ export class ProductsService {
           .where(and(...baseConditions, eq(productsBundle.featured, true)))
           .then((r) => ['featured', Number(r[0]?.count || 0)] as const),
       ]),
+      // Taxonomy options come from the whole filtered set, not just this page.
+      // `category` is applied to the type list (a type belongs to one
+      // department) but not to the category list, and `productType` is applied
+      // to neither, so both dropdowns still offer every alternative.
+      this.db
+        .select({ value: productsBundle.category })
+        .from(productsBundle)
+        .where(and(...taxonomyConditions, ...statusConditions(opts?.status)))
+        .groupBy(productsBundle.category)
+        .orderBy(asc(productsBundle.category)),
+      this.db
+        .select({ value: productsBundle.productType })
+        .from(productsBundle)
+        .where(
+          and(
+            ...taxonomyConditions,
+            ...statusConditions(opts?.status),
+            ...(opts?.category ? [eq(productsBundle.category, opts.category)] : []),
+          ),
+        )
+        .groupBy(productsBundle.productType)
+        .orderBy(asc(productsBundle.productType)),
     ]);
 
     const facets: Record<string, number> = {
@@ -285,6 +317,8 @@ export class ProductsService {
       limit,
       facets,
       facetTotal,
+      categories: categoryRows.map((r) => r.value).filter((v): v is string => Boolean(v)),
+      types: typeRows.map((r) => r.value).filter((v): v is string => Boolean(v)),
     };
   }
 
@@ -337,6 +371,7 @@ export class ProductsService {
    */
   private static readonly UPDATABLE: Record<string, true> = {
     title: true, slug: true, tagline: true, description: true, category: true,
+    productType: true,
     price: true, compareAtPrice: true, currency: true, trackInventory: true,
     inventory: true, allowBackorder: true, backorderLeadDays: true, isDigital: true,
     featured: true, sortOrder: true, tags: true, features: true,

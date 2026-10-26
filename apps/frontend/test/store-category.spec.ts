@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   ALL_CATEGORIES,
+  ALL_TYPES,
   buildCategoryHref,
+  buildTypeHref,
   readCategoryFromSearch,
+  readTypeFromSearch,
 } from '../src/lib/store-category';
 
 /**
@@ -67,5 +70,52 @@ describe('store category filter URLs', () => {
   it('never emits a doubled question mark or an empty query', () => {
     expect(buildCategoryHref('/products', '', ALL_CATEGORIES)).not.toContain('?');
     expect(buildCategoryHref('/products', '', 'Machines')).not.toContain('??');
+  });
+});
+
+describe('store product-type filter URLs', () => {
+  it('reads the type named by the query string', () => {
+    expect(readTypeFromSearch('?type=Vertical+Machining+Center')).toBe('Vertical Machining Center');
+    expect(readTypeFromSearch('type=Collet+Systems')).toBe('Collet Systems');
+  });
+
+  it('treats a missing or blank type as no filter', () => {
+    expect(readTypeFromSearch('')).toBe(ALL_TYPES);
+    expect(readTypeFromSearch('?type=')).toBe(ALL_TYPES);
+    expect(readTypeFromSearch('?type=%20%20')).toBe(ALL_TYPES);
+    expect(readTypeFromSearch(null)).toBe(ALL_TYPES);
+  });
+
+  it('round-trips a type through build and read', () => {
+    for (const name of ['Vertical Machining Center', 'Laser Cutting Machine', 'Collet Systems']) {
+      const href = buildTypeHref('/products', '', name);
+      expect(readTypeFromSearch(href.slice('/products'.length))).toBe(name);
+    }
+  });
+
+  it('collapses the all-type sentinel to the bare path', () => {
+    expect(buildTypeHref('/products', '', ALL_TYPES)).toBe('/products');
+    expect(buildTypeHref('/products', '', '')).toBe('/products');
+    expect(buildTypeHref('/products', '?type=Collet+Systems', ALL_TYPES)).toBe('/products');
+  });
+
+  it('preserves category, search and sort when choosing a type', () => {
+    expect(buildTypeHref('/products', '?category=CNC+Machines&q=mill&sort=name', 'CNC Mill')).toBe(
+      '/products?category=CNC+Machines&q=mill&sort=name&type=CNC+Mill',
+    );
+  });
+
+  it('clears the type when switching department', () => {
+    expect(
+      buildCategoryHref('/products', '?category=CNC+Machines&type=CNC+Mill', 'Tooling', {
+        clearType: true,
+      }),
+    ).toBe('/products?category=Tooling');
+  });
+
+  it('keeps the type when clearing a department unless asked', () => {
+    expect(
+      buildCategoryHref('/products', '?category=CNC+Machines&type=CNC+Mill', ALL_CATEGORIES),
+    ).toBe('/products?type=CNC+Mill');
   });
 });

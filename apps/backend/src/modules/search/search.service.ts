@@ -830,7 +830,7 @@ export class SearchService {
   private async searchProducts(tenantId: string, scope: SearchScope, limit: number, query?: string): Promise<Batch<SearchCandidate>> {
     const conditions = [eq(productsBundle.tenantId, tenantId)];
     if (scope === 'public') conditions.push(eq(productsBundle.isPublished, true), eq(productsBundle.status, 'published'), eq(productsBundle.isArchived, false));
-    if (query) conditions.push(or(contains(productsBundle.title, query), contains(productsBundle.tagline, query), contains(productsBundle.slug, query), contains(productsBundle.description, query), contains(productsBundle.category, query))!);
+    if (query) conditions.push(or(contains(productsBundle.title, query), contains(productsBundle.tagline, query), contains(productsBundle.slug, query), contains(productsBundle.description, query), contains(productsBundle.category, query), contains(productsBundle.productType, query))!);
     const where = and(...conditions);
     const rows = await this.drizzle.db.select().from(productsBundle).where(where).orderBy(asc(productsBundle.title)).limit(limit);
     const [countRow] = await this.drizzle.db.select({ value: count() }).from(productsBundle).where(where);
@@ -848,7 +848,7 @@ export class SearchService {
         publicVisible: Boolean(row.isPublished && !row.isArchived),
         adminVisible: true,
         updatedAt: dateValue(row.updatedAt),
-        meta: { status: row.status, archived: row.isArchived, category: row.category },
+        meta: { status: row.status, archived: row.isArchived, category: row.category, productType: row.productType },
       })),
     };
   }

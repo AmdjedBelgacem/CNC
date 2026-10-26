@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Layers,
   Mail,
   ShoppingCart,
   Tag,
@@ -419,6 +420,12 @@ export function ProductDetailClient({
                   {p.category}
                 </Badge>
               )}
+              {p.productType && (
+                <Badge variant="soft-muted" className="gap-1">
+                  <Layers className="size-3.5" />
+                  {p.productType}
+                </Badge>
+              )}
               {p.isDigital && (
                 <Badge variant="soft-muted" className="gap-1">
                   <Download className="size-3.5" />
@@ -607,6 +614,15 @@ export function ProductDetailClient({
                   <dt className="text-muted-foreground">{t('category')}</dt>
                   <dd className="font-medium text-foreground">{p.category ?? '—'}</dd>
                 </div>
+                {p.productType && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">{t('productType')}</dt>
+                      <dd className="text-end font-medium text-foreground">{p.productType}</dd>
+                    </div>
+                  </>
+                )}
                 <Separator />
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-muted-foreground">{t('format')}</dt>

@@ -20,6 +20,7 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'List published products with filters' })
   @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'productType', required: false })
   @ApiQuery({ name: 'featured', required: false })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'academyId', required: false })
@@ -30,6 +31,8 @@ export class ProductsController {
     @CurrentTenant() tenant: { id: string } | null,
     @Req() req: any,
     @Query('category') category?: string,
+    @Query('productType') productType?: string,
+    @Query('type') type?: string,
     @Query('featured') featured?: string,
     @Query('search') search?: string,
     @Query('academyId') academyId?: string,
@@ -42,6 +45,7 @@ export class ProductsController {
       // The resolver reads the locale cookie, then `?locale=`, then the header.
       localeInput: req,
       category,
+      productType: productType || type,
       featured: featured === 'true',
       search,
       academyId,

@@ -1,6 +1,6 @@
 'use client';
 import { api } from '@/lib/api-client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
@@ -60,6 +60,7 @@ interface ProductRow {
   pricingMode?: 'fixed' | 'from' | 'request' | null;
   currency: string;
   category: string | null;
+  productType: string | null;
   isPublished: boolean;
   isArchived: boolean;
   featured: boolean;
@@ -247,6 +248,9 @@ function ProductCard({
             {product.category && (
               <StatusPill label={product.category} tone={style.tone} dot={false} icon={CategoryIcon} />
             )}
+            {product.productType && (
+              <StatusPill label={product.productType} tone="blue" dot={false} />
+            )}
             {product.featured && (
               <StatusPill label={t('featured', { default: 'Featured' })} tone="purple" dot={false} icon={Star} />
             )}
@@ -338,11 +342,14 @@ export default function AdminProductsPage() {
   const params = useSearchParams();
   const status = params.get('status') ?? '';
   const category = params.get('category') ?? '';
+  const productType = params.get('type') ?? '';
   const q = params.get('q') ?? '';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const PAGE_SIZE = 12;
 
   const [rows, setRows] = useState<ProductRow[] | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [typeOptions, setTypeOptions] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
   const [facets, setFacets] = useState<Record<string, number> | null>(null);
   const [facetTotal, setFacetTotal] = useState(0);
@@ -382,6 +389,7 @@ export default function AdminProductsPage() {
         const qs = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
         if (status) qs.set('status', status);
         if (category) qs.set('category', category);
+        if (productType) qs.set('productType', productType);
         if (q) qs.set('search', q);
         const res = await fetch(`/api/proxy/admin/products?${qs.toString()}`, {
           credentials: 'include',
@@ -392,7 +400,18 @@ export default function AdminProductsPage() {
           );
         }
         const data = await res.json();
-        setRows(Array.isArray(data?.items) ? data.items : []);
+        const nextRows = Array.isArray(data?.items) ? (data.items as ProductRow[]) : [];
+        setRows(nextRows);
+        setCategoryOptions(
+          Array.isArray(data?.categories)
+            ? data.categories.filter((v: unknown): v is string => typeof v === 'string' && v.length > 0)
+            : [...new Set(nextRows.map((r) => r.category).filter((v): v is string => Boolean(v)))].sort(),
+        );
+        setTypeOptions(
+          Array.isArray(data?.types)
+            ? data.types.filter((v: unknown): v is string => typeof v === 'string' && v.length > 0)
+            : [...new Set(nextRows.map((r) => r.productType).filter((v): v is string => Boolean(v)))].sort(),
+        );
         setTotal(Number(data?.total ?? 0));
         setFacets(data?.facets && typeof data.facets === 'object' ? data.facets : null);
         setFacetTotal(Number(data?.facetTotal ?? data?.total ?? 0));
@@ -407,7 +426,7 @@ export default function AdminProductsPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, status, category, q],
+    [page, status, category, productType, q],
   );
 
   useEffect(() => {
@@ -469,16 +488,9 @@ export default function AdminProductsPage() {
     [load, t],
   );
 
-  // Category options come from what is on this page rather than a second request.
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rows ?? []) if (r.category) set.add(r.category);
-    return [...set].sort();
-  }, [rows]);
-
   const countOf = (k: string) => facets?.[k] ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const hasFilters = Boolean(status || category || q);
+  const hasFilters = Boolean(status || category || productType || q);
 
   const menuLabels = {
     publish: t('action.publish', { default: 'Publish' }),
@@ -602,16 +614,31 @@ export default function AdminProductsPage() {
             ]}
           />
 
-          {categories.length > 0 && (
+          {categoryOptions.length > 0 && (
             <Select
               value={category}
-              onChange={(v) => setParam({ category: v || null })}
+              onChange={(v) => setParam({ category: v || null, type: null })}
               label={t('categoryLabel', { default: 'Category' })}
             >
               <option value="">{t('allCategories', { default: 'All categories' })}</option>
-              {categories.map((c) => (
+              {categoryOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
+                </option>
+              ))}
+            </Select>
+          )}
+
+          {typeOptions.length > 0 && (
+            <Select
+              value={productType}
+              onChange={(v) => setParam({ type: v || null })}
+              label={t('typeLabel', { default: 'Type' })}
+            >
+              <option value="">{t('allTypes', { default: 'All types' })}</option>
+              {typeOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
                 </option>
               ))}
             </Select>
@@ -639,6 +666,13 @@ export default function AdminProductsPage() {
                 tone={categoryStyle(category).tone}
                 label={category}
                 onClear={() => setParam({ category: null })}
+              />
+            )}
+            {productType && (
+              <FilterChip
+                tone="blue"
+                label={productType}
+                onClear={() => setParam({ type: null })}
               />
             )}
             {hasFilters && (
@@ -853,6 +887,11 @@ export default function AdminProductsPage() {
                               <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-1.5 py-0.5 text-2xs text-muted-foreground">
                                 <CategoryIcon className="size-2.5" />
                                 {p.category}
+                              </span>
+                            )}
+                            {p.productType && (
+                              <span className="inline-flex max-w-36 items-center truncate rounded-md border border-info/20 bg-info/5 px-1.5 py-0.5 text-2xs text-info">
+                                {p.productType}
                               </span>
                             )}
                             {p.academy && (

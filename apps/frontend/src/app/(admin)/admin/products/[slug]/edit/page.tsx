@@ -59,7 +59,7 @@ interface ProductDetail {
   features: string[] | null;
   thumbnailUrl: string | null;
   mediaUrls: string[] | null;
-  price: number;
+  price: number | null;
   compareAtPrice: number | null;
   currency: string;
   pricingMode?: 'fixed' | 'from' | 'request' | null;
@@ -72,6 +72,7 @@ interface ProductDetail {
   isArchived: boolean;
   featured: boolean;
   category: string | null;
+  productType: string | null;
   tags: string[] | null;
   sortOrder: number | null;
   academyId: string | null;
@@ -97,6 +98,7 @@ function baselineOf(p: ProductDetail): ProductFormValue {
     tagline: p.tagline ?? '',
     description: p.description ?? '',
     category: p.category ?? '',
+    productType: p.productType ?? '',
     priceCents: p.price != null ? String(p.price) : '',
     // Absent means the pre-migration default; treating it as 'fixed' is what the
     // NOT NULL DEFAULT 'fixed' column guarantees for every existing row.
@@ -476,7 +478,9 @@ export default function ProductEditorPage() {
       <div className="mx-auto w-full max-w-[1200px] space-y-6 pt-6">
         <AdminPageHeader
           title={product.title}
-          description={`/${product.slug} · ${
+          description={`/${product.slug}${
+            product.category ? ` · ${product.category}` : ''
+          }${product.productType ? ` · ${product.productType}` : ''} · ${
             product.pricingMode === 'request'
               ? t('pricingRequest', { default: 'Request a quote' })
               : formatMoney(product.price, product.currency)
@@ -502,7 +506,7 @@ export default function ProductEditorPage() {
             { label: t('readinessDescription'), ok: !!product.description?.trim() },
             { label: t('readinessCategory'), ok: !!product.category },
             { label: t('readinessThumbnail'), ok: !!product.thumbnailUrl },
-            { label: t('readinessPrice'), ok: product.price != null && product.price > 0 },
+            { label: t('readinessPrice'), ok: product.pricingMode === 'request' || (product.price != null && product.price > 0) },
           ]}
         />
 
