@@ -12,11 +12,12 @@ import {
   Loader2,
   Search,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { useSiteSearch, type SearchResultItem } from '@/hooks/use-search';
 import { SearchResultRow } from '@/components/search/search-result-row';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/states';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 
@@ -40,6 +41,7 @@ export function GlobalSearchPalette() {
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations('search');
+  const tc = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -148,7 +150,19 @@ export function GlobalSearchPalette() {
               <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20"><Command className="size-4" /></span>
               <div><p className="font-display text-sm font-semibold tracking-wide">{t('commandLabel')}</p><p className="mt-0.5 text-[11px] text-background/60">{scope === 'admin' ? t('adminWorkspace') : t('publicCatalog')}</p></div>
             </div>
-            <kbd className="hidden rounded-md border border-background/20 bg-background/10 px-2 py-1 font-mono text-[10px] font-semibold text-background/70 sm:block">ESC</kbd>
+            <div className="flex shrink-0 items-center gap-2">
+              <kbd className="hidden rounded-md border border-background/20 bg-background/10 px-2 py-1 font-mono text-[10px] font-semibold text-background/70 sm:block">ESC</kbd>
+              {/* The kbd hint is desktop-only, so phones need a visible way out. */}
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  aria-label={tc('close')}
+                  className="rounded-lg p-2 text-background/70 transition hover:bg-background/10 hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background/40 sm:hidden"
+                >
+                  <X className="size-4" />
+                </button>
+              </DialogClose>
+            </div>
           </div>
           <div className="relative mt-5 flex items-center gap-3 rounded-xl border border-white/15 bg-background px-4 shadow-xl">
             <Search className="size-4 shrink-0 text-primary" />
