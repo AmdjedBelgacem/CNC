@@ -7,6 +7,7 @@ import type { Product } from '@/components/store/product-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getImageSrc } from '@/lib/images';
 import { coerceCurrency, formatMinorUnits } from '@/lib/money';
+import { cardPrice } from '@/lib/product-pricing';
 
 export function CourseProductsSidebar({
   tags,
@@ -18,6 +19,7 @@ export function CourseProductsSidebar({
   academyId?: string;
 }) {
   const t = useTranslations('ui.courseProductsSidebar');
+  const tp = useTranslations('products');
   const locale = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   useEffect(() => {
@@ -49,26 +51,35 @@ export function CourseProductsSidebar({
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-3">
-          {products.map((p) => (
-            <Link
-              key={p.id}
-              href={`/products/${p.slug}`}
-              className="group flex items-center gap-3"
-            >
-              <div className="aspect-square w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={getImageSrc(p.thumbnailUrl, 'product')} alt={p.title} className="h-full w-full object-cover" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
-                  {p.title}
-                </p>
-                <p className="font-mono text-xs text-muted-foreground">
-                  {formatMinorUnits(p.price, coerceCurrency(p.currency, 'USD'), locale)}
-                </p>
-              </div>
-            </Link>
-          ))}
+          {products.map((p) => {
+            const unit = cardPrice(p);
+            return (
+              <Link
+                key={p.id}
+                href={`/products/${p.slug}`}
+                className="group flex items-center gap-3"
+              >
+                <div className="aspect-square w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getImageSrc(p.thumbnailUrl, 'product')}
+                    alt={p.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
+                    {p.title}
+                  </p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {unit == null
+                      ? tp('priceOnRequest')
+                      : formatMinorUnits(unit, coerceCurrency(p.currency, 'USD'), locale)}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
         <Link
           href="/products"

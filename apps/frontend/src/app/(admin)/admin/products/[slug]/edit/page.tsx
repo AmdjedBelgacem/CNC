@@ -476,7 +476,11 @@ export default function ProductEditorPage() {
       <div className="mx-auto w-full max-w-[1200px] space-y-6 pt-6">
         <AdminPageHeader
           title={product.title}
-          description={`/${product.slug} · ${formatMoney(product.price, product.currency)}`}
+          description={`/${product.slug} · ${
+            product.pricingMode === 'request'
+              ? t('pricingRequest', { default: 'Request a quote' })
+              : formatMoney(product.price, product.currency)
+          }`}
           badge={
             <StatusPill
               label={t(`status.${statusKey}`, { default: statusKey })}

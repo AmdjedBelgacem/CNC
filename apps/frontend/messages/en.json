@@ -1587,6 +1587,7 @@
       "loadFailedGeneric": "Failed to load products",
       "manage": "Manage",
       "newProduct": "New product",
+      "priceOnRequest": "Price on request",
       "refresh": "Refresh products",
       "searchAria": "Search products",
       "searchPlaceholder": "Search by title or slug…",

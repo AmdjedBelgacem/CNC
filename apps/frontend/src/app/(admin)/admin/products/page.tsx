@@ -55,8 +55,9 @@ interface ProductRow {
   tagline: string | null;
   description?: string | null;
   thumbnailUrl: string | null;
-  price: number;
+  price: number | null;
   compareAtPrice: number | null;
+  pricingMode?: 'fixed' | 'from' | 'request' | null;
   currency: string;
   category: string | null;
   isPublished: boolean;
@@ -153,10 +154,14 @@ function ProductCard({
   const style = categoryStyle(product.category);
   const CategoryIcon = style.icon;
   const stock = stockState(product);
+  const quoteOnly = product.pricingMode === 'request';
   const discounted =
-    product.compareAtPrice != null && product.compareAtPrice > product.price;
+    !quoteOnly &&
+    product.compareAtPrice != null &&
+    product.price != null &&
+    product.compareAtPrice > product.price;
   const discountPct = discounted
-    ? Math.round((1 - product.price / (product.compareAtPrice as number)) * 100)
+    ? Math.round((1 - (product.price as number) / (product.compareAtPrice as number)) * 100)
     : 0;
 
   return (
@@ -209,7 +214,9 @@ function ProductCard({
             {/* Price leads: in a catalogue this is the number being scanned for. */}
             <div className="min-w-0">
               <p className="font-display text-lg font-bold leading-none tracking-tight tabular-nums text-foreground">
-                {formatMoney(product.price, product.currency)}
+                {quoteOnly
+                  ? t('priceOnRequest', { default: 'Price on request' })
+                  : formatMoney(product.price, product.currency)}
               </p>
               {discounted && (
                 <p className="mt-1 text-2xs tabular-nums text-muted-foreground line-through">
@@ -752,6 +759,7 @@ export default function AdminProductsPage() {
                     const st = statusOf(p);
                     const style = categoryStyle(p.category);
                     const stock = stockState(p);
+                    const quoteOnly = p.pricingMode === 'request';
                     const CategoryIcon = style.icon;
                     return (
                       <tr
@@ -810,13 +818,18 @@ export default function AdminProductsPage() {
                         </td>
                         <td className="px-4 py-3.5 text-end">
                           <span className="font-semibold tabular-nums text-foreground">
-                            {formatMoney(p.price, p.currency)}
+                            {quoteOnly
+                              ? t('priceOnRequest', { default: 'Price on request' })
+                              : formatMoney(p.price, p.currency)}
                           </span>
-                          {p.compareAtPrice != null && p.compareAtPrice > p.price && (
-                            <span className="block text-2xs tabular-nums text-muted-foreground line-through">
-                              {formatMoney(p.compareAtPrice, p.currency)}
-                            </span>
-                          )}
+                          {!quoteOnly &&
+                            p.compareAtPrice != null &&
+                            p.price != null &&
+                            p.compareAtPrice > p.price && (
+                              <span className="block text-2xs tabular-nums text-muted-foreground line-through">
+                                {formatMoney(p.compareAtPrice, p.currency)}
+                              </span>
+                            )}
                         </td>
                         <td className="px-4 py-3.5 text-end">
                           <span
