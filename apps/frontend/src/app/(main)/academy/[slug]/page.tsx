@@ -167,6 +167,7 @@ function toStoreProduct(product: {
   thumbnailUrl?: string | null;
   price?: number | null;
   compareAtPrice?: number | null;
+  pricingMode?: 'fixed' | 'from' | 'request' | null;
   currency?: string | null;
   inventory?: number | null;
   allowBackorder?: boolean | null;
@@ -193,8 +194,12 @@ function toStoreProduct(product: {
     description: product.description ?? undefined,
     features: product.features ?? undefined,
     thumbnailUrl: product.thumbnailUrl ?? undefined,
-    price: product.price ?? 0,
+    // Preserve a missing price instead of turning it into zero. A quote-only
+    // machine converted to `0` looked free on the academy page, and the card
+    // never got the `pricingMode` it needs to offer the quote form.
+    price: product.price ?? undefined,
     compareAtPrice: product.compareAtPrice ?? undefined,
+    pricingMode: product.pricingMode ?? undefined,
     currency: product.currency || 'SAR',
     inventory: product.inventory ?? undefined,
     allowBackorder: product.allowBackorder ?? undefined,

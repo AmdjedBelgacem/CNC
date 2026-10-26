@@ -21,6 +21,11 @@ import { useFxRates } from '@/hooks/use-fx-rates';
 import { useCartStore } from '@/stores/cart-store';
 import { useCurrencyStore } from '@/stores/currency-store';
 import { convertMinorUnits, formatMinorUnits, needsConversion } from '@/lib/money';
+import {
+  isQuoteOnly as isQuoteOnlyProduct,
+  lowestPositivePrice,
+  pricingModeOf,
+} from '@/lib/product-pricing';
 import { ProductCard } from '@/components/store/product-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -205,15 +210,9 @@ export function ProductDetailClient({
    * something the options do not support. Computed here because the variants are already
    * in the payload.
    */
-  const pricingMode = (p.pricingMode ?? 'fixed') as 'fixed' | 'from' | 'request';
-  const variantPrices = (p.variants ?? [])
-    .map((v) => v.price)
-    .filter((v): v is number => typeof v === 'number' && v > 0);
-  const fromPrice =
-    [p.price, ...variantPrices].filter((v): v is number => typeof v === 'number' && v > 0).length > 0
-      ? Math.min(...[p.price, ...variantPrices].filter((v): v is number => typeof v === 'number' && v > 0))
-      : null;
-  const isQuoteOnly = pricingMode === 'request';
+  const pricingMode = pricingModeOf(p);
+  const fromPrice = lowestPositivePrice(p);
+  const isQuoteOnly = isQuoteOnlyProduct(p);
   /**
    * In `request` mode no figure is shown at all — not the stored price, not a
    * "from". A price left on the row is kept for reference but publishing it would
@@ -439,9 +438,9 @@ export function ProductDetailClient({
           </div>
 
           <div className="flex flex-wrap items-baseline gap-3">
-            {pricingMode === 'from' ? (
+            {pricingMode === 'from' && headlinePrice != null ? (
               <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
-                {t('priceFrom', { price: headlinePrice == null ? '' : showPrice(headlinePrice) })}
+                {t('priceFrom', { price: showPrice(headlinePrice) })}
               </span>
             ) : (
               <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
@@ -649,16 +648,10 @@ export function ProductDetailClient({
           <h2 className="mb-4 font-display text-lg font-semibold text-foreground">{t('related')}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {related.slice(0, 4).map((rp) => (
-              <ProductCard
-                key={rp.id}
-                product={
-                  {
-                    ...rp,
-                    price: rp.price ?? 0,
-                    currency: rp.currency ?? 'USD',
-                  } as Parameters<typeof ProductCard>[0]['product']
-                }
-              />
+              // Pass the API row through unchanged. Forcing a null price to `0`
+              // made every quote-only related machine look free; the card now
+              // branches on `pricingMode` and ignores the stored reference price.
+              <ProductCard key={rp.id} product={rp} />
             ))}
           </div>
         </section>

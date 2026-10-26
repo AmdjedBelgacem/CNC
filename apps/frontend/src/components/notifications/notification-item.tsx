@@ -9,6 +9,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckCheck,
+  ClipboardList,
   Heart,
   Info,
   MessageCircle,
@@ -56,6 +57,7 @@ const TYPE_CATEGORY: Record<string, NotificationCategory> = {
   purchase: 'commerce',
   payment_succeeded: 'commerce',
   payment_failed: 'commerce',
+  'quote.requested': 'commerce',
   security: 'security',
   system: 'system',
 };
@@ -87,6 +89,7 @@ export function getNotificationCategory(notification: Notification): Notificatio
     type.includes('order') ||
     type.includes('payment') ||
     type.includes('purchase') ||
+    type.includes('quote') ||
     type.includes('commerce')
   ) {
     return 'commerce';
@@ -110,6 +113,7 @@ function iconFor(type: string) {
     return BookOpen;
   }
   if (value.includes('payment')) return PackageCheck;
+  if (value.includes('quote')) return ClipboardList;
   if (value.includes('order') || value.includes('purchase')) return ShoppingBag;
   if (value.includes('event')) return CalendarDays;
   if (value.includes('security')) return Shield;

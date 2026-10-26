@@ -75,6 +75,12 @@ export class QuotesService {
 
       const product = rows[0];
       if (!product) throw new NotFoundException('Product not found');
+      // A request may only reference a product in the tenant that received it.
+      // Without this, anyone could post a productId from another tenant and have
+      // that product's title delivered to the wrong admins.
+      if (input.tenantId && String(product.tenantId) !== String(input.tenantId)) {
+        throw new NotFoundException('Product not found');
+      }
       // A product that shows a price is not a quote request. If the tab was stale, the
       // buyer was looking at a page that no longer applies.
       if (product.pricingMode !== 'request') {
@@ -142,7 +148,11 @@ export class QuotesService {
       try {
         await this.notifications.notifyTenantAdmins(quote.tenantId, {
           type: 'quote.requested',
-          category: 'sales',
+          // Commerce is the category the notification preferences and the
+          // notification item renderer understand. `sales` fell through to the
+          // generic system bucket, so the request looked like an operational
+          // warning instead of a sales lead.
+          category: 'commerce',
           title: 'New quote request',
           body: productTitle
             ? `${name} (${company || email}) asked about ${productTitle}`

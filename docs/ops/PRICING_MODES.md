@@ -115,5 +115,8 @@ product) was removed and reverted.
   appear. Worth knowing when testing: a revert can look like it did not take.
 * `from` mode with no price anywhere on the product falls back to "Price on request" rather
   than showing an empty "From". That is deliberate — a blank headline reads as broken.
-* `/admin/quotes` is not yet linked from the admin navigation. It is reachable by URL; adding
-  it to the sidebar is a small follow-up.
+* `/admin/quotes` is linked from the admin rail under Commerce. A new request also appears
+  in the notification bell (category `commerce`) with a direct link to the inbox.
+* The storefront product card follows the same mode as the detail page: `request` replaces
+  the cart with a "Request a quote" button that opens the same form, and related products
+  are passed through unchanged so a missing price is never rendered as `0`.

@@ -23,6 +23,7 @@ import {
   DollarSign,
   Mail,
   Navigation,
+  ClipboardList,
   TriangleAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -162,6 +163,16 @@ const tabsBase: Omit<TabDef, 'title'>[] = [
     match: (p) => p.startsWith('/admin/finance'),
   },
   {
+    // Quote requests are sales leads, not storefront content. The inbox existed
+    // at /admin/quotes but was unreachable from the rail, so a notification could
+    // link to a page the admin had no way to find again.
+    href: '/admin/quotes',
+    group: 'commerce',
+    icon: ClipboardList,
+    roles: ADMIN_ROLES,
+    match: (p) => p.startsWith('/admin/quotes'),
+  },
+  {
     href: '/admin/certificates',
     group: 'commerce',
     icon: Award,
@@ -214,6 +225,7 @@ const tabKeyMap: Record<string, string> = {
   '/admin/courses': 'courses',
   '/admin/products': 'products',
   '/admin/finance': 'finance',
+  '/admin/quotes': 'quotes.title',
   '/admin/certificates': 'certificates',
   '/admin/alerts': 'alerts',
   '/admin/settings': 'settings',

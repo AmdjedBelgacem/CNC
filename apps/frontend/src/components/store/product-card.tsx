@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -6,11 +7,13 @@ import { DEFAULT_CURRENCY } from '@titan/shared';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, AlertTriangle, Mail } from 'lucide-react';
 import { useCartStore } from '@/stores/cart-store';
 import { useCurrencyStore } from '@/stores/currency-store';
 import { useFxRates } from '@/hooks/use-fx-rates';
 import { convertMinorUnits, formatMinorUnits, needsConversion } from '@/lib/money';
+import { cardPrice, isQuoteOnly, pricingModeOf } from '@/lib/product-pricing';
+import { QuoteRequestDialog } from '@/components/store/quote-request-dialog';
 import { cn } from '@/lib/utils';
 import { getImageSrc } from '@/lib/images';
 /**
@@ -31,8 +34,18 @@ export function ProductCard({ product }: { product: Product }) {
   const t = useTranslations('products');
   const displayCurrency = useCurrencyStore((s) => s.code);
   const { rates } = useFxRates();
-  const outOfStock = (product.inventory ?? 0) <= 0 && !product.allowBackorder;
-  const backorder = (product.inventory ?? 0) <= 0 && product.allowBackorder;
+  const [quoteOpen, setQuoteOpen] = useState(false);
+
+  const pricingMode = pricingModeOf(product);
+  const quoteOnly = isQuoteOnly(product);
+  /**
+   * A quote-only machine is not stock-constrained in the cart sense: there is no
+   * add-to-cart control to disable and a made-to-order unit can legitimately have
+   * zero on hand. Treating it as out of stock would cover the photo and hide the
+   * only useful action on the card.
+   */
+  const outOfStock = !quoteOnly && (product.inventory ?? 0) <= 0 && !product.allowBackorder;
+  const backorder = !quoteOnly && (product.inventory ?? 0) <= 0 && product.allowBackorder;
   const sourceCurrency = product.currency || DEFAULT_CURRENCY;
   // Until live rates land we cannot state a converted price without lying.
   const pending = needsConversion(sourceCurrency, displayCurrency, rates);
@@ -40,13 +53,21 @@ export function ProductCard({ product }: { product: Product }) {
     pending ? null : convertMinorUnits(minor, sourceCurrency, displayCurrency, rates);
   const format = (minor?: number | null) =>
     pending ? t('pricePending') : formatMinorUnits(convert(minor), displayCurrency, locale);
-  const unitMinor = product.variants?.[0]?.price ?? product.price;
+  const unitMinor = cardPrice(product);
   const unitDisplay = convert(unitMinor) ?? 0;
-  const price =
-    unitMinor == null
-      ? t('priceOnRequest')
-      : format(unitMinor);
-  const compareAtDisplay = product.compareAtPrice ? convert(product.compareAtPrice) : null;
+  const price = quoteOnly
+    ? t('priceOnRequest')
+    : unitMinor == null
+      ? pricingMode === 'from'
+        ? t('priceOnRequest')
+        : t('priceNotSet')
+      : pricingMode === 'from'
+        ? t('priceFrom', { price: format(unitMinor) })
+        : format(unitMinor);
+  // Compare-at is a fixed-price discount signal. Showing it beside "from" or a
+  // quote prompt would leak a figure the mode exists to withhold.
+  const compareAtDisplay =
+    pricingMode === 'fixed' && product.compareAtPrice ? convert(product.compareAtPrice) : null;
   const hasSale = Boolean(compareAtDisplay !== null && compareAtDisplay > unitDisplay);
   const href = `/products/${product.slug}`;
 
@@ -104,48 +125,80 @@ export function ProductCard({ product }: { product: Product }) {
       </CardHeader>
 
       <CardFooter className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-4">
-        <div className="min-w-0">
-          <span
-            className={cn(
-              'font-mono text-lg font-semibold tabular-nums',
-              pending ? 'text-muted-foreground' : 'text-foreground',
+        {quoteOnly ? (
+          /**
+           * The cart is replaced, not disabled. A greyed-out "Add to cart" on a
+           * machine that can only be quoted reads as a broken site; the request
+           * form is the intended path and it notifies the tenant's admins.
+           */
+          <div className="flex w-full flex-col gap-2">
+            <span className="font-mono text-sm font-semibold text-muted-foreground">
+              {t('priceOnRequest')}
+            </span>
+            <Button
+              size="sm"
+              className="w-full"
+              aria-label={`${t('requestQuote')}: ${product.title}`}
+              onClick={() => setQuoteOpen(true)}
+            >
+              <Mail className="size-4" />
+              {t('requestQuote')}
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="min-w-0">
+              <span
+                className={cn(
+                  'font-mono text-lg font-semibold tabular-nums',
+                  pending ? 'text-muted-foreground' : 'text-foreground',
+                )}
+              >
+                {price}
+              </span>
+              {hasSale && product.compareAtPrice ? (
+                <span className="ms-2 font-mono text-sm tabular-nums text-muted-foreground line-through">
+                  {format(product.compareAtPrice)}
+                </span>
+              ) : null}
+            </div>
+            {!outOfStock && (
+              <Button
+                size="sm"
+                variant={backorder ? 'outline' : 'default'}
+                aria-label={`${backorder ? t('backorder') : t('addToCart')}: ${product.title}`}
+                disabled={unitMinor == null}
+                title={unitMinor == null ? t('priceNotSet') : undefined}
+                onClick={() =>
+                  addItem({
+                    productId: product.id,
+                    slug: product.slug,
+                    title: product.title,
+                    price: product.variants?.[0]?.price ?? product.price ?? 0,
+                    currency: sourceCurrency ?? DEFAULT_CURRENCY,
+                    thumbnailUrl: product.thumbnailUrl ?? undefined,
+                  })
+                }
+              >
+                <ShoppingCart className="size-4" />
+                {/* Below `lg` the card is narrow (or beside the filter rail), so the
+                    label is dropped and the button stays icon-only on one line. */}
+                <span className="hidden lg:inline">
+                  {backorder ? t('backorder') : t('addToCart')}
+                </span>
+              </Button>
             )}
-          >
-            {price}
-          </span>
-          {hasSale && product.compareAtPrice ? (
-            <span className="ms-2 font-mono text-sm tabular-nums text-muted-foreground line-through">
-              {format(product.compareAtPrice)}
-            </span>
-          ) : null}
-        </div>
-        {!outOfStock && (
-          <Button
-            size="sm"
-            variant={backorder ? 'outline' : 'default'}
-            aria-label={`${backorder ? t('backorder') : t('addToCart')}: ${product.title}`}
-            disabled={unitMinor == null}
-            title={unitMinor == null ? t('priceNotSet') : undefined}
-            onClick={() =>
-              addItem({
-                productId: product.id,
-                slug: product.slug,
-                title: product.title,
-                price: product.variants?.[0]?.price ?? product.price ?? 0,
-                currency: sourceCurrency ?? DEFAULT_CURRENCY,
-                thumbnailUrl: product.thumbnailUrl ?? undefined,
-              })
-            }
-          >
-            <ShoppingCart className="size-4" />
-            {/* Below `lg` the card is narrow (or beside the filter rail), so the
-                label is dropped and the button stays icon-only on one line. */}
-            <span className="hidden lg:inline">
-              {backorder ? t('backorder') : t('addToCart')}
-            </span>
-          </Button>
+          </>
         )}
       </CardFooter>
+      {quoteOnly ? (
+        <QuoteRequestDialog
+          open={quoteOpen}
+          onOpenChange={setQuoteOpen}
+          productId={product.id}
+          productTitle={product.title}
+        />
+      ) : null}
     </Card>
   );
 }
