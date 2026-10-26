@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { ProductCard, type Product as CatalogProduct } from '@/components/store/product-card';
+import { cardPrice, isQuoteOnly, pricingModeOf } from '@/lib/product-pricing';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,12 @@ function isInStock(product: CatalogProduct) {
 }
 
 function isOnSale(product: CatalogProduct) {
-  return Boolean(product.compareAtPrice && product.compareAtPrice > (product.price ?? 0));
+  // Compare-at is only published in fixed mode; a quote-only machine with a
+  // reference price must not appear under "on sale".
+  return (
+    pricingModeOf(product) === 'fixed' &&
+    Boolean(product.compareAtPrice && product.compareAtPrice > (product.price ?? 0))
+  );
 }
 
 /**
@@ -204,12 +210,18 @@ export function ProductsCatalog({
 
   const unitPriceInDisplay = useCallback(
     (product: CatalogProduct) =>
-      priceInDisplay(product.variants?.[0]?.price ?? product.price, product.currency),
+      // A quote-only product has no figure to filter or sort on. Returning null
+      // (rather than 0) keeps it out of the price bounds and pushes it to the
+      // end of a price sort instead of pretending it is the cheapest item.
+      isQuoteOnly(product) ? null : priceInDisplay(cardPrice(product), product.currency),
     [priceInDisplay],
   );
 
   const bounds = useMemo(() => {
-    const prices = products.map((p) => unitPriceInDisplay(p) / 100);
+    const prices = products
+      .map((p) => unitPriceInDisplay(p))
+      .filter((price): price is number => price != null)
+      .map((price) => price / 100);
     if (prices.length === 0) return { min: 0, max: 0 };
     return { min: Math.floor(Math.min(...prices)), max: Math.ceil(Math.max(...prices)) };
   }, [products, unitPriceInDisplay]);
@@ -227,9 +239,9 @@ export function ProductsCatalog({
       if (stock === 'out' && isInStock(product)) return false;
       if (saleOnly && !isOnSale(product)) return false;
 
-      const unit = unitPriceInDisplay(product) / 100;
-      if (min !== null && Number.isFinite(min) && unit < min) return false;
-      if (max !== null && Number.isFinite(max) && unit > max) return false;
+      const unit = unitPriceInDisplay(product);
+      if (min !== null && Number.isFinite(min) && (unit == null || unit / 100 < min)) return false;
+      if (max !== null && Number.isFinite(max) && (unit == null || unit / 100 > max)) return false;
 
       if (needle) {
         const haystack = [
@@ -248,15 +260,23 @@ export function ProductsCatalog({
     });
 
     const priceOf = (p: CatalogProduct) => unitPriceInDisplay(p);
+    const comparePrice = (a: CatalogProduct, b: CatalogProduct) => {
+      const priceA = priceOf(a);
+      const priceB = priceOf(b);
+      if (priceA == null && priceB == null) return 0;
+      if (priceA == null) return 1;
+      if (priceB == null) return -1;
+      return priceA - priceB;
+    };
     const nameOf = (p: CatalogProduct) => p.title.trim().toLowerCase();
     const dateOf = (p: CatalogProduct) => new Date(p.updatedAt ?? p.createdAt ?? 0).getTime() || 0;
 
     return result.sort((a, b) => {
       switch (sort) {
         case 'price-asc':
-          return priceOf(a) - priceOf(b);
+          return comparePrice(a, b);
         case 'price-desc':
-          return priceOf(b) - priceOf(a);
+          return comparePrice(b, a);
         case 'name':
           return nameOf(a).localeCompare(nameOf(b), locale);
         case 'newest':

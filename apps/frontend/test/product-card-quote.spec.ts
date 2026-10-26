@@ -32,4 +32,11 @@ describe('quote-only product cards', () => {
     expect(src).toMatch(/pricingMode:\s*product\.pricingMode/);
     expect(src).not.toMatch(/price:\s*product\.price\s*\?\?\s*0/);
   });
+
+  it('does not treat quote-only products as zero in catalog sorting or filters', () => {
+    const src = read('components/store/products-catalog.tsx');
+    expect(src).toMatch(/isQuoteOnly\(product\) \? null/);
+    expect(src).toMatch(/priceA == null/);
+    expect(src).toMatch(/pricingModeOf\(product\) === 'fixed'/);
+  });
 });
