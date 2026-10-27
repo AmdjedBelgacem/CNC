@@ -78,18 +78,37 @@ await ctx.addCookies([
 ]);
 const page = await ctx.newPage();
 
-await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-await page.waitForSelector('#email', { state: 'visible', timeout: 30000 });
-await page.waitForTimeout(1200);
-await page.fill('#email', EMAIL);
-await page.fill('#password', PASSWORD);
-await page.click('button[type="submit"]');
-for (let i = 0; i < 60 && page.url().includes('/login'); i++) await page.waitForTimeout(500);
-if (page.url().includes('/login')) {
-  console.error('login failed');
-  process.exit(1);
+// A pre-minted access token lets this run against a production tenant whose
+// admin password is not available locally (Supabase-backed accounts). The
+// cookie is `__Host-`-prefixed in production, so it must be host-only, Secure,
+// and Path=/ — `url` (rather than `domain`) produces exactly that.
+if (process.env.ADMIN_ACCESS_TOKEN) {
+  await ctx.addCookies([
+    {
+      name: '__Host-access',
+      value: process.env.ADMIN_ACCESS_TOKEN,
+      url: BASE,
+      secure: BASE.startsWith('https'),
+      httpOnly: true,
+      sameSite: 'Lax',
+      expires: Math.floor(Date.now() / 1000) + 20 * 60,
+    },
+  ]);
+  console.log(`using a pre-minted access token at ${BASE} (mode=${COLOR_MODE})`);
+} else {
+  await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForSelector('#email', { state: 'visible', timeout: 30000 });
+  await page.waitForTimeout(1200);
+  await page.fill('#email', EMAIL);
+  await page.fill('#password', PASSWORD);
+  await page.click('button[type="submit"]');
+  for (let i = 0; i < 60 && page.url().includes('/login'); i++) await page.waitForTimeout(500);
+  if (page.url().includes('/login')) {
+    console.error('login failed');
+    process.exit(1);
+  }
+  console.log(`signed in as ${EMAIL} at ${BASE} (mode=${COLOR_MODE})`);
 }
-console.log(`signed in as ${EMAIL} at ${BASE} (mode=${COLOR_MODE})`);
 
 let failures = 0;
 for (const [slug, publicPath, builderPath] of PAGES) {
@@ -118,6 +137,39 @@ for (const [slug, publicPath, builderPath] of PAGES) {
       frames.map((f) => snapshot(f).catch(() => null)),
     );
     b = merge(snaps);
+
+    // The homepage renderer intentionally drops seed testimonials: there is no
+    // public testimonials source, so the builder shows the block with a
+    // "Hidden on the homepage" notice instead. Subtract that block's output so
+    // the audit still catches every real parity difference.
+    if (slug === 'home') {
+      const hidden = await canvas.evaluate((headingText) => {
+        const clean = (s) => s.replace(/\s+/g, ' ').trim();
+        const heading = [...document.querySelectorAll('h1,h2,h3')].find(
+          (e) => clean(e.textContent) === headingText,
+        );
+        const section = heading?.closest('section') ?? heading?.parentElement;
+        if (!section) return { headings: [], images: [] };
+        return {
+          headings: [...section.querySelectorAll('h1,h2,h3')]
+            .map((e) => clean(e.textContent))
+            .filter(Boolean),
+          images: [...section.querySelectorAll('img')]
+            .map((e) => e.getAttribute('src'))
+            .filter(Boolean)
+            .map((s) => s.split('?')[0]),
+        };
+      }, 'Trained by Industry Authorities. Endorsed by Machine Shops.');
+      const hiddenHeadings = new Set(hidden.headings);
+      const hiddenImages = new Set(hidden.images);
+      b.headings = b.headings.filter((h) => !hiddenHeadings.has(h));
+      b.images = b.images.filter((s) => !hiddenImages.has(s));
+      if (hiddenHeadings.size || hiddenImages.size) {
+        console.log(
+          `   note: home hides ${hiddenHeadings.size} testimonial heading(s) and ${hiddenImages.size} image(s) by design`,
+        );
+      }
+    }
   } catch (e) {
     console.log(`FAIL ${slug.padEnd(16)} ${String(e).split('\n')[0].slice(0, 120)}`);
     failures++;
