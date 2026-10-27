@@ -85,4 +85,52 @@ describe('ensureParitySections', () => {
     expect(about.content.at(-1)?.props?.variant).toBe('about-facts');
     expect(ensureParitySections(bareHome, 'privacy')).toBe(bareHome);
   });
+
+  it('normalises a published homepage snapshot without mutating it or un-hiding blocks', () => {
+    // Mirrors the shape of a long-lived published layout: an academy grid
+    // authored before `limit` existed, deliberately hidden, plus unrelated
+    // sections. The read-time fallback must only add the missing fixed islands
+    // and the limit — never mutate the stored snapshot or change visibility.
+    const published: PageLayout = {
+      root: { props: { title: 'Home' } },
+      content: [
+        { type: 'hero-console', props: { id: 'hero' } },
+        {
+          type: 'academy-grid',
+          props: { id: 'academies', visible: false, paddingTop: 64, paddingBottom: 64 },
+        },
+        { type: 'program-cards', props: { id: 'curriculum' } },
+      ],
+    };
+    const snapshot = structuredClone(published);
+
+    const out = ensureParitySections(published, 'home');
+
+    expect(published).toEqual(snapshot);
+    expect(out.root).toBe(published.root);
+    expect(out.content[1]?.props).toMatchObject({ visible: false, limit: 4 });
+    expect(out.content.slice(-2).map((node) => node.props?.variant)).toEqual([
+      'home-faq',
+      'home-guides',
+    ]);
+    // Idempotent: loading the same page twice must not append a second copy.
+    expect(ensureParitySections(out, 'home')).toBe(out);
+  });
+
+  it('still appends missing islands when the only change is a missing limit', () => {
+    const partial: PageLayout = {
+      root: { props: {} },
+      content: [
+        { type: 'academy-grid', props: { id: 'academies', limit: 0 } },
+        { type: 'live-island', props: { id: 'home-faq', variant: 'home-faq' } },
+      ],
+    };
+    const out = ensureParitySections(partial, 'home');
+    expect(out.content[0]?.props?.limit).toBe(0);
+    expect(out.content.map((node) => node.props?.variant)).toEqual([
+      undefined,
+      'home-faq',
+      'home-guides',
+    ]);
+  });
 });
