@@ -1190,19 +1190,9 @@ export const catalogHeroDefaults: CatalogHeroProps = {
   titleAccent: 'syllabus.',
   subtitle:
     'Four specialized academies. One mission: free, project-based manufacturing education that ends in credentials shops hire for.',
-  stats: [
-    { label: 'Academies', value: '4' },
-    { label: 'Courses', value: '12' },
-    { label: 'Price', value: '$0' },
-    { label: 'Format', value: 'Self-paced' },
-  ],
-  primaryCta: {
-    label: 'Browse pathways',
-    href: '#pathways',
-    variant: 'primary',
-    icon: 'arrow_forward',
-  },
-  secondaryCta: { label: 'How it works', href: '#how-it-works', variant: 'secondary' },
+  // Stats and CTAs are child blocks in the `statItems` / `actions` slots.
+  // Existing pages keep their legacy props and are migrated on read.
+  stats: [],
   borderBottom: true,
   paddingTop: 64,
   paddingBottom: 48,
@@ -1237,11 +1227,9 @@ export const cardGridDefaults: CardGridProps = {
   eyebrow: 'The model',
   title: 'Built like a shop, not a lecture hall.',
   subtitle: '',
-  items: [
-    { title: 'Step one', body: 'Describe the first step.', icon: 'school' },
-    { title: 'Step two', body: 'Describe the second step.', icon: 'wrench' },
-    { title: 'Step three', body: 'Describe the third step.', icon: 'verified_user' },
-  ],
+  // Cards are child blocks in the `cards` slot. Keep the legacy array empty so
+  // a newly inserted grid starts with a real slot rather than hidden prop data.
+  items: [],
   showNumbers: true,
   columns: 'md:grid-cols-3',
   band: 'none',
@@ -1273,30 +1261,93 @@ export type SpotlightCardsProps = z.infer<typeof spotlightCardsPropsSchema>;
 export const spotlightCardsDefaults: SpotlightCardsProps = {
   eyebrow: 'Signature paths',
   title: 'Three routes into the floor',
-  items: [
-    {
-      tag: 'START HERE',
-      title: 'CNC Machining Fundamentals',
-      meta: '36 Modules · Self-paced · Free',
-      href: '/academy/general',
-    },
-    {
-      tag: 'ADVANCED',
-      title: 'Aerospace Precision Manufacturing',
-      meta: '48 Modules · AS9100-aligned · Free',
-      href: '/academy/aerospace',
-    },
-    {
-      tag: 'INTERMEDIATE',
-      title: 'Automation & Robotics',
-      meta: '30 Modules · PLCs & robots · Free',
-      href: '/academy/automation',
-    },
-  ],
+  // Spotlight cards are child blocks in the `cards` slot.
+  items: [],
   columns: 'md:grid-cols-3',
   band: 'none',
   paddingTop: 64,
   paddingBottom: 64,
+};
+
+// ------------------------------------------------------------------
+// Decomposed catalog / card / terminal children
+//
+// These are the individual elements that used to live only inside a
+// parent's array/object prop. They are real blocks so the builder's Layers
+// tree and canvas can select, move and edit each one. The parent's legacy
+// prop stays in place as a fallback for layouts that have not been
+// migrated yet; the renderer prefers the child slot.
+// ------------------------------------------------------------------
+
+export const catalogStatPropsSchema = catalogHeroStatSchema.extend({
+  id: z.string().optional(),
+  ...layoutPropsSchema.shape,
+});
+export type CatalogStatProps = z.infer<typeof catalogStatPropsSchema>;
+
+export const catalogStatDefaults: CatalogStatProps = {
+  label: 'Label',
+  value: '0',
+};
+
+export const catalogCtaPropsSchema = catalogHeroCtaSchema.extend({
+  id: z.string().optional(),
+  ...layoutPropsSchema.shape,
+});
+export type CatalogCtaProps = z.infer<typeof catalogCtaPropsSchema>;
+
+export const catalogCtaDefaults: CatalogCtaProps = {
+  label: 'Learn more',
+  href: '#',
+  variant: 'primary',
+};
+
+export const cardGridItemPropsSchema = cardGridItemSchema.extend({
+  id: z.string().optional(),
+  ...layoutPropsSchema.shape,
+});
+export type CardGridItemProps = z.infer<typeof cardGridItemPropsSchema>;
+
+export const cardGridItemDefaults: CardGridItemProps = {
+  title: 'New card',
+  body: '',
+  icon: 'school',
+};
+
+export const spotlightCardPropsSchema = spotlightCardItemSchema.extend({
+  id: z.string().optional(),
+  ...layoutPropsSchema.shape,
+});
+export type SpotlightCardProps = z.infer<typeof spotlightCardPropsSchema>;
+
+export const spotlightCardDefaults: SpotlightCardProps = {
+  tag: 'NEW',
+  title: 'Spotlight card',
+  meta: '',
+  href: '/academy',
+};
+
+export const twinCodeLinePropsSchema = twinCodeLineSchema.extend({
+  id: z.string().optional(),
+  ...layoutPropsSchema.shape,
+});
+export type TwinCodeLineProps = z.infer<typeof twinCodeLinePropsSchema>;
+
+export const twinCodeLineDefaults: TwinCodeLineProps = {
+  text: 'G01 X0 Y0',
+  tone: 'code',
+};
+
+export const twinReadoutPropsSchema = twinReadoutSchema.extend({
+  id: z.string().optional(),
+  ...layoutPropsSchema.shape,
+});
+export type TwinReadoutProps = z.infer<typeof twinReadoutPropsSchema>;
+
+export const twinReadoutDefaults: TwinReadoutProps = {
+  label: 'Readout',
+  value: '0',
+  tone: 'normal',
 };
 
 /** Closing overlay band with copy column + two CTAs. */
@@ -1742,6 +1793,9 @@ const twinSection: BlockDefinition = {
   zones: {
     content: { allow: ['text', 'heading', 'badge', 'stack', 'button'] },
     features: { allow: ['feature-item'] },
+    // Terminal contents are individual blocks, not an inspector-only array.
+    code: { allow: ['twin-code-line'] },
+    readoutCells: { allow: ['twin-readout'] },
   },
 };
 
@@ -1952,6 +2006,10 @@ const catalogHero: BlockDefinition = {
   category: 'Sections',
   schema: catalogHeroPropsSchema,
   defaultProps: catalogHeroDefaults,
+  zones: {
+    statItems: { allow: ['catalog-stat'] },
+    actions: { allow: ['catalog-cta'] },
+  },
 };
 
 const cardGrid: BlockDefinition = {
@@ -1961,6 +2019,9 @@ const cardGrid: BlockDefinition = {
   category: 'Sections',
   schema: cardGridPropsSchema,
   defaultProps: cardGridDefaults,
+  zones: {
+    cards: { allow: ['card-grid-item'] },
+  },
 };
 
 const spotlightCards: BlockDefinition = {
@@ -1970,6 +2031,63 @@ const spotlightCards: BlockDefinition = {
   category: 'Sections',
   schema: spotlightCardsPropsSchema,
   defaultProps: spotlightCardsDefaults,
+  zones: {
+    cards: { allow: ['spotlight-card'] },
+  },
+};
+
+const catalogStat: BlockDefinition = {
+  type: 'catalog-stat',
+  label: 'Catalog Stat',
+  description: 'One label/value cell in a catalog hero stats strip.',
+  category: 'Items',
+  schema: catalogStatPropsSchema,
+  defaultProps: catalogStatDefaults,
+};
+
+const catalogCta: BlockDefinition = {
+  type: 'catalog-cta',
+  label: 'Catalog Button',
+  description: 'One primary or secondary action in a catalog hero.',
+  category: 'Items',
+  schema: catalogCtaPropsSchema,
+  defaultProps: catalogCtaDefaults,
+};
+
+const cardGridItem: BlockDefinition = {
+  type: 'card-grid-item',
+  label: 'Card Grid Item',
+  description: 'One numbered or icon card inside a Card Grid.',
+  category: 'Items',
+  schema: cardGridItemPropsSchema,
+  defaultProps: cardGridItemDefaults,
+};
+
+const spotlightCard: BlockDefinition = {
+  type: 'spotlight-card',
+  label: 'Spotlight Card',
+  description: 'One linked spotlight path card.',
+  category: 'Items',
+  schema: spotlightCardPropsSchema,
+  defaultProps: spotlightCardDefaults,
+};
+
+const twinCodeLine: BlockDefinition = {
+  type: 'twin-code-line',
+  label: 'Code Line',
+  description: 'One syntax-highlighted line in the digital-twin terminal.',
+  category: 'Items',
+  schema: twinCodeLinePropsSchema,
+  defaultProps: twinCodeLineDefaults,
+};
+
+const twinReadout: BlockDefinition = {
+  type: 'twin-readout',
+  label: 'Readout Cell',
+  description: 'One value cell in the digital-twin control dashboard.',
+  category: 'Items',
+  schema: twinReadoutPropsSchema,
+  defaultProps: twinReadoutDefaults,
 };
 
 const closingCta: BlockDefinition = {
@@ -2040,8 +2158,14 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   'avatar-stack': avatarStack,
   'progress-card': progressCard,
   'catalog-hero': catalogHero,
+  'catalog-stat': catalogStat,
+  'catalog-cta': catalogCta,
   'card-grid': cardGrid,
+  'card-grid-item': cardGridItem,
   'spotlight-cards': spotlightCards,
+  'spotlight-card': spotlightCard,
+  'twin-code-line': twinCodeLine,
+  'twin-readout': twinReadout,
   'closing-cta': closingCta,
   'live-island': liveIsland,
 };

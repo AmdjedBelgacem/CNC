@@ -16,7 +16,10 @@ import {
   buttonDefaults,
   cardDefaults,
   cardGridDefaults,
+  cardGridItemDefaults,
+  catalogCtaDefaults,
   catalogHeroDefaults,
+  catalogStatDefaults,
   consoleFrameDefaults,
   consoleHeaderDefaults,
   consoleScreenDefaults,
@@ -53,6 +56,7 @@ import {
   programCardDefaults,
   programCardsDefaults,
   progressCardDefaults,
+  spotlightCardDefaults,
   spotlightCardsDefaults,
   stackDefaults,
   statItemDefaults,
@@ -60,6 +64,8 @@ import {
   testimonialCardDefaults,
   testimonialsDefaults,
   textDefaults,
+  twinCodeLineDefaults,
+  twinReadoutDefaults,
   twinSectionDefaults,
   LIVE_ISLAND_VARIANTS,
 } from '@titan/shared';
@@ -1047,6 +1053,70 @@ const spotlightCards: ComponentConfig = def(
     ]),
   },
 );
+const catalogStat: ComponentConfig = def(
+  'catalog-stat',
+  'Catalog Stat',
+  catalogStatDefaults,
+  {
+    label: textField('Label'),
+    value: textField('Value'),
+  },
+);
+const catalogCta: ComponentConfig = def('catalog-cta', 'Catalog Button', catalogCtaDefaults, {
+  label: textField('Label'),
+  href: textField('URL', '/path'),
+  variant: selectField('Style', [
+    { label: 'Primary', value: 'primary' },
+    { label: 'Secondary', value: 'secondary' },
+  ]),
+  icon: iconField,
+});
+const cardGridItem: ComponentConfig = def(
+  'card-grid-item',
+  'Card Grid Item',
+  cardGridItemDefaults,
+  {
+    title: textField('Title'),
+    body: textareaField('Body'),
+    icon: iconField,
+  },
+);
+const spotlightCard: ComponentConfig = def(
+  'spotlight-card',
+  'Spotlight Card',
+  spotlightCardDefaults,
+  {
+    tag: textField('Tag'),
+    title: textField('Title'),
+    meta: textField('Meta line'),
+    href: textField('URL', '/academy'),
+  },
+);
+const twinCodeLine: ComponentConfig = def(
+  'twin-code-line',
+  'Code Line',
+  twinCodeLineDefaults,
+  {
+    text: textareaField('Line'),
+    tone: selectField('Tone', [
+      { label: 'Comment', value: 'comment' },
+      { label: 'Code', value: 'code' },
+      { label: 'Highlight', value: 'highlight' },
+      { label: 'OK', value: 'ok' },
+    ]),
+  },
+);
+const twinReadout: ComponentConfig = def('twin-readout', 'Readout Cell', twinReadoutDefaults, {
+  label: textField('Label'),
+  value: textField('Value'),
+  tone: selectField('Tone', [
+    { label: 'Success', value: 'success' },
+    { label: 'Normal', value: 'normal' },
+    { label: 'Accent', value: 'accent' },
+    { label: 'Primary', value: 'primary' },
+  ]),
+});
+
 const closingCta: ComponentConfig = def('closing-cta', 'Closing CTA', closingCtaDefaults, {
   eyebrow: textField('Eyebrow'),
   title: textField('Title'),
@@ -1134,8 +1204,14 @@ export const puckConfig: Config = {
     'avatar-stack': avatarStack,
     'progress-card': progressCard,
     'catalog-hero': catalogHero,
+    'catalog-stat': catalogStat,
+    'catalog-cta': catalogCta,
     'card-grid': cardGrid,
+    'card-grid-item': cardGridItem,
     'spotlight-cards': spotlightCards,
+    'spotlight-card': spotlightCard,
+    'twin-code-line': twinCodeLine,
+    'twin-readout': twinReadout,
     'closing-cta': closingCta,
     'live-island': liveIsland,
   },
@@ -1173,6 +1249,12 @@ export const puckConfig: Config = {
         'program-card',
         'testimonial-card',
         'faq-item',
+        'catalog-stat',
+        'catalog-cta',
+        'card-grid-item',
+        'spotlight-card',
+        'twin-code-line',
+        'twin-readout',
       ],
     },
     Layout: { components: ['stack', 'grid', 'card'] },

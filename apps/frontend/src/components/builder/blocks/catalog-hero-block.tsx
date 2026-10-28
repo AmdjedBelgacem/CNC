@@ -1,52 +1,21 @@
 'use client';
-import Link from 'next/link';
-import type { CatalogHeroProps } from '@titan/shared';
+import type { CatalogHeroProps, CatalogHeroStat } from '@titan/shared';
+import { isNodeArray } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
 import { useCatalogStats } from './use-catalog-stats';
-
-function CtaLink({
-  label,
-  href,
-  variant = 'primary',
-  icon,
-}: {
-  label: string;
-  href: string;
-  variant?: 'primary' | 'secondary';
-  icon?: string;
-}) {
-  const isPrimary = variant === 'primary';
-  const external = href.startsWith('#') || href.startsWith('http');
-  const cls = isPrimary
-    ? 'inline-flex h-11 items-center justify-center gap-2 rounded-md bg-primary px-6 font-medium text-primary-foreground shadow-sm transition hover:opacity-90'
-    : 'inline-flex h-11 items-center justify-center gap-2 rounded-md border border-border bg-card px-6 font-medium text-foreground transition hover:bg-surface-sunken';
-  const content = (
-    <>
-      {icon ? <Icon name={icon} className="size-4" /> : null}
-      {label}
-    </>
-  );
-  if (external) {
-    return (
-      <a href={href} className={cls}>
-        {content}
-      </a>
-    );
-  }
-  return (
-    <Link href={href} className={cls}>
-      {content}
-    </Link>
-  );
-}
+import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
+import { CatalogStatBlock, CatalogStatValueOverrides } from './catalog-stat-block';
+import { CatalogCtaLink } from './catalog-cta-block';
 
 /** Catalog hero: blueprint grid, badge row, accent H1, stats strip, CTAs. */
-export function CatalogHeroBlock({ props }: BlockComponentProps<CatalogHeroProps>) {
-  const liveStats = useCatalogStats(props.stats);
-
+export function CatalogHeroBlock({
+  props,
+  puck,
+  heroStats,
+}: BlockComponentProps<CatalogHeroProps> & { heroStats?: CatalogHeroStat[] }) {
   const {
     id,
     className,
@@ -61,14 +30,48 @@ export function CatalogHeroBlock({ props }: BlockComponentProps<CatalogHeroProps
     borderBottom = true,
   } = props;
 
+  // Stats and CTAs are child blocks. The legacy props remain the fallback for
+  // rows that have not been migrated yet.
+  const slotStatNodes = (puck.getSlotData?.('statItems') ?? []).filter(
+    (node) => node.type === 'catalog-stat',
+  );
+  const hasSlotStats = slotStatNodes.length > 0;
+  const legacyStats =
+    Array.isArray(props.stats) && !isNodeArray(props.stats) ? props.stats : undefined;
+  const preview = useBuilderLivePreview();
+  const previewStats = preview?.heroStats ?? null;
+  const liveLegacyStats = useCatalogStats(
+    heroStats || hasSlotStats ? undefined : legacyStats,
+  );
+  const stats = heroStats ?? previewStats ?? liveLegacyStats;
+  // Public pages that receive server-baked `heroStats` keep the exact previous
+  // render (translated labels included). Everywhere else — the builder canvas
+  // and public pages without a live override — render the real slot children so
+  // each stat stays selectable, overlaying live values only on placeholders.
+  const renderSlotStats = hasSlotStats && !heroStats;
+  const liveStatOverrides =
+    renderSlotStats && stats
+      ? new Map(
+          slotStatNodes
+            .map((node, index) => {
+              const nodeId = typeof node.props?.id === 'string' ? node.props.id : '';
+              const value = stats[index]?.value;
+              return nodeId && value !== undefined ? ([nodeId, value] as const) : null;
+            })
+            .filter((entry): entry is readonly [string, string] => entry !== null),
+        )
+      : null;
+  const showStats = renderSlotStats || Boolean(stats && stats.length > 0) || Boolean(puck.isEditing);
+
+  const slotActionNodes = puck.getSlotData?.('actions') ?? [];
+  const hasSlotActions = slotActionNodes.length > 0;
+  const showActions =
+    hasSlotActions || Boolean(primaryCta || secondaryCta) || Boolean(puck.isEditing);
+
   return (
     <section
       id={id}
-      className={cn(
-        'relative overflow-hidden',
-        borderBottom && 'border-b border-border',
-        className,
-      )}
+      className={cn('relative overflow-hidden', borderBottom && 'border-b border-border', className)}
       style={layoutStyle(props)}
     >
       <div className="absolute inset-0 blueprint-grid opacity-60" aria-hidden />
@@ -103,39 +106,50 @@ export function CatalogHeroBlock({ props }: BlockComponentProps<CatalogHeroProps
           </p>
         ) : null}
 
-        {liveStats && liveStats.length > 0 ? (
+        {showStats ? (
           <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
-            {liveStats.map((s) => (
-              <div key={s.label} className="bg-card px-4 py-3.5">
-                <dt className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  {s.label}
-                </dt>
-                <dd className="mt-1 font-display text-xl font-bold tracking-tight text-foreground tabular-nums">
-                  {s.value}
-                </dd>
-              </div>
-            ))}
+            {renderSlotStats ? (
+              <CatalogStatValueOverrides.Provider value={liveStatOverrides}>
+                {puck.renderSlot('statItems')}
+              </CatalogStatValueOverrides.Provider>
+            ) : stats && stats.length > 0 ? (
+              stats.map((stat, index) => (
+                <CatalogStatBlock
+                  key={`${stat.label}-${index}`}
+                  props={{ label: stat.label, value: stat.value }}
+                  puck={puck}
+                />
+              ))
+            ) : (
+              puck.renderSlot('statItems')
+            )}
           </dl>
         ) : null}
 
-        {primaryCta || secondaryCta ? (
+        {showActions ? (
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            {primaryCta ? (
-              <CtaLink
-                label={primaryCta.label}
-                href={primaryCta.href}
-                variant={primaryCta.variant ?? 'primary'}
-                icon={primaryCta.icon}
-              />
-            ) : null}
-            {secondaryCta ? (
-              <CtaLink
-                label={secondaryCta.label}
-                href={secondaryCta.href}
-                variant={secondaryCta.variant ?? 'secondary'}
-                icon={secondaryCta.icon}
-              />
-            ) : null}
+            {hasSlotActions || (!primaryCta && !secondaryCta && puck.isEditing) ? (
+              puck.renderSlot('actions')
+            ) : (
+              <>
+                {primaryCta ? (
+                  <CatalogCtaLink
+                    label={primaryCta.label}
+                    href={primaryCta.href}
+                    variant={primaryCta.variant ?? 'primary'}
+                    icon={primaryCta.icon}
+                  />
+                ) : null}
+                {secondaryCta ? (
+                  <CatalogCtaLink
+                    label={secondaryCta.label}
+                    href={secondaryCta.href}
+                    variant={secondaryCta.variant ?? 'secondary'}
+                    icon={secondaryCta.icon}
+                  />
+                ) : null}
+              </>
+            )}
           </div>
         ) : null}
       </div>

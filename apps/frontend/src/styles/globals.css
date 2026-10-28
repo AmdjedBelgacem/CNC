@@ -1026,6 +1026,18 @@
   animation: marquee 30s linear infinite;
 }
 
+/* Card-grid child blocks keep the 01/02/… numbering even though every card is
+   a real child node. The parent toggles the class; the child owns the slot. */
+.card-grid-numbered {
+  counter-reset: card-grid;
+}
+.card-grid-numbered .card-grid-item {
+  counter-increment: card-grid;
+}
+.card-grid-numbered .card-grid-index::before {
+  content: counter(card-grid, decimal-leading-zero);
+}
+
 .scrollbar-thin::-webkit-scrollbar {
   height: 6px;
 }

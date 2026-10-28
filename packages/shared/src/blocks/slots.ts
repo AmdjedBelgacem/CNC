@@ -212,6 +212,120 @@ export function insertNodeAtZone(
 }
 
 /**
+ * Moves legacy composite props (arrays/objects edited only through the
+ * inspector) into real child slots.
+ *
+ * The parent schemas keep the old props for backwards compatibility and as a
+ * render fallback, so this never deletes authored content. It is idempotent:
+ * once a slot already contains nodes the legacy prop is left alone.
+ */
+export function migrateCompositeLayout(layout: PageLayout): PageLayout {
+  const migrateNode = (node: PuckNode): PuckNode => {
+    const props: Record<string, unknown> = { ...(node.props ?? {}) };
+    let changed = false;
+    const parentId = typeof props.id === 'string' && props.id ? props.id : '';
+    const childId = (kind: string, index: number) =>
+      parentId ? `${parentId}-${kind}-${index}` : undefined;
+
+    const migrateArray = (
+      slot: string,
+      legacyKey: string,
+      childType: string,
+      mapItem: (item: Record<string, unknown>) => Record<string, unknown>,
+    ) => {
+      if (isNodeArray(props[slot])) return;
+      const legacy = props[legacyKey];
+      if (!Array.isArray(legacy) || legacy.length === 0) return;
+      const rows = legacy.filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === 'object' && item !== null && !Array.isArray(item),
+      );
+      if (rows.length === 0) return;
+      props[slot] = rows.map((item, index) => {
+        const id = childId(childType, index);
+        return {
+          type: childType,
+          props: { ...(id ? { id } : {}), ...mapItem(item) },
+        };
+      });
+      changed = true;
+    };
+
+    if (node.type === 'catalog-hero') {
+      migrateArray('statItems', 'stats', 'catalog-stat', (stat) => ({
+        label: String(stat.label ?? ''),
+        value: String(stat.value ?? ''),
+      }));
+
+      if (!isNodeArray(props.actions)) {
+        const ctas = [props.primaryCta, props.secondaryCta].filter(
+          (cta): cta is Record<string, unknown> =>
+            typeof cta === 'object' && cta !== null && !Array.isArray(cta),
+        );
+        if (ctas.length > 0) {
+          props.actions = ctas.map((cta, index) => {
+            const id = childId('cta', index);
+            return {
+              type: 'catalog-cta',
+              props: {
+                ...(id ? { id } : {}),
+                label: String(cta.label ?? ''),
+                href: String(cta.href ?? '#'),
+                variant: cta.variant === 'secondary' ? 'secondary' : 'primary',
+                ...(typeof cta.icon === 'string' ? { icon: cta.icon } : {}),
+              },
+            };
+          });
+          changed = true;
+        }
+      }
+    } else if (node.type === 'card-grid') {
+      migrateArray('cards', 'items', 'card-grid-item', (item) => ({
+        title: String(item.title ?? ''),
+        body: String(item.body ?? ''),
+        ...(typeof item.icon === 'string' ? { icon: item.icon } : {}),
+      }));
+    } else if (node.type === 'spotlight-cards') {
+      migrateArray('cards', 'items', 'spotlight-card', (item) => ({
+        tag: String(item.tag ?? 'NEW'),
+        title: String(item.title ?? ''),
+        ...(typeof item.meta === 'string' ? { meta: item.meta } : {}),
+        href: String(item.href ?? '/academy'),
+      }));
+    } else if (node.type === 'twin-section') {
+      migrateArray('code', 'codeLines', 'twin-code-line', (line) => ({
+        text: String(line.text ?? ''),
+        ...(typeof line.tone === 'string' ? { tone: line.tone } : {}),
+      }));
+      migrateArray('readoutCells', 'readouts', 'twin-readout', (cell) => ({
+        label: String(cell.label ?? ''),
+        value: String(cell.value ?? ''),
+        ...(typeof cell.tone === 'string' ? { tone: cell.tone } : {}),
+      }));
+    }
+
+    // Walk both newly-created and pre-existing child slots so nested composite
+    // blocks are migrated in one pass.
+    for (const slot of slotNamesFor(node.type)) {
+      const children = props[slot];
+      if (!isNodeArray(children)) continue;
+      const rewritten = children.map(migrateNode);
+      if (rewritten.some((child, index) => child !== children[index])) {
+        props[slot] = rewritten;
+        changed = true;
+      }
+    }
+
+    return changed ? { type: node.type, props } : node;
+  };
+
+  const previous = layout.content ?? [];
+  const content = previous.map(migrateNode);
+  if (content.every((node, index) => node === previous[index])) return layout;
+  return { ...layout, content };
+}
+
+/**
  * Converts a legacy DropZone layout (flat `zones` map) to the inline slot
  * shape: every `"<nodeId>:<slot>"` entry whose owner declares that slot moves
  * into `owner.props[slot]` and is removed from the map. Unknown, orphan, or
@@ -219,11 +333,13 @@ export function insertNodeAtZone(
  * break.
  *
  * Mirrors Puck's own `migrate()` helper for our data shape, without console
- * noise and without needing the editor config.
+ * noise and without needing the editor config. Composite prop arrays are then
+ * promoted to child slots by `migrateCompositeLayout`, so a page with no
+ * legacy `zones` map still gets its cards/stats/CTAs decomposed.
  */
 export function migrateLegacyLayout(layout: PageLayout): PageLayout {
   const zones = layout.zones;
-  if (!zones || Object.keys(zones).length === 0) return layout;
+  if (!zones || Object.keys(zones).length === 0) return migrateCompositeLayout(layout);
   // Keys actually consumed by the attach pass. Anything else (orphans,
   // undeclared slots, unreachable owners) stays in the map untouched.
   const consumed = new Set<string>();
@@ -257,16 +373,16 @@ export function migrateLegacyLayout(layout: PageLayout): PageLayout {
   const prevContent = layout.content ?? [];
   const content = prevContent.map(attach);
   const contentChanged = content.some((node, i) => node !== prevContent[i]);
-  if (!contentChanged && consumed.size === 0) return layout;
+  if (!contentChanged && consumed.size === 0) return migrateCompositeLayout(layout);
   const remaining: Record<string, PuckNode[]> = {};
   for (const [key, value] of Object.entries(zones)) {
     if (!consumed.has(key)) remaining[key] = value as PuckNode[];
   }
-  return {
+  return migrateCompositeLayout({
     ...layout,
     content,
     zones: Object.keys(remaining).length > 0 ? remaining : undefined,
-  };
+  });
 }
 
 /**

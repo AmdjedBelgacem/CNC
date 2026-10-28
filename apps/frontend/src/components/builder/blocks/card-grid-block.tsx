@@ -1,12 +1,13 @@
 'use client';
 import type { CardGridProps } from '@titan/shared';
+import { isNodeArray } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
 
 /** Numbered/icon card grid — steps, promises, formats, house rules. */
-export function CardGridBlock({ props }: BlockComponentProps<CardGridProps>) {
+export function CardGridBlock({ props, puck }: BlockComponentProps<CardGridProps>) {
   const {
     id,
     className,
@@ -20,7 +21,9 @@ export function CardGridBlock({ props }: BlockComponentProps<CardGridProps>) {
     note,
   } = props;
 
-  const Wrapper = showNumbers ? 'ol' : 'ul';
+  const slotCards = puck.getSlotData?.('cards') ?? [];
+  const hasSlotCards = slotCards.length > 0;
+  const legacyItems = Array.isArray(items) && !isNodeArray(items) ? items : [];
 
   return (
     <section
@@ -45,32 +48,42 @@ export function CardGridBlock({ props }: BlockComponentProps<CardGridProps>) {
           {subtitle ? <p className="mt-3 text-muted-foreground">{subtitle}</p> : null}
         </div>
 
-        <Wrapper className={cn('grid gap-4', columns)}>
-          {items.map((item, index) => {
-            const num = String(index + 1).padStart(2, '0');
-            return (
-              <li
-                key={`${item.title}-${index}`}
-                className="relative rounded-lg border border-border bg-card p-6 shadow-xs"
-              >
-                {showNumbers ? (
-                  <span className="absolute end-5 top-5 font-mono text-xs font-bold tracking-[0.1em] text-border-strong tabular-nums">
-                    {num}
-                  </span>
-                ) : null}
-                <div className="mb-4 flex size-11 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Icon name={item.icon} className="size-5" />
-                </div>
-                <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
-                  {item.title}
-                </h3>
-                {item.body ? (
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-                ) : null}
-              </li>
-            );
-          })}
-        </Wrapper>
+        <div
+          role="list"
+          className={cn('grid gap-4', columns, showNumbers && 'card-grid-numbered')}
+        >
+          {hasSlotCards
+            ? puck.renderSlot('cards')
+            : legacyItems.length > 0
+              ? legacyItems.map((item, index) => {
+                  const num = String(index + 1).padStart(2, '0');
+                  return (
+                    <div
+                      key={`${item.title}-${index}`}
+                      role="listitem"
+                      className="relative rounded-lg border border-border bg-card p-6 shadow-xs"
+                    >
+                      {showNumbers ? (
+                        <span className="absolute end-5 top-5 font-mono text-xs font-bold tracking-[0.1em] text-border-strong tabular-nums">
+                          {num}
+                        </span>
+                      ) : null}
+                      <div className="mb-4 flex size-11 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Icon name={item.icon} className="size-5" />
+                      </div>
+                      <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
+                        {item.title}
+                      </h3>
+                      {item.body ? (
+                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                          {item.body}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })
+              : puck.renderSlot('cards')}
+        </div>
 
         {note ? (
           <p className="mt-6 inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-xs">

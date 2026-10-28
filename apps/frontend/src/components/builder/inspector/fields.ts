@@ -5,8 +5,11 @@ import type {
   BadgeProps,
   ButtonProps,
   CardProps,
+  CardGridItemProps,
   CardGridProps,
+  CatalogCtaProps,
   CatalogHeroProps,
+  CatalogStatProps,
   ClosingCtaProps,
   ConsoleAxisDrawerProps,
   ConsoleAxisProps,
@@ -46,10 +49,13 @@ import type {
   StackProps,
   StatItemProps,
   StatsProps,
+  SpotlightCardProps,
   SpotlightCardsProps,
   TestimonialCardProps,
   TestimonialsProps,
   TextProps,
+  TwinCodeLineProps,
+  TwinReadoutProps,
   TwinSectionProps,
 } from '@titan/shared';
 import { LIVE_ISLAND_VARIANTS } from '@titan/shared';
@@ -1973,6 +1979,8 @@ export const spotlightCardsInspector = defineInspector<SpotlightCardsProps>().gr
         key: 'items',
         label: 'Spotlight cards',
         control: 'repeater',
+        // Cards are child blocks in the `cards` slot now.
+        showWhen: () => false,
         itemLabel: 'card',
         maxItems: 6,
         newItem: () => ({ tag: 'NEW', title: 'Spotlight card', href: '/academy' }),
@@ -2084,6 +2092,8 @@ export const cardGridInspector = defineInspector<CardGridProps>().groups([
         key: 'items',
         label: 'Cards',
         control: 'repeater',
+        // Cards are child blocks in the `cards` slot now.
+        showWhen: () => false,
         itemLabel: 'card',
         maxItems: 8,
         newItem: () => ({ title: 'New card', body: '', icon: 'school' }),
@@ -2658,6 +2668,8 @@ export const twinSectionInspector = defineInspector<TwinSectionProps>().groups([
         key: 'codeLines',
         label: 'Code lines',
         control: 'repeater',
+        // Code lines are child blocks in the `code` slot now.
+        showWhen: () => false,
         itemLabel: 'line',
         maxItems: 24,
         newItem: () => ({ text: 'G01 X0 Y0', tone: 'code' }),
@@ -2681,6 +2693,8 @@ export const twinSectionInspector = defineInspector<TwinSectionProps>().groups([
         key: 'readouts',
         label: 'Readout cells',
         control: 'repeater',
+        // Readout cells are child blocks in the `readoutCells` slot now.
+        showWhen: () => false,
         itemLabel: 'readout',
         maxItems: 8,
         newItem: () => ({ label: 'Readout', value: '0', tone: 'normal' }),
@@ -2985,6 +2999,8 @@ export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
         key: 'stats',
         label: 'Stats',
         control: 'repeater',
+        // Stats are child blocks in the `statItems` slot now.
+        showWhen: () => false,
         itemLabel: 'stat',
         maxItems: 6,
         newItem: () => ({ label: 'Label', value: '0' }),
@@ -3002,11 +3018,20 @@ export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
     titleKey: 'actions',
     icon: MousePointerClick,
     fields: [
-      { key: 'primaryCta', label: 'Primary CTA', control: 'object', objectFields: catalogCtaFields },
+      {
+        key: 'primaryCta',
+        label: 'Primary CTA',
+        control: 'object',
+        // CTAs are child blocks in the `actions` slot now.
+        showWhen: () => false,
+        objectFields: catalogCtaFields,
+      },
       {
         key: 'secondaryCta',
         label: 'Secondary CTA',
         control: 'object',
+        // CTAs are child blocks in the `actions` slot now.
+        showWhen: () => false,
         objectFields: catalogCtaFields,
       },
     ],
@@ -3017,6 +3042,130 @@ export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
     titleKey: 'style',
     icon: Palette,
     fields: [{ key: 'borderBottom', label: 'Bottom border', control: 'toggle' }],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const catalogStatInspector = defineInspector<CatalogStatProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'label', label: 'Label', control: 'text' },
+      { key: 'value', label: 'Value', control: 'text' },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const catalogCtaInspector = defineInspector<CatalogCtaProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: MousePointerClick,
+    fields: [
+      { key: 'label', label: 'Label', control: 'text' },
+      { key: 'href', label: 'Link', control: 'text', placeholder: '/path' },
+      {
+        key: 'variant',
+        label: 'Style',
+        control: 'select',
+        options: [
+          { label: 'Primary', value: 'primary' },
+          { label: 'Secondary', value: 'secondary' },
+        ],
+      },
+      { key: 'icon', label: 'Icon', control: 'icon' },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const cardGridItemInspector = defineInspector<CardGridItemProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'body', label: 'Body', control: 'textarea' },
+      { key: 'icon', label: 'Icon', control: 'icon' },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const spotlightCardInspector = defineInspector<SpotlightCardProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'tag', label: 'Tag', control: 'text' },
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'meta', label: 'Meta line', control: 'text' },
+      { key: 'href', label: 'Link', control: 'text', placeholder: '/academy' },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const twinCodeLineInspector = defineInspector<TwinCodeLineProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'text', label: 'Line', control: 'textarea' },
+      {
+        key: 'tone',
+        label: 'Tone',
+        control: 'select',
+        options: [
+          { label: 'Comment', value: 'comment' },
+          { label: 'Code', value: 'code' },
+          { label: 'Highlight', value: 'highlight' },
+          { label: 'OK', value: 'ok' },
+        ],
+      },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
+export const twinReadoutInspector = defineInspector<TwinReadoutProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'label', label: 'Label', control: 'text' },
+      { key: 'value', label: 'Value', control: 'text' },
+      {
+        key: 'tone',
+        label: 'Tone',
+        control: 'select',
+        options: [
+          { label: 'Success', value: 'success' },
+          { label: 'Normal', value: 'normal' },
+          { label: 'Accent', value: 'accent' },
+          { label: 'Primary', value: 'primary' },
+        ],
+      },
+    ],
   },
   spacingGroup(),
   advancedGroup(),
@@ -3082,4 +3231,10 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   'testimonial-card': { label: 'Testimonial Card', groups: testimonialCardInspector.groups },
   'live-island': { label: 'Live Data Island', groups: liveIslandInspector.groups },
   'catalog-hero': { label: 'Catalog Hero', groups: catalogHeroInspector.groups },
+  'catalog-stat': { label: 'Catalog Stat', groups: catalogStatInspector.groups },
+  'catalog-cta': { label: 'Catalog Button', groups: catalogCtaInspector.groups },
+  'card-grid-item': { label: 'Card Grid Item', groups: cardGridItemInspector.groups },
+  'spotlight-card': { label: 'Spotlight Card', groups: spotlightCardInspector.groups },
+  'twin-code-line': { label: 'Code Line', groups: twinCodeLineInspector.groups },
+  'twin-readout': { label: 'Readout Cell', groups: twinReadoutInspector.groups },
 };

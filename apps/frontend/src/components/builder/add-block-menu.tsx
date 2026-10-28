@@ -67,8 +67,14 @@ const BLOCK_ICONS: Record<string, LucideIcon> = {
   // Five blocks previously fell back to the generic `Puzzle` glyph, which made
   // them look like placeholders in a list where everything else had an icon.
   'catalog-hero': MonitorPlay,
+  'catalog-stat': BarChart3,
+  'catalog-cta': MousePointerClick,
   'card-grid': LayoutGrid,
+  'card-grid-item': LayoutGrid,
   'spotlight-cards': Sparkles,
+  'spotlight-card': Sparkles,
+  'twin-code-line': TerminalSquare,
+  'twin-readout': Gauge,
   'closing-cta': CheckSquare2,
   'live-island': MousePointerClick,
   nav: Navigation,

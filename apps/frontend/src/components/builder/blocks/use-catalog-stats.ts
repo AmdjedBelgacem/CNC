@@ -27,7 +27,7 @@ export interface HeroStat {
 const PLACEHOLDERS = new Set(['—', '-', '–', '--', '', '—']);
 
 /** Mirrors the server's "no usable price" case rather than inventing a number. */
-function isPlaceholder(value: string | undefined): boolean {
+export function isPlaceholderValue(value: string | undefined): boolean {
   return value === undefined || PLACEHOLDERS.has(value.trim());
 }
 
@@ -41,7 +41,7 @@ export function useCatalogStats(stats: HeroStat[] | undefined): HeroStat[] | und
     if (waitingForLive || liveHero) return;
     if (!stats?.length) return;
     // Nothing to do unless the layout actually carries placeholders.
-    if (!stats.some((s) => isPlaceholder(s.value))) return;
+    if (!stats.some((s) => isPlaceholderValue(s.value))) return;
 
     let active = true;
     fetch('/api/proxy/products?limit=200')
@@ -92,5 +92,5 @@ export function useCatalogStats(stats: HeroStat[] | undefined): HeroStat[] | und
   if (!live) return stats;
 
   // Overlay live values only where the stored value is still a placeholder.
-  return stats.map((s, i) => (isPlaceholder(s.value) && live[i] ? { ...s, value: live[i].value } : s));
+  return stats.map((s, i) => (isPlaceholderValue(s.value) && live[i] ? { ...s, value: live[i].value } : s));
 }

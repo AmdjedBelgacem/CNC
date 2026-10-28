@@ -1,4 +1,5 @@
 import type { TwinSectionProps } from '@titan/shared';
+import { isNodeArray } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
@@ -35,6 +36,12 @@ export function TwinSectionBlock({ props, puck }: BlockComponentProps<TwinSectio
     codeLines = [],
     readouts = [],
   } = props;
+
+  const slotCodeLines = puck.getSlotData?.('code') ?? [];
+  const slotReadouts = puck.getSlotData?.('readoutCells') ?? [];
+  const legacyCodeLines = Array.isArray(codeLines) && !isNodeArray(codeLines) ? codeLines : [];
+  const legacyReadouts = Array.isArray(readouts) && !isNodeArray(readouts) ? readouts : [];
+
   return (
     <section
       id={id}
@@ -71,31 +78,35 @@ export function TwinSectionBlock({ props, puck }: BlockComponentProps<TwinSectio
                 ) : null}
               </div>
               {/* Code view */}
-              {codeLines.length > 0 ? (
+              {slotCodeLines.length > 0 || legacyCodeLines.length > 0 || puck.isEditing ? (
                 <div className="p-6 font-mono text-xs sm:text-sm leading-relaxed bg-black/60 overflow-x-auto space-y-1">
-                  {codeLines.map((line, i) => (
-                    <div key={i} className={LINE_TONE[line.tone ?? 'code']}>
-                      {line.text}
-                    </div>
-                  ))}
+                  {slotCodeLines.length > 0
+                    ? puck.renderSlot('code')
+                    : legacyCodeLines.map((line, index) => (
+                        <div key={index} className={LINE_TONE[line.tone ?? 'code']}>
+                          {line.text}
+                        </div>
+                      ))}
                 </div>
               ) : null}
               {/* Control dashboard */}
-              {readouts.length > 0 ? (
+              {slotReadouts.length > 0 || legacyReadouts.length > 0 || puck.isEditing ? (
                 <div className="bg-black/80 p-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center font-mono">
-                  {readouts.map((cell, i) => (
-                    <div key={i} className="p-2 rounded bg-white/5 border border-white/10">
-                      <span className="text-[10px] text-white/50 block">{cell.label}</span>
-                      <span
-                        className={cn(
-                          'text-xs font-bold',
-                          READOUT_TONE[cell.tone ?? 'normal'],
-                        )}
-                      >
-                        {cell.value}
-                      </span>
-                    </div>
-                  ))}
+                  {slotReadouts.length > 0
+                    ? puck.renderSlot('readoutCells')
+                    : legacyReadouts.map((cell, index) => (
+                        <div key={index} className="p-2 rounded bg-white/5 border border-white/10">
+                          <span className="text-[10px] text-white/50 block">{cell.label}</span>
+                          <span
+                            className={cn(
+                              'text-xs font-bold',
+                              READOUT_TONE[cell.tone ?? 'normal'],
+                            )}
+                          >
+                            {cell.value}
+                          </span>
+                        </div>
+                      ))}
                 </div>
               ) : null}
             </div>

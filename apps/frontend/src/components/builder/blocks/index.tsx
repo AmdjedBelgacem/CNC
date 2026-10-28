@@ -49,8 +49,14 @@ import { FaqItemBlock } from './faq-item-block';
 import { FooterBlock } from './footer-block';
 import { FooterColBlock } from './footer-col-block';
 import { CatalogHeroBlock } from './catalog-hero-block';
+import { CatalogStatBlock } from './catalog-stat-block';
+import { CatalogCtaBlock } from './catalog-cta-block';
 import { CardGridBlock } from './card-grid-block';
+import { CardGridItemBlock } from './card-grid-item-block';
 import { SpotlightCardsBlock } from './spotlight-cards-block';
+import { SpotlightCardBlock } from './spotlight-card-block';
+import { TwinCodeLineBlock } from './twin-code-line-block';
+import { TwinReadoutBlock } from './twin-readout-block';
 import { ClosingCtaBlock } from './closing-cta-block';
 import { LiveIslandBlock } from './live-island-block'; /** Puck-like slot bridge injected by the public renderer (or Puck itself in the editor). */
 export interface PuckBridge {
@@ -126,8 +132,14 @@ export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<
   'avatar-stack': AvatarStackBlock,
   'progress-card': ProgressCardBlock,
   'catalog-hero': CatalogHeroBlock,
+  'catalog-stat': CatalogStatBlock,
+  'catalog-cta': CatalogCtaBlock,
   'card-grid': CardGridBlock,
+  'card-grid-item': CardGridItemBlock,
   'spotlight-cards': SpotlightCardsBlock,
+  'spotlight-card': SpotlightCardBlock,
+  'twin-code-line': TwinCodeLineBlock,
+  'twin-readout': TwinReadoutBlock,
   'closing-cta': ClosingCtaBlock,
   'live-island': LiveIslandBlock,
 };

@@ -127,8 +127,25 @@ export function HomeBuilder({
     if (node.type === 'testimonials' || node.type === 'testimonial-card') return null;
     if (node.type === 'catalog-hero') {
       const props = mergeBlockProps(node.type, node.props) as unknown as CatalogHeroProps;
-      const withStats: CatalogHeroProps = heroStats ? { ...props, stats: heroStats } : props;
-      return <CatalogHeroBlock props={withStats} puck={noopPuck} />;
+      const nodeWithDefaults: PuckNode = {
+        type: node.type,
+        props: props as unknown as Record<string, unknown>,
+      };
+      const renderBuilderSlot = (slot: string) =>
+        getSlotChildren(nodeWithDefaults, slot, zones).map((child, index) => (
+          <BuilderNode
+            key={(child.props?.id as string | undefined) ?? index}
+            node={child}
+            zones={zones}
+            intercept={intercept}
+          />
+        ));
+      const puck: PuckBridge = {
+        renderSlot: renderBuilderSlot,
+        getSlotData: (slot) => getSlotChildren(nodeWithDefaults, slot, zones),
+        isEditing: false,
+      };
+      return <CatalogHeroBlock props={props} puck={puck} heroStats={heroStats} />;
     }
     if (node.type === 'cta-signup') {
       // Pill/subtitle are baked into the layout server-side (applyLiveHomeMetrics).
