@@ -82,11 +82,13 @@ const ISLAND_COPY: Record<string, { label: string; detail: string; fixed?: boole
   },
 };
 
-export function LiveIslandBlock({ props }: BlockComponentProps<LiveIslandProps>) {
+export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandProps>) {
   const { variant } = props;
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(0);
   const [ready, setReady] = useState(false);
+  const headerNodes = puck.getSlotData?.('header') ?? [];
+  const hasHeader = headerNodes.length > 0;
   const copy = ISLAND_COPY[variant] ?? {
     label: props.label || variant,
     detail: 'This section is rendered from the same source as the public page.',
@@ -128,6 +130,12 @@ export function LiveIslandBlock({ props }: BlockComponentProps<LiveIslandProps>)
         </span>
       </div>
 
+      {hasHeader ? (
+        <div className="px-margin-mobile md:px-margin-desktop pt-12 md:pt-16">
+          {puck.renderSlot('header')}
+        </div>
+      ) : null}
+
       {empty ? (
         <div className="px-margin-mobile md:px-margin-desktop py-12">
           <div className="mx-auto max-w-3xl rounded-lg border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
@@ -141,7 +149,7 @@ export function LiveIslandBlock({ props }: BlockComponentProps<LiveIslandProps>)
         <iframe
           ref={frameRef}
           title={`Live preview: ${copy.label}`}
-          src={`/preview/island/${variant}`}
+          src={`/preview/island/${variant}?part=body`}
           className="pointer-events-none block w-full border-0"
           style={{ height: height || 420 }}
           scrolling="no"

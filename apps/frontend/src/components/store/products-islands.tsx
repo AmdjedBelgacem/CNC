@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArrowRight, Download, Headset, Truck } from 'lucide-react';
@@ -7,10 +8,28 @@ import { DepartmentLink } from '@/components/store/department-link';
 import { getImageSrc } from '@/lib/images';
 import { coerceCurrency, formatMinorUnits } from '@/lib/money';
 import { cardPrice, isQuoteOnly } from '@/lib/product-pricing';
+import { cn } from '@/lib/utils';
 import type { Product as ApiProduct } from '@/lib/api/types';
 
+/**
+ * Every island accepts the builder's `header` slot and a `bodyOnly` flag used
+ * by the canvas preview iframe. When `header` is supplied (English pages) it
+ * replaces the translated header markup with the real builder nodes. Arabic
+ * pages keep the default translated header because the public renderer does
+ * not pass a header for that locale.
+ */
+type IslandChrome = {
+  header?: ReactNode;
+  /** True in the builder canvas: render only the live data, not the header. */
+  bodyOnly?: boolean;
+};
+
 /** Live featured strip — the `products-featured` island (On the bench). */
-export async function ProductsFeatured({ products }: { products: ApiProduct[] }) {
+export async function ProductsFeatured({
+  products,
+  header,
+  bodyOnly,
+}: { products: ApiProduct[] } & IslandChrome) {
   const t = await getTranslations('pages.products');
   const featured = products.filter((p) => p.featured).slice(0, 6);
   if (featured.length === 0) return null;
@@ -22,26 +41,33 @@ export async function ProductsFeatured({ products }: { products: ApiProduct[] })
   return (
     <section
       id="on-the-bench"
-      className="border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16"
+      className={cn(
+        'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16',
+        bodyOnly && 'pt-0',
+      )}
     >
       <div className="mx-auto w-full max-w-[1800px]">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              {t('featuredHeading')}
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-              Featured this week
-            </h2>
-          </div>
-          <a
-            href="#inventory"
-            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary"
-          >
-            Full catalog
-            <ArrowRight className="flip-rtl size-3.5" />
-          </a>
-        </div>
+        {bodyOnly
+          ? null
+          : header ?? (
+              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    {t('featuredHeading')}
+                  </p>
+                  <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                    Featured this week
+                  </h2>
+                </div>
+                <a
+                  href="#inventory"
+                  className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary"
+                >
+                  Full catalog
+                  <ArrowRight className="flip-rtl size-3.5" />
+                </a>
+              </div>
+            )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {featured.map((product) => (
             <Link
@@ -94,30 +120,39 @@ export async function ProductsFeatured({ products }: { products: ApiProduct[] })
 export async function ProductsInventory({
   categories,
   products,
+  header,
+  bodyOnly,
 }: {
   categories: { name: string; count: number }[];
   /** Server-fetched, so the grid is populated in the HTML rather than after hydration. */
   products?: CatalogProduct[];
-}) {
+} & IslandChrome) {
   const t = await getTranslations('products');
 
   return (
     <section
       id="inventory"
-      className="px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-[1800px] py-14 md:py-20"
+      className={cn(
+        'px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-[1800px] py-14 md:py-20',
+        bodyOnly && 'pt-0',
+      )}
     >
-      <div className="mb-8 flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-10">
-        <div className="max-w-2xl lg:min-w-[380px] lg:flex-1">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-            {t('liveInventory')}
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            {t('catalogTitle')}
-          </h2>
-          <p className="mt-3 text-muted-foreground">{t('catalogSubtitle')}</p>
-        </div>
-        <ProductsTrustStrip />
-      </div>
+      {bodyOnly
+        ? null
+        : header ?? (
+            <div className="mb-8 flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-10">
+              <div className="max-w-2xl lg:min-w-[380px] lg:flex-1">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  {t('liveInventory')}
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                  {t('catalogTitle')}
+                </h2>
+                <p className="mt-3 text-muted-foreground">{t('catalogSubtitle')}</p>
+              </div>
+              <ProductsTrustStrip />
+            </div>
+          )}
       <ProductsCatalog
         categories={categories.map((c) => c.name)}
         initialProducts={products}
@@ -154,24 +189,35 @@ async function ProductsTrustStrip() {
 }
 
 /** Department index island — the `products-departments` island. */
-export async function ProductsDepartments({ categories }: { categories: { name: string; count: number }[] }) {
+export async function ProductsDepartments({
+  categories,
+  header,
+  bodyOnly,
+}: { categories: { name: string; count: number }[] } & IslandChrome) {
   const t = await getTranslations('products');
 
   return (
     <section
       id="departments"
-      className="border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-14 md:py-20"
+      className={cn(
+        'border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-14 md:py-20',
+        bodyOnly && 'pt-0',
+      )}
     >
       <div className="mx-auto w-full max-w-[1800px]">
-        <div className="mb-8 max-w-2xl">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-            {t('directory')}
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            {t('shopByDepartment')}
-          </h2>
-          <p className="mt-3 text-muted-foreground">{t('shopByDepartmentHint')}</p>
-        </div>
+        {bodyOnly
+          ? null
+          : header ?? (
+              <div className="mb-8 max-w-2xl">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  {t('directory')}
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                  {t('shopByDepartment')}
+                </h2>
+                <p className="mt-3 text-muted-foreground">{t('shopByDepartmentHint')}</p>
+              </div>
+            )}
 
         {categories.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">

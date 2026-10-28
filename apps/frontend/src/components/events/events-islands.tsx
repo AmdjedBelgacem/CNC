@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import {
@@ -13,6 +14,13 @@ import { getImageSrc } from '@/lib/images';
 import type { CatalogEvent } from '@/lib/events';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+
+type IslandChrome = {
+  /** Builder-authored header nodes. Arabic pages omit it and keep the translated header. */
+  header?: ReactNode;
+  /** Builder canvas preview: render the live rows without the header. */
+  bodyOnly?: boolean;
+};
 
 function dayParts(iso: string, locale = 'en') {
   const d = new Date(iso);
@@ -252,10 +260,12 @@ export async function EventsFormatTicker({
 export async function EventsNextUp({
   events,
   upcoming,
+  header,
+  bodyOnly,
 }: {
   events: CatalogEvent[];
   upcoming: CatalogEvent[];
-}) {
+} & IslandChrome) {
   const locale = await getLocale();
   const t = await getTranslations('pages.events');
   const list = upcomingList(events, upcoming);
@@ -265,26 +275,33 @@ export async function EventsNextUp({
   return (
     <section
       id="next-up"
-      className="border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16"
+      className={cn(
+        'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16',
+        bodyOnly && 'pt-0',
+      )}
     >
       <div className="max-w-container-max mx-auto">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              {t('nextUpHeading')}
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-              Don&apos;t miss the next one
-            </h2>
-          </div>
-          <a
-            href="#browse"
-            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary"
-          >
-            Full board
-            <ArrowRight className="flip-rtl size-3.5" />
-          </a>
-        </div>
+        {bodyOnly
+          ? null
+          : header ?? (
+              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    {t('nextUpHeading')}
+                  </p>
+                  <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                    Don&apos;t miss the next one
+                  </h2>
+                </div>
+                <a
+                  href="#browse"
+                  className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary"
+                >
+                  Full board
+                  <ArrowRight className="flip-rtl size-3.5" />
+                </a>
+              </div>
+            )}
         <NextUpCard event={nextEvent} locale={locale} t={t} />
       </div>
     </section>
@@ -295,10 +312,12 @@ export async function EventsNextUp({
 export async function EventsSchedule({
   events,
   upcoming,
+  header,
+  bodyOnly,
 }: {
   events: CatalogEvent[];
   upcoming: CatalogEvent[];
-}) {
+} & IslandChrome) {
   const locale = await getLocale();
   const t = await getTranslations('pages.events');
   const now = Date.now();
@@ -325,21 +344,28 @@ export async function EventsSchedule({
   return (
     <section
       id="schedule"
-      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20"
+      className={cn(
+        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20',
+        bodyOnly && 'pt-0',
+      )}
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
         <div className="min-w-0">
-          <div className="mb-6 max-w-2xl">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Schedule
-            </p>
-            <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              What&apos;s coming up
-            </h2>
-            <p className="mt-3 text-muted-foreground">
-              Ordered by date — workshops, webinars, and meets as they land on the board.
-            </p>
-          </div>
+          {bodyOnly
+            ? null
+            : header ?? (
+                <div className="mb-6 max-w-2xl">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Schedule
+                  </p>
+                  <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                    What&apos;s coming up
+                  </h2>
+                  <p className="mt-3 text-muted-foreground">
+                    Ordered by date — workshops, webinars, and meets as they land on the board.
+                  </p>
+                </div>
+              )}
 
           {groups.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
@@ -453,25 +479,32 @@ export async function EventsSchedule({
 }
 
 /** Full events board island — the `events-browse` island. */
-export function EventsBrowse() {
+export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
   return (
     <section
       id="browse"
-      className="border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-16 md:py-20"
+      className={cn(
+        'border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-16 md:py-20',
+        bodyOnly && 'pt-0',
+      )}
     >
       <div className="max-w-container-max mx-auto">
-        <div className="mb-6 max-w-2xl">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-            Full board
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Browse every event
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Filter by format, toggle upcoming vs past, search by city or title — live from the
-            events API.
-          </p>
-        </div>
+        {bodyOnly
+          ? null
+          : header ?? (
+              <div className="mb-6 max-w-2xl">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Full board
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                  Browse every event
+                </h2>
+                <p className="mt-3 text-muted-foreground">
+                  Filter by format, toggle upcoming vs past, search by city or title — live from
+                  the events API.
+                </p>
+              </div>
+            )}
         <EventsBoard />
       </div>
     </section>

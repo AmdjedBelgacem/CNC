@@ -1,5 +1,6 @@
 import { getBlockDefinition } from './registry';
 import { consoleNodesFromProps } from './console-composition';
+import { liveIslandHeaderSeed } from './live-island-parts';
 import type { PageLayout, PuckNode } from '../types/page';
 
 /**
@@ -302,6 +303,17 @@ export function migrateCompositeLayout(layout: PageLayout): PageLayout {
         value: String(cell.value ?? ''),
         ...(typeof cell.tone === 'string' ? { tone: cell.tone } : {}),
       }));
+    } else if (node.type === 'live-island') {
+      if (!isNodeArray(props.header)) {
+        const seeded = liveIslandHeaderSeed(
+          typeof props.variant === 'string' ? props.variant : undefined,
+          parentId || undefined,
+        );
+        if (seeded && seeded.length > 0) {
+          props.header = seeded;
+          changed = true;
+        }
+      }
     } else if (node.type === 'closing-cta') {
       if (!isNodeArray(props.actions)) {
         const actions: Record<string, unknown>[] = [];

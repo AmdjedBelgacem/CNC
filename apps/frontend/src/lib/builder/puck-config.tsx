@@ -160,9 +160,11 @@ const render = (type: string) => (editorProps: any) => {
   const C = BLOCK_COMPONENTS[type] as ComponentType<{ props: unknown; puck: unknown }> | undefined;
   if (!C) return <></>;
   const { puck, editMode: _editMode, ...props } = editorProps ?? {};
-  // Mirror the public renderer's `visible === false` gate so hidden blocks
-  // don't render in the canvas either.
-  if ((props as Record<string, unknown>)?.visible === false) return <></>;
+  // Hidden blocks are still real nodes in the layer tree. Returning nothing
+  // here made them impossible to select on the canvas, so the only way to
+  // reach their children was the Layers pane. Render them dimmed in the
+  // editor instead; the public renderer still honours `visible: false`.
+  const hidden = (props as Record<string, unknown>)?.visible === false;
   const definition = getBlockDefinition(type);
   const renderSlot = (
     slotName: string,
@@ -193,7 +195,19 @@ const render = (type: string) => (editorProps: any) => {
     const node = findNodeById(data, props.id as string | undefined);
     return node ? getSlotChildren(node, slotName, data.zones) : [];
   };
-  return <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />;
+  const rendered = <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />;
+  if (!hidden) return rendered;
+  return (
+    <div
+      className="relative rounded-sm outline-2 outline-dashed outline-warning/70 outline-offset-4"
+      data-builder-hidden-block="true"
+    >
+      <div className="pointer-events-none absolute -top-6 end-0 z-20 inline-flex items-center gap-1 rounded-full border border-warning/40 bg-background/95 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-warning shadow-sm">
+        Hidden on public site
+      </div>
+      <div className="opacity-60">{rendered}</div>
+    </div>
+  );
 };
 const def = (
   type: string,

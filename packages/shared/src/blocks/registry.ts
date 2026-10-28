@@ -2133,6 +2133,14 @@ const liveIsland: BlockDefinition = {
   category: 'Sections',
   schema: liveIslandPropsSchema,
   defaultProps: liveIslandDefaults,
+  // The static section heading and supporting copy are real blocks. The live
+  // rows stay in the island component; the header slot makes the visible
+  // heading, description and (for the catalog) trust cards selectable.
+  zones: {
+    header: {
+      allow: ['badge', 'heading', 'text', 'link', 'button', 'stack', 'grid', 'card'],
+    },
+  },
 };
 
 export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {

@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { HomeBuilder } from '@/components/home/home-builder';
 import { FeedTicker, FeedTopics, FeedWire, feedHeroStats } from '@/components/feed/feed-islands';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { liveIslandHeader } from '@/components/home/live-island-header';
 import { fetchWireSnapshot } from '@/lib/feed';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
 
 export default async function FeedPage() {
   const tFeed = await getTranslations('pages.feed');
+  const locale = await getLocale();
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, snapshot] = await Promise.all([
@@ -63,8 +65,18 @@ export default async function FeedPage() {
         heroStats={feedHeroStats(snapshot, tFeed)}
         islands={{
           'feed-ticker': <FeedTicker snapshot={snapshot} />,
-          'feed-topics': <FeedTopics snapshot={snapshot} />,
-          'feed-wire': <FeedWire snapshot={snapshot} />,
+          'feed-topics': (
+            <FeedTopics
+              snapshot={snapshot}
+              header={liveIslandHeader(layout, 'feed-topics', locale)}
+            />
+          ),
+          'feed-wire': (
+            <FeedWire
+              snapshot={snapshot}
+              header={liveIslandHeader(layout, 'feed-wire', locale)}
+            />
+          ),
         }}
       />
     </>

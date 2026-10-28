@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
+import { getLocale } from 'next-intl/server';
 import { HomeBuilder } from '@/components/home/home-builder';
 import { AcademyPathways } from '@/components/academy/academy-pathways';
 import { academyHeroStats } from '@/components/academy/academy-hero-stats';
+import { liveIslandHeader } from '@/components/home/live-island-header';
 import { fetchPublishedAcademies } from '@/lib/academies';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
@@ -22,6 +24,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AcademyPage() {
+  const locale = await getLocale();
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, academies] = await Promise.all([
@@ -57,7 +60,12 @@ export default async function AcademyPage() {
         academies={academies}
         heroStats={academyHeroStats(academies)}
         islands={{
-          'academy-pathways': <AcademyPathways academies={academies} />,
+          'academy-pathways': (
+            <AcademyPathways
+              academies={academies}
+              header={liveIslandHeader(layout, 'academy-pathways', locale)}
+            />
+          ),
         }}
       />
     </>

@@ -1,8 +1,17 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArrowRight, Hash } from 'lucide-react';
 import { FeedStream } from '@/components/feed/feed-stream';
 import type { WireSnapshot } from '@/lib/feed';
+import { cn } from '@/lib/utils';
+
+type IslandChrome = {
+  /** Builder-authored header nodes. Arabic pages omit it and keep the translated header. */
+  header?: ReactNode;
+  /** Builder canvas preview: render the live rows without the header. */
+  bodyOnly?: boolean;
+};
 
 function snippet(content: string, max = 140) {
   const clean = content.replace(/\s+/g, ' ').trim();
@@ -41,27 +50,36 @@ export async function FeedTicker({ snapshot }: { snapshot: WireSnapshot }) {
 }
 
 /** Topic index island — the `feed-topics` island. */
-export async function FeedTopics({ snapshot }: { snapshot: WireSnapshot }) {
+export async function FeedTopics({
+  snapshot,
+  header,
+  bodyOnly,
+}: { snapshot: WireSnapshot } & IslandChrome) {
   const t = await getTranslations('pages.feed');
   return (
     <section
       id="topics"
-      className="border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-14 md:py-18"
+      className={cn(
+        'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-14 md:py-18',
+        bodyOnly && 'pt-0',
+      )}
     >
       <div className="max-w-container-max mx-auto">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              {t('topicsTitle')}
-            </p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-              {t('topicsBlurb')}
-            </h2>
-          </div>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            {t('topicsHint')}
-          </p>
-        </div>
+        {bodyOnly
+          ? null
+          : header ?? (
+              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    {t('topicsTitle')}
+                  </p>
+                  <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                    {t('topicsBlurb')}
+                  </h2>
+                </div>
+                <p className="max-w-sm text-sm text-muted-foreground">{t('topicsHint')}</p>
+              </div>
+            )}
 
         {snapshot.topics.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
@@ -97,26 +115,35 @@ export async function FeedTopics({ snapshot }: { snapshot: WireSnapshot }) {
 }
 
 /** Live wire + side rail — the `feed-wire` island. */
-export async function FeedWire({ snapshot }: { snapshot: WireSnapshot }) {
+export async function FeedWire({
+  snapshot,
+  header,
+  bodyOnly,
+}: { snapshot: WireSnapshot } & IslandChrome) {
   const t = await getTranslations('pages.feed');
   return (
     <section
       id="live-wire"
-      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20"
+      className={cn(
+        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20',
+        bodyOnly && 'pt-0',
+      )}
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
         <div className="min-w-0">
-          <div className="mb-6 max-w-2xl">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              {t('wireTitle')}
-            </p>
-            <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              {t('wireBlurb')}
-            </h2>
-            <p className="mt-3 text-muted-foreground">
-              {t('wireHint')}
-            </p>
-          </div>
+          {bodyOnly
+            ? null
+            : header ?? (
+                <div className="mb-6 max-w-2xl">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    {t('wireTitle')}
+                  </p>
+                  <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                    {t('wireBlurb')}
+                  </h2>
+                  <p className="mt-3 text-muted-foreground">{t('wireHint')}</p>
+                </div>
+              )}
           <FeedStream embedded />
         </div>
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { HomeBuilder } from '@/components/home/home-builder';
 import {
   EventsBrowse,
@@ -9,6 +9,7 @@ import {
   EventsSchedule,
   eventsHeroStats,
 } from '@/components/events/events-islands';
+import { liveIslandHeader } from '@/components/home/live-island-header';
 import { fetchCatalogEvents } from '@/lib/events';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
 
 export default async function EventsPage() {
   const tEvents = await getTranslations('pages.events');
+  const locale = await getLocale();
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, events, upcoming] = await Promise.all([
@@ -91,9 +93,23 @@ export default async function EventsPage() {
         heroStats={eventsHeroStats(tEvents, events, upcoming)}
         islands={{
           'events-ticker': <EventsFormatTicker events={events} />,
-          'events-next-up': <EventsNextUp events={events} upcoming={upcoming} />,
-          'events-schedule': <EventsSchedule events={events} upcoming={upcoming} />,
-          'events-browse': <EventsBrowse />,
+          'events-next-up': (
+            <EventsNextUp
+              events={events}
+              upcoming={upcoming}
+              header={liveIslandHeader(layout, 'events-next-up', locale)}
+            />
+          ),
+          'events-schedule': (
+            <EventsSchedule
+              events={events}
+              upcoming={upcoming}
+              header={liveIslandHeader(layout, 'events-schedule', locale)}
+            />
+          ),
+          'events-browse': (
+            <EventsBrowse header={liveIslandHeader(layout, 'events-browse', locale)} />
+          ),
         }}
       />
     </>

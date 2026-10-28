@@ -1,8 +1,17 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import type { AcademySummary } from '@/lib/academies';
 import { getImageSrc } from '@/lib/images';
+import { cn } from '@/lib/utils';
+
+type IslandChrome = {
+  /** Builder-authored header nodes. Arabic pages omit it and keep the translated header. */
+  header?: ReactNode;
+  /** Builder canvas preview: render the live rows without the header. */
+  bodyOnly?: boolean;
+};
 
 /**
  * Live academy pathways directory — the `academy-pathways` island.
@@ -82,26 +91,37 @@ function PathwayRow({
   );
 }
 
-export async function AcademyPathways({ academies }: { academies: AcademySummary[] }) {
+export async function AcademyPathways({
+  academies,
+  header,
+  bodyOnly,
+}: { academies: AcademySummary[] } & IslandChrome) {
   const t = await getTranslations('pages.academyPathways');
   return (
     <section
       id="pathways"
-      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-24"
+      className={cn(
+        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-24',
+        bodyOnly && 'pt-0',
+      )}
     >
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-            {t('directory')}
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            {t('chooseAcademy')}
-          </h2>
-        </div>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          {t('directoryBlurb')}
-        </p>
-      </div>
+      {bodyOnly
+        ? null
+        : header ?? (
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  {t('directory')}
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                  {t('chooseAcademy')}
+                </h2>
+              </div>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {t('directoryBlurb')}
+              </p>
+            </div>
+          )}
 
       {academies.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-16 text-center">

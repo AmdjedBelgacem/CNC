@@ -29,10 +29,14 @@ import { AboutFactsSection, HomeFaqSection, HomeGuidesSection } from '@/componen
  */
 export default async function IslandPreviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ variant: string }>;
+  searchParams: Promise<{ part?: string | string[] }>;
 }) {
   const { variant } = await params;
+  const query = await searchParams;
+  const bodyOnly = query.part === 'body';
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
 
@@ -50,23 +54,25 @@ export default async function IslandPreviewPage({
       break;
     case 'academy-pathways': {
       const academies = await fetchPublishedAcademies(tenantSlug);
-      content = <AcademyPathways academies={academies} />;
+      content = <AcademyPathways academies={academies} bodyOnly={bodyOnly} />;
       break;
     }
     case 'products-featured': {
       const products = await fetchCatalogProducts(tenantSlug, { limit: 100 });
-      content = <ProductsFeatured products={products} />;
+      content = <ProductsFeatured products={products} bodyOnly={bodyOnly} />;
       break;
     }
     case 'products-inventory': {
       const products = await fetchCatalogProducts(tenantSlug, { limit: 100 });
       const categories = categoryCounts(products);
-      content = <ProductsInventory categories={categories} products={products} />;
+      content = (
+        <ProductsInventory categories={categories} products={products} bodyOnly={bodyOnly} />
+      );
       break;
     }
     case 'products-departments': {
       const products = await fetchCatalogProducts(tenantSlug, { limit: 100 });
-      content = <ProductsDepartments categories={categoryCounts(products)} />;
+      content = <ProductsDepartments categories={categoryCounts(products)} bodyOnly={bodyOnly} />;
       break;
     }
     case 'feed-ticker':
@@ -77,9 +83,9 @@ export default async function IslandPreviewPage({
         variant === 'feed-ticker' ? (
           <FeedTicker snapshot={snapshot} />
         ) : variant === 'feed-topics' ? (
-          <FeedTopics snapshot={snapshot} />
+          <FeedTopics snapshot={snapshot} bodyOnly={bodyOnly} />
         ) : (
-          <FeedWire snapshot={snapshot} />
+          <FeedWire snapshot={snapshot} bodyOnly={bodyOnly} />
         );
       break;
     }
@@ -88,7 +94,7 @@ export default async function IslandPreviewPage({
     case 'events-schedule':
     case 'events-browse': {
       if (variant === 'events-browse') {
-        content = <EventsBrowse />;
+        content = <EventsBrowse bodyOnly={bodyOnly} />;
         break;
       }
       const [events, upcoming] = await Promise.all([
@@ -99,9 +105,9 @@ export default async function IslandPreviewPage({
         variant === 'events-ticker' ? (
           <EventsFormatTicker events={events} />
         ) : variant === 'events-next-up' ? (
-          <EventsNextUp events={events} upcoming={upcoming} />
+          <EventsNextUp events={events} upcoming={upcoming} bodyOnly={bodyOnly} />
         ) : (
-          <EventsSchedule events={events} upcoming={upcoming} />
+          <EventsSchedule events={events} upcoming={upcoming} bodyOnly={bodyOnly} />
         );
       break;
     }

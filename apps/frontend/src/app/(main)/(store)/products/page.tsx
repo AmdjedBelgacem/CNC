@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
 import { HomeBuilder } from '@/components/home/home-builder';
 import {
@@ -9,6 +9,7 @@ import {
   productsHeroStats,
 } from '@/components/store/products-islands';
 import { fetchCatalogProducts } from '@/lib/products';
+import { liveIslandHeader } from '@/components/home/live-island-header';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
 
 export default async function ProductsPage() {
   const tProducts = await getTranslations('pages.products');
+  const locale = await getLocale();
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, products] = await Promise.all([
@@ -83,14 +85,25 @@ export default async function ProductsPage() {
         layout={layout}
         heroStats={productsHeroStats(tProducts, products, categories)}
         islands={{
-          'products-featured': <ProductsFeatured products={products} />,
+          'products-featured': (
+            <ProductsFeatured
+              products={products}
+              header={liveIslandHeader(layout, 'products-featured', locale)}
+            />
+          ),
           'products-inventory': (
             <ProductsInventory
               categories={categories}
               products={products}
+              header={liveIslandHeader(layout, 'products-inventory', locale)}
             />
           ),
-          'products-departments': <ProductsDepartments categories={categories} />,
+          'products-departments': (
+            <ProductsDepartments
+              categories={categories}
+              header={liveIslandHeader(layout, 'products-departments', locale)}
+            />
+          ),
         }}
       />
     </>
