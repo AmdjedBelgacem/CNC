@@ -1,6 +1,7 @@
 'use client';
 import { createElement } from 'react';
 import type { ComponentType, CSSProperties } from 'react';
+import { useGetPuck } from '@measured/puck';
 import type { ComponentConfig, Config } from '@measured/puck';
 import {
   ICON_KEYS,
@@ -151,6 +152,10 @@ const withLayoutFields = (fields: any) => ({
 }); /** Renders the shared block component with Puck's props+puck (same component the public renderer uses). * * In the editor Puck spreads the node's props flat (`{ ...props, puck, editMode }`), * with each declared Slot field replaced by its Slot *component*. Our block * components expect the `{ props, puck }` shape, so we re-wrap here: slot * components are exposed through the bridge's `renderSlot(name)` (same call * shape the public renderer implements), keeping the editor canvas identical * to the public renderer. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const render = (type: string) => (editorProps: any) => {
+  // The `puck` render prop is only PuckContext (drop zones, editing flag); it
+  // does not expose the store. Read the latest layout through the store getter
+  // so slot data resolves in the canvas without subscribing every block to it.
+  const getPuck = useGetPuck();
   const C = BLOCK_COMPONENTS[type] as ComponentType<{ props: unknown; puck: unknown }> | undefined;
   if (!C) return <></>;
   const { puck, editMode: _editMode, ...props } = editorProps ?? {};
@@ -182,7 +187,7 @@ const render = (type: string) => (editorProps: any) => {
     });
   };
   const getSlotData = (slotName: string) => {
-    const data = (puck as { appState?: { data?: PageLayout } } | undefined)?.appState?.data;
+    const data = getPuck().appState.data as unknown as PageLayout | undefined;
     if (!data) return [];
     const node = findNodeById(data, props.id as string | undefined);
     return node ? getSlotChildren(node, slotName, data.zones) : [];
