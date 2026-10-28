@@ -10,6 +10,7 @@ import type {
   CatalogCtaProps,
   CatalogHeroProps,
   CatalogStatProps,
+  ClosingCtaActionProps,
   ClosingCtaProps,
   ConsoleAxisDrawerProps,
   ConsoleAxisProps,
@@ -2046,12 +2047,25 @@ export const closingCtaInspector = defineInspector<ClosingCtaProps>().groups([
     titleKey: 'actions',
     icon: MousePointerClick,
     fields: [
-      { key: 'primaryLabel', label: 'Primary label', control: 'text' },
-      { key: 'primaryHref', label: 'Primary link', control: 'text', placeholder: '/path' },
-      { key: 'primaryIcon', label: 'Primary icon', control: 'icon' },
-      { key: 'secondaryLabel', label: 'Secondary label', control: 'text' },
-      { key: 'secondaryHref', label: 'Secondary link', control: 'text', placeholder: '/path' },
-      { key: 'secondaryIcon', label: 'Secondary icon', control: 'icon' },
+      // Buttons are child blocks in the `actions` slot now.
+      { key: 'primaryLabel', label: 'Primary label', control: 'text', showWhen: () => false },
+      {
+        key: 'primaryHref',
+        label: 'Primary link',
+        control: 'text',
+        placeholder: '/path',
+        showWhen: () => false,
+      },
+      { key: 'primaryIcon', label: 'Primary icon', control: 'icon', showWhen: () => false },
+      { key: 'secondaryLabel', label: 'Secondary label', control: 'text', showWhen: () => false },
+      {
+        key: 'secondaryHref',
+        label: 'Secondary link',
+        control: 'text',
+        placeholder: '/path',
+        showWhen: () => false,
+      },
+      { key: 'secondaryIcon', label: 'Secondary icon', control: 'icon', showWhen: () => false },
     ],
   },
   {
@@ -2065,6 +2079,31 @@ export const closingCtaInspector = defineInspector<ClosingCtaProps>().groups([
       { key: 'paddingRight', label: 'Padding right', control: 'number' },
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
       { key: 'paddingLeft', label: 'Padding left', control: 'number' },
+    ],
+  },
+  layoutOnlyGroup(),
+  advancedGroup(),
+]);
+
+export const closingCtaActionInspector = defineInspector<ClosingCtaActionProps>().groups([
+  {
+    id: 'content',
+    title: 'Button',
+    titleKey: 'content',
+    icon: MousePointerClick,
+    fields: [
+      { key: 'label', label: 'Label', control: 'text' },
+      { key: 'href', label: 'Link', control: 'text', placeholder: '/path' },
+      {
+        key: 'variant',
+        label: 'Style',
+        control: 'select',
+        options: [
+          { label: 'Primary', value: 'primary' },
+          { label: 'Secondary', value: 'secondary' },
+        ],
+      },
+      { key: 'icon', label: 'Icon', control: 'icon' },
     ],
   },
   layoutOnlyGroup(),
@@ -3202,6 +3241,10 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   faq: { label: 'FAQ', groups: faqInspector.groups },
   footer: { label: 'Footer', groups: footerInspector.groups },
   'spotlight-cards': { label: 'Spotlight Cards', groups: spotlightCardsInspector.groups },
+  'closing-cta-action': {
+    label: 'Closing CTA Button',
+    groups: closingCtaActionInspector.groups,
+  },
   'closing-cta': { label: 'Closing CTA', groups: closingCtaInspector.groups },
   'card-grid': { label: 'Card Grid', groups: cardGridInspector.groups },
   'cta-signup': { label: 'CTA Signup Band', groups: ctaSignupInspector.groups },

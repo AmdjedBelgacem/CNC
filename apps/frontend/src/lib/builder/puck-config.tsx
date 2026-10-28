@@ -35,6 +35,7 @@ import {
   consoleMetricDefaults,
   ctaBannerDefaults,
   ctaSignupDefaults,
+  closingCtaActionDefaults,
   closingCtaDefaults,
   faqDefaults,
   faqItemDefaults,
@@ -1122,6 +1123,20 @@ const twinReadout: ComponentConfig = def('twin-readout', 'Readout Cell', twinRea
   ]),
 });
 
+const closingCtaAction: ComponentConfig = def(
+  'closing-cta-action',
+  'Closing CTA Button',
+  closingCtaActionDefaults,
+  {
+    label: textField('Label'),
+    href: textField('URL', '/path'),
+    variant: selectField('Style', [
+      { label: 'Primary', value: 'primary' },
+      { label: 'Secondary', value: 'secondary' },
+    ]),
+    icon: iconField,
+  },
+);
 const closingCta: ComponentConfig = def('closing-cta', 'Closing CTA', closingCtaDefaults, {
   eyebrow: textField('Eyebrow'),
   title: textField('Title'),
@@ -1217,6 +1232,7 @@ export const puckConfig: Config = {
     'spotlight-card': spotlightCard,
     'twin-code-line': twinCodeLine,
     'twin-readout': twinReadout,
+    'closing-cta-action': closingCtaAction,
     'closing-cta': closingCta,
     'live-island': liveIsland,
   },
@@ -1260,6 +1276,7 @@ export const puckConfig: Config = {
         'spotlight-card',
         'twin-code-line',
         'twin-readout',
+        'closing-cta-action',
       ],
     },
     Layout: { components: ['stack', 'grid', 'card'] },

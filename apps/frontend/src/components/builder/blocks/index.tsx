@@ -58,6 +58,7 @@ import { SpotlightCardBlock } from './spotlight-card-block';
 import { TwinCodeLineBlock } from './twin-code-line-block';
 import { TwinReadoutBlock } from './twin-readout-block';
 import { ClosingCtaBlock } from './closing-cta-block';
+import { ClosingCtaActionBlock } from './closing-cta-action-block';
 import { LiveIslandBlock } from './live-island-block'; /** Puck-like slot bridge injected by the public renderer (or Puck itself in the editor). */
 export interface PuckBridge {
   /**
@@ -140,6 +141,7 @@ export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<
   'spotlight-card': SpotlightCardBlock,
   'twin-code-line': TwinCodeLineBlock,
   'twin-readout': TwinReadoutBlock,
+  'closing-cta-action': ClosingCtaActionBlock,
   'closing-cta': ClosingCtaBlock,
   'live-island': LiveIslandBlock,
 };

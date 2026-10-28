@@ -1350,6 +1350,23 @@ export const twinReadoutDefaults: TwinReadoutProps = {
   tone: 'normal',
 };
 
+/** One primary or secondary action in a closing CTA band. */
+export const closingCtaActionPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  label: z.string().max(80).default('Get started'),
+  href: z.string().max(600).default('/'),
+  variant: z.enum(['primary', 'secondary']).default('primary'),
+  icon: iconKeySchema.optional(),
+});
+export type ClosingCtaActionProps = z.infer<typeof closingCtaActionPropsSchema>;
+
+export const closingCtaActionDefaults: ClosingCtaActionProps = {
+  label: 'Get started',
+  href: '/register',
+  variant: 'primary',
+  icon: 'arrow_forward',
+};
+
 /** Closing overlay band with copy column + two CTAs. */
 export const closingCtaPropsSchema = layoutPropsSchema.extend({
   id: z.string().optional(),
@@ -2090,6 +2107,15 @@ const twinReadout: BlockDefinition = {
   defaultProps: twinReadoutDefaults,
 };
 
+const closingCtaAction: BlockDefinition = {
+  type: 'closing-cta-action',
+  label: 'Closing CTA Button',
+  description: 'One primary or secondary button in a closing CTA band.',
+  category: 'Items',
+  schema: closingCtaActionPropsSchema,
+  defaultProps: closingCtaActionDefaults,
+};
+
 const closingCta: BlockDefinition = {
   type: 'closing-cta',
   label: 'Closing CTA',
@@ -2097,6 +2123,7 @@ const closingCta: BlockDefinition = {
   category: 'Sections',
   schema: closingCtaPropsSchema,
   defaultProps: closingCtaDefaults,
+  zones: { actions: { allow: ['closing-cta-action'], max: 2 } },
 };
 
 const liveIsland: BlockDefinition = {
@@ -2166,6 +2193,7 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   'spotlight-card': spotlightCard,
   'twin-code-line': twinCodeLine,
   'twin-readout': twinReadout,
+  'closing-cta-action': closingCtaAction,
   'closing-cta': closingCta,
   'live-island': liveIsland,
 };

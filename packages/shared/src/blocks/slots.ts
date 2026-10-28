@@ -302,6 +302,46 @@ export function migrateCompositeLayout(layout: PageLayout): PageLayout {
         value: String(cell.value ?? ''),
         ...(typeof cell.tone === 'string' ? { tone: cell.tone } : {}),
       }));
+    } else if (node.type === 'closing-cta') {
+      if (!isNodeArray(props.actions)) {
+        const actions: Record<string, unknown>[] = [];
+        if (
+          typeof props.primaryLabel === 'string' &&
+          props.primaryLabel &&
+          typeof props.primaryHref === 'string' &&
+          props.primaryHref
+        ) {
+          actions.push({
+            label: props.primaryLabel,
+            href: props.primaryHref,
+            variant: 'primary',
+            ...(typeof props.primaryIcon === 'string' ? { icon: props.primaryIcon } : {}),
+          });
+        }
+        if (
+          typeof props.secondaryLabel === 'string' &&
+          props.secondaryLabel &&
+          typeof props.secondaryHref === 'string' &&
+          props.secondaryHref
+        ) {
+          actions.push({
+            label: props.secondaryLabel,
+            href: props.secondaryHref,
+            variant: 'secondary',
+            ...(typeof props.secondaryIcon === 'string' ? { icon: props.secondaryIcon } : {}),
+          });
+        }
+        if (actions.length > 0) {
+          props.actions = actions.map((action, index) => {
+            const id = childId('closing-cta-action', index);
+            return {
+              type: 'closing-cta-action',
+              props: { ...(id ? { id } : {}), ...action },
+            };
+          });
+          changed = true;
+        }
+      }
     }
 
     // Walk both newly-created and pre-existing child slots so nested composite

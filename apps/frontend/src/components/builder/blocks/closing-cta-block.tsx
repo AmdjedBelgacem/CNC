@@ -1,42 +1,12 @@
 'use client';
-import Link from 'next/link';
 import type { ClosingCtaProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
-import { Icon } from '@/components/ui/icon';
-
-function Cta(
-  label: string,
-  href: string,
-  primary: boolean,
-  icon?: string,
-) {
-  const cls = primary
-    ? 'inline-flex h-11 items-center justify-center gap-2 rounded-md bg-primary px-6 font-medium text-primary-foreground transition hover:opacity-90'
-    : 'inline-flex h-11 items-center justify-center gap-2 rounded-md border border-white/20 px-6 font-medium text-white transition hover:bg-white/10';
-  const content = (
-    <>
-      {icon ? <Icon name={icon} className="size-4" /> : null}
-      {label}
-    </>
-  );
-  if (href.startsWith('#') || href.startsWith('http')) {
-    return (
-      <a href={href} className={cls}>
-        {content}
-      </a>
-    );
-  }
-  return (
-    <Link href={href} className={cls}>
-      {content}
-    </Link>
-  );
-}
+import { ClosingCtaActionLink } from './closing-cta-action-block';
 
 /** Dark overlay closing band with copy column + primary/secondary CTAs. */
-export function ClosingCtaBlock({ props }: BlockComponentProps<ClosingCtaProps>) {
+export function ClosingCtaBlock({ props, puck }: BlockComponentProps<ClosingCtaProps>) {
   const {
     id,
     className,
@@ -51,6 +21,9 @@ export function ClosingCtaBlock({ props }: BlockComponentProps<ClosingCtaProps>)
     secondaryIcon,
     borderTop = false,
   } = props;
+
+  const slotActions = puck.getSlotData?.('actions') ?? [];
+  const hasSlotActions = slotActions.length > 0;
 
   return (
     <section
@@ -73,12 +46,28 @@ export function ClosingCtaBlock({ props }: BlockComponentProps<ClosingCtaProps>)
           {body ? <p className="mt-3 text-white/70">{body}</p> : null}
         </div>
         <div className="flex flex-wrap gap-3">
-          {primaryLabel && primaryHref
-            ? Cta(primaryLabel, primaryHref, true, primaryIcon)
-            : null}
-          {secondaryLabel && secondaryHref
-            ? Cta(secondaryLabel, secondaryHref, false, secondaryIcon)
-            : null}
+          {hasSlotActions ? (
+            puck.renderSlot('actions')
+          ) : (
+            <>
+              {primaryLabel && primaryHref ? (
+                <ClosingCtaActionLink
+                  label={primaryLabel}
+                  href={primaryHref}
+                  variant="primary"
+                  icon={primaryIcon}
+                />
+              ) : null}
+              {secondaryLabel && secondaryHref ? (
+                <ClosingCtaActionLink
+                  label={secondaryLabel}
+                  href={secondaryHref}
+                  variant="secondary"
+                  icon={secondaryIcon}
+                />
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </section>

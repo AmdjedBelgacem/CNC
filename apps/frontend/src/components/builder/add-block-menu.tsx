@@ -75,6 +75,7 @@ const BLOCK_ICONS: Record<string, LucideIcon> = {
   'spotlight-card': Sparkles,
   'twin-code-line': TerminalSquare,
   'twin-readout': Gauge,
+  'closing-cta-action': MousePointerClick,
   'closing-cta': CheckSquare2,
   'live-island': MousePointerClick,
   nav: Navigation,
