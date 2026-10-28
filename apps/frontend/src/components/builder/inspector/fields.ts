@@ -127,6 +127,13 @@ const textColorOptions = [
   { label: 'Accent', labelKey: 'accent', value: 'text-accent' },
   { label: 'White', labelKey: 'white', value: 'text-white' },
 ];
+const sectionBgOptions = [
+  { label: 'Lowest surface', value: 'bg-surface-container-lowest' },
+  { label: 'Low surface', value: 'bg-surface-container-low' },
+  { label: 'Transparent', value: 'bg-transparent' },
+  { label: 'Card', value: 'bg-card' },
+  { label: 'Sunken', value: 'bg-surface-sunken' },
+];
 const gapOptions = [
   { label: 'None', labelKey: 'none', value: 'none' },
   { label: '8px', labelKey: '8px', value: 'sm' },
@@ -156,6 +163,18 @@ export const headingInspector = defineInspector<HeadingProps>().groups([
         ],
       },
       { key: 'text', label: 'Text', control: 'textarea', hint: 'A newline creates a line break.' },
+      {
+        key: 'accentText',
+        label: 'Accent phrase',
+        control: 'text',
+        hint: 'Italic primary phrase rendered after the heading text.',
+      },
+      {
+        key: 'suffixText',
+        label: 'Suffix text',
+        control: 'text',
+        hint: 'Plain text rendered after the accent phrase.',
+      },
     ],
   },
   {
@@ -611,6 +630,7 @@ export const badgeInspector = defineInspector<BadgeProps>().groups([
         ],
       },
       { key: 'uppercase', label: 'Uppercase', control: 'toggle' },
+      { key: 'pulse', label: 'Pulse dot', control: 'toggle' },
       { key: 'color', label: 'Color', control: 'select', options: textColorOptions },
     ],
   },
@@ -893,12 +913,26 @@ export const statItemInspector = defineInspector<StatItemProps>().groups([
       },
       { key: 'align', label: 'Alignment', control: 'segmented', options: alignOptions },
       { key: 'hover', label: 'Hover lift', control: 'toggle' },
+      {
+        key: 'shadow',
+        label: 'Shadow',
+        control: 'select',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'Small', value: 'sm' },
+          { label: 'Medium', value: 'md' },
+          { label: 'Large', value: 'lg' },
+          { label: 'XL', value: 'xl' },
+          { label: 'Glow', value: 'glow' },
+        ],
+      },
     ],
   },
   spacingGroup<StatItemProps>(),
   advancedGroup<StatItemProps>(),
 ]);
 export const logoItemInspector = defineInspector<Record<string, never>>().groups([
+  spacingGroup<Record<string, never>>(),
   advancedGroup<Record<string, never>>(),
 ]);
 export const featureItemInspector = defineInspector<FeatureItemProps>().groups([
@@ -1115,6 +1149,26 @@ export const sectionInspector = defineInspector<SectionProps>().groups([
         hint: 'Pixels',
         hintKey: 'pixels',
       },
+      {
+        key: 'marginTop',
+        label: 'Margin top',
+        control: 'slider',
+        min: 0,
+        max: 320,
+        step: 4,
+        hint: 'Pixels',
+        hintKey: 'pixels',
+      },
+      {
+        key: 'marginBottom',
+        label: 'Margin bottom',
+        control: 'slider',
+        min: 0,
+        max: 320,
+        step: 4,
+        hint: 'Pixels',
+        hintKey: 'pixels',
+      },
     ],
   },
   { id: 'spacing', title: 'Spacing', icon: Box, fields: PADDING_FIELDS as never[] },
@@ -1263,6 +1317,7 @@ export const navInspector = defineInspector<NavProps>().groups([
       },
     ],
   },
+  spacingGroup<NavProps>(),
   advancedGroup<NavProps>(),
 ]);
 export const heroInspector = defineInspector<HeroProps>().groups([
@@ -1528,6 +1583,15 @@ export const partnerLogosInspector = defineInspector<PartnerLogosProps>().groups
         hint: 'Pixels',
         hintKey: 'pixels',
       },
+      {
+        key: 'frame',
+        label: 'Logo frame',
+        control: 'segmented',
+        options: [
+          { label: 'Glass wall', value: 'wall' },
+          { label: 'Bare strip', value: 'strip' },
+        ],
+      },
     ],
   },
   advancedGroup<PartnerLogosProps>(),
@@ -1708,6 +1772,12 @@ export const ctaBannerInspector = defineInspector<CtaBannerProps>().groups([
           { label: '4rem', labelKey: '4rem', value: 'rounded-[4rem]' },
         ],
       },
+      {
+        key: 'sectionBg',
+        label: 'Section background',
+        control: 'select',
+        options: sectionBgOptions,
+      },
     ],
   },
   {
@@ -1805,6 +1875,12 @@ export const faqInspector = defineInspector<FaqProps>().groups([
         hint: 'Pixels',
         hintKey: 'pixels',
       },
+      {
+        key: 'sectionBg',
+        label: 'Section background',
+        control: 'select',
+        options: sectionBgOptions,
+      },
     ],
   },
   advancedGroup<FaqProps>(),
@@ -1889,6 +1965,29 @@ export const spotlightCardsInspector = defineInspector<SpotlightCardsProps>().gr
     ],
   },
   {
+    id: 'cards',
+    title: 'Cards',
+    titleKey: 'cards',
+    icon: Rows3,
+    fields: [
+      {
+        key: 'items',
+        label: 'Spotlight cards',
+        control: 'repeater',
+        itemLabel: 'card',
+        maxItems: 6,
+        newItem: () => ({ tag: 'NEW', title: 'Spotlight card', href: '/academy' }),
+        itemFields: [
+          { key: 'tag', label: 'Tag', control: 'text' },
+          { key: 'title', label: 'Title', control: 'text' },
+          { key: 'meta', label: 'Meta line', control: 'text' },
+          { key: 'href', label: 'Link', control: 'text', placeholder: '/academy' },
+        ],
+        getItemSummary: (item) => String(item.title ?? 'Spotlight card'),
+      },
+    ],
+  },
+  {
     id: 'style',
     title: 'Style',
     titleKey: 'style',
@@ -1903,8 +2002,19 @@ export const spotlightCardsInspector = defineInspector<SpotlightCardsProps>().gr
           { label: 'Sunken', value: 'sunken' },
         ],
       },
+      {
+        key: 'columns',
+        label: 'Columns',
+        control: 'select',
+        options: [
+          { label: '3 columns', value: 'md:grid-cols-3' },
+          { label: '2 columns', value: 'md:grid-cols-2' },
+        ],
+      },
       { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingRight', label: 'Padding right', control: 'number' },
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+      { key: 'paddingLeft', label: 'Padding left', control: 'number' },
     ],
   },
   layoutOnlyGroup(),
@@ -1931,8 +2041,10 @@ export const closingCtaInspector = defineInspector<ClosingCtaProps>().groups([
     fields: [
       { key: 'primaryLabel', label: 'Primary label', control: 'text' },
       { key: 'primaryHref', label: 'Primary link', control: 'text', placeholder: '/path' },
+      { key: 'primaryIcon', label: 'Primary icon', control: 'icon' },
       { key: 'secondaryLabel', label: 'Secondary label', control: 'text' },
       { key: 'secondaryHref', label: 'Secondary link', control: 'text', placeholder: '/path' },
+      { key: 'secondaryIcon', label: 'Secondary icon', control: 'icon' },
     ],
   },
   {
@@ -1943,7 +2055,9 @@ export const closingCtaInspector = defineInspector<ClosingCtaProps>().groups([
     fields: [
       { key: 'borderTop', label: 'Top border', control: 'toggle' },
       { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingRight', label: 'Padding right', control: 'number' },
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+      { key: 'paddingLeft', label: 'Padding left', control: 'number' },
     ],
   },
   layoutOnlyGroup(),
@@ -1963,6 +2077,29 @@ export const cardGridInspector = defineInspector<CardGridProps>().groups([
     ],
   },
   {
+    id: 'cards',
+    title: 'Cards',
+    titleKey: 'cards',
+    icon: Rows3,
+    fields: [
+      {
+        key: 'items',
+        label: 'Cards',
+        control: 'repeater',
+        itemLabel: 'card',
+        maxItems: 8,
+        newItem: () => ({ title: 'New card', body: '', icon: 'school' }),
+        itemFields: [
+          { key: 'title', label: 'Title', control: 'text' },
+          { key: 'body', label: 'Body', control: 'textarea' },
+          { key: 'icon', label: 'Icon', control: 'icon' },
+        ],
+        getItemSummary: (item) => String(item.title ?? 'Card'),
+      },
+      { key: 'note', label: 'Note under grid', control: 'textarea' },
+    ],
+  },
+  {
     id: 'style',
     title: 'Style',
     titleKey: 'style',
@@ -1975,7 +2112,7 @@ export const cardGridInspector = defineInspector<CardGridProps>().groups([
         control: 'select',
         options: [
           { label: '3 columns', value: 'md:grid-cols-3' },
-          { label: '2 columns', value: 'md:grid-cols-2' },
+          { label: '4 columns', value: 'sm:grid-cols-2 lg:grid-cols-4' },
         ],
       },
       {
@@ -1988,7 +2125,9 @@ export const cardGridInspector = defineInspector<CardGridProps>().groups([
         ],
       },
       { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingRight', label: 'Padding right', control: 'number' },
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+      { key: 'paddingLeft', label: 'Padding left', control: 'number' },
     ],
   },
   layoutOnlyGroup(),
@@ -2026,7 +2165,9 @@ export const ctaSignupInspector = defineInspector<CtaSignupProps>().groups([
     icon: Palette,
     fields: [
       { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingRight', label: 'Padding right', control: 'number' },
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+      { key: 'paddingLeft', label: 'Padding left', control: 'number' },
     ],
   },
   layoutOnlyGroup(),
@@ -2071,6 +2212,132 @@ export const heroConsoleInspector = defineInspector<HeroConsoleProps>().groups([
       },
     ],
   },
+  {
+    id: 'legacy-console',
+    title: 'Legacy console',
+    titleKey: 'legacy-console',
+    icon: Layers,
+    fields: [
+      {
+        key: 'feedLabel',
+        label: 'Feed label',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'feedValue',
+        label: 'Feed value',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'feedTag',
+        label: 'Feed tag',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'spindleLabel',
+        label: 'Spindle label',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'spindleValue',
+        label: 'Spindle value',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'spindleTag',
+        label: 'Spindle tag',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'auditValue',
+        label: 'Audit value',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'axesTitle',
+        label: 'Axes title',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'vibration',
+        label: 'Vibration note',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'controllerLabel',
+        label: 'Controller label',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'floatIcon',
+        label: 'Floating metric icon',
+        control: 'icon',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'floatLabel',
+        label: 'Floating metric label',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'floatValue',
+        label: 'Floating metric value',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'floatTag',
+        label: 'Floating metric tag',
+        control: 'text',
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'axes',
+        label: 'Axis readouts',
+        control: 'repeater',
+        itemLabel: 'axis',
+        maxItems: 8,
+        newItem: () => ({ label: 'X', value: '0', tone: 'normal' }),
+        itemFields: [
+          { key: 'label', label: 'Label', control: 'text' },
+          { key: 'value', label: 'Value', control: 'text' },
+          {
+            key: 'tone',
+            label: 'Tone',
+            control: 'select',
+            options: [
+              { label: 'Normal', value: 'normal' },
+              { label: 'Accent', value: 'accent' },
+            ],
+          },
+        ],
+        getItemSummary: (item) => String(item.label ?? 'Axis'),
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+      {
+        key: 'modes',
+        label: 'Mode buttons',
+        control: 'repeater',
+        itemLabel: 'mode',
+        maxItems: 6,
+        newItem: () => ({ label: 'Mode' }),
+        itemFields: [{ key: 'label', label: 'Label', control: 'text' }],
+        getItemSummary: (item) => String(item.label ?? 'Mode'),
+        showWhen: (p) => p.consoleMode === 'legacy',
+      },
+    ],
+  },
   spacingGroup(),
   advancedGroup(),
 ]);
@@ -2100,7 +2367,7 @@ export const consoleFrameInspector = defineInspector<ConsoleFrameProps>().groups
       { key: 'glass', label: 'Glass treatment', control: 'toggle' },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2116,7 +2383,7 @@ export const consoleHeaderInspector = defineInspector<ConsoleHeaderProps>().grou
       { key: 'showTrafficLights', label: 'Traffic lights', control: 'toggle' },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2164,7 +2431,7 @@ export const consoleImageInspector = defineInspector<ConsoleImageProps>().groups
       { key: 'opacity', label: 'Opacity', control: 'slider', min: 0, max: 100, step: 1 },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2198,7 +2465,7 @@ export const consoleTelemetryStackInspector = defineInspector<ConsoleTelemetrySt
       },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2223,7 +2490,7 @@ export const consoleTelemetryInspector = defineInspector<ConsoleTelemetryProps>(
       },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2258,7 +2525,7 @@ export const consoleAuditInspector = defineInspector<ConsoleAuditProps>().groups
       },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2306,7 +2573,7 @@ export const consoleAxisInspector = defineInspector<ConsoleAxisProps>().groups([
       },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2318,7 +2585,7 @@ export const consoleModeBarInspector = defineInspector<ConsoleModeBarProps>().gr
     icon: Type,
     fields: [{ key: 'controllerLabel', label: 'Controller label', control: 'text' }],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2334,7 +2601,7 @@ export const consoleModeInspector = defineInspector<ConsoleModeProps>().groups([
       { key: 'hideOnMobile', label: 'Hide on mobile', control: 'toggle' },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2370,7 +2637,7 @@ export const consoleMetricInspector = defineInspector<ConsoleMetricProps>().grou
       },
     ],
   },
-  layoutOnlyGroup(),
+  spacingGroup(),
   advancedGroup(),
 ]);
 
@@ -2386,14 +2653,71 @@ export const twinSectionInspector = defineInspector<TwinSectionProps>().groups([
     ],
   },
   {
+    id: 'terminal',
+    title: 'Terminal',
+    titleKey: 'terminal',
+    icon: Rows3,
+    fields: [
+      {
+        key: 'codeLines',
+        label: 'Code lines',
+        control: 'repeater',
+        itemLabel: 'line',
+        maxItems: 24,
+        newItem: () => ({ text: 'G01 X0 Y0', tone: 'code' }),
+        itemFields: [
+          { key: 'text', label: 'Line', control: 'textarea' },
+          {
+            key: 'tone',
+            label: 'Tone',
+            control: 'select',
+            options: [
+              { label: 'Comment', value: 'comment' },
+              { label: 'Code', value: 'code' },
+              { label: 'Highlight', value: 'highlight' },
+              { label: 'OK', value: 'ok' },
+            ],
+          },
+        ],
+        getItemSummary: (item) => String(item.text ?? 'Line'),
+      },
+      {
+        key: 'readouts',
+        label: 'Readout cells',
+        control: 'repeater',
+        itemLabel: 'readout',
+        maxItems: 8,
+        newItem: () => ({ label: 'Readout', value: '0', tone: 'normal' }),
+        itemFields: [
+          { key: 'label', label: 'Label', control: 'text' },
+          { key: 'value', label: 'Value', control: 'text' },
+          {
+            key: 'tone',
+            label: 'Tone',
+            control: 'select',
+            options: [
+              { label: 'Success', value: 'success' },
+              { label: 'Normal', value: 'normal' },
+              { label: 'Accent', value: 'accent' },
+              { label: 'Primary', value: 'primary' },
+            ],
+          },
+        ],
+        getItemSummary: (item) => String(item.label ?? 'Readout'),
+      },
+    ],
+  },
+  {
     id: 'style',
     title: 'Style',
     titleKey: 'style',
     icon: Palette,
     fields: [
-      { key: 'sectionBg', label: 'Section background', control: 'text' },
+      { key: 'sectionBg', label: 'Section background', control: 'select', options: sectionBgOptions },
       { key: 'paddingTop', label: 'Padding top', control: 'number' },
+      { key: 'paddingRight', label: 'Padding right', control: 'number' },
       { key: 'paddingBottom', label: 'Padding bottom', control: 'number' },
+      { key: 'paddingLeft', label: 'Padding left', control: 'number' },
     ],
   },
   layoutOnlyGroup(),
@@ -2523,6 +2847,15 @@ export const programCardsInspector = defineInspector<ProgramCardsProps>().groups
         hint: 'Pixels',
         hintKey: 'pixels',
       },
+      {
+        key: 'limit',
+        label: 'Maximum cards',
+        control: 'slider',
+        min: 1,
+        max: 24,
+        step: 1,
+        hint: 'Unset shows every published academy.',
+      },
     ],
   },
   advancedGroup<ProgramCardsProps>(),
@@ -2568,6 +2901,15 @@ export const testimonialsInspector = defineInspector<TestimonialsProps>().groups
         hint: 'Pixels',
         hintKey: 'pixels',
       },
+      {
+        key: 'limit',
+        label: 'Maximum cards',
+        control: 'slider',
+        min: 1,
+        max: 24,
+        step: 1,
+        hint: 'Unset shows every published testimonial.',
+      },
     ],
   },
   advancedGroup<TestimonialsProps>(),
@@ -2608,6 +2950,21 @@ export const liveIslandInspector = defineInspector<LiveIslandProps>().groups([
   spacingGroup<LiveIslandProps>(),
 ]);
 
+const catalogCtaFields: InspectorFieldDef<Record<string, unknown>>[] = [
+  { key: 'label', label: 'Label', control: 'text' },
+  { key: 'href', label: 'Link', control: 'text', placeholder: '/path' },
+  {
+    key: 'variant',
+    label: 'Style',
+    control: 'select',
+    options: [
+      { label: 'Primary', value: 'primary' },
+      { label: 'Secondary', value: 'secondary' },
+    ],
+  },
+  { key: 'icon', label: 'Icon', control: 'icon' },
+];
+
 export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
   {
     id: 'content',
@@ -2616,10 +2973,55 @@ export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
     icon: Type,
     fields: [
       { key: 'eyebrow', label: 'Eyebrow', control: 'text' },
+      { key: 'eyebrowIcon', label: 'Eyebrow icon', control: 'icon' },
+      { key: 'metaLine', label: 'Meta line', control: 'text' },
       { key: 'title', label: 'Title', control: 'text' },
       { key: 'titleAccent', label: 'Title accent', control: 'text' },
       { key: 'subtitle', label: 'Subtitle', control: 'textarea' },
     ],
+  },
+  {
+    id: 'stats',
+    title: 'Stats strip',
+    titleKey: 'stats',
+    icon: Rows3,
+    fields: [
+      {
+        key: 'stats',
+        label: 'Stats',
+        control: 'repeater',
+        itemLabel: 'stat',
+        maxItems: 6,
+        newItem: () => ({ label: 'Label', value: '0' }),
+        itemFields: [
+          { key: 'label', label: 'Label', control: 'text' },
+          { key: 'value', label: 'Value', control: 'text' },
+        ],
+        getItemSummary: (item) => String(item.label ?? 'Stat'),
+      },
+    ],
+  },
+  {
+    id: 'ctas',
+    title: 'Buttons',
+    titleKey: 'actions',
+    icon: MousePointerClick,
+    fields: [
+      { key: 'primaryCta', label: 'Primary CTA', control: 'object', objectFields: catalogCtaFields },
+      {
+        key: 'secondaryCta',
+        label: 'Secondary CTA',
+        control: 'object',
+        objectFields: catalogCtaFields,
+      },
+    ],
+  },
+  {
+    id: 'style',
+    title: 'Style',
+    titleKey: 'style',
+    icon: Palette,
+    fields: [{ key: 'borderBottom', label: 'Bottom border', control: 'toggle' }],
   },
   spacingGroup(),
   advancedGroup(),

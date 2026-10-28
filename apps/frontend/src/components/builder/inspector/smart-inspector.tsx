@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { getBlockDefinition } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
-import { ChevronDown, MousePointerClick, Settings2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, MousePointerClick, Plus, Settings2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JsonInspectorSection } from '../node-inspector';
 import { BLOCK_INSPECTOR } from './fields';
@@ -288,9 +288,149 @@ function renderControl(
       return <IconControl value={String(value ?? '')} onChange={onChange} />;
     case 'image-upload':
       return <ImageUploadControl value={String(value ?? '')} onChange={(v) => onChange(v)} />;
+    case 'repeater':
+      return <RepeaterControl field={field} value={value} onChange={onChange} />;
+    case 'object':
+      return <ObjectControl field={field} value={value} onChange={onChange} />;
     default:
       return null;
   }
+}
+
+/**
+ * Repeatable array editor. Each item is a normal inspector field group, so
+ * nested text, selects, icons and images all use the same controls and reset
+ * behaviour as top-level props. Add/remove/reorder keep the array schema-safe.
+ */
+function RepeaterControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: InspectorFieldDef<Record<string, unknown>>;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const items = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+  const itemFields = field.itemFields ?? [];
+  const maxItems = field.maxItems ?? 99;
+  const itemLabel = field.itemLabel ?? 'item';
+  const updateItem = (index: number, key: string, next: unknown) => {
+    onChange(items.map((item, i) => (i === index ? { ...item, [key]: next } : item)));
+  };
+  const removeItem = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+  const moveItem = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    const current = next[index];
+    const other = next[target];
+    if (!current || !other) return;
+    next[index] = other;
+    next[target] = current;
+    onChange(next);
+  };
+  const addItem = () => {
+    if (items.length >= maxItems) return;
+    onChange([...items, field.newItem?.() ?? {}]);
+  };
+  return (
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <div
+          key={index}
+          className="overflow-hidden rounded-md border border-border bg-background"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/30 px-2 py-1.5">
+            <span className="truncate text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {field.getItemSummary?.(item) || `${itemLabel} ${index + 1}`}
+            </span>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => moveItem(index, -1)}
+                disabled={index === 0}
+                title="Move up"
+                className="flex size-6 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              >
+                <ChevronUp className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveItem(index, 1)}
+                disabled={index === items.length - 1}
+                title="Move down"
+                className="flex size-6 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              >
+                <ChevronDown className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => removeItem(index)}
+                title={`Remove ${itemLabel}`}
+                className="flex size-6 items-center justify-center rounded text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {itemFields.map((itemField) => (
+              <FieldControl
+                key={itemField.key}
+                field={itemField}
+                value={item[itemField.key]}
+                defaultValue={itemField.resetValue}
+                onChange={(next) => updateItem(index, itemField.key, next)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addItem}
+        disabled={items.length >= maxItems}
+        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-2 py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+      >
+        <Plus className="size-3.5" /> Add {itemLabel}
+      </button>
+    </div>
+  );
+}
+
+/** Nested object editor for structured props such as CTA objects. */
+function ObjectControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: InspectorFieldDef<Record<string, unknown>>;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const object =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const objectFields = field.objectFields ?? [];
+  return (
+    <div className="overflow-hidden rounded-md border border-border bg-background">
+      <div className="divide-y divide-border">
+        {objectFields.map((objectField) => (
+          <FieldControl
+            key={objectField.key}
+            field={objectField}
+            value={object[objectField.key]}
+            defaultValue={objectField.resetValue}
+            onChange={(next) => onChange({ ...object, [objectField.key]: next })}
+          />
+        ))}
+      </div>
+    </div>
+  );
 } /** * Debounces commits for text-like inputs so typing stays smooth (no store * dispatch per keystroke, stable cursor). Local state drives the input; * the value is committed after a 150ms pause or on blur. External changes * (undo/redo/page switch) are picked up via lastCommitted comparison. */
 function useDebouncedValue<T>(value: T, commit: (next: T) => void, delay = 150) {
   const [local, setLocal] = useState(value);

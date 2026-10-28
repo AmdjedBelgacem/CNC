@@ -16,7 +16,9 @@ export type ControlKind =
   | 'toggle'
   | 'color'
   | 'icon'
-  | 'image-upload';
+  | 'image-upload'
+  | 'repeater'
+  | 'object';
 
 export interface FieldOption {
   label: string;
@@ -50,6 +52,18 @@ export interface InspectorFieldDef<TProps = Record<string, unknown>> {
   showWhen?: (props: TProps) => boolean;
   /** "Reset" target when it differs from the registry defaultProps. */
   resetValue?: unknown;
+  /** Repeater controls: the fields rendered for each item. */
+  itemFields?: InspectorFieldDef<Record<string, unknown>>[];
+  /** Repeater controls: factory for a newly added item. */
+  newItem?: () => Record<string, unknown>;
+  /** Repeater controls: maximum number of items. */
+  maxItems?: number;
+  /** Repeater controls: singular noun used in the add button and item headers. */
+  itemLabel?: string;
+  /** Repeater controls: short summary shown in an item header. */
+  getItemSummary?: (item: Record<string, unknown>) => string;
+  /** Object controls: the fields rendered for the nested object. */
+  objectFields?: InspectorFieldDef<Record<string, unknown>>[];
 }
 
 export interface InspectorGroup<TProps = Record<string, unknown>> {
