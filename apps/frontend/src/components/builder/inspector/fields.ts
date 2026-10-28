@@ -1967,7 +1967,6 @@ export const spotlightCardsInspector = defineInspector<SpotlightCardsProps>().gr
   {
     id: 'cards',
     title: 'Cards',
-    titleKey: 'cards',
     icon: Rows3,
     fields: [
       {
@@ -2079,7 +2078,6 @@ export const cardGridInspector = defineInspector<CardGridProps>().groups([
   {
     id: 'cards',
     title: 'Cards',
-    titleKey: 'cards',
     icon: Rows3,
     fields: [
       {
@@ -2215,7 +2213,6 @@ export const heroConsoleInspector = defineInspector<HeroConsoleProps>().groups([
   {
     id: 'legacy-console',
     title: 'Legacy console',
-    titleKey: 'legacy-console',
     icon: Layers,
     fields: [
       {
@@ -2655,7 +2652,6 @@ export const twinSectionInspector = defineInspector<TwinSectionProps>().groups([
   {
     id: 'terminal',
     title: 'Terminal',
-    titleKey: 'terminal',
     icon: Rows3,
     fields: [
       {
@@ -2983,7 +2979,6 @@ export const catalogHeroInspector = defineInspector<CatalogHeroProps>().groups([
   {
     id: 'stats',
     title: 'Stats strip',
-    titleKey: 'stats',
     icon: Rows3,
     fields: [
       {
