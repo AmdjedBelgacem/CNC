@@ -42,6 +42,42 @@ export interface TranslateFieldsResult {
 const MAX_FIELDS = 40;
 const MAX_FIELD_CHARS = 8000;
 
+/**
+ * Bulk translation is split into chunks this size.
+ *
+ * The provider timeout is a wall-clock limit and the model's latency grows with the number of
+ * output tokens. A 40-field page chunk needed 40–55s at a 4k output budget, which is too close to
+ * a chat-sized timeout; 12 fields finish comfortably and, if one chunk fails, only those fields
+ * are lost instead of the whole page.
+ */
+const TRANSLATE_BATCH_FIELDS = 12;
+
+/** Translation output needs more room than a chat reply; a page's Arabic JSON is large. */
+const MIN_TRANSLATION_TOKENS = 2048;
+const MAX_TRANSLATION_TOKENS = 8000;
+
+/** Bulk translation legitimately outlives the interactive assistant's timeout. */
+const MIN_TRANSLATION_TIMEOUT_MS = 60_000;
+
+/**
+ * Estimate the output budget for a translation call.
+ *
+ * Arabic tokenises less efficiently than English and the reply repeats every key, so a
+ * character-count estimate needs headroom. The runtime's own `maxTokens` is a floor, not a
+ * ceiling: an admin who tuned it for chat should not make bulk translation truncate.
+ */
+export function translationTokenBudget(
+  runtimeMaxTokens: number,
+  fields: Array<[string, string]>,
+): number {
+  const chars = fields.reduce((total, [key, value]) => total + key.length + value.length, 0);
+  const estimated = Math.ceil(chars * 1.5) + fields.length * 8 + 64;
+  return Math.min(
+    MAX_TRANSLATION_TOKENS,
+    Math.max(runtimeMaxTokens, MIN_TRANSLATION_TOKENS, estimated),
+  );
+}
+
 @Injectable()
 export class AiTranslationService {
   private readonly logger = new Logger(AiTranslationService.name);
@@ -70,10 +106,15 @@ export class AiTranslationService {
     }
     const usable = raw
       .map(([key, value]) => [key, (value as string).trim()] as [string, string])
-      .filter(([, value]) => value.length > 0)
-      .slice(0, MAX_FIELDS);
+      .filter(([, value]) => value.length > 0);
     if (usable.length === 0) {
       throw new BadRequestException('There is nothing to translate — fill in at least one English field first');
+    }
+    if (usable.length > MAX_FIELDS) {
+      // Never drop the tail silently: the caller sees exactly why and can use the batch endpoint.
+      throw new BadRequestException(
+        `Too many fields in one request (${usable.length}); the limit is ${MAX_FIELDS}`,
+      );
     }
     for (const [key, value] of usable) {
       if (value.length > MAX_FIELD_CHARS) {
@@ -82,6 +123,9 @@ export class AiTranslationService {
     }
 
     const runtime = await this.settings.getRuntimeConfig(tenantId);
+    const keys = usable.map(([key]) => key);
+    const maxTokens = translationTokenBudget(runtime.maxTokens, usable);
+    const timeoutMs = Math.max(runtime.timeoutMs, MIN_TRANSLATION_TIMEOUT_MS);
 
     const system = [
       'You are a professional technical translator for a CNC machining education platform.',
@@ -90,11 +134,21 @@ export class AiTranslationService {
       '- Preserve meaning and technical accuracy. Keep product and course names, model numbers, units and acronyms (CNC, CAD, CAM, 5-axis, ISO, mada) unchanged.',
       '- Return ONLY valid JSON. No prose, no markdown fences, no commentary.',
       '- Use the same keys as the input and the same number of values.',
+      '- Return every key from the input, even when the value is short.',
       '- Keep placeholders, numbers and URLs exactly as they appear.',
       '- If a value is already Arabic, return it unchanged.',
     ].join('\n');
 
     const payload = Object.fromEntries(usable);
+    const messages = [
+      { role: 'system' as const, content: system },
+      {
+        role: 'user' as const,
+        content: input.entity
+          ? `Translate these ${input.entity} fields:\n${JSON.stringify(payload, null, 2)}`
+          : `Translate these fields:\n${JSON.stringify(payload, null, 2)}`,
+      },
+    ];
     let content: string;
     let usedFallback = false;
     let model = runtime.primaryModel;
@@ -104,35 +158,62 @@ export class AiTranslationService {
         apiKey: runtime.apiKey,
         model: runtime.primaryModel,
         fallbackModel: runtime.fallbackModel,
-        messages: [
-          { role: 'system', content: system },
-          {
-            role: 'user',
-            content: input.entity
-              ? `Translate these ${input.entity} fields:\n${JSON.stringify(payload, null, 2)}`
-              : `Translate these fields:\n${JSON.stringify(payload, null, 2)}`,
-          },
-        ],
-        // Translation is close to deterministic; a little temperature lets the model pick the
-        // natural Arabic phrasing instead of repeating one template.
-        maxTokens: runtime.maxTokens,
-        temperature: Math.max(runtime.temperature, 0.2),
-        timeoutMs: runtime.timeoutMs,
+        messages,
+        // Structured JSON is markedly more reliable at temperature 0. Translation does not need
+        // creative variation, and one stray markdown fence or truncated object costs a retry.
+        maxTokens,
+        temperature: 0,
+        timeoutMs,
       });
       content = result.content;
       usedFallback = result.usedFallback;
       model = result.model;
     } catch (error) {
       const code = error instanceof AiProviderError ? error.code : 'provider_error';
-      this.logger.warn(`Translation failed (${code})`);
+      const status = error instanceof AiProviderError ? error.providerStatus : undefined;
+      this.logger.warn(`Translation failed (${code}${status ? ` ${status}` : ''})`);
       throw new ServiceUnavailableException(
         code === 'missing_api_key'
           ? 'Add an AI provider key in AI Assistant settings before translating'
-          : 'The AI provider could not complete the translation',
+          : code === 'network_error'
+            ? 'The AI provider timed out or could not be reached — try again'
+            : code === 'empty_completion'
+              ? 'The AI provider ran out of output space — try translating a smaller selection'
+              : code === 'http_error'
+                ? `The AI provider rejected the translation request${status ? ` (HTTP ${status})` : ''}`
+                : 'The AI provider could not complete the translation',
       );
     }
 
-    const translations = this.parse(content, usable.map(([key]) => key));
+    let translations: Record<string, string>;
+    try {
+      translations = this.parse(content, keys);
+    } catch (parseError) {
+      /**
+       * A truncated JSON reply is the output budget running out, not a bad translation.
+       * Retry once with more room before giving up; the batch caller still keeps every other
+       * chunk if this one cannot be recovered.
+       */
+      if (maxTokens >= MAX_TRANSLATION_TOKENS) throw parseError;
+      try {
+        const retry = await this.provider.complete({
+          baseUrl: runtime.baseUrl,
+          apiKey: runtime.apiKey,
+          model: runtime.primaryModel,
+          fallbackModel: runtime.fallbackModel,
+          messages,
+          maxTokens: Math.min(MAX_TRANSLATION_TOKENS, maxTokens * 2),
+          temperature: 0,
+          timeoutMs,
+        });
+        content = retry.content;
+        usedFallback = usedFallback || retry.usedFallback;
+        model = retry.model;
+        translations = this.parse(content, keys);
+      } catch {
+        throw parseError;
+      }
+    }
     return { targetLocale, translations, model, usedFallback };
   }
 
@@ -217,7 +298,7 @@ export interface TranslateGroupInput {
 export interface TranslateGroupResult {
   key: string;
   translations: Record<string, string>;
-  /** Set when this group failed; other groups still return. */
+  /** Set when at least one chunk of this group failed; successful chunks are still returned. */
   error?: string;
 }
 
@@ -225,7 +306,7 @@ export interface TranslateGroupsResult {
   groups: TranslateGroupResult[];
   /** Fields translated across every group. */
   translatedCount: number;
-  /** Groups that failed. */
+  /** Groups with at least one failed chunk. */
   failedCount: number;
   model: string;
   usedFallback: boolean;
@@ -279,60 +360,55 @@ export class AiTranslationBatchService {
     let lastModel = '';
     let anyFallback = false;
 
-    // Flatten into batches that respect the per-request field cap, keeping group boundaries.
-    let batch: Array<{ group: TranslateGroupInput; fields: Record<string, string> }> = [];
-    let batchFields = 0;
-    const flush = async () => {
-      if (batch.length === 0) return;
-      const payload = batch.reduce<Record<string, string>>((acc, item) => ({ ...acc, ...item.fields }), {});
-      try {
-        const result = await this.translation.translateFields(tenantId, {
-          sourceLocale: 'en',
-          targetLocale: 'ar',
-          fields: payload,
-          entity: input.entity,
-        });
-        lastModel = result.model;
-        anyFallback = anyFallback || result.usedFallback;
-        // Split the flat reply back onto the groups that contributed each label.
-        for (const item of batch) {
-          const own: Record<string, string> = {};
-          for (const label of Object.keys(item.fields)) {
-            const value = result.translations[label];
-            if (value) own[label] = value;
-          }
-          results.push({ key: item.group.key, translations: own });
-          translatedCount += Object.keys(own).length;
-        }
-      } catch (error) {
-        failedCount += batch.length;
-        const message = error instanceof Error ? error.message : 'Translation failed';
-        this.logger.warn(`Batch of ${batch.length} group(s) failed: ${message}`);
-        for (const item of batch) results.push({ key: item.group.key, translations: {}, error: message });
-      }
-      batch = [];
-      batchFields = 0;
-    };
-
+    /**
+     * Translate one group at a time, splitting it into chunks.
+     *
+     * Groups are kept separate rather than flattened into one payload: two groups can
+     * legitimately use the same label (`title`), and a flat payload would let the later group
+     * overwrite the earlier one's source text and hand both groups the same translation.
+     * Chunking inside the group keeps each model call small enough for the provider timeout
+     * and preserves every chunk that succeeds.
+     */
     for (const group of groups) {
       const fields: Record<string, string> = {};
       for (const [label, value] of Object.entries(group.fields ?? {})) {
         if (typeof value === 'string' && value.trim()) fields[label] = value;
       }
-      if (Object.keys(fields).length === 0) {
+      const entries = Object.entries(fields);
+      if (entries.length === 0) {
         results.push({ key: group.key, translations: {} });
         continue;
       }
-      const count = Object.keys(fields).length;
-      if (batchFields + count > MAX_FIELDS && batch.length > 0) await flush();
-      batch.push({ group, fields });
-      batchFields += count;
-    }
-    await flush();
 
-    // Preserve the caller's ordering regardless of how batches interleaved.
-    const order = new Map(groups.map((g, i) => [g.key, i]));
-    results.sort((a, b) => (order.get(a.key) ?? 0) - (order.get(b.key) ?? 0));
+      const merged: Record<string, string> = {};
+      let groupError: string | undefined;
+      for (let index = 0; index < entries.length; index += TRANSLATE_BATCH_FIELDS) {
+        const chunk = Object.fromEntries(entries.slice(index, index + TRANSLATE_BATCH_FIELDS));
+        try {
+          const result = await this.translation.translateFields(tenantId, {
+            sourceLocale: 'en',
+            targetLocale: 'ar',
+            fields: chunk,
+            entity: input.entity,
+          });
+          lastModel = result.model;
+          anyFallback = anyFallback || result.usedFallback;
+          Object.assign(merged, result.translations);
+          translatedCount += Object.keys(result.translations).length;
+        } catch (error) {
+          groupError = error instanceof Error ? error.message : 'Translation failed';
+          this.logger.warn(
+            `Chunk of ${Object.keys(chunk).length} field(s) in group "${group.key}" failed: ${groupError}`,
+          );
+        }
+      }
+      results.push({
+        key: group.key,
+        translations: merged,
+        ...(groupError ? { error: groupError } : {}),
+      });
+      if (groupError) failedCount += 1;
+    }
 
     return { groups: results, translatedCount, failedCount, model: lastModel, usedFallback: anyFallback };
   }

@@ -142,15 +142,20 @@ export function useTranslateDraft({
 
       const failedKeys: string[] = [];
       for (const group of result.groups ?? []) {
-        if (group.error || Object.keys(group.translations ?? {}).length === 0) {
-          if (group.error) failedKeys.push(group.key);
-          continue;
-        }
-        onApply(group.key, group.translations);
+        const translations = group.translations ?? {};
+        if (group.error) failedKeys.push(group.key);
+        // A group can be partially successful: the backend returns every chunk that
+        // finished, so apply those even when another chunk timed out.
+        if (Object.keys(translations).length > 0) onApply(group.key, translations);
       }
 
       const count = result.translatedCount ?? 0;
-      if (count === 0) throw new Error(t('empty'));
+      if (count === 0) {
+        // Surface the provider's reason (timeout, missing key, …) rather than a blank
+        // "no translation" message; the group error is the only useful diagnostic here.
+        const firstError = (result.groups ?? []).find((group) => group.error)?.error;
+        throw new Error(firstError || t('empty'));
+      }
 
       toast({
         type: failedKeys.length > 0 ? 'info' : 'ok',
