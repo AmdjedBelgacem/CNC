@@ -7,6 +7,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { CoursesService } from './courses.service';
+import { LiveSessionsService } from './live-sessions.service';
 import { UploadService } from '../auth/services/upload.service';
 import {
   CreateCourseDto,
@@ -24,6 +25,7 @@ import {
   LessonContentDocumentDto,
   UpdateCourseDto,
 } from './dto/courses.dto';
+import { CreateLiveSessionDto, UpdateLiveSessionDto } from './dto/live-sessions.dto';
 
 // Admin course management surface — role-guarded, tenant-scoped.
 // The public /courses controller remains untouched for student flows.
@@ -34,6 +36,7 @@ export class AdminCoursesController {
   private readonly logger = new Logger(AdminCoursesController.name);
   constructor(
     private courses: CoursesService,
+    private liveSessions: LiveSessionsService,
     private upload: UploadService,
   ) {}
 
@@ -309,5 +312,86 @@ export class AdminCoursesController {
     @Body() dto: ReorderCurriculumDto,
   ) {
     return this.courses.reorderCurriculum(tenant.id, slug, dto);
+  }
+
+  // --- Live sessions (Google Meet) ---
+  // courseId (not slug) because these routes are called straight from the
+  // studio, which already holds the course id.
+  @Get(':courseId/live-sessions')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'List all live sessions of a course (admin view, incl. drafts)' })
+  listLiveSessions(
+    @CurrentTenant() tenant: { id: string },
+    @Param('courseId') courseId: string,
+  ) {
+    return this.liveSessions.listForAdmin(tenant.id, courseId);
+  }
+
+  @Post(':courseId/live-sessions')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'Create a live session (draft; soft-warns on overlapping sessions)' })
+  createLiveSession(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('courseId') courseId: string,
+    @Body() dto: CreateLiveSessionDto,
+  ) {
+    return this.liveSessions.create(tenant.id, courseId, dto, req.user);
+  }
+
+  @Patch(':courseId/live-sessions/:sessionId')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'Update a live session (reschedule, edit details, set Meet URL)' })
+  updateLiveSession(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('sessionId') sessionId: string,
+    @Body() dto: UpdateLiveSessionDto,
+  ) {
+    return this.liveSessions.update(tenant.id, sessionId, dto, req.user);
+  }
+
+  @Delete(':courseId/live-sessions/:sessionId')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'Delete a live session' })
+  deleteLiveSession(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.liveSessions.remove(tenant.id, sessionId, req.user);
+  }
+
+  @Post(':courseId/live-sessions/:sessionId/publish')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'Publish a live session (draft → scheduled; notifies enrolled learners)' })
+  publishLiveSession(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.liveSessions.publish(tenant.id, sessionId, req.user);
+  }
+
+  @Post(':courseId/live-sessions/:sessionId/cancel')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'Cancel a live session (join blocked afterwards)' })
+  cancelLiveSession(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.liveSessions.cancel(tenant.id, sessionId, req.user);
+  }
+
+  @Post(':courseId/live-sessions/:sessionId/provision-meet')
+  @Roles('super_admin', 'admin', 'instructor')
+  @ApiOperation({ summary: 'v2 flag: provision a Google Calendar event + Meet conferenceData' })
+  provisionLiveSessionMeet(
+    @Req() req: any,
+    @CurrentTenant() tenant: { id: string },
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.liveSessions.provisionMeet(tenant.id, sessionId, req.user);
   }
 }

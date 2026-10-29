@@ -6,8 +6,9 @@ import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DifficultyBar } from '@/components/academy/difficulty-bar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Award, BookOpen, ArrowRight, Shield } from 'lucide-react';
+import { Award, BookOpen, ArrowRight, Shield, Video } from 'lucide-react';
 import { CertificateList } from '@/components/certificates/certificate-list';
+import { useNextLiveSession } from '@/hooks/use-live-sessions';
 import Link from 'next/link';
 interface Enrollment {
   id: string;
@@ -35,6 +36,7 @@ export default function AccountPage() {
       ),
     enabled: isAuthenticated,
   });
+  const { nextSession } = useNextLiveSession(isAuthenticated);
   if (!isAuthenticated) {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
@@ -66,6 +68,40 @@ export default function AccountPage() {
         {' '}
         <div className="lg:col-span-3">
           {' '}
+          {nextSession ? (
+            <Card className="mb-8 border-primary/30 hover:border-primary/50 transition-colors">
+              {' '}
+              <CardHeader>
+                {' '}
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  {' '}
+                  <div className="min-w-0">
+                    {' '}
+                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-primary">
+                      {' '}
+                      <Video className="size-4" /> {t('learning.nextLiveSession')}{' '}
+                    </div>{' '}
+                    <CardTitle className="mt-2 text-lg">{nextSession.title}</CardTitle>{' '}
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {nextSession.courseTitle} ·{' '}
+                      {new Intl.DateTimeFormat(undefined, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                        timeZone: nextSession.timezone || undefined,
+                      }).format(new Date(nextSession.startsAt))}
+                    </p>{' '}
+                  </div>{' '}
+                  <Button variant="outline" size="sm" asChild>
+                    {' '}
+                    <Link href={`/courses/${nextSession.courseSlug}#live-sessions`}>
+                      {' '}
+                      {t('learning.openCourse')} <ArrowRight className="flip-rtl ms-1 size-3.5" />{' '}
+                    </Link>{' '}
+                  </Button>{' '}
+                </div>{' '}
+              </CardHeader>{' '}
+            </Card>
+          ) : null}
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             {' '}
             <BookOpen className="size-5 text-primary" /> {t('learning.enrolledCourses')}{' '}

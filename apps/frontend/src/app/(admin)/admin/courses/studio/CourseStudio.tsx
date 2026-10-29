@@ -12,6 +12,7 @@ import { StepBasics } from './StepBasics';
 import { StepMedia } from './StepMedia';
 import { StepPricing } from './StepPricing';
 import { StepLocalization } from './StepSeo';
+import { StepLive } from './StepLive';
 import { StepPublish } from './StepPublish';
 import { StudioPreview } from './StudioPreview';
 import { CurriculumBuilder } from './CurriculumBuilder';
@@ -22,7 +23,7 @@ import { toast } from '@/components/ui/toast';
 import type { CourseStudioData, Lesson, Section } from './types';
 import * as api from './api';
 
-const STEP_KEYS = ['basics', 'curriculum', 'media', 'pricing', 'localization', 'publish'] as const;
+const STEP_KEYS = ['basics', 'curriculum', 'media', 'pricing', 'localization', 'live', 'publish'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
 
 function isStepKey(value: string | null): value is StepKey {
@@ -535,6 +536,7 @@ export function CourseStudio({ slug }: { slug: string }) {
     <StepMedia key="media" course={course} update={update} />,
     <StepPricing key="pricing" course={course} update={update} />,
     <StepLocalization key="localization" course={course} update={update} locale={locale} />,
+    <StepLive key="live" course={course} />,
     <StepPublish key="publish" course={course} steps={steps} reasons={publishReasons} warnings={warnings} canPublish={canPublish} saving={publishing || publishCheckLoading} onPublish={() => void publish()} onRetryCheck={() => void syncPublish()} onPreviewCourse={() => openStudioPreview(firstLesson)} onToggleAutoIssue={(next) => update({ autoIssueCertificate: next })} />,
   ];
 

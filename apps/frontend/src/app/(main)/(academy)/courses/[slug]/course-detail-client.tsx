@@ -25,6 +25,7 @@ import { useCourse } from '@/hooks/use-courses';
 import type { Course } from '@/lib/api/types';
 import { DifficultyBar } from '@/components/academy/difficulty-bar';
 import { CourseProductsSidebar } from '@/components/store/course-products-sidebar';
+import { LiveSessionsSection } from '@/components/academy/live-sessions-section';
 import { CinematicVideoPlayer } from '@/components/media/cinematic-player';
 import { EnrollButton } from './enroll-button';
 import { ProgressSection } from './progress-section';
@@ -479,6 +480,8 @@ export default function CourseDetailClient({ initialCourse }: CourseDetailClient
           </div>
         </div>
       </section>
+
+      <LiveSessionsSection courseId={course.id} />
 
       <section className="container mx-auto px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="relative isolate overflow-hidden rounded-2xl border border-border bg-foreground px-6 py-8 text-background sm:px-10 sm:py-10">

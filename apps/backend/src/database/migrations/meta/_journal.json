@@ -313,6 +313,13 @@
       "when": 1787361700672,
       "tag": "042_product_type",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1787362700672,
+      "tag": "043_live_sessions",
+      "breakpoints": true
     }
   ]
 }

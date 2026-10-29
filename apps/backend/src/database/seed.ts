@@ -8,6 +8,7 @@ import { seedStudyGroups } from './seed/seed-study-groups';
 import { seedSponsors } from './seed/seed-sponsors';
 import { seedEvents } from './seed/seed-events';
 import { seedPosts } from './seed/seed-posts';
+import { seedLiveSessions } from './seed/seed-live-sessions';
 import {
   PERMISSION_CATALOG,
   SYSTEM_ROLE_KEYS,
@@ -773,6 +774,9 @@ async function seed() {
   }
 
   await seedBilingualDemoCourse(db, tenant.id, academy?.id ?? null);
+
+  // --- Live sessions (Google Meet) on the flagship course ---
+  if (courses[0]) await seedLiveSessions(db, tenant.id, courses[0].id);
 
   // --- Lesson thumbnail backfill: lessons without thumbs inherit the course thumbnail ---
   const courseThumb = (

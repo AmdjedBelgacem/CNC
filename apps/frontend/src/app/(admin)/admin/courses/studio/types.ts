@@ -7,6 +7,24 @@ import type {
 } from '@titan/shared';
 
 export type AccessMode = 'open' | 'invite' | 'paid';
+
+export type LiveSessionStatus = 'draft' | 'scheduled' | 'live' | 'completed' | 'cancelled';
+
+export interface LiveSession {
+  id: string;
+  courseId: string;
+  seriesId: string | null;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  meetUrl: string | null;
+  status: LiveSessionStatus;
+  capacity: number | null;
+  /** Set only on create/update responses: soft overlap warnings. */
+  warnings?: string[];
+}
 export interface Attachment {
   id: string;
   name: string;

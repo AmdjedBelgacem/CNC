@@ -1,7 +1,7 @@
 import { ensureCsrfToken, getActiveLocale } from '@/lib/api-client';
 import type { LessonBlock, LessonContentDocument } from '@titan/shared';
 import type { FxRates } from '@/lib/api/types';
-import type { Attachment, CourseStudioData, LessonVideoMeta } from './types';
+import type { Attachment, CourseStudioData, LessonVideoMeta, LiveSession } from './types';
 const BASE = '/api/proxy/admin/courses';
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 async function req<T = unknown>(
@@ -160,4 +160,32 @@ export interface PublishCheck {
   reasons: string[];
 }
 export const checkPublish = (slug: string) => req<PublishCheck>(`${BASE}/${slug}/validate`, 'GET');
+
+// --- Live sessions (Google Meet) ---
+export const listLiveSessions = (courseId: string) =>
+  req<LiveSession[]>(`${BASE}/${courseId}/live-sessions`, 'GET');
+export const createLiveSession = (
+  courseId: string,
+  body: {
+    title: string;
+    description?: string;
+    seriesId?: string;
+    startsAt: string;
+    endsAt: string;
+    timezone?: string;
+    meetUrl?: string;
+    capacity?: number;
+  },
+) => req<LiveSession>(`${BASE}/${courseId}/live-sessions`, 'POST', body);
+export const updateLiveSession = (
+  courseId: string,
+  sessionId: string,
+  body: Record<string, unknown>,
+) => req<LiveSession>(`${BASE}/${courseId}/live-sessions/${sessionId}`, 'PATCH', body);
+export const deleteLiveSession = (courseId: string, sessionId: string) =>
+  req<{ id: string; deleted: boolean }>(`${BASE}/${courseId}/live-sessions/${sessionId}`, 'DELETE');
+export const publishLiveSession = (courseId: string, sessionId: string) =>
+  req<LiveSession>(`${BASE}/${courseId}/live-sessions/${sessionId}/publish`, 'POST', {});
+export const cancelLiveSession = (courseId: string, sessionId: string) =>
+  req<LiveSession>(`${BASE}/${courseId}/live-sessions/${sessionId}/cancel`, 'POST', {});
 export type { Attachment };

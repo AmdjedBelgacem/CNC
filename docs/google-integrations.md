@@ -90,3 +90,38 @@ contains a refresh token or its ciphertext.
 | `GET` | `/admin/integrations/oauth/callback/:service` | browser redirect target |
 | `POST` | `/admin/integrations/:service/test` | re-probe, refresh the token |
 | `POST` | `/admin/integrations/:service/disconnect` | clears the token |
+
+## Live sessions: Google Meet provisioning (v2, feature-flagged)
+
+Live course sessions (`live_sessions` table) run on Google Meet. v1 requires the
+instructor to paste the Meet URL — validated at save time against the
+`https://meet.google.com/...` allowlist — and the learner join endpoint
+(`GET /live-sessions/:id/join`) releases it only to enrolled learners inside the
+join window (startsAt − 15 min through endsAt + 30 min, computed server-side).
+
+The optional v2 path provisions the Meet room from the backend: creating a Google
+Calendar event with `conferenceData` (requestId + `hangoutsMeet` conference
+solution) and persisting `meetUrl` + `calendarEventId` on the session. The
+endpoint is `POST /admin/courses/:courseId/live-sessions/:sessionId/provision-meet`
+and responds `403` with the missing variable names until the environment below is
+configured.
+
+### Environment
+
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | OAuth client authorised for `https://www.googleapis.com/auth/calendar.events` |
+| `GOOGLE_CLIENT_SECRET` | server only |
+| `GOOGLE_REFRESH_TOKEN` | long-lived refresh token minted from the offline-access consent |
+
+While any of these is unset the endpoint refuses with a clear message and the
+Course Studio only offers the paste-a-link flow — the flag is discoverable, not
+silent. Implementation notes for whoever builds it:
+
+- The calendar must be the one whose automatically-created Meet rooms the tenant
+  recognises; a service account cannot own Meet links without domain-wide
+  delegation, so the OAuth refresh-token path is the supported one.
+- Persist `calendarEventId` so rescheduling the session (`PATCH`) can patch the
+  event instead of leaking a second Meet room, and cancellation can delete it.
+- Room codes minted by Calendar satisfy the same allowlist validator
+  (`isValidMeetUrl` in `apps/backend/src/modules/courses/dto/live-sessions.dto.ts`).

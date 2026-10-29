@@ -85,6 +85,14 @@ export function stepStates(course: CourseStudioData): StepState[] {
       advisory: true,
     },
     {
+      key: 'live',
+      labelKey: 'live',
+      // Live sessions are optional — a course is fully self-paced without one —
+      // so this step is advisory like localization and never blocks a publish.
+      done: true,
+      advisory: true,
+    },
+    {
       key: 'publish',
       labelKey: 'publish',
       done: ready,
@@ -107,13 +115,13 @@ export function stepHint(step: StepState, t: Translate): string | undefined {
 /** Maps a server-side publish blocker string onto a step index. */
 export function reasonToStep(reason: string): number {
   const value = reason.toLowerCase();
-  if (value.includes('publish') || value.includes('ready')) return 5;
+  if (value.includes('publish') || value.includes('ready')) return 6;
   if (value.includes('seo') || value.includes('description') || value.includes('translation') || value.includes('arabic')) return 4;
   if (value.includes('title') || value.includes('slug')) return 0;
   if (value.includes('section') || value.includes('lesson') || value.includes('quiz')) return 1;
   if (value.includes('thumbnail') || value.includes('image') || value.includes('media')) return 2;
   if (value.includes('price') || value.includes('paid') || value.includes('access')) return 3;
-  return 5;
+  return 6;
 }
 
 /**
