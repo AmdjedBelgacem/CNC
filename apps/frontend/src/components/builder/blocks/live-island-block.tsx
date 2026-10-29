@@ -88,12 +88,18 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
   const [height, setHeight] = useState(0);
   const [ready, setReady] = useState(false);
   const headerNodes = puck.getSlotData?.('header') ?? [];
+  const itemNodes = puck.getSlotData?.('items') ?? [];
+  const footerNodes = puck.getSlotData?.('footer') ?? [];
   const hasHeader = headerNodes.length > 0;
+  const hasItems = itemNodes.length > 0;
+  const hasFooter = footerNodes.length > 0;
   const copy = ISLAND_COPY[variant] ?? {
     label: props.label || variant,
     detail: 'This section is rendered from the same source as the public page.',
     fixed: false,
   };
+  const fixed = copy.fixed === true;
+  const fixedWidth = variant === 'home-guides' ? 'max-w-5xl' : 'max-w-3xl';
 
   useEffect(() => {
     setHeight(0);
@@ -131,12 +137,31 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
       </div>
 
       {hasHeader ? (
-        <div className="px-margin-mobile md:px-margin-desktop pt-12 md:pt-16">
+        <div
+          className={
+            fixed
+              ? `mx-auto ${fixedWidth} px-4 pt-12 sm:px-6 md:pt-16 lg:px-8`
+              : 'px-margin-mobile md:px-margin-desktop pt-12 md:pt-16'
+          }
+        >
           {puck.renderSlot('header')}
         </div>
       ) : null}
 
-      {empty ? (
+      {fixed ? (
+        <>
+          {hasItems ? (
+            <div className={`mx-auto ${fixedWidth} mt-8 space-y-8 px-4 pb-16 sm:px-6 lg:px-8`}>
+              {puck.renderSlot('items')}
+            </div>
+          ) : null}
+          {hasFooter ? (
+            <div className={`mx-auto ${fixedWidth} px-4 pb-16 sm:px-6 lg:px-8`}>
+              {puck.renderSlot('footer')}
+            </div>
+          ) : null}
+        </>
+      ) : empty ? (
         <div className="px-margin-mobile md:px-margin-desktop py-12">
           <div className="mx-auto max-w-3xl rounded-lg border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
             <p className="font-semibold text-foreground">No published data</p>

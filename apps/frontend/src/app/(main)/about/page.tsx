@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
+import { getLocale } from 'next-intl/server';
+import { coerceLocale } from '@/i18n/config';
 import { HomeBuilder } from '@/components/home/home-builder';
 import { AboutFactsSection } from '@/components/home/home-extras';
+import { liveIslandSlot } from '@/components/home/live-island-header';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { ensureParitySections } from '@titan/shared';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
@@ -32,6 +35,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
+  const locale = coerceLocale(await getLocale());
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const layout = ensureParitySections(await resolvePageLayout(tenantSlug, 'about'), 'about');
@@ -44,7 +48,15 @@ export default async function AboutPage() {
       />
       <HomeBuilder
         layout={layout}
-        islands={{ 'about-facts': <AboutFactsSection /> }}
+        islands={{
+          'about-facts': (
+            <AboutFactsSection
+              header={liveIslandSlot(layout, 'about-facts', 'header', locale)}
+              items={liveIslandSlot(layout, 'about-facts', 'items', locale)}
+              footer={liveIslandSlot(layout, 'about-facts', 'footer', locale)}
+            />
+          ),
+        }}
       />
     </>
   );

@@ -2133,12 +2133,19 @@ const liveIsland: BlockDefinition = {
   category: 'Sections',
   schema: liveIslandPropsSchema,
   defaultProps: liveIslandDefaults,
-  // The static section heading and supporting copy are real blocks. The live
-  // rows stay in the island component; the header slot makes the visible
-  // heading, description and (for the catalog) trust cards selectable.
+  // Static copy is authored as real blocks. Dynamic islands use `header` and
+  // keep their live rows in the island component. The repository-managed
+  // islands (`home-faq`, `home-guides`, `about-facts`) use `items`/`footer`
+  // so their question, fact and link rows are selectable too.
   zones: {
     header: {
       allow: ['badge', 'heading', 'text', 'link', 'button', 'stack', 'grid', 'card'],
+    },
+    items: {
+      allow: ['heading', 'text', 'link', 'button', 'badge', 'stack', 'grid', 'card', 'image'],
+    },
+    footer: {
+      allow: ['text', 'link', 'button', 'stack', 'card'],
     },
   },
 };

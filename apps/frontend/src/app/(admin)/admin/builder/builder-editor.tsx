@@ -20,6 +20,7 @@ import {
   type PuckNode,
 } from '@titan/shared';
 import { puckConfig } from '@/lib/builder/puck-config';
+import { seedFixedLiveIslands } from '@/lib/builder/fixed-island-seeds';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { PageTranslationPanel } from '@/components/builder/page-translation';
 import { BuilderTranslationProvider } from '@/components/builder/translation-context';
@@ -595,9 +596,11 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         // slot children on load, so the editor store — and the next save —
         // are always in the canonical slot shape.
         const migrated = ensureNodeIds(
-          ensureParitySections(
-            expandHeroConsoleLayout(migrateLegacyLayout(layout as unknown as PageLayout)),
-            slug,
+          seedFixedLiveIslands(
+            ensureParitySections(
+              expandHeroConsoleLayout(migrateLegacyLayout(layout as unknown as PageLayout)),
+              slug,
+            ),
           ),
         ) as unknown as Data;
         const loadedIds = new Set<string>();

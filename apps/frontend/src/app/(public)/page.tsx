@@ -15,6 +15,7 @@ import { BRAND_NAME, OG_IMAGE, SITE_URL, absoluteUrl, organizationJsonLd, webSit
 import { faqJsonLd, breadcrumbJsonLd } from '@/lib/schema';
 import { HOMEPAGE_FAQ } from '@/lib/faq-content';
 import { HomeFaqSection, HomeGuidesSection } from '@/components/home/home-extras';
+import { liveIslandSlot } from '@/components/home/live-island-header';
 export const metadata: Metadata = {
   title: 'CNC Machining Courses & Certification',
   description:
@@ -113,8 +114,17 @@ export default async function HomePage() {
         courses={courses}
         sponsors={sponsors}
         islands={{
-          'home-faq': <HomeFaqSection />,
-          'home-guides': <HomeGuidesSection />,
+          'home-faq': (
+            <HomeFaqSection
+              header={liveIslandSlot(layout, 'home-faq', 'header', locale)}
+              items={liveIslandSlot(layout, 'home-faq', 'items', locale)}
+            />
+          ),
+          'home-guides': (
+            <HomeGuidesSection
+              header={liveIslandSlot(layout, 'home-guides', 'header', locale)}
+            />
+          ),
         }}
       />{' '}
     </div>

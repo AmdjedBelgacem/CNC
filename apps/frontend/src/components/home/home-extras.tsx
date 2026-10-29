@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { HOMEPAGE_FAQ } from '@/lib/faq-content';
 import { BRAND_NAME } from '@/lib/brand';
@@ -10,67 +11,91 @@ import { BRAND_NAME } from '@/lib/brand';
  * them at all. They are now `live-island` variants: the public route renders the
  * same component through its island map, and the builder previews it in an
  * iframe. One implementation, so the two cannot drift.
+ *
+ * The builder-authored slots (`header`, `items`, `footer`) replace the default
+ * copy when present. The defaults remain the fallback for layouts that have not
+ * been opened and saved in the builder yet.
  */
+type IslandSlots = {
+  header?: ReactNode;
+  items?: ReactNode;
+  footer?: ReactNode;
+};
 
-export function HomeFaqSection() {
+export function HomeFaqSection({ header, items }: IslandSlots) {
   return (
     <section
-      aria-labelledby="faq-heading"
+      aria-label={header ? 'Frequently asked questions about CNC machining training' : undefined}
+      aria-labelledby={header ? undefined : 'faq-heading'}
       className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8"
     >
-      <h2
-        id="faq-heading"
-        className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
-      >
-        Frequently asked questions about CNC machining training
-      </h2>
-      <dl className="mt-8 space-y-8">
-        {HOMEPAGE_FAQ.map((item) => (
-          <div key={item.question} className="border-b border-border pb-6 last:border-b-0">
-            <dt className="font-display text-lg font-semibold text-foreground">
-              {item.question}
-            </dt>
-            <dd className="mt-2 text-base leading-7 text-muted-foreground">{item.answer}</dd>
-          </div>
-        ))}
-      </dl>
+      {header ?? (
+        <h2
+          id="faq-heading"
+          className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+        >
+          Frequently asked questions about CNC machining training
+        </h2>
+      )}
+      {items ? (
+        <div className="mt-8 space-y-8">{items}</div>
+      ) : (
+        <dl className="mt-8 space-y-8">
+          {HOMEPAGE_FAQ.map((item) => (
+            <div key={item.question} className="border-b border-border pb-6 last:border-b-0">
+              <dt className="font-display text-lg font-semibold text-foreground">
+                {item.question}
+              </dt>
+              <dd className="mt-2 text-base leading-7 text-muted-foreground">{item.answer}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   );
 }
 
-export function HomeGuidesSection() {
+export function HomeGuidesSection({ header }: IslandSlots) {
   return (
     <section
-      aria-labelledby="cnc-guides-heading"
+      aria-label={header ? 'CNC solutions, training and practical guides' : undefined}
+      aria-labelledby={header ? undefined : 'cnc-guides-heading'}
       className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8"
     >
-      <h2
-        id="cnc-guides-heading"
-        className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
-      >
-        CNC solutions, training and practical guides
-      </h2>
-      <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
-        Start with our CNC training materials, then review CNC solutions, implementation
-        guidance and partner options for your shop or learning centre.
-      </p>
-      <p className="mt-4 text-base leading-7 text-muted-foreground">
-        <Link href="/learn" className="text-primary underline-offset-4 hover:underline">
-          CNC guides
-        </Link>{' '}
-        ·{' '}
-        <Link href="/courses" className="text-primary underline-offset-4 hover:underline">
-          CNC courses
-        </Link>{' '}
-        ·{' '}
-        <Link href="/products" className="text-primary underline-offset-4 hover:underline">
-          CNC tools
-        </Link>{' '}
-        ·{' '}
-        <Link href="/become-a-partner" className="text-primary underline-offset-4 hover:underline">
-          Become a partner
-        </Link>
-      </p>
+      {header ?? (
+        <>
+          <h2
+            id="cnc-guides-heading"
+            className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+          >
+            CNC solutions, training and practical guides
+          </h2>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">
+            Start with our CNC training materials, then review CNC solutions, implementation
+            guidance and partner options for your shop or learning centre.
+          </p>
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
+            <Link href="/learn" className="text-primary underline-offset-4 hover:underline">
+              CNC guides
+            </Link>{' '}
+            ·{' '}
+            <Link href="/courses" className="text-primary underline-offset-4 hover:underline">
+              CNC courses
+            </Link>{' '}
+            ·{' '}
+            <Link href="/products" className="text-primary underline-offset-4 hover:underline">
+              CNC tools
+            </Link>{' '}
+            ·{' '}
+            <Link
+              href="/become-a-partner"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Become a partner
+            </Link>
+          </p>
+        </>
+      )}
     </section>
   );
 }
@@ -94,41 +119,54 @@ const ABOUT_FACTS: { heading: string; body: string }[] = [
   },
 ];
 
-export function AboutFactsSection() {
+export function AboutFactsSection({ header, items, footer }: IslandSlots) {
   return (
     <section
-      aria-labelledby="about-facts-heading"
+      aria-label={header ? `About ${BRAND_NAME}` : undefined}
+      aria-labelledby={header ? undefined : 'about-facts-heading'}
       className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8"
     >
-      <h2
-        id="about-facts-heading"
-        className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
-      >
-        About {BRAND_NAME}
-      </h2>
-      <p className="mt-3 text-base text-muted-foreground">
-        {BRAND_NAME} is a manufacturing-education company. The following describes what it
-        teaches and who it serves.
-      </p>
-      <dl className="mt-8 space-y-8">
-        {ABOUT_FACTS.map((fact) => (
-          <div key={fact.heading} className="border-b border-border pb-6 last:border-b-0">
-            <dt className="font-display text-lg font-semibold text-foreground">{fact.heading}</dt>
-            <dd className="mt-2 text-base leading-7 text-muted-foreground">{fact.body}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className="mt-8 text-sm text-muted-foreground">
-        Course catalogue, academies and pricing are listed on the{' '}
-        <a href="/courses" className="underline underline-offset-4">
-          courses page
-        </a>
-        . For cohort and institutional training, see{' '}
-        <a href="/edu-purchases" className="underline underline-offset-4">
-          educational purchasing
-        </a>
-        .
-      </p>
+      {header ?? (
+        <>
+          <h2
+            id="about-facts-heading"
+            className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+          >
+            About {BRAND_NAME}
+          </h2>
+          <p className="mt-3 text-base text-muted-foreground">
+            {BRAND_NAME} is a manufacturing-education company. The following describes what it
+            teaches and who it serves.
+          </p>
+        </>
+      )}
+      {items ? (
+        <div className="mt-8 space-y-8">{items}</div>
+      ) : (
+        <dl className="mt-8 space-y-8">
+          {ABOUT_FACTS.map((fact) => (
+            <div key={fact.heading} className="border-b border-border pb-6 last:border-b-0">
+              <dt className="font-display text-lg font-semibold text-foreground">
+                {fact.heading}
+              </dt>
+              <dd className="mt-2 text-base leading-7 text-muted-foreground">{fact.body}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {footer ?? (
+        <p className="mt-8 text-sm text-muted-foreground">
+          Course catalogue, academies and pricing are listed on the{' '}
+          <a href="/courses" className="underline underline-offset-4">
+            courses page
+          </a>
+          . For cohort and institutional training, see{' '}
+          <a href="/edu-purchases" className="underline underline-offset-4">
+            educational purchasing
+          </a>
+          .
+        </p>
+      )}
     </section>
   );
 }

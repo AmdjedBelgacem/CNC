@@ -3,17 +3,18 @@ import { getSlotChildren, type PageLayout, type PuckNode } from '@titan/shared';
 import { BuilderNode } from '@/components/builder/block-renderer';
 
 /**
- * Builds the builder-authored header for a live island.
+ * Builds one builder-authored slot for a live island.
  *
  * `HomeBuilder` is a client component, so it cannot receive a render function
  * from a server page (functions are not serializable across the RSC boundary).
- * The page resolves the header itself and passes the resulting element into
- * the island component. Arabic pages call this with `locale !== 'en'` and get
+ * The page resolves the slot itself and passes the resulting element into the
+ * island component. Arabic pages call this with `locale !== 'en'` and get
  * `undefined`, keeping the translated header that lives inside the island.
  */
-export function liveIslandHeader(
+export function liveIslandSlot(
   layout: PageLayout,
   variant: string,
+  slot: string,
   locale: string,
 ): ReactNode | undefined {
   if (locale !== 'en') return undefined;
@@ -23,7 +24,7 @@ export function liveIslandHeader(
       candidate.type === 'live-island' && candidate.props?.variant === variant,
   );
   if (!node) return undefined;
-  const children = getSlotChildren(node, 'header', zones);
+  const children = getSlotChildren(node, slot, zones);
   if (children.length === 0) return undefined;
   return children.map((child, index) => (
     <BuilderNode
@@ -32,4 +33,13 @@ export function liveIslandHeader(
       zones={zones}
     />
   ));
+}
+
+/** Convenience wrapper for the live-island header slot. */
+export function liveIslandHeader(
+  layout: PageLayout,
+  variant: string,
+  locale: string,
+): ReactNode | undefined {
+  return liveIslandSlot(layout, variant, 'header', locale);
 }
