@@ -32,6 +32,26 @@ const DYNAMIC_BLOCKS: Record<string, { source: string; href?: string; homeOnly?:
  */
 const HIDDEN_ON_HOME = new Set(['testimonials', 'testimonial-card']);
 
+/**
+ * Live islands are a hybrid: their header and static copy are real builder child
+ * blocks, while their rows are records fetched at render time. The generic
+ * "cannot be typed here" notice would be wrong for them, so name the source and
+ * point at the editable header explicitly.
+ */
+const LIVE_ISLAND_SOURCES: Record<string, { source: string; href: string }> = {
+  'academy-pathways': { source: 'Academies', href: '/admin/academies' },
+  'products-featured': { source: 'Products', href: '/admin/products' },
+  'products-inventory': { source: 'Products', href: '/admin/products' },
+  'products-departments': { source: 'Products', href: '/admin/products' },
+  'events-ticker': { source: 'Events', href: '/admin' },
+  'events-next-up': { source: 'Events', href: '/admin' },
+  'events-schedule': { source: 'Events', href: '/admin' },
+  'events-browse': { source: 'Events', href: '/admin' },
+  'feed-ticker': { source: 'Community posts', href: '/admin' },
+  'feed-topics': { source: 'Community posts', href: '/admin' },
+  'feed-wire': { source: 'Community posts', href: '/admin' },
+};
+
 export function isDynamicBlock(type: string): boolean {
   return type in DYNAMIC_BLOCKS || HIDDEN_ON_HOME.has(type);
 }
@@ -58,6 +78,34 @@ export function DynamicContentNotice({
           cards. Remove it, or use a <span className="font-medium text-foreground">Live island</span>{' '}
           section for content that visitors actually see.
         </p>
+      </div>
+    );
+  }
+
+  if (type === 'live-island') {
+    const variant = typeof props?.variant === 'string' ? props.variant : '';
+    const live = LIVE_ISLAND_SOURCES[variant];
+    // Fixed islands (FAQ, guides, about facts) have real editable rows now, so
+    // they must not claim their content is uneditable live data.
+    if (!live) return null;
+    return (
+      <div className="border-b border-border bg-info/5 px-3 py-2.5">
+        <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-info">
+          <Database className="size-3.5 shrink-0" aria-hidden />
+          Live data rows
+        </p>
+        <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
+          The section header and copy are editable as child blocks in Layers. The rows below are
+          live records from <span className="font-medium text-foreground">{live.source}</span>, so
+          edit the source records to change what visitors see.
+        </p>
+        <a
+          href={live.href}
+          className="mt-1.5 inline-flex items-center gap-1 text-2xs font-medium text-primary hover:underline"
+        >
+          Manage {live.source.toLowerCase()}
+          <ExternalLink className="size-3" aria-hidden />
+        </a>
       </div>
     );
   }

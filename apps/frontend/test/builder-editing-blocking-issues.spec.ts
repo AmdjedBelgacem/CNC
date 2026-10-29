@@ -175,13 +175,15 @@ describe('every block is either editable or explains why it is not', () => {
     for (const type of [
       'academy-grid',
       'program-cards',
-      'testimonials',
       'partner-logos',
       'catalog-hero',
       'live-island',
     ]) {
       expect(notice).toMatch(new RegExp(`['\\"]?${type}['\\"]?\\s*:`));
     }
+    // Testimonials have no public source on the homepage; they are covered by
+    // the "hidden on the homepage" set instead of the dynamic-source map.
+    expect(notice).toMatch(/HIDDEN_ON_HOME = new Set\(\['testimonials'/);
     expect(notice).toMatch(/Dynamic content/);
     // It must name where the content actually lives, not just say "dynamic".
     expect(notice).toMatch(/href:/);
@@ -189,7 +191,9 @@ describe('every block is either editable or explains why it is not', () => {
 
   it('the notice renders in the inspector, including the no-properties fallback', () => {
     const inspector = read('components/builder/inspector/smart-inspector.tsx');
-    expect(inspector).toMatch(/<DynamicContentNotice type=\{selected\.type\} \/>/);
+    expect(inspector).toMatch(
+      /<DynamicContentNotice type=\{selected\.type\} props=\{selected\.props\} \/>/,
+    );
     // Twice: once above the field groups, once above the "no editable properties" panel.
     expect((inspector.match(/<DynamicContentNotice/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });

@@ -37,9 +37,10 @@ describe('content security policy allows the payment gateway', () => {
     expect(body).toMatch(/if \(isDev\) scriptSrc.push\("'unsafe-eval'", "'unsafe-inline'"\)/);
   });
 
-  it('keeps object-src none and frame-ancestors none', () => {
+  it('keeps object-src none and frame-ancestors none outside the preview surface', () => {
     expect(body).toMatch(/object-src 'none'/);
-    expect(body).toMatch(/frame-ancestors 'none'/);
+    // Preview surfaces are same-origin frames; every other response stays unframeable.
+    expect(body).toMatch(/frame-ancestors \$\{allowSelfFrame \? "'self'" : "'none'"\}/);
   });
 
   it('the checkout page loads the SDK from that same host', () => {

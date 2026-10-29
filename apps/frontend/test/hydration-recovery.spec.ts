@@ -40,7 +40,7 @@ describe('hydration recovery guard', () => {
     // nonce on scripts it emits. Without it the guard shipped, appeared in the HTML, and never
     // ran — the page still went blank.
     expect(source).toContain('nonce={nonce}');
-    expect(layout).toContain("headers()).get('x-nonce')");
+    expect(layout).toContain("requestHeaders.get('x-nonce')");
   });
 
   it('recognises the minified hydration errors and the worded form', () => {
