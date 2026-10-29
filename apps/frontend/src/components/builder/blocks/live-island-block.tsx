@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { LiveIslandProps } from '@titan/shared';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
+import { ProductsCatalog } from '@/components/store/products-catalog';
 
 /**
  * Canvas representation of a live tenant-data island.
@@ -90,9 +91,13 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
   const headerNodes = puck.getSlotData?.('header') ?? [];
   const itemNodes = puck.getSlotData?.('items') ?? [];
   const footerNodes = puck.getSlotData?.('footer') ?? [];
+  const recordNodes = puck.getSlotData?.('records') ?? [];
   const hasHeader = headerNodes.length > 0;
   const hasItems = itemNodes.length > 0;
   const hasFooter = footerNodes.length > 0;
+  const recordIds = recordNodes
+    .map((node) => (typeof node.props?.productId === 'string' ? node.props.productId : ''))
+    .filter(Boolean);
   const copy = ISLAND_COPY[variant] ?? {
     label: props.label || variant,
     detail: 'This section is rendered from the same source as the public page.',
@@ -161,6 +166,14 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
             </div>
           ) : null}
         </>
+      ) : variant === 'products-inventory' ? (
+        <div className="px-margin-mobile md:px-margin-desktop pb-14 md:pb-20">
+          <ProductsCatalog
+            records={puck.renderSlot('records', { className: 'contents' })}
+            recordIds={recordIds}
+            inBuilder
+          />
+        </div>
       ) : empty ? (
         <div className="px-margin-mobile md:px-margin-desktop py-12">
           <div className="mx-auto max-w-3xl rounded-lg border border-dashed border-border bg-muted/20 px-6 py-10 text-center">

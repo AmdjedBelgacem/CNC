@@ -9,7 +9,11 @@ import {
   productsHeroStats,
 } from '@/components/store/products-islands';
 import { fetchCatalogProducts } from '@/lib/products';
-import { liveIslandHeader } from '@/components/home/live-island-header';
+import {
+  liveIslandHeader,
+  liveIslandRecordIds,
+  liveIslandSlot,
+} from '@/components/home/live-island-header';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
@@ -96,6 +100,8 @@ export default async function ProductsPage() {
               categories={categories}
               products={products}
               header={liveIslandHeader(layout, 'products-inventory', locale)}
+              records={liveIslandSlot(layout, 'products-inventory', 'records', locale)}
+              recordIds={liveIslandRecordIds(layout, 'products-inventory', locale)}
             />
           ),
           'products-departments': (

@@ -37,6 +37,7 @@ import type {
   HeroConsoleProps,
   HeroProps,
   IconProps,
+  ProductCardProps,
   ProgramCardProps,
   ImageProps,
   LinkProps,
@@ -3142,6 +3143,25 @@ export const cardGridItemInspector = defineInspector<CardGridItemProps>().groups
   advancedGroup(),
 ]);
 
+/**
+ * A live product card. Price, stock, image and link are resolved from the
+ * catalogue at render time; only the copy that is safe to author is exposed.
+ */
+export const productCardInspector = defineInspector<ProductCardProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      { key: 'title', label: 'Title', control: 'text' },
+      { key: 'tagline', label: 'Tagline', control: 'textarea' },
+    ],
+  },
+  spacingGroup(),
+  advancedGroup(),
+]);
+
 export const spotlightCardInspector = defineInspector<SpotlightCardProps>().groups([
   {
     id: 'content',
@@ -3277,6 +3297,7 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   'catalog-stat': { label: 'Catalog Stat', groups: catalogStatInspector.groups },
   'catalog-cta': { label: 'Catalog Button', groups: catalogCtaInspector.groups },
   'card-grid-item': { label: 'Card Grid Item', groups: cardGridItemInspector.groups },
+  'product-card': { label: 'Product Card', groups: productCardInspector.groups },
   'spotlight-card': { label: 'Spotlight Card', groups: spotlightCardInspector.groups },
   'twin-code-line': { label: 'Code Line', groups: twinCodeLineInspector.groups },
   'twin-readout': { label: 'Readout Cell', groups: twinReadoutInspector.groups },

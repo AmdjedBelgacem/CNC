@@ -122,10 +122,16 @@ export async function ProductsInventory({
   products,
   header,
   bodyOnly,
+  records,
+  recordIds,
 }: {
   categories: { name: string; count: number }[];
   /** Server-fetched, so the grid is populated in the HTML rather than after hydration. */
   products?: CatalogProduct[];
+  /** Builder-authored product cards, rendered inside the live catalog grid. */
+  records?: ReactNode;
+  /** Product ids that already have a child card block. */
+  recordIds?: string[];
 } & IslandChrome) {
   const t = await getTranslations('products');
 
@@ -156,6 +162,8 @@ export async function ProductsInventory({
       <ProductsCatalog
         categories={categories.map((c) => c.name)}
         initialProducts={products}
+        records={records}
+        recordIds={recordIds}
       />
     </section>
   );

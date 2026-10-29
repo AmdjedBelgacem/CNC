@@ -21,7 +21,9 @@ import {
 } from '@titan/shared';
 import { puckConfig } from '@/lib/builder/puck-config';
 import { seedFixedLiveIslands } from '@/lib/builder/fixed-island-seeds';
+import { seedProductInventoryRecords } from '@/lib/builder/live-record-seeds';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
+import type { Product as CatalogProduct } from '@/components/store/product-card';
 import { PageTranslationPanel } from '@/components/builder/page-translation';
 import { BuilderTranslationProvider } from '@/components/builder/translation-context';
 import { BuilderLivePreviewProvider } from '@/components/builder/live-preview-context';
@@ -70,6 +72,22 @@ const PUCK_UI = {
   rightSideBarVisible: false,
   previewMode: 'edit' as const,
 };
+
+/**
+ * Product records are seeded from the same live catalogue the storefront uses.
+ * A failure is not fatal: the canvas still renders the live fallback cards, and
+ * the next builder load retries the seed.
+ */
+async function fetchCatalogProductsForBuilder(): Promise<CatalogProduct[] | null> {
+  try {
+    const response = await apiProxyFetch('/api/proxy/products?limit=200');
+    if (!response.ok) return null;
+    const body = (await response.json()) as { data?: CatalogProduct[] };
+    return Array.isArray(body.data) ? body.data : null;
+  } catch {
+    return null;
+  }
+}
 /**
  * Canvas chrome — injected INTO the iframe document (the override's children * are portaled into the frame). Recolours Puck's outline scale to the app * blue and adds smooth hover/selection rings, rounded dropzones, and a glassy * hover label chip. Class names are version-pinned to @measured/puck 0.20.2. */
 const CANVAS_CSS = `
@@ -314,6 +332,8 @@ export function BuilderEditor() {
   const baselineLatch = useRef(false);
   const seenIds = useRef<Map<string, Set<string>>>(new Map());
   const pageCache = useRef<Map<string, PageRecord>>(new Map());
+  /** Live catalogue snapshot used to seed product-card parts on the products page. */
+  const productRecordsRef = useRef<CatalogProduct[] | null>(null);
   const puckDispatch = useRef<((action: unknown) => void) | null>(null);
   /**
    * A layout that could not be handed to Puck yet.
@@ -553,10 +573,16 @@ Stable registration callback (unstable identity would re-run the bridge effect o
           if (!changed) return item;
           return { type: item.type, props: nextProps };
         });
-      return {
+      const withSeeds = {
         ...next,
         content: applySeeds((next.content ?? []) as unknown as PuckNode[]) as unknown as Content,
       };
+      // Product cards are data-backed parts, so they are seeded from the live
+      // catalogue rather than a static registry seed.
+      return seedProductInventoryRecords(
+        withSeeds as unknown as PageLayout,
+        productRecordsRef.current,
+      ) as unknown as Data;
     }, []);
   const handleChange = useCallback(
     (next: Data) => {
@@ -587,6 +613,11 @@ Stable registration callback (unstable identity would re-run the bridge effect o
   const load = useCallback(
     async (target: string) => {
       const token = ++loadToken.current;
+      // Seed product cards from the live catalogue before the page is applied.
+      // Other pages skip the request entirely.
+      const productRecords =
+        target === 'products' ? await fetchCatalogProductsForBuilder() : null;
+      productRecordsRef.current = productRecords;
       const cached = pageCache.current.get(target);
       const apply = (layout: Data, clearSelection = false) => {
         // A newer load started while this one was in flight (rapid page switching): applying the stale response would overwrite the page the
@@ -597,9 +628,12 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         // are always in the canonical slot shape.
         const migrated = ensureNodeIds(
           seedFixedLiveIslands(
-            ensureParitySections(
-              expandHeroConsoleLayout(migrateLegacyLayout(layout as unknown as PageLayout)),
-              slug,
+            seedProductInventoryRecords(
+              ensureParitySections(
+                expandHeroConsoleLayout(migrateLegacyLayout(layout as unknown as PageLayout)),
+                slug,
+              ),
+              productRecords,
             ),
           ),
         ) as unknown as Data;

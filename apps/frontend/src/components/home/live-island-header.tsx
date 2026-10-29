@@ -43,3 +43,28 @@ export function liveIslandHeader(
 ): ReactNode | undefined {
   return liveIslandSlot(layout, variant, 'header', locale);
 }
+
+/**
+ * Product ids that already have a child `product-card` block.
+ *
+ * The inventory catalog uses this to render a live fallback for products added
+ * after the page was last seeded. Arabic pages return `undefined`: they keep the
+ * translated storefront cards and ignore the English record blocks.
+ */
+export function liveIslandRecordIds(
+  layout: PageLayout,
+  variant: string,
+  locale: string,
+): string[] | undefined {
+  if (locale !== 'en') return undefined;
+  const zones = (layout as { zones?: Record<string, PuckNode[]> }).zones ?? {};
+  const node = (layout.content ?? []).find(
+    (candidate) =>
+      candidate.type === 'live-island' && candidate.props?.variant === variant,
+  );
+  if (!node) return undefined;
+  const ids = getSlotChildren(node, 'records', zones)
+    .map((child) => (typeof child.props?.productId === 'string' ? child.props.productId : ''))
+    .filter(Boolean);
+  return ids.length > 0 ? ids : undefined;
+}

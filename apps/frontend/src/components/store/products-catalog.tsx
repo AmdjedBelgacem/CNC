@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ALL_CATEGORIES, ALL_TYPES, buildCategoryHref, buildTypeHref, readCategoryFromSearch, readTypeFromSearch } from '@/lib/store-category';
 import { useLocale, useTranslations } from 'next-intl';
@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { ProductCard, type Product as CatalogProduct } from '@/components/store/product-card';
+import { ProductRecordContext } from '@/components/store/product-record-context';
 import { cardPrice, isQuoteOnly, pricingModeOf } from '@/lib/product-pricing';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,9 +67,22 @@ function isOnSale(product: CatalogProduct) {
 export function ProductsCatalog({
   categories = [],
   initialProducts,
+  records,
+  recordIds,
+  inBuilder = false,
 }: {
   categories?: string[];
   initialProducts?: CatalogProduct[];
+  /**
+   * Builder-authored product cards. The catalog still owns filtering, sorting
+   * and pagination; each card reads a context to know whether it belongs on the
+   * current page and where to sit.
+   */
+  records?: ReactNode;
+  /** Product ids that already have a child card block, so missing ones can fall back. */
+  recordIds?: string[];
+  /** The builder canvas must not rewrite the admin URL when a filter changes. */
+  inBuilder?: boolean;
 }) {
   const t = useTranslations('products');
   const locale = useLocale();
@@ -188,22 +202,27 @@ export function ProductsCatalog({
       setPage(1);
       // `replace` keeps the department grid from filling the history stack:
       // a shopper clicking four departments should go back to where they came
-      // from, not through four near-identical store pages.
-      router.replace(
-        buildCategoryHref(pathname, searchParams.toString(), next, { clearType: true }),
-        { scroll: false },
-      );
+      // from, not through four near-identical store pages. The builder canvas
+      // is an editor, not the storefront, so it must not rewrite the admin URL.
+      if (!inBuilder) {
+        router.replace(
+          buildCategoryHref(pathname, searchParams.toString(), next, { clearType: true }),
+          { scroll: false },
+        );
+      }
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams, inBuilder],
   );
 
   const applyType = useCallback(
     (next: string) => {
       setProductType(next);
       setPage(1);
-      router.replace(buildTypeHref(pathname, searchParams.toString(), next), { scroll: false });
+      if (!inBuilder) {
+        router.replace(buildTypeHref(pathname, searchParams.toString(), next), { scroll: false });
+      }
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams, inBuilder],
   );
 
   const categoryOptions = useMemo(() => {
@@ -372,6 +391,30 @@ export function ProductsCatalog({
   const paged = useMemo(
     () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     [filtered, page],
+  );
+
+  const recordIdSet = useMemo(() => new Set(recordIds ?? []), [recordIds]);
+  const productsById = useMemo(
+    () => new Map(products.map((product) => [product.id, product])),
+    [products],
+  );
+  const recordContext = useMemo(
+    () => ({
+      productsById,
+      visibleIds: new Set(paged.map((product) => product.id)),
+      order: new Map(paged.map((product, index) => [product.id, index])),
+      editing: inBuilder,
+    }),
+    [productsById, paged, inBuilder],
+  );
+  /**
+   * A product added after the page was last seeded has no child card yet.
+   * Render it as a live card at the end of the page rather than hiding it from
+   * the storefront; opening the builder seeds it into the layout.
+   */
+  const fallbackProducts = useMemo(
+    () => paged.filter((product) => !recordIdSet.has(product.id)),
+    [paged, recordIdSet],
   );
 
   const activeFilterCount =
@@ -806,27 +849,32 @@ export function ProductsCatalog({
         )}
 
         {!error && !loading && filtered.length > 0 && (
-          <Stagger
-            key={page}
-            className={cn(
-              'grid gap-4',
-              density === 'dense'
-                ? 'sm:grid-cols-2 xl:grid-cols-4'
-                : 'sm:grid-cols-2 xl:grid-cols-3',
-            )}
-            // Products cascade in per page load. `maxDelay` keeps a 4-column
-            // grid from taking half a second to finish appearing.
-            gap={0.035}
-            maxDelay={0.28}
-          >
-            {paged.map((product, i) => (
-              <StaggerItem key={product.id} index={i}>
-                <LayoutBox>
-                  <ProductCard product={product} />
-                </LayoutBox>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          <ProductRecordContext.Provider value={recordContext}>
+            <Stagger
+              key={page}
+              className={cn(
+                'grid gap-4',
+                density === 'dense'
+                  ? 'sm:grid-cols-2 xl:grid-cols-4'
+                  : 'sm:grid-cols-2 xl:grid-cols-3',
+              )}
+              // Products cascade in per page load. `maxDelay` keeps a 4-column
+              // grid from taking half a second to finish appearing.
+              gap={0.035}
+              maxDelay={0.28}
+            >
+              {records ? <div className="contents">{records}</div> : null}
+              {fallbackProducts.map((product, i) => (
+                <div key={product.id} style={{ order: paged.length + i }}>
+                  <StaggerItem index={paged.length + i}>
+                    <LayoutBox>
+                      <ProductCard product={product} />
+                    </LayoutBox>
+                  </StaggerItem>
+                </div>
+              ))}
+            </Stagger>
+          </ProductRecordContext.Provider>
         )}
 
         {!error && !loading && totalPages > 1 && (

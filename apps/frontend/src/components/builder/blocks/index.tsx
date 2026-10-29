@@ -59,6 +59,7 @@ import { TwinCodeLineBlock } from './twin-code-line-block';
 import { TwinReadoutBlock } from './twin-readout-block';
 import { ClosingCtaBlock } from './closing-cta-block';
 import { ClosingCtaActionBlock } from './closing-cta-action-block';
+import { ProductCardBlock } from './product-card-block';
 import { LiveIslandBlock } from './live-island-block'; /** Puck-like slot bridge injected by the public renderer (or Puck itself in the editor). */
 export interface PuckBridge {
   /**
@@ -143,5 +144,6 @@ export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<
   'twin-readout': TwinReadoutBlock,
   'closing-cta-action': ClosingCtaActionBlock,
   'closing-cta': ClosingCtaBlock,
+  'product-card': ProductCardBlock,
   'live-island': LiveIslandBlock,
 };

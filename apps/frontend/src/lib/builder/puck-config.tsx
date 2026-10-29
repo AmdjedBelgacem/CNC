@@ -55,6 +55,7 @@ import {
   navDefaults,
   navLinkDefaults,
   partnerLogosDefaults,
+  productCardDefaults,
   programCardDefaults,
   programCardsDefaults,
   progressCardDefaults,
@@ -1163,6 +1164,10 @@ const closingCta: ComponentConfig = def('closing-cta', 'Closing CTA', closingCta
   secondaryIcon: iconField,
   borderTop: booleanSelect('Top border'),
 });
+const productCard: ComponentConfig = def('product-card', 'Product Card', productCardDefaults, {
+  title: textField('Title'),
+  tagline: textareaField('Tagline'),
+});
 const liveIsland: ComponentConfig = def('live-island', 'Live Island', liveIslandDefaults, {
   variant: selectField(
     'Island',
@@ -1248,6 +1253,7 @@ export const puckConfig: Config = {
     'twin-readout': twinReadout,
     'closing-cta-action': closingCtaAction,
     'closing-cta': closingCta,
+    'product-card': productCard,
     'live-island': liveIsland,
   },
   root: { fields: {} },

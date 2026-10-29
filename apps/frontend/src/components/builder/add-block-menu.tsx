@@ -77,6 +77,7 @@ const BLOCK_ICONS: Record<string, LucideIcon> = {
   'twin-readout': Gauge,
   'closing-cta-action': MousePointerClick,
   'closing-cta': CheckSquare2,
+  'product-card': Tag,
   'live-island': MousePointerClick,
   nav: Navigation,
   footer: PanelBottom,

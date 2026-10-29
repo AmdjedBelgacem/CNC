@@ -38,10 +38,13 @@ const HIDDEN_ON_HOME = new Set(['testimonials', 'testimonial-card']);
  * "cannot be typed here" notice would be wrong for them, so name the source and
  * point at the editable header explicitly.
  */
-const LIVE_ISLAND_SOURCES: Record<string, { source: string; href: string }> = {
+const LIVE_ISLAND_SOURCES: Record<
+  string,
+  { source: string; href: string; records?: boolean }
+> = {
   'academy-pathways': { source: 'Academies', href: '/admin/academies' },
   'products-featured': { source: 'Products', href: '/admin/products' },
-  'products-inventory': { source: 'Products', href: '/admin/products' },
+  'products-inventory': { source: 'Products', href: '/admin/products', records: true },
   'products-departments': { source: 'Products', href: '/admin/products' },
   'events-ticker': { source: 'Events', href: '/admin' },
   'events-next-up': { source: 'Events', href: '/admin' },
@@ -95,9 +98,20 @@ export function DynamicContentNotice({
           Live data rows
         </p>
         <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">
-          The section header and copy are editable as child blocks in Layers. The rows below are
-          live records from <span className="font-medium text-foreground">{live.source}</span>, so
-          edit the source records to change what visitors see.
+          {live.records ? (
+            <>
+              The cards below are child blocks: select one in Layers to edit its title and
+              tagline. Price, stock, image and link stay live from{' '}
+              <span className="font-medium text-foreground">{live.source}</span>.
+            </>
+          ) : (
+            <>
+              The section header and copy are editable as child blocks in Layers. The rows below
+              are live records from{' '}
+              <span className="font-medium text-foreground">{live.source}</span>, so edit the
+              source records to change what visitors see.
+            </>
+          )}
         </p>
         <a
           href={live.href}

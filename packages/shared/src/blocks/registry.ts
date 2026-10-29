@@ -1443,6 +1443,27 @@ export const liveIslandDefaults: LiveIslandProps = {
   paddingBottom: 64,
 };
 
+/**
+ * One live product record inside the inventory island.
+ *
+ * Prices, stock, images and links stay live. Only the copy that is safe to
+ * author — the card title and tagline — is stored here, so the builder and the
+ * public storefront share one card without freezing commerce data into a page.
+ */
+export const productCardPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  productId: z.string().max(100).default(''),
+  title: z.string().max(300).default(''),
+  tagline: z.string().max(300).default(''),
+});
+export type ProductCardProps = z.infer<typeof productCardPropsSchema>;
+
+export const productCardDefaults: ProductCardProps = {
+  productId: '',
+  title: '',
+  tagline: '',
+};
+
 // ------------------------------------------------------------------
 // Composition support
 // ------------------------------------------------------------------
@@ -2126,6 +2147,16 @@ const closingCta: BlockDefinition = {
   zones: { actions: { allow: ['closing-cta-action'], max: 2 } },
 };
 
+const productCard: BlockDefinition = {
+  type: 'product-card',
+  label: 'Product Card',
+  description:
+    'One live product record. The title and tagline are authored here; price, stock, image and link stay live.',
+  category: 'Items',
+  schema: productCardPropsSchema,
+  defaultProps: productCardDefaults,
+};
+
 const liveIsland: BlockDefinition = {
   type: 'live-island',
   label: 'Live Island',
@@ -2147,6 +2178,9 @@ const liveIsland: BlockDefinition = {
     footer: {
       allow: ['text', 'link', 'button', 'stack', 'card'],
     },
+    // Live inventory cards. They are child blocks so each card is selectable,
+    // while the catalog still owns filtering, sorting, pagination and live data.
+    records: { allow: ['product-card'] },
   },
 };
 
@@ -2210,6 +2244,7 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   'twin-readout': twinReadout,
   'closing-cta-action': closingCtaAction,
   'closing-cta': closingCta,
+  'product-card': productCard,
   'live-island': liveIsland,
 };
 
