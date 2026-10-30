@@ -117,8 +117,15 @@ const CANVAS_CSS = `
 [data-puck-overlay]{transition:box-shadow .18s ease;}
 [data-puck-overlay][class*="--hover"],[data-puck-overlay][class*="--selected"]{box-shadow:0 0 0 4px rgba(37,99,235,.16),0 16px 32px -12px rgba(37,99,235,.35);}
 ._DraggableComponent-overlay_1vaqy_12{border-radius:10px;transition:outline-color .15s ease,background-color .15s ease;}
-._DropZone--isEnabled_1i2sv_59{outline:2px dashed var(--puck-color-azure-07);border-radius:12px;transition:outline-color .15s ease;min-height:48px;}
-[data-puck-dropzone][class*="DropZone--isAreaSelected"]{min-height:48px;}
+/* Empty dropzones must not add production-unlike min-heights (the public page
+ * collapses them to zero). The dashed affordance and a 48px hit target appear
+ * only while a drag is actually in flight — Puck toggles data-puck-dragging on
+ * the canvas root for exactly that window — or when an area is selected, in
+ * which case only the outline shows (selection must never change flow). */
+._DropZone--isEnabled_1i2sv_59{min-height:0;}
+[data-puck-dragging] ._DropZone--isEnabled_1i2sv_59{outline:2px dashed var(--puck-color-azure-07);border-radius:12px;min-height:48px;transition:outline-color .15s ease;}
+[data-puck-dragging] [data-puck-dropzone]:not(:has([data-puck-component])){min-height:48px;}
+[data-puck-dropzone][class*="DropZone--isAreaSelected"]{outline:1px dashed var(--puck-color-azure-05);min-height:0;}
 ._DropZone_1i2sv_1:empty{border-radius:12px;}
 ._DraggableComponent-actions_1vaqy_71{background:rgba(15,23,42,.92);color:#fff;border-radius:9999px;padding:2px 4px;box-shadow:0 8px 24px -8px rgba(0,0,0,.45);backdrop-filter:blur(8px);font-size:11px;}
 ._DraggableComponent-actions_1vaqy_71 button{background:transparent;color:rgba(255,255,255,.92);border-radius:9999px;}

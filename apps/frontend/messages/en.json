@@ -3940,8 +3940,7 @@
       "border-colour": "Border colour",
       "corner-radius-px": "Corner radius (px)",
       "overflow": "Overflow",
-      "uploaded-image-url": "Uploaded image URL",
-      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)"
+      "uploaded-image-url": "Uploaded image URL"
     },
     "fieldPlaceholders": {
       "free-manufacturing-education-for-all": "Free manufacturing education for all",
@@ -3979,7 +3978,6 @@
       "corner-radius-px": "Corner radius (px)",
       "overflow": "Overflow",
       "uploaded-image-url": "Uploaded image URL",
-      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)",
       "actions": "Buttons",
       "form": "Form",
       "instructor": "Instructor",

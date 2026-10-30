@@ -1960,7 +1960,7 @@ export function seedProductsLayout(): PageLayout {
         { label: 'SKUs', value: '—' },
         { label: 'Departments', value: '—' },
         { label: 'Price range', value: '—' },
-        { label: 'Free ship at', value: '$99' },
+        { label: 'Free ship', value: 'over $99' },
       ],
       primaryCta: {
         label: 'Search inventory',

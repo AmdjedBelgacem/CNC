@@ -3939,8 +3939,7 @@
       "border-colour": "لون الإطار",
       "corner-radius-px": "استدارة الزاوية (بكسل)",
       "overflow": "الفيض",
-      "uploaded-image-url": "رابط الصورة المرفوعة",
-      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "مثال: linear-gradient(135deg, #0ea5e9, #6366f1)"
+      "uploaded-image-url": "رابط الصورة المرفوعة"
     },
     "fieldPlaceholders": {
       "free-manufacturing-education-for-all": "تعليم صناعي مجاني للجميع",
@@ -3978,7 +3977,6 @@
       "corner-radius-px": "استدارة الزاوية (بكسل)",
       "overflow": "الفيض",
       "uploaded-image-url": "رابط الصورة المرفوعة",
-      "e.g. linear-gradient(135deg, #0ea5e9, #6366f1)": "مثال: linear-gradient(135deg, #0ea5e9, #6366f1)",
       "actions": "الأزرار",
       "form": "النموذج",
       "instructor": "المدرّب",
