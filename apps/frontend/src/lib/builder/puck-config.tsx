@@ -73,7 +73,8 @@ import {
   LIVE_ISLAND_VARIANTS,
 } from '@titan/shared';
 import { ImageUploadControl } from '@/components/builder/inspector/image-upload-control';
-import { BLOCK_COMPONENTS } from '@/components/builder/blocks'; // ---------------------------------------------------------------- helpers
+import { BLOCK_COMPONENTS } from '@/components/builder/blocks';
+import { useBuilderLivePreview } from '@/components/builder/live-preview-context'; // ---------------------------------------------------------------- helpers
 const imageField = (label: string) => ({
   type: 'custom' as const,
   label,
@@ -152,20 +153,38 @@ const withLayoutFields = (fields: any) => ({
   ...layoutFields,
   ...fields,
 }); /** Renders the shared block component with Puck's props+puck (same component the public renderer uses). * * In the editor Puck spreads the node's props flat (`{ ...props, puck, editMode }`), * with each declared Slot field replaced by its Slot *component*. Our block * components expect the `{ props, puck }` shape, so we re-wrap here: slot * components are exposed through the bridge's `renderSlot(name)` (same call * shape the public renderer implements), keeping the editor canvas identical * to the public renderer. */
+/**
+ * Blocks the public renderer never emits.
+ *
+ * `HomeBuilder` and `BlockRenderer` skip the app chrome, and the marketing
+ * pages suppress the seeded testimonials (there is no public API for them).
+ * The canvas must apply the same policy or it shows sections the visitor can
+ * never see — and, worse, those sections add height that the published page
+ * does not have.
+ */
+const CHROME_BLOCK_TYPES = new Set(['nav', 'footer']);
+const MARKETING_SUPPRESSED_BLOCK_TYPES = new Set(['testimonials', 'testimonial-card']);
+/** Routes that render through `BlockRenderer` rather than `HomeBuilder`. */
+const BLOCK_RENDERER_PAGE_SLUGS = new Set(['privacy', 'refunds', 'terms', 'edu-purchases']);
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const render = (type: string) => (editorProps: any) => {
   // The `puck` render prop is only PuckContext (drop zones, editing flag); it
   // does not expose the store. Read the latest layout through the store getter
   // so slot data resolves in the canvas without subscribing every block to it.
   const getPuck = useGetPuck();
+  const preview = useBuilderLivePreview();
   const C = BLOCK_COMPONENTS[type] as ComponentType<{ props: unknown; puck: unknown }> | undefined;
   if (!C) return <></>;
   const { puck, editMode: _editMode, ...props } = editorProps ?? {};
-  // Hidden blocks are still real nodes in the layer tree. Returning nothing
-  // here made them impossible to select on the canvas, so the only way to
-  // reach their children was the Layers pane. Render them dimmed in the
-  // editor instead; the public renderer still honours `visible: false`.
   const hidden = (props as Record<string, unknown>)?.visible === false;
+  const suppressed =
+    CHROME_BLOCK_TYPES.has(type) ||
+    Boolean(
+      preview?.pageSlug &&
+        !BLOCK_RENDERER_PAGE_SLUGS.has(preview.pageSlug) &&
+        MARKETING_SUPPRESSED_BLOCK_TYPES.has(type),
+    );
   const definition = getBlockDefinition(type);
   const renderSlot = (
     slotName: string,
@@ -180,12 +199,13 @@ const render = (type: string) => (editorProps: any) => {
         }>
       | undefined;
     if (!Slot || typeof Slot !== 'function') return null;
-    // Enforce the registry `allow` list and keep empty slots compact so they
-    // don't blow out flex/grid layouts (Puck default minEmptyHeight is 128).
+    // Enforce the registry `allow` list. Empty slots collapse to their natural
+    // height (zero) so the canvas matches the public page; the CSS dropzone
+    // styles give them a visible target only while a drag is active.
     const allow = definition?.zones?.[slotName]?.allow;
     return createElement(Slot, {
       ...(allow ? { allow } : {}),
-      minEmptyHeight: 48,
+      minEmptyHeight: 0,
       className: options?.className,
       style: options?.style,
     });
@@ -197,16 +217,23 @@ const render = (type: string) => (editorProps: any) => {
     return node ? getSlotChildren(node, slotName, data.zones) : [];
   };
   const rendered = <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />;
-  if (!hidden) return rendered;
-  return (
-    <div
-      className="relative rounded-sm outline-2 outline-dashed outline-warning/70 outline-offset-4"
-      data-builder-hidden-block="true"
-    >
-      <div className="pointer-events-none absolute -top-6 end-0 z-20 inline-flex items-center gap-1 rounded-full border border-warning/40 bg-background/95 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-warning shadow-sm">
-        Hidden on public site
+  if (suppressed) {
+    // Still mounted so its nodes remain in Puck's tree and the Layers pane can
+    // select them; `hidden` removes it from flow and from the painted page.
+    return (
+      <div hidden data-builder-suppressed-block={type} aria-hidden="true">
+        {rendered}
       </div>
-      <div className="opacity-60">{rendered}</div>
+    );
+  }
+  if (!hidden) return rendered;
+  // Hidden blocks stay mounted for Layers, but must not take up the space the
+  // public page gives back to the next section. The old dashed wrapper added
+  // hundreds of pixels on the homepage and made the canvas unusable as a
+  // visual preview.
+  return (
+    <div hidden data-builder-hidden-block="true" aria-hidden="true">
+      {rendered}
     </div>
   );
 };

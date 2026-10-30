@@ -102,7 +102,7 @@ export async function AcademyPathways({
       id="pathways"
       className={cn(
         'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-24',
-        bodyOnly && 'pt-0',
+        bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       {bodyOnly

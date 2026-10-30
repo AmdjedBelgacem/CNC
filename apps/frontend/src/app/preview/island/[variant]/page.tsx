@@ -32,11 +32,15 @@ export default async function IslandPreviewPage({
   searchParams,
 }: {
   params: Promise<{ variant: string }>;
-  searchParams: Promise<{ part?: string | string[] }>;
+  searchParams: Promise<{ part?: string | string[]; headerHeight?: string | string[] }>;
 }) {
   const { variant } = await params;
   const query = await searchParams;
   const bodyOnly = query.part === 'body';
+  const rawHeaderHeight = Array.isArray(query.headerHeight)
+    ? query.headerHeight[0]
+    : query.headerHeight;
+  const headerSpacerHeight = Number(rawHeaderHeight) || 0;
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
 
@@ -85,7 +89,11 @@ export default async function IslandPreviewPage({
         ) : variant === 'feed-topics' ? (
           <FeedTopics snapshot={snapshot} bodyOnly={bodyOnly} />
         ) : (
-          <FeedWire snapshot={snapshot} bodyOnly={bodyOnly} />
+          <FeedWire
+            snapshot={snapshot}
+            bodyOnly={bodyOnly}
+            headerSpacerHeight={headerSpacerHeight}
+          />
         );
       break;
     }
@@ -107,7 +115,12 @@ export default async function IslandPreviewPage({
         ) : variant === 'events-next-up' ? (
           <EventsNextUp events={events} upcoming={upcoming} bodyOnly={bodyOnly} />
         ) : (
-          <EventsSchedule events={events} upcoming={upcoming} bodyOnly={bodyOnly} />
+          <EventsSchedule
+            events={events}
+            upcoming={upcoming}
+            bodyOnly={bodyOnly}
+            headerSpacerHeight={headerSpacerHeight}
+          />
         );
       break;
     }

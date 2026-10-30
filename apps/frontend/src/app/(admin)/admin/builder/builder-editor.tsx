@@ -66,6 +66,13 @@ const PUCK_IFRAME = {
 const PUCK_VIEWPORTS = VIEWPORTS.map(({ label, width }) => ({
   label,
   width,
+  // Puck defaults the viewport height to `auto`, which makes the iframe grow to
+  // the page's content height. `100vh`/`min-h-screen` then resolve to that
+  // content height instead of a real device viewport: the homepage hero grew
+  // from 1200px on the public site to 2212px in the canvas. A fixed viewport
+  // height keeps CSS viewport units honest and lets the page scroll inside the
+  // frame, exactly as it does for a visitor.
+  height: width >= 1280 ? 1200 : width >= 768 ? 1024 : 844,
 }));
 const PUCK_UI = {
   leftSideBarVisible: false,
@@ -110,7 +117,8 @@ const CANVAS_CSS = `
 [data-puck-overlay]{transition:box-shadow .18s ease;}
 [data-puck-overlay][class*="--hover"],[data-puck-overlay][class*="--selected"]{box-shadow:0 0 0 4px rgba(37,99,235,.16),0 16px 32px -12px rgba(37,99,235,.35);}
 ._DraggableComponent-overlay_1vaqy_12{border-radius:10px;transition:outline-color .15s ease,background-color .15s ease;}
-._DropZone--isEnabled_1i2sv_59{outline:2px dashed var(--puck-color-azure-07);border-radius:12px;transition:outline-color .15s ease;}
+._DropZone--isEnabled_1i2sv_59{outline:2px dashed var(--puck-color-azure-07);border-radius:12px;transition:outline-color .15s ease;min-height:48px;}
+[data-puck-dropzone][class*="DropZone--isAreaSelected"]{min-height:48px;}
 ._DropZone_1i2sv_1:empty{border-radius:12px;}
 ._DraggableComponent-actions_1vaqy_71{background:rgba(15,23,42,.92);color:#fff;border-radius:9999px;padding:2px 4px;box-shadow:0 8px 24px -8px rgba(0,0,0,.45);backdrop-filter:blur(8px);font-size:11px;}
 ._DraggableComponent-actions_1vaqy_71 button{background:transparent;color:rgba(255,255,255,.92);border-radius:9999px;}

@@ -20,6 +20,13 @@ type IslandChrome = {
   header?: ReactNode;
   /** Builder canvas preview: render the live rows without the header. */
   bodyOnly?: boolean;
+  /**
+   * Canvas-only: reserve the authored header's height inside the public grid
+   * while the editable header is overlaid on top of the iframe. Without this,
+   * a header that lives in the main column of a side-rail grid is counted
+   * outside the grid and makes the canvas section taller than the public one.
+   */
+  headerSpacerHeight?: number;
 };
 
 function dayParts(iso: string, locale = 'en') {
@@ -277,7 +284,7 @@ export async function EventsNextUp({
       id="next-up"
       className={cn(
         'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16',
-        bodyOnly && 'pt-0',
+        bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       <div className="max-w-container-max mx-auto">
@@ -314,6 +321,7 @@ export async function EventsSchedule({
   upcoming,
   header,
   bodyOnly,
+  headerSpacerHeight = 0,
 }: {
   events: CatalogEvent[];
   upcoming: CatalogEvent[];
@@ -344,28 +352,29 @@ export async function EventsSchedule({
   return (
     <section
       id="schedule"
-      className={cn(
-        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20',
-        bodyOnly && 'pt-0',
-      )}
+      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20"
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
         <div className="min-w-0">
-          {bodyOnly
-            ? null
-            : header ?? (
-                <div className="mb-6 max-w-2xl">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                    Schedule
-                  </p>
-                  <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                    What&apos;s coming up
-                  </h2>
-                  <p className="mt-3 text-muted-foreground">
-                    Ordered by date — workshops, webinars, and meets as they land on the board.
-                  </p>
-                </div>
-              )}
+          {bodyOnly ? (
+            headerSpacerHeight > 0 ? (
+              <div style={{ height: headerSpacerHeight }} aria-hidden="true" />
+            ) : null
+          ) : (
+            header ?? (
+              <div className="mb-6 max-w-2xl">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Schedule
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                  What&apos;s coming up
+                </h2>
+                <p className="mt-3 text-muted-foreground">
+                  Ordered by date — workshops, webinars, and meets as they land on the board.
+                </p>
+              </div>
+            )
+          )}
 
           {groups.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
@@ -485,7 +494,7 @@ export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
       id="browse"
       className={cn(
         'border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-16 md:py-20',
-        bodyOnly && 'pt-0',
+        bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       <div className="max-w-container-max mx-auto">

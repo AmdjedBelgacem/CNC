@@ -752,6 +752,68 @@
     animation: motion-reveal-failsafe 400ms ease-out 1200ms forwards;
   }
 
+  /* Fixed-island lists are rendered by the public components and by Puck's
+     slot bridge. Puck inserts a `[data-puck-component]` wrapper around every
+     child, so the item's own `last:` variant never matches in the canvas.
+     Drop the final divider in both shapes so the builder and the public page
+     keep the same rule. */
+  .fixed-island-items [data-puck-component] > div[class*="border-b"] {
+    border-bottom-width: 1px !important;
+  }
+  .fixed-island-items > .fixed-island-item:last-child,
+  .fixed-island-items [data-puck-component]:last-child > .fixed-island-item,
+  .fixed-island-items [data-puck-component]:last-child > div {
+    border-bottom-width: 0 !important;
+  }
+
+  /* Puck's component wrapper is the flex item inside an authored stack, not
+     the block root it contains. Without this the inventory header's copy and
+     trust strip stack instead of sharing the row, adding ~130px to the canvas.
+     Keep the wrapper positioned (Puck's overlay needs its box) and hand it the
+     flex role the public root declares. */
+  [data-builder-live-island='products-inventory']
+    [data-puck-dropzone='inventory-header-root:content']
+    > [data-puck-component]:has(> .max-w-2xl) {
+    flex: 1 1 0%;
+    min-width: 0;
+  }
+  [data-builder-live-island='products-inventory']
+    [data-puck-dropzone='inventory-header-root:content']
+    > [data-puck-component]:has(> .grid) {
+    flex: 0 0 auto;
+  }
+
+  /* These two public islands put their header inside the main column of a
+     side-rail grid. The canvas renders the live grid in an iframe, so the
+     editable header is overlaid on a spacer reserved inside that column. */
+  [data-builder-live-island='events-schedule'] > .island-header-overlay,
+  [data-builder-live-island='feed-wire'] > .island-header-overlay {
+    position: absolute;
+    z-index: 10;
+    top: 64px;
+    left: 24px;
+    right: 24px;
+    display: flow-root;
+  }
+  @media (min-width: 768px) {
+    [data-builder-live-island='events-schedule'] > .island-header-overlay,
+    [data-builder-live-island='feed-wire'] > .island-header-overlay {
+      top: 80px;
+      left: 40px;
+      right: 40px;
+    }
+  }
+  @media (min-width: 1024px) {
+    [data-builder-live-island='events-schedule'] > .island-header-overlay {
+      right: auto;
+      width: calc(100% - 80px - 32px - 280px);
+    }
+    [data-builder-live-island='feed-wire'] > .island-header-overlay {
+      right: auto;
+      width: calc(100% - 80px - 32px - 300px);
+    }
+  }
+
   @keyframes motion-reveal-failsafe {
     to {
       opacity: 1 !important;

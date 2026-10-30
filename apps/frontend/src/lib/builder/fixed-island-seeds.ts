@@ -55,7 +55,7 @@ const itemCard = (question: string, answer: string): SeedNode =>
     radius: 'none',
     border: false,
     align: 'left',
-    className: 'border-b border-border pb-6 last:border-b-0',
+    className: 'fixed-island-item border-b border-border pb-6',
     content: [
       heading(question, {
         as: 'h3',

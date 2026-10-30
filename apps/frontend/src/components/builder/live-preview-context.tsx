@@ -170,6 +170,10 @@ export function BuilderLivePreviewProvider({
 
   const homeMetrics = useMemo(() => {
     if (pageSlug !== 'home') return null;
+    // Until the live data arrives, use the values already baked into the saved
+    // layout. Building metrics from empty arrays showed "0 academies" in the
+    // canvas while the published page showed the real counts.
+    if (loading || failed) return null;
     const courseTotal =
       academies.reduce((sum, a) => sum + (a.courseCount || 0), 0) || courses.length;
     return buildLiveHomeMetrics({
@@ -177,7 +181,7 @@ export function BuilderLivePreviewProvider({
       courseCount: courseTotal,
       sponsorCount: sponsors.length,
     });
-  }, [pageSlug, academies, courses.length, sponsors.length]);
+  }, [pageSlug, loading, failed, academies, courses.length, sponsors.length]);
 
   const heroStats = useMemo<HeroStat[] | null>(() => {
     if (loading) return null;

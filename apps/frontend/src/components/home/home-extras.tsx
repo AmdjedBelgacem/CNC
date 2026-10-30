@@ -38,11 +38,14 @@ export function HomeFaqSection({ header, items }: IslandSlots) {
         </h2>
       )}
       {items ? (
-        <div className="mt-8 space-y-8">{items}</div>
+        <div className="fixed-island-items mt-8 flex flex-col gap-8">{items}</div>
       ) : (
-        <dl className="mt-8 space-y-8">
+        <dl className="fixed-island-items mt-8 flex flex-col gap-8">
           {HOMEPAGE_FAQ.map((item) => (
-            <div key={item.question} className="border-b border-border pb-6 last:border-b-0">
+            <div
+              key={item.question}
+              className="fixed-island-item border-b border-border pb-6"
+            >
               <dt className="font-display text-lg font-semibold text-foreground">
                 {item.question}
               </dt>
@@ -141,11 +144,14 @@ export function AboutFactsSection({ header, items, footer }: IslandSlots) {
         </>
       )}
       {items ? (
-        <div className="mt-8 space-y-8">{items}</div>
+        <div className="fixed-island-items mt-8 flex flex-col gap-8">{items}</div>
       ) : (
-        <dl className="mt-8 space-y-8">
+        <dl className="fixed-island-items mt-8 flex flex-col gap-8">
           {ABOUT_FACTS.map((fact) => (
-            <div key={fact.heading} className="border-b border-border pb-6 last:border-b-0">
+            <div
+              key={fact.heading}
+              className="fixed-island-item border-b border-border pb-6"
+            >
               <dt className="font-display text-lg font-semibold text-foreground">
                 {fact.heading}
               </dt>

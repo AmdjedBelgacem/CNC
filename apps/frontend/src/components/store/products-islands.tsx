@@ -43,7 +43,7 @@ export async function ProductsFeatured({
       id="on-the-bench"
       className={cn(
         'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16',
-        bodyOnly && 'pt-0',
+        bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       <div className="mx-auto w-full max-w-[1800px]">
@@ -140,7 +140,7 @@ export async function ProductsInventory({
       id="inventory"
       className={cn(
         'px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-[1800px] py-14 md:py-20',
-        bodyOnly && 'pt-0',
+        bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       {bodyOnly
@@ -209,7 +209,7 @@ export async function ProductsDepartments({
       id="departments"
       className={cn(
         'border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-14 md:py-20',
-        bodyOnly && 'pt-0',
+        bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       <div className="mx-auto w-full max-w-[1800px]">

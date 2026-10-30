@@ -11,6 +11,11 @@ type IslandChrome = {
   header?: ReactNode;
   /** Builder canvas preview: render the live rows without the header. */
   bodyOnly?: boolean;
+  /**
+   * Canvas-only: reserve the authored header's height inside the public grid
+   * while the editable header is overlaid on top of the iframe.
+   */
+  headerSpacerHeight?: number;
 };
 
 function snippet(content: string, max = 140) {
@@ -61,7 +66,7 @@ export async function FeedTopics({
       id="topics"
       className={cn(
         'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-14 md:py-18',
-        bodyOnly && 'pt-0',
+        bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       <div className="max-w-container-max mx-auto">
@@ -119,31 +124,33 @@ export async function FeedWire({
   snapshot,
   header,
   bodyOnly,
+  headerSpacerHeight = 0,
 }: { snapshot: WireSnapshot } & IslandChrome) {
   const t = await getTranslations('pages.feed');
   return (
     <section
       id="live-wire"
-      className={cn(
-        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20',
-        bodyOnly && 'pt-0',
-      )}
+      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20"
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
         <div className="min-w-0">
-          {bodyOnly
-            ? null
-            : header ?? (
-                <div className="mb-6 max-w-2xl">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                    {t('wireTitle')}
-                  </p>
-                  <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                    {t('wireBlurb')}
-                  </h2>
-                  <p className="mt-3 text-muted-foreground">{t('wireHint')}</p>
-                </div>
-              )}
+          {bodyOnly ? (
+            headerSpacerHeight > 0 ? (
+              <div style={{ height: headerSpacerHeight }} aria-hidden="true" />
+            ) : null
+          ) : (
+            header ?? (
+              <div className="mb-6 max-w-2xl">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  {t('wireTitle')}
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                  {t('wireBlurb')}
+                </h2>
+                <p className="mt-3 text-muted-foreground">{t('wireHint')}</p>
+              </div>
+            )
+          )}
           <FeedStream embedded />
         </div>
 
