@@ -1,7 +1,38 @@
 import { ImageResponse } from 'next/og';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export default function OpenGraphImage() {
+export const alt = 'BAROOT CNC SOLUTIONS — CNC MACHINING COURSES & CERTIFICATION';
+
+/**
+ * The social share card shows the actual site logo, not a drawn stand-in.
+ *
+ * The logo is read from the shipped `public/` directory at request time and
+ * inlined as a data URL (satori cannot fetch relative paths). Standalone builds
+ * run with the app directory as cwd, but candidates cover both layouts so a
+ * missing file degrades to the text-only card instead of a 500.
+ */
+async function loadLogo(): Promise<string | null> {
+  const candidates = [
+    path.join(process.cwd(), 'public', 'logo.png'),
+    path.join(process.cwd(), 'apps', 'frontend', 'public', 'logo.png'),
+    path.join(process.cwd(), '..', '..', 'apps', 'frontend', 'public', 'logo.png'),
+  ];
+  for (const file of candidates) {
+    try {
+      const bytes = await readFile(file);
+      return `data:image/png;base64,${bytes.toString('base64')}`;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+export default async function OpenGraphImage() {
+  const logoSrc = await loadLogo();
   return new ImageResponse(
     <div
       style={{
@@ -16,48 +47,43 @@ export default function OpenGraphImage() {
       }}
     >
       {' '}
-      <svg
-        width="80"
-        height="80"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#C2410C"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ marginBottom: 24 }}
-      >
-        {' '}
-        <circle cx="12" cy="12" r="3" />{' '}
-        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />{' '}
-      </svg>{' '}
-      <h1
+      {logoSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoSrc}
+          width={430}
+          height={336}
+          style={{ objectFit: 'contain', marginBottom: 28 }}
+        />
+      ) : null}{' '}
+      <div
         style={{
+          display: 'flex',
           fontSize: 72,
           fontWeight: 800,
           color: '#ffffff',
           letterSpacing: '-0.02em',
-          margin: 0,
           textAlign: 'center',
           lineHeight: 1.1,
         }}
       >
         {' '}
-        Baroot CNC Solutions{' '}
-      </h1>{' '}
-      <p
+        BAROOT CNC SOLUTIONS{' '}
+      </div>{' '}
+      <div
         style={{
-          fontSize: 32,
+          display: 'flex',
+          fontSize: 30,
           fontWeight: 600,
           color: '#C2410C',
-          margin: '16px 0 0',
+          marginTop: 18,
           textAlign: 'center',
-          letterSpacing: '0.01em',
+          letterSpacing: '0.08em',
         }}
       >
         {' '}
-        Free CNC Education{' '}
-      </p>{' '}
+        CNC MACHINING COURSES &amp; CERTIFICATION{' '}
+      </div>{' '}
     </div>,
     { ...size },
   );

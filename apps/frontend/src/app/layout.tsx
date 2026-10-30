@@ -57,20 +57,22 @@ export const metadata: Metadata = {
     'Baroot CNC Solutions delivers CNC machining courses, simulation-first training and industry-recognised certification for machinists, engineers and manufacturing teams.',
   applicationName: BRAND_NAME,
   openGraph: {
-    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
+    // Share-facing copy is all caps by request: link previews (WhatsApp,
+    // LinkedIn, X) show exactly these strings, and the brand presents in caps.
+    title: `${BRAND_NAME.toUpperCase()} | CNC MACHINING COURSES & CERTIFICATION`,
     description:
-      'CNC machining courses, simulation-first training and industry-recognised certification for machinists, engineers and manufacturing teams.',
+      'CNC MACHINING COURSES, SIMULATION-FIRST TRAINING AND INDUSTRY-RECOGNISED CERTIFICATION FOR MACHINISTS, ENGINEERS AND MANUFACTURING TEAMS.',
     type: 'website',
     locale: 'en_US',
-    siteName: BRAND_NAME,
+    siteName: BRAND_NAME.toUpperCase(),
     url: SITE_URL,
     images: [OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
+    title: `${BRAND_NAME.toUpperCase()} | CNC MACHINING COURSES & CERTIFICATION`,
     description:
-      'CNC machining courses, simulation-first training and industry-recognised certification for machinists, engineers and manufacturing teams.',
+      'CNC MACHINING COURSES, SIMULATION-FIRST TRAINING AND INDUSTRY-RECOGNISED CERTIFICATION FOR MACHINISTS, ENGINEERS AND MANUFACTURING TEAMS.',
     images: [OG_IMAGE.url],
   },
   /**

@@ -30,21 +30,22 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: absoluteUrl('/') },
   openGraph: {
-    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
+    // Share-facing copy is all caps by request — link previews show these strings.
+    title: `${BRAND_NAME.toUpperCase()} | CNC MACHINING COURSES & CERTIFICATION`,
     description:
-      'Simulation-first CNC machining courses, technical resources and industry-recognised certification for manufacturing professionals.',
+      'SIMULATION-FIRST CNC MACHINING COURSES, TECHNICAL RESOURCES AND INDUSTRY-RECOGNISED CERTIFICATION FOR MANUFACTURING PROFESSIONALS.',
     type: 'website',
     url: absoluteUrl('/'),
-    siteName: BRAND_NAME,
+    siteName: BRAND_NAME.toUpperCase(),
     // The homepage previously shipped no og:image at all, so every share of the most
     // important URL rendered without a preview card.
     images: [OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${BRAND_NAME} | CNC Machining Courses & Certification`,
+    title: `${BRAND_NAME.toUpperCase()} | CNC MACHINING COURSES & CERTIFICATION`,
     description:
-      'Simulation-first CNC machining courses and industry-recognised certification for manufacturing professionals.',
+      'SIMULATION-FIRST CNC MACHINING COURSES AND INDUSTRY-RECOGNISED CERTIFICATION FOR MANUFACTURING PROFESSIONALS.',
     images: [OG_IMAGE.url],
   },
 };

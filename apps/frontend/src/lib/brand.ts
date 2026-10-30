@@ -109,7 +109,7 @@ export const OG_IMAGE = {
   url: absoluteUrl('/opengraph-image'),
   width: 1200,
   height: 630,
-  alt: `${BRAND_NAME} — precision manufacturing education`,
+  alt: 'BAROOT CNC SOLUTIONS — CNC MACHINING COURSES & CERTIFICATION',
 };
 
 /**
