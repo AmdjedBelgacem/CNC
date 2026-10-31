@@ -2799,6 +2799,7 @@
         "media": "Media",
         "pricing": "Pricing",
         "localization": "Localization",
+        "live": "Live sessions",
         "publish": "Publish",
         "hintTitle": "Add a course title",
         "hintCurriculum": "Add a section with at least one lesson",
