@@ -1,7 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 const withAlpha = (name) => `rgb(var(${name}) / <alpha-value>)`;
 const sansStack = ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'];
-const displayStack = ['var(--font-space-grotesk)', 'var(--font-inter)', 'ui-sans-serif', 'sans-serif'];
+// Display type follows the theme's display font (a book serif by default).
+const displayStack = ['var(--font-family-display)'];
+const serifStack = ['var(--font-serif)', 'ui-serif', 'Georgia', 'serif'];
 
 module.exports = {
   // MUST be 'class': the app toggles `.dark` on <html> (see ThemeProvider), and the
@@ -86,6 +88,7 @@ module.exports = {
       fontFamily: {
         sans: sansStack,
         display: displayStack,
+        serif: serifStack,
         'display-hero': displayStack,
         'headline-lg': displayStack,
         'headline-md': displayStack,

@@ -6,6 +6,15 @@ export const FONT_CSS_VARS: Record<FontKey, string> = {
   inter: 'var(--font-inter)',
   'space-grotesk': 'var(--font-space-grotesk)',
   'jetbrains-mono': 'var(--font-mono)',
+  'source-serif': 'var(--font-serif)',
+};
+
+/** Generic fallback family per font key, so a serif theme degrades to a serif. */
+const FONT_FALLBACKS: Record<FontKey, string> = {
+  inter: 'ui-sans-serif, system-ui, sans-serif',
+  'space-grotesk': 'var(--font-inter), ui-sans-serif, system-ui, sans-serif',
+  'jetbrains-mono': 'ui-monospace, SFMono-Regular, monospace',
+  'source-serif': "ui-serif, Georgia, 'Times New Roman', serif",
 };
 
 export function isFontKey(value: unknown): value is FontKey {
@@ -95,13 +104,13 @@ export function colorSetToTokens(set: ColorSet, mode: 'light' | 'dark'): Record<
     '--c-muted-foreground': ch(set.mutedForeground),
     '--c-surface-raised': ch(set.card),
     '--c-surface-sunken': ch(surfaceSunken),
-    // Overlay is always near-black: it backs modal scrims in both modes.
-    '--c-overlay': darker ? '4 7 13' : '15 23 42',
+    // Overlay is always a warm near-black: it backs modal scrims in both modes.
+    '--c-overlay': darker ? '12 11 10' : '20 20 19',
     // Lines
     '--c-border': ch(set.border),
     '--c-border-strong': ch(borderStrong),
     '--c-input': ch(set.border),
-    '--c-ring': ch(set.primary),
+    '--c-ring': ch(set.ring || set.primary),
     // Legacy builder text/surface tokens
     '--c-text-primary': ch(set.foreground),
     '--c-text-secondary': ch(shiftColor(set.foreground, darker ? -0.18 : 0.18)),
@@ -113,7 +122,7 @@ export function colorSetToTokens(set: ColorSet, mode: 'light' | 'dark'): Record<
     '--c-secondary-fixed': ch(shiftColor(set.secondary, 0.6)),
     // Glass + decorative
     '--glass-bg': ch(set.card),
-    '--glass-border-color': darker ? 'rgba(232,236,245,0.10)' : 'rgba(15,23,42,0.08)',
+    '--glass-border-color': darker ? 'rgba(245,244,238,0.08)' : 'rgba(20,20,19,0.07)',
     '--glow-color': ch(set.background),
     // Hex twins for plain-CSS consumers and native widgets
     '--color-primary': set.primary,
@@ -155,11 +164,11 @@ export function colorSetToCssVars(set: ColorSet): Record<string, string> {
 }
 
 function fontVars(tokens: ThemeTokens): Record<string, string> {
-  const sans = FONT_CSS_VARS[resolveFontKey(tokens.fonts.sans)];
-  const display = FONT_CSS_VARS[resolveFontKey(tokens.fonts.display)];
+  const sansKey = resolveFontKey(tokens.fonts.sans);
+  const displayKey = resolveFontKey(tokens.fonts.display);
   return {
-    '--font-family-sans': `${sans}, ui-sans-serif, system-ui, sans-serif`,
-    '--font-family-display': `${display}, var(--font-inter), ui-sans-serif, system-ui, sans-serif`,
+    '--font-family-sans': `${FONT_CSS_VARS[sansKey]}, ${FONT_FALLBACKS[sansKey]}`,
+    '--font-family-display': `${FONT_CSS_VARS[displayKey]}, ${FONT_FALLBACKS[displayKey]}`,
   };
 }
 

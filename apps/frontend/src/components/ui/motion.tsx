@@ -3,7 +3,9 @@
 import * as React from 'react';
 import {
   AnimatePresence,
+  animate,
   m,
+  useInView,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -465,6 +467,105 @@ export function LayoutBox({
   );
 }
 /* ── Re-exports so there's exactly one motion import path ────────────────── */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Implementations for HoverLift / Crossfade / AnimatedNumber
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Lifts on hover and settles on press, on a spring so a quick pass of the
+ * pointer doesn't strobe. Pair with `hover:shadow-lg transition-shadow` on the
+ * same element for the elevation half of the effect.
+ */
+export function HoverLift({
+  children,
+  lift = 4,
+  scale = 1,
+  as = 'div',
+  className,
+  ...rest
+}: HoverLiftProps) {
+  const Tag = m[as] as typeof m.div;
+  return (
+    <Tag
+      whileHover={{ y: -lift, scale, transition: spring.smooth }}
+      whileTap={{ y: -lift / 3, scale: scale === 1 ? 0.99 : 1, transition: spring.snappy }}
+      className={className}
+      {...rest}
+    >
+      {children}
+    </Tag>
+  );
+}
+
+/** Swap content in place: keyed on `value`, the old view leaves as the new arrives. */
+export function Crossfade({
+  value,
+  axis = 'y',
+  distance: dist = distance.sm,
+  children,
+  className,
+  ...rest
+}: CrossfadeProps) {
+  const offset = axis === 'none' ? {} : { [axis]: dist };
+  const exitOffset = axis === 'none' ? {} : { [axis]: -dist / 2 };
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <m.div
+        key={value}
+        initial={{ opacity: 0, ...offset }}
+        animate={{ opacity: 1, x: 0, y: 0, transition: transition.enter }}
+        exit={{ opacity: 0, ...exitOffset, transition: transition.leave }}
+        className={className}
+        {...rest}
+      >
+        {children}
+      </m.div>
+    </AnimatePresence>
+  );
+}
+
+/**
+ * Counts up to `value` the first time it scrolls into view. The final,
+ * formatted value is what's server-rendered, so no-JS and crawlers see the
+ * real number; the count-up only runs once mounted.
+ */
+export function AnimatedNumber({
+  value,
+  format = (v) => Math.round(v).toLocaleString(),
+  durationSeconds = 1.1,
+  className,
+  animateOnChange = false,
+}: AnimatedNumberProps) {
+  const ref = React.useRef<HTMLSpanElement>(null);
+  const inViewNow = useInView(ref, { once: true, margin: '-10% 0px' });
+  const reduce = useReducedMotion();
+  const played = React.useRef(false);
+  const formatRef = React.useRef(format);
+  formatRef.current = format;
+
+  React.useEffect(() => {
+    const node = ref.current;
+    if (!node || !inViewNow || reduce) return;
+    if (played.current && !animateOnChange) return;
+    played.current = true;
+    const controls = animate(0, value, {
+      duration: durationSeconds,
+      ease: ease.emerge,
+      onUpdate: (v) => {
+        node.textContent = formatRef.current(v);
+      },
+    });
+    return () => controls.stop();
+  }, [inViewNow, value, durationSeconds, animateOnChange, reduce]);
+
+  return (
+    <span ref={ref} className={cn('tabular-nums', className)}>
+      {format(value)}
+    </span>
+  );
+}
 
 export { m, duration, ease, spring, transition, distance, stagger, staggerItem, inView };
 export type { Variants, HTMLMotionProps };

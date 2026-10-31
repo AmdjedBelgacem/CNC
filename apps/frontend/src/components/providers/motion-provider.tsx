@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { LazyMotion, MotionConfig, domAnimation, useReducedMotion } from 'framer-motion';
+import { LazyMotion, MotionConfig, domMax, useReducedMotion } from 'framer-motion';
 
 /**
  * Global motion configuration, mounted once in the root layout.
@@ -34,8 +34,10 @@ import { LazyMotion, MotionConfig, domAnimation, useReducedMotion } from 'framer
  *
  * ── Why LazyMotion ──
  *
- * `domAnimation` is loaded lazily instead of being bundled up front, saving
- * ~15kb gzipped on first paint. The trade-off is that components must use `m.*`
+ * `domMax` (animations + layout/shared-layout) is used rather than
+ * `domAnimation`: the redesign relies on `layout` and `layoutId` for sliding
+ * tab indicators, segmented controls and reflowing lists, which the smaller
+ * bundle silently ignores. The trade-off is that components must use `m.*`
  * rather than `motion.*`; `strict` turns a mistake there into a loud warning
  * instead of a silent runtime no-op.
  */
@@ -46,7 +48,7 @@ export function MotionProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => setMounted(true), []);
 
   return (
-    <LazyMotion features={domAnimation} strict>
+    <LazyMotion features={domMax} strict>
       <MotionConfig reducedMotion={mounted && prefersReducedMotion ? 'user' : 'never'}>
         {children}
       </MotionConfig>

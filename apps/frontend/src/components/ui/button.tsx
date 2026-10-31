@@ -4,28 +4,29 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold tracking-[-0.005em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'pressable inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium tracking-[-0.005em] transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 active:bg-primary/95',
+          // A hairline inner highlight gives the clay fill a pressed-paper depth.
+          'bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.14),0_1px_2px_rgb(20_20_19/0.12)] hover:bg-primary/90 active:bg-primary/95',
         destructive:
           'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
         outline:
-          'border border-border bg-card text-foreground shadow-xs hover:border-border-strong hover:bg-muted',
+          'border border-border bg-card text-foreground shadow-xs hover:border-border-strong hover:bg-muted/60',
         secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/85',
         accent: 'bg-accent text-accent-foreground shadow-xs hover:bg-accent/90',
-        ghost: 'text-foreground hover:bg-muted',
+        ghost: 'text-foreground hover:bg-muted/80',
         subtle: 'bg-muted text-foreground hover:bg-muted/70',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-4 py-2',
-        xs: 'h-7 rounded-sm px-2 text-xs',
+        xs: 'h-7 rounded-md px-2 text-xs',
         sm: 'h-9 px-3 text-sm',
         lg: 'h-11 px-6',
-        xl: 'h-12 px-8 text-base',
+        xl: 'h-12 rounded-xl px-8 text-base',
         // Icon buttons: the hit area stays generous while the GLYPH is sized down,
         // so the icon has real breathing room instead of sitting edge-to-edge.
         // Contexts: `icon` = nav/toolbar actions, `icon-sm` = dense toolbars,

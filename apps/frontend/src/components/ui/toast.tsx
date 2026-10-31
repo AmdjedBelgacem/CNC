@@ -65,12 +65,13 @@ export function ToastViewport({ dir = 'ltr' }: { dir?: 'ltr' | 'rtl' }) {
           '--normal-bg': 'var(--popover)',
           '--normal-text': 'var(--popover-foreground)',
           '--normal-border': 'var(--border)',
-          fontFamily: 'var(--font-sans)',
+          fontFamily: 'var(--font-family-sans)',
         } as CSSProperties,
         classNames: {
-          toast: 'rounded-xl border shadow-lg',
-          title: 'text-13 font-semibold',
-          description: 'text-xs leading-relaxed',
+          toast: 'rounded-2xl border border-border/80 shadow-xl backdrop-blur',
+          title: 'text-sm font-medium',
+          description: 'text-xs leading-relaxed text-muted-foreground',
+          closeButton: 'border-border bg-card text-muted-foreground hover:text-foreground',
         },
       }}
     />

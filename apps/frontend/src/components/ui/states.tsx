@@ -42,7 +42,7 @@ export function EmptyState({
       <m.div
         initial={{ opacity: 0, scale: 0.7 }}
         animate={{ opacity: 1, scale: 1, transition: { ...spring.snappy, delay: 0.05 } }}
-        className="flex size-12 items-center justify-center rounded-lg border border-border bg-muted/60"
+        className="flex size-14 items-center justify-center rounded-2xl border border-border/70 bg-card shadow-sm"
       >
         <m.span
           initial={{ rotate: -18, opacity: 0 }}
@@ -53,7 +53,7 @@ export function EmptyState({
         </m.span>
       </m.div>
       <div className="max-w-sm space-y-1">
-        <p className="text-sm font-semibold text-foreground">{title ?? t('empty')}</p>
+        <p className="font-display text-lg font-medium text-foreground">{title ?? t('empty')}</p>
         {description && (
           <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
         )}
