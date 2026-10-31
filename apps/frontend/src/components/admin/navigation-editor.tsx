@@ -16,7 +16,9 @@ import {
   Trash2,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
+import { AnimatePresence, LayoutGroup, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -224,23 +226,53 @@ export function NavigationEditor() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
+      <div className="space-y-2" aria-busy="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="flex h-12 items-center gap-3 rounded-xl border border-border/60 bg-card px-3 shadow-xs"
+          >
+            <Loader2 className={cn('size-4 text-muted-foreground', i === 0 ? 'animate-spin' : 'opacity-0')} />
+            <span className="h-3 w-40 animate-pulse rounded-full bg-muted" />
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs">
+        <div className="text-sm tabular-nums text-muted-foreground">
           {stats.links === 1 ? t('linkCount') : t('linksCount', { count: stats.links })}
           {stats.groups > 0 &&
             ` · ${stats.groups === 1 ? t('groupSuffix') : t('groupsSuffix', { count: stats.groups })}`}
         </div>
         <div className="flex items-center gap-2">
-          {dirty && <span className="text-xs text-muted-foreground">{t('unsaved')}</span>}
-          {saved && !dirty && <span className="text-xs text-success">{t('saved')}</span>}
+          <AnimatePresence mode="wait" initial={false}>
+            {dirty ? (
+              <m.span
+                key="unsaved"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4, transition: { duration: 0.1 } }}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-warning"
+              >
+                <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
+                {t('unsaved')}
+              </m.span>
+            ) : saved ? (
+              <m.span
+                key="saved"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4, transition: { duration: 0.1 } }}
+                className="text-xs font-medium text-success"
+              >
+                {t('saved')}
+              </m.span>
+            ) : null}
+          </AnimatePresence>
           <Button variant="outline" onClick={() => void load()} disabled={saving || !dirty}>
             {t('discard')}
           </Button>
@@ -251,19 +283,25 @@ export function NavigationEditor() {
         </div>
       </div>
 
-      {error && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {error && (
+          <m.div
+            key="error"
+            role="alert"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: ease.emerge } }}
+            exit={{ opacity: 0, transition: { duration: 0.14 } }}
+            className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-3 text-sm text-destructive"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {tree.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border px-6 py-12 text-center">
-          <p className="text-sm text-muted-foreground">{t('empty')}</p>
+        <div className="animate-fade-in-up rounded-xl border border-dashed border-border/80 bg-surface-sunken/30 px-6 py-14 text-center">
+          <p className="mx-auto max-w-sm text-sm text-muted-foreground">{t('empty')}</p>
           <div className="mt-4 flex justify-center gap-2">
             <Button
               variant="outline"
@@ -285,7 +323,9 @@ export function NavigationEditor() {
           </div>
         </div>
       ) : (
-        <ul className="space-y-1.5">
+        <LayoutGroup>
+        <ul className="space-y-2">
+          <AnimatePresence initial={false}>
           {tree.map((node) => (
             <NavRow
               key={node.id ?? newIdOf(node)}
@@ -316,7 +356,9 @@ export function NavigationEditor() {
               }
             />
           ))}
+          </AnimatePresence>
         </ul>
+        </LayoutGroup>
       )}
 
       {tree.length > 0 && (
@@ -437,10 +479,16 @@ function NavRow({
   const broken = node.type === 'page' && (node.pageMissing || node.pageDisabled);
 
   return (
-    <li>
+    <m.li
+      layout="position"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -8, transition: { duration: 0.16, ease: ease.exit } }}
+      transition={spring.layout}
+    >
       <div
         className={cn(
-          'flex items-center gap-2 rounded-md border border-border bg-card px-2 py-2',
+          'group flex items-center gap-2 rounded-xl border border-border/70 bg-card px-2.5 py-2 shadow-xs transition-[opacity,border-color,box-shadow] duration-200 hover:border-border hover:shadow-sm',
           hidden && 'opacity-60',
         )}
       >
@@ -450,13 +498,14 @@ function NavRow({
             aria-label={open ? t('collapse') : t('expand')}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+            className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            {open ? (
-              <ChevronDown className="size-4" />
-            ) : (
-              <ChevronRight className="flip-rtl size-4" />
-            )}
+            <ChevronRight
+              className={cn(
+                'flip-rtl size-4 transition-transform duration-200',
+                open && 'rotate-90 rtl:-rotate-90',
+              )}
+            />
           </button>
         ) : (
           <GripVertical className="size-4 shrink-0 text-muted-foreground/40" aria-hidden />
@@ -474,23 +523,23 @@ function NavRow({
             </span>
           )}
           {isGroup ? (
-            <span className="shrink-0 rounded-sm bg-secondary px-1.5 py-0.5 font-mono text-[10px] uppercase text-secondary-foreground">
+            <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-2xs font-medium text-accent">
               {t('groupBadge')}
             </span>
           ) : (
-            <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+            <span className="shrink-0 truncate font-mono text-2xs text-muted-foreground">
               {node.type === 'page' ? `/${node.pageSlug}` : node.href}
               {node.openInNewTab && <ExternalLink className="ms-1 inline size-3" aria-hidden />}
             </span>
           )}
           {broken && (
-            <span className="shrink-0 rounded-sm bg-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-warning">
+            <span className="shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-2xs font-medium text-warning">
               {node.pageMissing ? t('pageMissing') : t('pageDisabled')}
             </span>
           )}
         </button>
 
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <IconButton label={t('moveUp')} onClick={() => onMove(-1)}>
             <ChevronDown className="size-4 rotate-180" />
           </IconButton>
@@ -511,8 +560,15 @@ function NavRow({
         </div>
       </div>
 
+      <AnimatePresence initial={false}>
       {isGroup && open && node.children?.length ? (
-        <ul className="mt-1.5 space-y-1.5 border-s-2 border-border/60 ps-4 pe-0">
+        <m.ul
+          key="children"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1, transition: { duration: 0.28, ease: ease.emerge } }}
+          exit={{ height: 0, opacity: 0, transition: { duration: 0.18, ease: ease.exit } }}
+          className="ms-3 space-y-2 overflow-hidden border-s border-border/70 pe-0 ps-4 pt-2"
+        >
           {node.children.map((child) => (
             <NavRow
               key={child.id ?? newIdOf(child)}
@@ -530,9 +586,10 @@ function NavRow({
               onMoveChild={() => {}}
             />
           ))}
-        </ul>
+        </m.ul>
       ) : null}
-    </li>
+      </AnimatePresence>
+    </m.li>
   );
 }
 
@@ -554,7 +611,7 @@ function IconButton({
       title={label}
       onClick={onClick}
       className={cn(
-        'rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+        'rounded-md p-1.5 text-muted-foreground transition-[background-color,color,transform] hover:bg-muted hover:text-foreground active:scale-90',
         danger && 'hover:bg-destructive/10 hover:text-destructive',
       )}
     >

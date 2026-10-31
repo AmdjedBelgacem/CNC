@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AdminNavigationPage() {
   const t = await getTranslations('admin.navigation');
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <AdminPageHeader title={t('title')} description={t('description')} />
       <NavigationEditor />
     </div>

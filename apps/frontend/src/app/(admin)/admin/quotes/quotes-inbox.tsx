@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Inbox, Loader2, Mail, Search } from 'lucide-react';
+import { ChevronDown, Inbox, Loader2, Mail, Search } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
+import { ease } from '@/lib/motion';
+import { PillTabs } from '@/components/admin/admin-ui';
 import { api } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -29,9 +32,9 @@ interface QuoteRow {
 const STATUSES = ['all', 'new', 'contacted', 'closed'] as const;
 
 const badgeClass: Record<string, string> = {
-  new: 'border-primary/30 bg-primary/10 text-primary',
-  contacted: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  closed: 'border-border bg-muted text-muted-foreground',
+  new: 'border-primary/15 bg-primary/10 text-primary',
+  contacted: 'border-warning/20 bg-warning/10 text-warning',
+  closed: 'border-border/70 bg-muted text-muted-foreground',
 };
 
 /**
@@ -72,21 +75,18 @@ export function QuotesInbox() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUSES.map((value) => (
-          <Button
-            key={value}
-            type="button"
-            size="sm"
-            variant={status === value ? 'default' : 'outline'}
-            onClick={() => setStatus(value)}
-          >
-            {value === 'all' ? t('filterAll', { default: 'All' }) : t(`status.${value}`)}
-            {value !== 'all' && counts[value] ? (
-              <span className="ms-1 opacity-70">({counts[value]})</span>
-            ) : null}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-card p-2 shadow-xs">
+        <div className="w-full sm:w-auto">
+          <PillTabs
+            value={status}
+            onChange={(value) => setStatus(value)}
+            options={STATUSES.map((value) => ({
+              key: value,
+              label: value === 'all' ? t('filterAll', { default: 'All' }) : t(`status.${value}`),
+              count: value !== 'all' && counts[value] ? counts[value] : undefined,
+            }))}
+          />
+        </div>
 
         <div className="relative ms-auto w-full sm:w-64">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -103,45 +103,77 @@ export function QuotesInbox() {
       {isLoading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
+            <Skeleton key={i} className="h-[74px] rounded-xl" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <p className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-10 text-sm text-muted-foreground">
-          <Inbox className="size-4" />
+        <m.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, ease: ease.emerge }}
+          className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 bg-surface-sunken/30 px-4 py-14 text-center text-sm text-muted-foreground"
+        >
+          <span className="flex size-10 items-center justify-center rounded-full bg-muted">
+            <Inbox className="size-[18px]" />
+          </span>
           {t('empty', { default: 'No quote requests yet.' })}
-        </p>
+        </m.p>
       ) : (
         <ul className="space-y-2">
-          {items.map((quote) => {
+          {items.map((quote, index) => {
             const expanded = openId === quote.id;
             return (
-              <li key={quote.id} className="rounded-xl border border-border bg-card">
+              <m.li
+                key={quote.id}
+                layout="position"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: ease.emerge, delay: Math.min(index * 0.035, 0.4) }}
+                className={cn(
+                  'overflow-hidden rounded-xl border bg-card transition-[border-color,box-shadow] duration-200',
+                  expanded ? 'border-border shadow-md' : 'border-border/70 shadow-xs hover:shadow-sm',
+                )}
+              >
                 <button
                   type="button"
                   onClick={() => setOpenId(expanded ? null : quote.id)}
-                  className="flex w-full flex-wrap items-center gap-3 p-4 text-start"
+                  className="flex w-full flex-wrap items-center gap-3 p-4 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:bg-muted/40"
                   aria-expanded={expanded}
                 >
                   <Badge className={cn('shrink-0', badgeClass[quote.status])}>
                     {t(`status.${quote.status}`)}
                   </Badge>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground">
+                    <span className="block truncate text-sm font-medium text-foreground">
                       {quote.name}
                       {quote.company ? <span className="font-normal text-muted-foreground"> · {quote.company}</span> : null}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">{quote.email}</span>
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                     {new Date(quote.createdAt).toLocaleDateString()}
                   </span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn(
+                      'size-4 shrink-0 text-muted-foreground transition-transform duration-300',
+                      expanded && 'rotate-180',
+                    )}
+                  />
                 </button>
 
+                <AnimatePresence initial={false}>
                 {expanded ? (
-                  <div className="space-y-4 border-t border-border p-4">
+                  <m.div
+                    key="details"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1, transition: { duration: 0.32, ease: ease.emerge } }}
+                    exit={{ height: 0, opacity: 0, transition: { duration: 0.2, ease: ease.exit } }}
+                    className="overflow-hidden"
+                  >
+                  <div className="space-y-4 border-t border-border/60 p-4">
                     {quote.message ? (
-                      <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-sm leading-relaxed">
+                      <p className="max-w-prose whitespace-pre-wrap rounded-lg bg-muted/50 p-3.5 text-sm leading-relaxed">
                         {quote.message}
                       </p>
                     ) : null}
@@ -157,7 +189,7 @@ export function QuotesInbox() {
                             if (e.target.value === (quote.adminNote ?? '')) return;
                             patch.mutate({ id: quote.id, adminNote: e.target.value || null });
                           }}
-                          className="flex w-full resize-y rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          className="flex w-full resize-y rounded-lg border border-border/90 bg-card px-3 py-2 text-sm shadow-xs transition-[border-color,box-shadow] hover:border-border-strong focus:border-primary/50 focus:outline-none focus:ring-[3px] focus:ring-primary/15"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -202,8 +234,10 @@ export function QuotesInbox() {
                       {patch.isPending ? <Loader2 className="size-4 animate-spin self-center" /> : null}
                     </div>
                   </div>
+                  </m.div>
                 ) : null}
-              </li>
+                </AnimatePresence>
+              </m.li>
             );
           })}
         </ul>

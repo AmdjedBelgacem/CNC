@@ -23,6 +23,7 @@ import { api } from '@/lib/api-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
+import { Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 
 type Status = 'connected' | 'expired' | 'revoked' | 'not_connected' | 'blocked';
 
@@ -46,11 +47,11 @@ interface ServiceStatus {
 }
 
 const TONE: Record<Status, string> = {
-  connected: 'border-success/40 bg-success/10 text-success',
-  expired: 'border-warning/40 bg-warning/10 text-warning',
-  revoked: 'border-destructive/40 bg-destructive/10 text-destructive',
-  not_connected: 'border-border bg-muted text-muted-foreground',
-  blocked: 'border-border bg-muted text-muted-foreground',
+  connected: 'border-success/15 bg-success/10 text-success',
+  expired: 'border-warning/20 bg-warning/10 text-warning',
+  revoked: 'border-destructive/15 bg-destructive/10 text-destructive',
+  not_connected: 'border-border/70 bg-muted text-muted-foreground',
+  blocked: 'border-border/70 bg-muted text-muted-foreground',
 };
 
 export function IntegrationsPanel() {
@@ -139,7 +140,7 @@ export function IntegrationsPanel() {
   return (
     <div className="space-y-5">
       <header>
-        <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">{t('title')}</h2>
+        <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">{t('title')}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
         <div className="mt-3 flex items-center gap-2">
           <Search className="pointer-events-none size-4 text-muted-foreground" aria-hidden />
@@ -150,7 +151,7 @@ export function IntegrationsPanel() {
             aria-label={tAdmin('csrfToken')}
             className="h-8 max-w-xs font-mono text-xs"
           />
-          <p className="text-2xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {platform?.oauthConfigured ? tAdmin('oauthConfigured') : t('platformMissing')}
           </p>
         </div>
@@ -161,29 +162,39 @@ export function IntegrationsPanel() {
       ) : query.isError ? (
         <ErrorState title={tAdmin('loadFailed')} onRetry={() => void query.refetch()} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {services.map((service) => (
-            <Card key={service.service}>
+        <Stagger className="grid gap-4 lg:grid-cols-2">
+          {services.map((service, index) => (
+            <StaggerItem key={service.service} index={index} className="h-full">
+            <Card className="h-full transition-shadow duration-200 hover:shadow-md">
               <CardHeader>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <CardTitle className="text-sm">{service.label}</CardTitle>
+                    <CardTitle className="font-display text-lg font-medium tracking-[-0.015em]">{service.label}</CardTitle>
                     <CardDescription>{service.description}</CardDescription>
                   </div>
-                  <Badge variant="outline" className={cn('shrink-0', TONE[service.status])}>
-                    {t(service.status)}
-                  </Badge>
+                  <Crossfade value={service.status} axis="none" className="shrink-0">
+                    <Badge variant="outline" className={cn('shrink-0 gap-1.5', TONE[service.status])}>
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'size-1.5 rounded-full bg-current',
+                          service.status === 'connected' && 'animate-pulse',
+                        )}
+                      />
+                      {t(service.status)}
+                    </Badge>
+                  </Crossfade>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {service.status === 'blocked' && service.blockedReason && (
-                  <p className="flex items-start gap-2 rounded-md border border-border bg-muted p-2 text-xs text-muted-foreground">
+                  <p className="flex items-start gap-2 rounded-lg border border-border/70 bg-muted/60 p-2.5 text-xs text-muted-foreground">
                     <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                     {service.blockedReason}
                   </p>
                 )}
                 {service.service === 'search_console' && (
-                  <p className="text-2xs italic text-muted-foreground">{t('customerNote')}</p>
+                  <p className="text-xs italic text-muted-foreground">{t('customerNote')}</p>
                 )}
                 {service.connectedEmail && (
                   <p className="text-xs text-foreground">
@@ -191,17 +202,17 @@ export function IntegrationsPanel() {
                   </p>
                 )}
                 {service.externalAccountId && (
-                  <p className="font-mono text-2xs text-muted-foreground">
+                  <p className="font-mono text-xs text-muted-foreground">
                     {t('accountId')}: {service.externalAccountId}
                   </p>
                 )}
                 {service.externalAccountIds.length > 1 && (
-                  <p className="text-2xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {t('accountsFound')}: {service.externalAccountIds.join(', ')}
                   </p>
                 )}
                 {service.lastErrorMessage && (
-                  <p className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-2xs text-destructive">
+                  <p className="animate-fade-in-up rounded-lg border border-destructive/20 bg-destructive/[0.06] p-2.5 text-xs text-destructive">
                     {service.lastErrorCode}: {service.lastErrorMessage}
                   </p>
                 )}
@@ -247,9 +258,9 @@ export function IntegrationsPanel() {
                     </Button>
                   )}
                 </div>
-                <details className="text-2xs text-muted-foreground">
-                  <summary className="cursor-pointer">{t('scopes')}</summary>
-                  <ul className="mt-1 space-y-0.5 font-mono">
+                <details className="group/scopes border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer select-none font-medium transition-colors hover:text-foreground">{t('scopes')}</summary>
+                  <ul className="mt-2 animate-fade-in-up space-y-0.5 rounded-lg bg-muted/50 p-2.5 font-mono text-2xs">
                     {service.scopes.length === 0 ? (
                       <li>—</li>
                     ) : (
@@ -259,8 +270,9 @@ export function IntegrationsPanel() {
                 </details>
               </CardContent>
             </Card>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
     </div>
   );

@@ -19,7 +19,9 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useLocale } from 'next-intl';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease } from '@/lib/motion';
 
 /* -------------------------------------------------------------------------- */
 /* Formatting                                                                 */
@@ -143,11 +145,17 @@ export function Sparkline({
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={stroke} stopOpacity="0.24" />
+          <stop offset="0%" stopColor={stroke} stopOpacity="0.16" />
           <stop offset="100%" stopColor={stroke} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polygon points={`0,${height} ${coords.join(' ')} ${width},${height}`} fill={`url(#${gradientId})`} />
+      <m.polygon
+        points={`0,${height} ${coords.join(' ')} ${width},${height}`}
+        fill={`url(#${gradientId})`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.2, ease: ease.emerge }}
+      />
       <polyline
         points={coords.join(' ')}
         fill="none"
@@ -186,7 +194,7 @@ export function DeltaBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums',
+        'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-2xs font-medium tabular-nums',
         positive
           ? 'bg-success/10 text-success'
           : delta < 0
@@ -227,19 +235,25 @@ export function Panel({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-xl border bg-card',
-        tone === 'attention' ? 'border-warning/30' : 'border-border',
+        'overflow-hidden rounded-xl border bg-card transition-shadow duration-200',
+        tone === 'attention'
+          ? 'border-warning/25 shadow-xs'
+          : tone === 'flat'
+            ? 'border-border/70'
+            : 'border-border/70 shadow-xs hover:shadow-sm',
         className,
       )}
     >
       {(title || action) && (
-        <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+        <header className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5 sm:px-5">
           <div className="min-w-0">
             {title && (
-              <h2 className="truncate text-13 font-semibold tracking-tight text-foreground">{title}</h2>
+              <h2 className="truncate font-display text-base font-medium tracking-[-0.015em] text-foreground">
+                {title}
+              </h2>
             )}
             {subtitle && (
-              <p className="mt-0.5 truncate text-2xs text-muted-foreground">{subtitle}</p>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
             )}
           </div>
           {action && <div className="shrink-0">{action}</div>}
@@ -266,17 +280,17 @@ export function SegmentedBar({
 }) {
   const total = segments.reduce((sum, segment) => sum + Math.max(0, segment.value), 0);
   return (
-    <div className={cn('flex h-2.5 w-full overflow-hidden rounded-full bg-muted', className)}>
+    <div className={cn('flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-muted', className)}>
       {total === 0 ? null : (
-        segments.map((segment) =>
+        segments.map((segment, index) =>
           segment.value > 0 ? (
-            <div
+            <m.div
               key={segment.label}
-              className="h-full transition-[width] duration-500"
-              style={{
-                width: `${(segment.value / total) * 100}%`,
-                backgroundColor: segment.color,
-              }}
+              className="h-full first:rounded-s-full last:rounded-e-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${(segment.value / total) * 100}%` }}
+              transition={{ duration: 0.7, delay: 0.1 + index * 0.06, ease: ease.emerge }}
+              style={{ backgroundColor: segment.color }}
               title={`${segment.label}: ${segment.value}`}
             />
           ) : null,
@@ -303,13 +317,16 @@ export function SeriesBars({
   return (
     <div className={cn('flex items-end gap-[2px]', className)} style={{ height }}>
       {points.map((point, index) => (
-        <div
+        <m.div
           key={`${point.label}-${index}`}
-          className="group relative flex-1 rounded-t-[2px] transition-opacity hover:opacity-80"
+          className="group relative flex-1 origin-bottom rounded-t-[3px] transition-opacity hover:!opacity-100"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ duration: 0.55, delay: Math.min(index * 0.012, 0.4), ease: ease.emerge }}
           style={{
             height: `${Math.max(2, (point.value / max) * 100)}%`,
             backgroundColor: barColor,
-            opacity: point.value === 0 ? 0.15 : 0.85,
+            opacity: point.value === 0 ? 0.12 : 0.7,
           }}
           title={`${point.label}: ${point.value}`}
         />

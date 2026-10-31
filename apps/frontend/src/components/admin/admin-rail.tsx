@@ -26,7 +26,9 @@ import {
   ClipboardList,
   TriangleAlert,
 } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
 import { useAuthStore } from '@/stores/auth-store';
 import { openAdminSearch } from './admin-search-palette';
 import { NotificationBell } from '@/components/notifications/notification-bell';
@@ -231,6 +233,27 @@ const tabKeyMap: Record<string, string> = {
   '/admin/settings': 'settings',
   '/': 'viewSite',
 };
+/** Shared hover label for rail entries — an ink chip that slides out from the rail. */
+const RAIL_TIP =
+  'pointer-events-none absolute start-full z-50 ms-3 -translate-x-1 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background opacity-0 shadow-md transition-[opacity,transform] duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 rtl:translate-x-1 rtl:group-hover:translate-x-0';
+
+const RAIL_ITEM =
+  'group relative flex shrink-0 items-center justify-center rounded-lg outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring';
+
+/** The one sliding "you are here" marker shared by every rail entry. */
+function RailActiveMarker() {
+  return (
+    <m.span
+      layoutId="admin-rail-active"
+      aria-hidden="true"
+      className="absolute inset-0 rounded-lg bg-primary/10 ring-1 ring-inset ring-primary/15"
+      transition={spring.smooth}
+    >
+      <span className="absolute -start-[13px] top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-e-full bg-primary" />
+    </m.span>
+  );
+}
+
 function RailButton({
   href,
   title,
@@ -247,18 +270,14 @@ function RailButton({
       href={href}
       title={title}
       className={cn(
-        'group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-150',
-        active
-          ? 'bg-primary/10 text-primary shadow-sm'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        RAIL_ITEM,
+        'size-9',
+        active ? 'text-primary' : 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
       )}
     >
-      {' '}
-      {children}{' '}
-      <span className="pointer-events-none absolute start-full z-50 ms-3 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs font-medium text-foreground opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
-        {' '}
-        {title}{' '}
-      </span>{' '}
+      {active && <RailActiveMarker />}
+      <span className="relative flex">{children}</span>
+      <span className={RAIL_TIP}>{title}</span>
     </Link>
   );
 }
@@ -268,14 +287,13 @@ function SearchRailButton({ label }: { label: string }) {
       type="button"
       onClick={openAdminSearch}
       title={label}
-      className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground"
+      className={cn(
+        RAIL_ITEM,
+        'size-9 text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
+      )}
     >
-      {' '}
-      <Search className="size-[18px]" />{' '}
-      <span className="pointer-events-none absolute start-full z-50 ms-3 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs font-medium text-foreground opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
-        {' '}
-        {label}{' '}
-      </span>{' '}
+      <Search className="size-[18px]" />
+      <span className={RAIL_TIP}>{label}</span>
     </button>
   );
 }
@@ -338,23 +356,40 @@ export function AdminRail() {
     };
   }, [openGroup]);
 
+  // The mobile sheet is a modal surface: Escape dismisses it, like every other sheet.
+  useEffect(() => {
+    if (!mobileGroup) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileGroup(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileGroup]);
+
+  const groupLabel = (key: NavGroup) =>
+    key === 'content'
+      ? tAdmin('nav.groupContent')
+      : key === 'people'
+        ? tAdmin('nav.groupPeople')
+        : key === 'commerce'
+          ? tAdmin('nav.groupCommerce')
+          : tAdmin('nav.groupPlatform');
+
   return (
     <>
-      {' '}
-      <aside className="no-scrollbar fixed inset-y-0 start-0 z-40 hidden w-16 flex-col items-center gap-1.5 border-r border-border bg-card/60 py-3 lg:flex">
-        {' '}
+      <aside className="no-scrollbar fixed inset-y-0 start-0 z-40 hidden w-16 flex-col items-center gap-1 border-e border-border/70 bg-surface-sunken/70 py-3 backdrop-blur-sm lg:flex">
         <Link
           href="/admin"
           title="TITANS Admin"
-          className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs"
+          className="mb-2 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:-rotate-6 active:scale-95"
         >
           <Crosshair className="size-4" strokeWidth={2.5} />
-        </Link>{' '}
+        </Link>
         <div className="mb-1 flex shrink-0 flex-col items-center gap-1">
-          {' '}
-          <SearchRailButton label={tAdmin('searchHint')} />{' '}
-          {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}{' '}
-        </div>{' '}
+          <SearchRailButton label={tAdmin('searchHint')} />
+          {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}
+        </div>
+        <div className="my-1.5 h-px w-6 shrink-0 bg-border/80" aria-hidden="true" />
         {/*
           Rendered from `visibleTabs`, the same list the mobile bar below uses.
 
@@ -373,10 +408,9 @@ export function AdminRail() {
               title={tab.title}
               active={Boolean(tab.match(pathname))}
             >
-              {' '}
-              <tab.icon className="size-[18px]" />{' '}
+              <tab.icon className="size-[18px]" />
             </RailButton>
-          ))}{' '}
+          ))}
         {navGroups.map((group) => {
           const meta = GROUP_META[group.key];
           // A group lights up when the route you are on belongs to it, so you always know which
@@ -392,89 +426,98 @@ export function AdminRail() {
                 aria-haspopup="menu"
                 title={tAdmin(meta.labelKey)}
                 className={cn(
-                  'group relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150',
+                  RAIL_ITEM,
+                  'size-9',
                   containsActive
-                    ? 'bg-primary/10 text-primary shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    ? 'text-primary'
+                    : open
+                      ? 'bg-foreground/[0.06] text-foreground'
+                      : 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
                 )}
               >
-                <meta.icon className="size-[18px]" />
-                {group.children.length > 0 && (
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'absolute -bottom-0.5 -end-0.5 size-1.5 rounded-full bg-primary transition-opacity',
-                      containsActive || open ? 'opacity-100' : 'opacity-0',
-                    )}
-                  />
-                )}
+                {containsActive && <RailActiveMarker />}
+                <meta.icon className="relative size-[18px]" />
               </button>
-              {open && (
-                <div
-                  role="menu"
-                  className="absolute start-full top-0 z-50 ms-2 w-60 animate-in overflow-hidden rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-lg"
-                >
-                  <p className="px-2.5 pb-1.5 pt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    {tAdmin(meta.labelKey)}
-                  </p>
-                  {group.children.map((child) => {
-                    const active = Boolean(child.match(pathname));
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        role="menuitem"
-                        onClick={() => setOpenGroup(null)}
-                        className={cn(
-                          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors',
-                          active
-                            ? 'bg-primary/10 font-medium text-primary'
-                            : 'text-foreground hover:bg-muted',
-                        )}
-                      >
-                        <child.icon className="size-4 shrink-0 opacity-80" />
-                        <span className="truncate">{child.title}</span>
-                        {active && <span className="ms-auto size-1.5 rounded-full bg-primary" />}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
+              <AnimatePresence>
+                {open && (
+                  <m.div
+                    role="menu"
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1, transition: spring.smooth }}
+                    exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12, ease: ease.exit } }}
+                    className="absolute start-full top-0 z-50 ms-3 w-60 origin-top-left overflow-hidden rounded-xl border border-border/80 bg-popover p-1.5 text-popover-foreground shadow-lg rtl:origin-top-right"
+                  >
+                    <p className="px-2.5 pb-1.5 pt-1.5 text-xs font-medium text-muted-foreground">
+                      {tAdmin(meta.labelKey)}
+                    </p>
+                    {group.children.map((child, index) => {
+                      const active = Boolean(child.match(pathname));
+                      return (
+                        <m.div
+                          key={child.href}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                            transition: { duration: 0.22, ease: ease.emerge, delay: 0.02 + index * 0.025 },
+                          }}
+                        >
+                          <Link
+                            href={child.href}
+                            role="menuitem"
+                            onClick={() => setOpenGroup(null)}
+                            className={cn(
+                              'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm outline-none transition-colors focus-visible:bg-muted',
+                              active
+                                ? 'bg-primary/10 font-medium text-primary'
+                                : 'text-foreground hover:bg-muted',
+                            )}
+                          >
+                            <child.icon
+                              className={cn(
+                                'size-4 shrink-0',
+                                active ? 'text-primary' : 'text-muted-foreground',
+                              )}
+                            />
+                            <span className="truncate">{child.title}</span>
+                            {active && <span className="ms-auto size-1.5 rounded-full bg-primary" />}
+                          </Link>
+                        </m.div>
+                      );
+                    })}
+                  </m.div>
+                )}
+              </AnimatePresence>
             </div>
           );
-        })}{' '}
+        })}
         {visibleTabs
           .filter((tab) => tab.href === '/')
           .map((tab) => (
             <RailButton key={tab.href} href={tab.href} title={tab.title} active={false}>
-              {' '}
-              <tab.icon className="size-[18px]" />{' '}
+              <tab.icon className="size-[18px]" />
             </RailButton>
-          ))}{' '}
-        <div className="sticky bottom-0 mt-auto flex shrink-0 flex-col items-center gap-1 bg-card/95 pt-2 backdrop-blur-sm">
-          {' '}
-          <div className="my-1 h-px w-8 bg-border" />{' '}
+          ))}
+        <div className="sticky bottom-0 mt-auto flex shrink-0 flex-col items-center gap-1 pt-2">
+          <div className="my-1 h-px w-6 bg-border/80" />
           <button
             type="button"
             onClick={() => {
               window.location.href = '/';
             }}
             title={tAdmin('exitAdmin')}
-            className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:border-destructive hover:bg-destructive/10 hover:text-destructive dark:hover:border-red-900/30"
+            className={cn(
+              RAIL_ITEM,
+              'size-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive',
+            )}
           >
-            {' '}
-            <LogOut className="size-[18px]" />{' '}
-            <span className="pointer-events-none absolute start-full z-50 ms-3 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs font-medium text-foreground opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
-              {' '}
-              {tAdmin('exitAdmin')}{' '}
-            </span>{' '}
-          </button>{' '}
-        </div>{' '}
-      </aside>{' '}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {' '}
+            <LogOut className="flip-rtl size-[18px]" />
+            <span className={RAIL_TIP}>{tAdmin('exitAdmin')}</span>
+          </button>
+        </div>
+      </aside>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
         <div className="grid grid-cols-6 gap-1 px-2 py-1">
-          {' '}
           {NAV_GROUP_ORDER.filter((key) => key !== 'overview').map((key) => {
             const group = navGroups.find((g) => g.key === key);
             if (!group || !group.children.length) return null;
@@ -485,90 +528,116 @@ export function AdminRail() {
                 key={key}
                 type="button"
                 onClick={() => setMobileGroup(key)}
-                className={`flex min-w-[2.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-2xs font-semibold transition ${active ? 'text-primary' : 'text-muted-foreground'}`}
+                className={cn(
+                  'relative flex min-w-[2.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-2xs font-medium transition-colors active:scale-95',
+                  active ? 'text-primary' : 'text-muted-foreground',
+                )}
               >
-                {' '}
-                <Icon className="size-[18px] shrink-0" />{' '}
-                <span className="max-w-full truncate leading-tight">
-                    {key === 'content'
-                      ? tAdmin('nav.groupContent')
-                      : key === 'people'
-                        ? tAdmin('nav.groupPeople')
-                        : key === 'commerce'
-                          ? tAdmin('nav.groupCommerce')
-                          : tAdmin('nav.groupPlatform')}
-                  </span>{' '}
+                {active && (
+                  <m.span
+                    layoutId="admin-mobile-active"
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-lg bg-primary/10"
+                    transition={spring.smooth}
+                  />
+                )}
+                <Icon className="relative size-[18px] shrink-0" />
+                <span className="relative max-w-full truncate leading-tight">{groupLabel(key)}</span>
               </button>
             );
-          })}{' '}
+          })}
           <button
             type="button"
             onClick={openAdminSearch}
             title={tAdmin('searchHint')}
-            className="flex min-w-[2.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-2xs font-semibold text-muted-foreground transition"
+            className="flex min-w-[2.5rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-2xs font-medium text-muted-foreground transition active:scale-95"
           >
-            {' '}
-            <Search className="size-[18px] shrink-0" />{' '}
-            <span className="max-w-full truncate leading-tight">{tAdmin('search')}</span>{' '}
-          </button>{' '}
+            <Search className="size-[18px] shrink-0" />
+            <span className="max-w-full truncate leading-tight">{tAdmin('search')}</span>
+          </button>
           <div className="flex min-w-[2.5rem] items-center justify-center">
-            {' '}
             {isSuperAdmin ? <PlatformAlertsRailBell /> : <NotificationBell />}
-          </div>{' '}
-        </div>{' '}
-      </nav>{' '}
-      {mobileGroup ? (
-        <>
-          {' '}
-          <button
-            type="button"
-            aria-label="Close navigation group"
-            className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden"
-            onClick={() => setMobileGroup(null)}
-          />
-          {' '}
-          <div className="fixed inset-x-0 bottom-0 z-[65] max-h-[70vh] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl lg:hidden">
-            {' '}
-            <div className="mb-3 flex items-center justify-between">
-              {' '}
-              <h2 className="text-base font-bold text-foreground">
-                {mobileGroup === 'content'
-                  ? tAdmin('nav.groupContent')
-                  : mobileGroup === 'people'
-                    ? tAdmin('nav.groupPeople')
-                    : mobileGroup === 'commerce'
-                      ? tAdmin('nav.groupCommerce')
-                      : tAdmin('nav.groupPlatform')}
-              </h2>{' '}
-              <button
-                type="button"
-                className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-                onClick={() => setMobileGroup(null)}
-              >
-                Close
-              </button>{' '}
-            </div>{' '}
-            <div className="grid grid-cols-2 gap-2">
-              {' '}
-              {(navGroups.find((g) => g.key === mobileGroup)?.children ?? []).map((tab) => {
-                const active = tab.match(pathname);
-                return (
-                  <Link
-                    key={tab.href}
-                    href={tab.href}
-                    onClick={() => setMobileGroup(null)}
-                    className={`flex items-center gap-3 rounded-xl border border-border p-3 text-sm font-medium transition ${active ? 'border-primary bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}`}
-                  >
-                    {' '}
-                    <tab.icon className="size-4 shrink-0" />{' '}
-                    <span>{tab.title}</span>{' '}
-                  </Link>
-                );
-              })}
-            </div>{' '}
           </div>
-        </>
-      ) : null}
+        </div>
+      </nav>
+      <AnimatePresence>
+        {mobileGroup ? (
+          <>
+            <m.button
+              key="admin-mobile-scrim"
+              type="button"
+              aria-label="Close navigation group"
+              className="fixed inset-0 z-[60] bg-overlay/45 backdrop-blur-[3px] lg:hidden"
+              onClick={() => setMobileGroup(null)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { duration: 0.22, ease: ease.emerge } }}
+              exit={{ opacity: 0, transition: { duration: 0.16, ease: ease.exit } }}
+            />
+            <m.div
+              key="admin-mobile-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label={groupLabel(mobileGroup)}
+              initial={{ y: '100%' }}
+              animate={{ y: 0, transition: spring.gentle }}
+              exit={{ y: '100%', transition: { duration: 0.2, ease: ease.exit } }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.6 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 80 || info.velocity.y > 500) setMobileGroup(null);
+              }}
+              className="fixed inset-x-0 bottom-0 z-[65] max-h-[70vh] overflow-y-auto rounded-t-2xl border-t border-border/70 bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl lg:hidden"
+            >
+              <div aria-hidden="true" className="mx-auto mb-3 h-1 w-10 rounded-full bg-border-strong/70" />
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
+                  {groupLabel(mobileGroup)}
+                </h2>
+                <button
+                  type="button"
+                  className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  onClick={() => setMobileGroup(null)}
+                >
+                  Close
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(navGroups.find((g) => g.key === mobileGroup)?.children ?? []).map((tab, index) => {
+                  const active = tab.match(pathname);
+                  return (
+                    <m.div
+                      key={tab.href}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        transition: { duration: 0.28, ease: ease.emerge, delay: 0.06 + index * 0.035 },
+                      }}
+                    >
+                      <Link
+                        href={tab.href}
+                        onClick={() => setMobileGroup(null)}
+                        className={cn(
+                          'flex items-center gap-3 rounded-xl border p-3 text-sm font-medium transition-colors active:scale-[0.98]',
+                          active
+                            ? 'border-primary/30 bg-primary/10 text-primary'
+                            : 'border-border/70 text-foreground hover:bg-muted',
+                        )}
+                      >
+                        <tab.icon
+                          className={cn('size-4 shrink-0', active ? 'text-primary' : 'text-muted-foreground')}
+                        />
+                        <span>{tab.title}</span>
+                      </Link>
+                    </m.div>
+                  );
+                })}
+              </div>
+            </m.div>
+          </>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }

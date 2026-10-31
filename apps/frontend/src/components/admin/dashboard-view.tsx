@@ -44,7 +44,10 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
+import { AnimatedNumber, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { useAuthStore } from '@/stores/auth-store';
 import { AdminCommandBar, BarIconButton, BarPrimaryButton } from './admin-chrome';
 import {
@@ -164,7 +167,7 @@ function RangePicker({
     <div
       role="group"
       aria-label={label}
-      className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
+      className="flex h-10 items-center gap-0.5 rounded-lg border border-border/70 bg-muted/60 p-0.5 sm:h-9"
     >
       {RANGES.map((range) => (
         <button
@@ -173,13 +176,21 @@ function RangePicker({
           onClick={() => onChange(range.key)}
           aria-pressed={value === range.key}
           className={cn(
-            'rounded-md px-2.5 py-1 text-2xs font-semibold transition active:scale-[0.98]',
+            'relative h-full rounded-md px-2.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]',
             value === range.key
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'text-foreground'
               : 'text-muted-foreground hover:text-foreground',
           )}
         >
-          {labels[range.key]}
+          {value === range.key && (
+            <m.span
+              layoutId="dashboard-range"
+              aria-hidden="true"
+              className="absolute inset-0 rounded-md bg-card shadow-xs ring-1 ring-border/60"
+              transition={spring.smooth}
+            />
+          )}
+          <span className="relative">{labels[range.key]}</span>
         </button>
       ))}
     </div>
@@ -191,6 +202,8 @@ function KpiCell({
   label,
   sub,
   value,
+  amount,
+  formatAmount,
   delta,
   sparkline,
   tone,
@@ -203,6 +216,9 @@ function KpiCell({
   label: string;
   sub: string;
   value: string;
+  /** Raw number behind `value`, so it can count up; `value` stays the SSR text. */
+  amount?: number;
+  formatAmount?: (n: number) => string;
   delta: number | null;
   sparkline?: number[];
   tone: 'primary' | 'success' | 'warning';
@@ -220,22 +236,29 @@ function KpiCell({
   return (
     <Link
       href={href}
-      className="group relative flex min-w-0 flex-col gap-3 px-4 py-4 transition-colors hover:bg-muted/40 sm:px-5"
+      className="group relative flex h-full min-w-0 flex-col gap-3 bg-card px-4 py-5 outline-none transition-colors duration-200 hover:bg-surface-raised focus-visible:bg-muted/40 sm:px-5"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-2xs font-medium uppercase tracking-wide text-muted-foreground">
-            {label}
-          </p>
-          <p className="mt-1.5 flex flex-wrap items-baseline gap-2">
-            <span className="font-display text-2xl font-bold tabular-nums tracking-tight text-foreground">
-              {value}
+          <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
+          <p className="mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="font-display text-[28px] font-medium leading-none tracking-[-0.022em] text-foreground">
+              {typeof amount === 'number' && formatAmount ? (
+                <AnimatedNumber value={amount} format={formatAmount} animateOnChange />
+              ) : (
+                <span className="tabular-nums">{value}</span>
+              )}
             </span>
             <DeltaBadge delta={delta} labels={deltaLabels} />
           </p>
-          <p className="mt-0.5 truncate text-2xs text-muted-foreground">{sub}</p>
+          <p className="mt-1.5 truncate text-xs text-muted-foreground">{sub}</p>
         </div>
-        <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', ring)}>
+        <span
+          className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:-translate-y-0.5',
+            ring,
+          )}
+        >
           <Icon className="size-4" aria-hidden="true" />
         </span>
       </div>
@@ -244,7 +267,7 @@ function KpiCell({
           points={sparkline}
           tone={tone}
           label={sparkLabel}
-          className="-mb-1 opacity-80 transition-opacity group-hover:opacity-100"
+          className="-mb-1 opacity-70 transition-opacity duration-200 group-hover:opacity-100"
         />
       ) : (
         <div className="h-7" aria-label={noData} />
@@ -512,6 +535,8 @@ export function DashboardView() {
       label: t('kpiUsers'),
       sub: t('kpiUsersSub'),
       value: count(overview?.users?.value ?? 0),
+      amount: overview?.users?.value ?? 0,
+      formatAmount: (n: number) => count(Math.round(n)),
       delta: overview?.users?.delta ?? null,
       sparkline: overview?.users?.sparkline,
       tone: 'primary' as const,
@@ -523,6 +548,8 @@ export function DashboardView() {
       label: t('kpiActive'),
       sub: t('kpiActiveSub'),
       value: count(overview?.activeUsers?.value ?? 0),
+      amount: overview?.activeUsers?.value ?? 0,
+      formatAmount: (n: number) => count(Math.round(n)),
       delta: overview?.activeUsers?.delta ?? null,
       sparkline: overview?.activeUsers?.sparkline,
       tone: 'success' as const,
@@ -534,6 +561,8 @@ export function DashboardView() {
       label: t('kpiVisitors', { default: 'Visitors' }),
       sub: t('kpiVisitorsSub', { default: 'Active sessions' }),
       value: count(overview?.visitors?.value ?? 0),
+      amount: overview?.visitors?.value ?? 0,
+      formatAmount: (n: number) => count(Math.round(n)),
       delta: overview?.visitors?.delta ?? null,
       sparkline: overview?.visitors?.sparkline,
       tone: 'primary' as const,
@@ -545,6 +574,8 @@ export function DashboardView() {
       label: t('kpiEnrollments'),
       sub: t('kpiEnrollmentsSub'),
       value: count(overview?.enrollments?.value ?? 0),
+      amount: overview?.enrollments?.value ?? 0,
+      formatAmount: (n: number) => count(Math.round(n)),
       delta: overview?.enrollments?.delta ?? null,
       sparkline: overview?.enrollments?.sparkline,
       tone: 'primary' as const,
@@ -556,6 +587,8 @@ export function DashboardView() {
       label: t('kpiRevenue'),
       sub: t('kpiRevenueSub'),
       value: currency(overview?.revenue?.cents ?? 0),
+      amount: overview?.revenue?.cents ?? 0,
+      formatAmount: (n: number) => currency(Math.round(n)),
       delta: overview?.revenue?.delta ?? null,
       sparkline: overview?.revenue?.sparkline,
       tone: 'warning' as const,
@@ -614,22 +647,20 @@ export function DashboardView() {
         }
       />
 
-      <div className="mx-auto w-full max-w-[1560px] space-y-5 pt-5">
+      <div className="mx-auto w-full max-w-[1560px] space-y-6 pt-6">
         {/* Hero band: greeting plus the four numbers as one reading. */}
-        <header className="rounded-xl border border-border bg-card">
-          <div className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <header className="space-y-5">
+          <Reveal className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <p className="font-mono text-2xs uppercase tracking-[0.12em] text-muted-foreground">
-                {t('eyebrow')}
-              </p>
-              <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              <p className="eyebrow">{t('eyebrow')}</p>
+              <h1 className="mt-2 text-balance font-display text-[28px] font-medium leading-[1.15] tracking-[-0.022em] text-foreground sm:text-[36px]">
                 {/* Two messages rather than one `select` with two `other`
                     branches: ICU allows a single `other`, and the duplicate threw
                     INVALID_MESSAGE on every dashboard render. Each locale also owns
                     its own separator, so Arabic keeps "، " instead of a hardcoded ", ". */}
                 {firstName ? t('heroTitleNamed', { name: firstName }) : t('heroTitle')}
               </h1>
-              <p className="mt-1 truncate text-2xs text-muted-foreground">
+              <p className="mt-2 text-pretty text-sm text-muted-foreground">
                 {t('heroSubtitle', {
                   tenant: tenantSlug || 'academy',
                   role: role ? role.replace(/_/g, ' ') : '—',
@@ -644,37 +675,51 @@ export function DashboardView() {
                   : null}
               </p>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
-            {loading
-              ? [0, 1, 2, 3].map((index) => (
-                  <div key={index} className="px-4 py-4 sm:px-5">
+          {/* Hairline-ruled KPI strip: `gap-px` over a border-coloured well draws
+              the dividers on every row, however the grid wraps. */}
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            {loading ? (
+              <div className="grid grid-cols-1 gap-px bg-border/60 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {[0, 1, 2, 3, 4].map((index) => (
+                  <div key={index} className="bg-card px-4 py-5 sm:px-5">
                     <Skeleton className="h-3 w-20" />
-                    <Skeleton className="mt-2 h-7 w-24" />
+                    <Skeleton className="mt-3 h-7 w-24" />
                     <Skeleton className="mt-3 h-7 w-full" />
                   </div>
-                ))
-              : kpis.map((kpi) => (
-                  <KpiCell
-                    key={kpi.label}
-                    {...kpi}
-                    deltaLabels={{
-                      up: t('vsPreviousUp'),
-                      down: t('vsPreviousDown'),
-                      flat: t('vsPreviousFlat'),
-                    }}
-                    noData={t('noData')}
-                  />
                 ))}
+              </div>
+            ) : (
+              <Stagger className="grid grid-cols-1 gap-px bg-border/60 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {kpis.map((kpi, index) => (
+                  <StaggerItem key={kpi.label} index={index} className="bg-card">
+                    <KpiCell
+                      {...kpi}
+                      deltaLabels={{
+                        up: t('vsPreviousUp'),
+                        down: t('vsPreviousDown'),
+                        flat: t('vsPreviousFlat'),
+                      }}
+                      noData={t('noData')}
+                    />
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            )}
           </div>
         </header>
 
+        <AnimatePresence initial={false}>
         {failed.length > 0 && (
-          <div
+          <m.div
             role="status"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/5 px-4 py-3"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto', transition: { duration: 0.3, ease: ease.emerge } }}
+            exit={{ opacity: 0, height: 0, transition: { duration: 0.18, ease: ease.exit } }}
+            className="overflow-hidden"
           >
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/25 bg-warning/[0.06] px-4 py-3">
             <p className="flex items-center gap-2 text-13 text-foreground">
               <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
               {t('errorTitle')}
@@ -682,15 +727,17 @@ export function DashboardView() {
             <button
               type="button"
               onClick={() => void load(true)}
-              className="rounded-md border border-border bg-background px-2.5 py-1 text-2xs font-semibold text-foreground transition hover:bg-muted"
+              className="rounded-lg border border-border/80 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:bg-muted/60 active:scale-[0.98]"
             >
               {t('errorAction')}
             </button>
           </div>
+          </m.div>
         )}
+        </AnimatePresence>
 
-        <div className="grid gap-5 lg:grid-cols-12">
-          <div className="space-y-5 lg:col-span-8">
+        <div className="grid gap-6 lg:grid-cols-12">
+          <div className="space-y-6 lg:col-span-8">
             {/* Attention rail */}
             <Panel
               title={t('attention')}
@@ -698,7 +745,7 @@ export function DashboardView() {
               tone="attention"
               action={
                 attention.length > 0 ? (
-                  <span className="rounded-md bg-warning/15 px-1.5 py-0.5 text-2xs font-semibold tabular-nums text-warning">
+                  <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium tabular-nums text-warning">
                     {count(attention.length)}
                   </span>
                 ) : null
@@ -712,25 +759,25 @@ export function DashboardView() {
                 </div>
               ) : attention.length === 0 ? (
                 <div className="flex items-center gap-3 px-4 py-5 sm:px-5">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
                     <BarChart3 className="size-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-13 font-semibold text-foreground">{t('attentionEmpty')}</p>
-                    <p className="text-2xs text-muted-foreground">{t('attentionEmptyBody')}</p>
+                    <p className="text-sm font-medium text-foreground">{t('attentionEmpty')}</p>
+                    <p className="text-xs text-muted-foreground">{t('attentionEmptyBody')}</p>
                   </div>
                 </div>
               ) : (
-                <ul className="divide-y divide-border">
-                  {attention.map((item) => (
-                    <li key={item.key}>
+                <Stagger as="ul" className="divide-y divide-border/60">
+                  {attention.map((item, index) => (
+                    <StaggerItem as="li" key={item.key} index={index}>
                       <Link
                         href={item.href}
-                        className="group flex items-start gap-3 px-4 py-3 transition hover:bg-muted/40 sm:px-5"
+                        className="group flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 sm:px-5"
                       >
                         <span
                           className={cn(
-                            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
+                            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
                             item.severity === 'high'
                               ? 'bg-destructive/10 text-destructive'
                               : item.severity === 'medium'
@@ -741,9 +788,9 @@ export function DashboardView() {
                           <item.icon className="size-4" aria-hidden="true" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-13 font-medium leading-snug text-foreground">{item.text}</p>
+                          <p className="text-sm font-medium leading-snug text-foreground">{item.text}</p>
                           {item.samples.length > 0 && (
-                            <p className="mt-1 line-clamp-1 text-2xs text-muted-foreground">
+                            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
                               {item.samples.slice(0, 3).join(' · ')}
                               {item.samples.length > 3
                                 ? ` · ${t('sampleMore', { count: item.samples.length - 3 })}`
@@ -751,7 +798,7 @@ export function DashboardView() {
                             </p>
                           )}
                         </div>
-                        <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-2xs font-semibold text-primary">
+                        <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
                           {t('fix')}
                           <ExternalLink
                             className="size-3 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
@@ -759,9 +806,9 @@ export function DashboardView() {
                           />
                         </span>
                       </Link>
-                    </li>
+                    </StaggerItem>
                   ))}
-                </ul>
+                </Stagger>
               )}
             </Panel>
 
@@ -772,7 +819,7 @@ export function DashboardView() {
               action={
                 <Link
                   href="/admin/analytics"
-                  className="inline-flex items-center gap-1 text-2xs font-semibold text-primary transition hover:underline"
+                  className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
                 >
                   {t('fullAnalytics')}
                   <ExternalLink className="size-3" aria-hidden="true" />
@@ -782,15 +829,15 @@ export function DashboardView() {
               {loading ? (
                 <Skeleton className="h-24 w-full" />
               ) : !hasSeries ? (
-                <p className="py-6 text-center text-2xs text-muted-foreground">{t('seriesEmpty')}</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">{t('seriesEmpty')}</p>
               ) : (
                 <div className="space-y-5">
                   <div>
                     <div className="mb-1.5 flex items-baseline justify-between gap-2">
-                      <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <p className="text-xs font-medium text-muted-foreground">
                         {t('enrollmentsLabel')}
                       </p>
-                      <p className="text-13 font-semibold tabular-nums text-foreground">
+                      <p className="font-display text-base font-medium tabular-nums text-foreground">
                         {count(enrolledSeries.reduce((sum, point) => sum + point.value, 0))}
                       </p>
                     </div>
@@ -798,10 +845,10 @@ export function DashboardView() {
                   </div>
                   <div>
                     <div className="mb-1.5 flex items-baseline justify-between gap-2">
-                      <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <p className="text-xs font-medium text-muted-foreground">
                         {t('revenueLabel')}
                       </p>
-                      <p className="text-13 font-semibold tabular-nums text-foreground">
+                      <p className="font-display text-base font-medium tabular-nums text-foreground">
                         {currency(revenueDaily.reduce((sum, point) => sum + point.value, 0), PLATFORM_CURRENCY)}
                       </p>
                     </div>
@@ -819,7 +866,7 @@ export function DashboardView() {
                 isManager ? (
                   <Link
                     href="/admin/courses"
-                    className="inline-flex items-center gap-1 text-2xs font-semibold text-primary transition hover:underline"
+                    className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
                   >
                     {t('viewAll')}
                     <ExternalLink className="size-3" aria-hidden="true" />
@@ -833,34 +880,36 @@ export function DashboardView() {
                   <Skeleton className="h-10 w-full" />
                 </div>
               ) : (topCourses ?? []).length === 0 ? (
-                <p className="px-4 py-8 text-center text-2xs text-muted-foreground sm:px-5">
+                <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
                   {t('topCoursesEmpty')}
                 </p>
               ) : (
-                <ol className="divide-y divide-border">
+                <ol className="divide-y divide-border/60">
                   {(topCourses ?? []).slice(0, 6).map((course, index) => {
                     const max = Math.max(1, ...(topCourses ?? []).map((entry) => entry.enrollments));
                     return (
                       <li key={course.id}>
                         <Link
                           href={`/admin/courses/${course.slug ?? course.id}/edit`}
-                          className="group flex items-center gap-3 px-4 py-2.5 transition hover:bg-muted/40 sm:px-5"
+                          className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:px-5"
                         >
-                          <span className="w-4 shrink-0 text-2xs font-semibold tabular-nums text-muted-foreground">
+                          <span className="w-5 shrink-0 font-display text-sm font-medium tabular-nums text-muted-foreground">
                             {index + 1}
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-13 font-medium text-foreground">
                               {course.title}
                             </span>
-                            <span className="mt-1 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-muted">
-                              <span
-                                className="block h-full rounded-full bg-primary/70"
-                                style={{ width: `${(course.enrollments / max) * 100}%` }}
+                            <span className="mt-1.5 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-muted">
+                              <m.span
+                                className="block h-full rounded-full bg-primary/60"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(course.enrollments / max) * 100}%` }}
+                                transition={{ duration: 0.7, delay: 0.1 + index * 0.05, ease: ease.emerge }}
                               />
                             </span>
                           </span>
-                          <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
+                          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                             {t('enrollmentCount', { count: course.enrollments })}
                           </span>
                         </Link>
@@ -872,7 +921,7 @@ export function DashboardView() {
             </Panel>
           </div>
 
-          <div className="space-y-5 lg:col-span-4">
+          <div className="space-y-6 lg:col-span-4">
             {/* Catalogue health, over counts that exist */}
             <Panel title={t('health')} subtitle={t('healthSub')}>
               {loading ? (
@@ -893,17 +942,17 @@ export function DashboardView() {
                       { key: 'drafts', value: health.drafts, color: 'bg-warning' },
                     ].map((row) => (
                       <div key={row.key} className="flex items-center justify-between gap-2">
-                        <dt className="flex items-center gap-2 text-2xs text-muted-foreground">
+                        <dt className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span className={cn('size-2 rounded-full', row.color)} aria-hidden="true" />
                           {t(row.key)}
                         </dt>
-                        <dd className="text-13 font-semibold tabular-nums text-foreground">
+                        <dd className="text-sm font-medium tabular-nums text-foreground">
                           {count(row.value)}
                         </dd>
                       </div>
                     ))}
                   </dl>
-                  <p className="border-t border-border pt-3 text-2xs text-muted-foreground">
+                  <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
                     {health.share
                       ? t('progressShare', { value: health.share, total: count(health.total) })
                       : t('courseCount', { count: health.total })}
@@ -920,7 +969,7 @@ export function DashboardView() {
                 isManager ? (
                   <Link
                     href="/admin/users"
-                    className="inline-flex items-center gap-1 text-2xs font-semibold text-primary transition hover:underline"
+                    className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
                   >
                     {t('viewAll')}
                     <ExternalLink className="size-3" aria-hidden="true" />
@@ -934,35 +983,35 @@ export function DashboardView() {
                   <Skeleton className="h-10 w-full" />
                 </div>
               ) : (stats?.recentUsers ?? []).length === 0 ? (
-                <p className="px-4 py-8 text-center text-2xs text-muted-foreground sm:px-5">
+                <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
                   {t('noUsersYet')}
                 </p>
               ) : (
-                <ul className="divide-y divide-border">
-                  {(stats?.recentUsers ?? []).slice(0, 5).map((account) => (
-                    <li key={account.id}>
+                <Stagger as="ul" className="divide-y divide-border/60">
+                  {(stats?.recentUsers ?? []).slice(0, 5).map((account, index) => (
+                    <StaggerItem as="li" key={account.id} index={index}>
                       <Link
                         href={`/admin/users?focus=${account.id}`}
-                        className="group flex items-center gap-3 px-4 py-2.5 transition hover:bg-muted/40 sm:px-5"
+                        className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:px-5"
                       >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-2xs font-bold text-background">
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-2xs font-semibold text-secondary dark:bg-foreground/10 dark:text-foreground">
                           {initials(account.name, account.email)}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-13 font-medium text-foreground">
                             {account.name || account.email.split('@')[0]}
                           </span>
-                          <span className="block truncate text-2xs text-muted-foreground">
+                          <span className="block truncate text-xs text-muted-foreground">
                             {account.email}
                           </span>
                         </span>
-                        <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                           {relativeFrom(account.createdAt, now, relativeLabels)}
                         </span>
                       </Link>
-                    </li>
+                    </StaggerItem>
                   ))}
-                </ul>
+                </Stagger>
               )}
             </Panel>
 
@@ -973,16 +1022,16 @@ export function DashboardView() {
                   <Link
                     key={shortcut.href}
                     href={shortcut.href}
-                    className="group flex items-center gap-3 rounded-lg px-2.5 py-2 transition hover:bg-muted/60"
+                    className="group flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/60"
                   >
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition group-hover:border-primary/40 group-hover:text-primary">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground shadow-xs transition-[border-color,color,transform] duration-200 group-hover:-translate-y-px group-hover:border-primary/30 group-hover:text-primary">
                       <shortcut.icon className="size-4" aria-hidden="true" />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-13 font-medium text-foreground">
                       {t(shortcut.key)}
                     </span>
                     <ExternalLink
-                      className="size-3 shrink-0 text-muted-foreground/50 transition group-hover:text-primary"
+                      className="size-3 shrink-0 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-primary rtl:group-hover:-translate-x-0.5"
                       aria-hidden="true"
                     />
                   </Link>

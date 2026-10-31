@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { m } from 'framer-motion';
+import { ease } from '@/lib/motion';
 
 /**
  * Side-by-side English and Arabic for every translatable field.
@@ -54,7 +56,7 @@ function StatusRail({ missing }: { missing: boolean }) {
     <span
       aria-hidden
       className={cn(
-        'absolute inset-y-3 start-0 w-[3px] rounded-full',
+        'absolute inset-y-3 start-0 w-[3px] rounded-e-full',
         missing ? 'bg-warning' : 'bg-success',
       )}
     />
@@ -84,10 +86,10 @@ export function TranslationReviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0">
-        <DialogHeader className="border-b border-border px-4 py-4 pe-12 sm:px-6 sm:py-5 sm:pe-14">
+        <DialogHeader className="border-b border-border/70 px-4 py-4 pe-12 sm:px-6 sm:py-5 sm:pe-14">
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
             <div className="min-w-0">
-              <DialogTitle className="flex items-center gap-2 font-display text-lg">
+              <DialogTitle className="flex items-center gap-2 font-display text-xl font-medium">
                 <Languages className="size-4 shrink-0 text-primary" aria-hidden />
                 <span className="truncate">{t('review.title', { entity: entityLabel ?? '' })}</span>
               </DialogTitle>
@@ -95,11 +97,11 @@ export function TranslationReviewDialog({
             </div>
             {/* A precise count rather than a bar: it is the only number that matters here. */}
             <div className="shrink-0 text-end">
-              <div className="font-mono text-xl font-medium tabular-nums leading-none">
+              <div className="font-display text-2xl font-medium tabular-nums leading-none">
                 <span className={missing ? 'text-warning' : 'text-success'}>{done}</span>
                 <span className="text-muted-foreground">/{items.length}</span>
               </div>
-              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <div className="mt-1 text-xs text-muted-foreground">
                 {missing ? t('review.missingCount', { count: missing }) : t('coverage.complete')}
               </div>
             </div>
@@ -111,18 +113,21 @@ export function TranslationReviewDialog({
             <p className="py-8 text-center text-sm text-muted-foreground">{t('review.nothing')}</p>
           )}
           {items.map((item, index) => (
-            <article
+            <m.article
               key={`${item.label}-${index}`}
-              className="relative grid gap-x-7 gap-y-3 rounded-lg border border-border bg-card ps-4 pe-4 py-3.5 transition-colors hover:border-border-strong sm:grid-cols-2"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: ease.emerge, delay: Math.min(index * 0.035, 0.4) }}
+              className="relative grid gap-x-7 gap-y-3 overflow-hidden rounded-xl border border-border/70 bg-card py-3.5 pe-4 ps-5 shadow-xs transition-[border-color,box-shadow] hover:border-border hover:shadow-sm sm:grid-cols-2"
             >
               <StatusRail missing={item.missing} />
 
               <div className="min-w-0 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {item.label}
                   </span>
-                  <span className="rounded-sm bg-muted px-1.5 py-px font-mono text-[10px] tracking-wider text-muted-foreground">
+                  <span className="rounded-full bg-muted px-1.5 py-px font-mono text-2xs text-muted-foreground">
                     EN
                   </span>
                 </div>
@@ -137,15 +142,15 @@ export function TranslationReviewDialog({
                     className="size-3 shrink-0 rotate-180 rtl:rotate-0 text-border-strong sm:hidden"
                     aria-hidden
                   />
-                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {t('review.arabic')}
                   </span>
                   {item.missing ? (
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-warning">
+                    <span className="rounded-full bg-warning/10 px-2 py-px text-2xs font-medium text-warning">
                       {t('review.missing')}
                     </span>
                   ) : (
-                    <span className="rounded-sm bg-accent/10 px-1.5 py-px font-mono text-[10px] tracking-wider text-accent">
+                    <span className="rounded-full bg-accent/10 px-1.5 py-px font-mono text-2xs text-accent">
                       AR
                     </span>
                   )}
@@ -177,7 +182,7 @@ export function TranslationReviewDialog({
                   </p>
                 )}
               </div>
-            </article>
+            </m.article>
           ))}
         </DialogBody>
 

@@ -1,5 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, m } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api-client';
@@ -106,7 +109,7 @@ export function EmailTemplatesList() {
   }, [templates]);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] space-y-6">
       <AdminPageHeader
         title={t('templatesTitle')}
         description={t('templatesDescription')}
@@ -118,15 +121,32 @@ export function EmailTemplatesList() {
         }
       />
 
-      {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {error && (
+          <m.div
+            key="error"
+            role="alert"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: ease.emerge } }}
+            exit={{ opacity: 0, transition: { duration: 0.14 } }}
+            className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-3 text-sm text-destructive"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </m.div>
+        )}
+      </AnimatePresence>
 
+      <AnimatePresence initial={false}>
       {creating && (
-        <div className="space-y-4 rounded-lg border bg-card p-4">
+        <m.div
+          key="create"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1, transition: { duration: 0.32, ease: ease.emerge } }}
+          exit={{ height: 0, opacity: 0, transition: { duration: 0.2, ease: ease.exit } }}
+          className="overflow-hidden"
+        >
+        <div className="space-y-5 rounded-xl border border-border/70 bg-card p-5 shadow-sm">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="tmpl-name">{t('fieldName')}</Label>
@@ -176,56 +196,75 @@ export function EmailTemplatesList() {
             <BarButton onClick={() => setCreating(false)}>{t('cancel')}</BarButton>
           </div>
         </div>
+        </m.div>
       )}
+      </AnimatePresence>
 
       <div className="flex flex-wrap gap-1.5">
-        <button
-          onClick={() => setFilter('all')}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-            filter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'
-          }`}
-        >
-          {t('allCategories')} ({templates.length})
-        </button>
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setFilter(c)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-              filter === c ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'
-            }`}
-          >
-            {EMAIL_CATEGORY_LABELS[c]} ({counts[c] ?? 0})
-          </button>
-        ))}
+        {(['all', ...CATEGORIES] as const).map((c) => {
+          const active = filter === c;
+          return (
+            <button
+              key={c}
+              onClick={() => setFilter(c)}
+              className={cn(
+                'relative rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-150 active:scale-[0.97]',
+                active
+                  ? 'border-transparent text-primary'
+                  : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
+              )}
+            >
+              {active && (
+                <m.span
+                  layoutId="email-category-filter"
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-full bg-primary/10 ring-1 ring-inset ring-primary/20"
+                  transition={spring.smooth}
+                />
+              )}
+              <span className="relative">
+                {c === 'all'
+                  ? `${t('allCategories')} (${templates.length})`
+                  : `${EMAIL_CATEGORY_LABELS[c]} (${counts[c] ?? 0})`}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-4 py-6 text-sm text-muted-foreground shadow-xs">
           <Loader2 className="size-4 animate-spin" />
           {t('loading')}
         </div>
       ) : visible.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="animate-fade-in-up rounded-xl border border-dashed border-border/80 bg-surface-sunken/30 p-12 text-center text-sm text-muted-foreground">
           {t('empty')}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="border-b border-border/70 bg-surface-sunken/40 text-start text-xs text-muted-foreground">
               <tr>
-                <th className="px-4 py-2.5 font-medium">{t('colName')}</th>
-                <th className="px-4 py-2.5 font-medium">{t('colCategory')}</th>
-                <th className="px-4 py-2.5 font-medium">{t('colStatus')}</th>
-                <th className="px-4 py-2.5 font-medium">{t('colVersion')}</th>
-                <th className="px-4 py-2.5 font-medium">{t('colUpdated')}</th>
+                <th className="px-4 py-2.5 text-start font-medium">{t('colName')}</th>
+                <th className="px-4 py-2.5 text-start font-medium">{t('colCategory')}</th>
+                <th className="px-4 py-2.5 text-start font-medium">{t('colStatus')}</th>
+                <th className="px-4 py-2.5 text-start font-medium">{t('colVersion')}</th>
+                <th className="px-4 py-2.5 text-start font-medium">{t('colUpdated')}</th>
               </tr>
             </thead>
-            <tbody>
-              {visible.map((tpl) => (
-                <tr key={tpl.id} className="border-t hover:bg-muted/30">
+            <tbody className="divide-y divide-border/60">
+              <AnimatePresence initial={false}>
+              {visible.map((tpl, index) => (
+                <m.tr
+                  key={tpl.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, transition: { duration: 0.28, ease: ease.emerge, delay: Math.min(index * 0.03, 0.36) } }}
+                  exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                  className="transition-colors hover:bg-muted/40"
+                >
                   <td className="px-4 py-3">
-                    <Link href={`/admin/email/templates/${tpl.id}`} className="flex items-center gap-2 font-medium hover:underline">
+                    <Link href={`/admin/email/templates/${tpl.id}`} className="flex items-center gap-2 font-medium underline-offset-4 transition-colors hover:text-primary hover:underline">
                       <Mail className="size-4 text-muted-foreground" />
                       {tpl.name}
                     </Link>
@@ -238,10 +277,10 @@ export function EmailTemplatesList() {
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                         tpl.status === 'published'
-                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                          ? 'bg-success/10 text-success'
                           : tpl.status === 'archived'
                             ? 'bg-muted text-muted-foreground'
-                            : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                            : 'bg-warning/10 text-warning'
                       }`}
                     >
                       {t(STATUS_LABEL[tpl.status] ?? 'status_draft')}
@@ -255,11 +294,12 @@ export function EmailTemplatesList() {
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                     {tpl.status === 'published' ? `v${tpl.version}` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                  <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
                     {new Date(tpl.updatedAt).toLocaleDateString()}
                   </td>
-                </tr>
+                </m.tr>
               ))}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>

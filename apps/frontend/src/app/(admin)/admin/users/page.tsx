@@ -13,7 +13,10 @@ import {
   UserX,
   X,
 } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease } from '@/lib/motion';
+import { Stagger, StaggerItem } from '@/components/ui/motion';
 import { toast } from '@/components/ui/toast';
 import {
   AdminCommandBar,
@@ -220,8 +223,8 @@ export default function AdminUsersPage() {
               'Every student on your platform — progress, certificates and account health in one place.',
           })}
           badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success md:self-auto">
-              <ShieldCheck className="size-4" />
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/15 bg-success/10 px-3 py-1.5 text-xs font-medium text-success md:self-auto">
+              <ShieldCheck className="size-3.5" />
               {tAdmin('learnerAccess.tenantSafeBadge', { default: 'Tenant-safe · Live status' })}
             </span>
           }
@@ -229,39 +232,47 @@ export default function AdminUsersPage() {
 
         {/* Headline numbers come from the server facets, so they reflect every
             matching learner rather than the twelve rows on screen. */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerItem index={0}>
           <AdminKpiCard
             icon={GraduationCap}
             label={tAdmin('learnerAccess.totalLearners', { default: 'Total learners' })}
-            value={loading ? '—' : String(facetTotal || total)}
+            value={loading ? '—' : facetTotal || total}
             sub={tAdmin('learnerAccess.shownCount', {
               count: rows?.length ?? 0,
               default: '{count, plural, one {# shown} other {# shown}}',
             })}
             tone="blue"
           />
+          </StaggerItem>
+          <StaggerItem index={1}>
           <AdminKpiCard
             icon={UserCheck}
             label={tStatus('active')}
-            value={loading ? '—' : String(countOf('active'))}
+            value={loading ? '—' : countOf('active')}
             sub={tAdmin('learnerAccess.inGoodStanding', { default: 'In good standing' })}
             tone="emerald"
           />
+          </StaggerItem>
+          <StaggerItem index={2}>
           <AdminKpiCard
             icon={CalendarDays}
             label={tStatus('pending_verification')}
-            value={loading ? '—' : String(countOf('pending_verification'))}
+            value={loading ? '—' : countOf('pending_verification')}
             sub={tAdmin('learnerAccess.awaitingVerification', { default: 'Awaiting verification' })}
             tone="amber"
           />
+          </StaggerItem>
+          <StaggerItem index={3}>
           <AdminKpiCard
             icon={UserX}
             label={tStatus('suspended')}
-            value={loading ? '—' : String(countOf('suspended'))}
+            value={loading ? '—' : countOf('suspended')}
             sub={tAdmin('learnerAccess.needsReview', { default: 'Needs review' })}
             tone="rose"
           />
-        </div>
+          </StaggerItem>
+        </Stagger>
 
         {error && (
           <ErrorBanner
@@ -274,7 +285,7 @@ export default function AdminUsersPage() {
         <Toolbar>
           <PillTabs value={status} onChange={(k) => push({ status: k || null })} options={statusTabs} />
 
-          <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1 shadow-xs">
+          <div className="flex h-9 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-2.5 shadow-xs transition-colors focus-within:border-primary/50 focus-within:ring-[3px] focus-within:ring-primary/15 hover:border-border-strong">
             <input
               type="date"
               value={from}
@@ -298,6 +309,7 @@ export default function AdminUsersPage() {
 
           {/* Show what is actually filtering, with a one-click way to undo it. */}
           <div className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
+            <AnimatePresence initial={false} mode="popLayout">
             {q && (
               <FilterChip
                 label={tAdmin('learnerAccess.filterSearch', { q, default: 'Search: {q}' })}
@@ -322,15 +334,21 @@ export default function AdminUsersPage() {
               />
             )}
             {hasFilters && (
-              <button
+              <m.button
+                key="clear-all"
+                layout
                 type="button"
                 onClick={clearAll}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.12 } }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]"
               >
                 <X className="size-3.5" />
                 {tCommon('clear')}
-              </button>
+              </m.button>
             )}
+            </AnimatePresence>
           </div>
         </Toolbar>
 
@@ -362,7 +380,7 @@ export default function AdminUsersPage() {
                   <button
                     type="button"
                     onClick={clearAll}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-xs transition hover:bg-muted"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
                   >
                     <X className="size-4" />
                     {tAdmin('learnerAccess.clearFilters', { default: 'Clear filters' })}
@@ -372,34 +390,42 @@ export default function AdminUsersPage() {
             />
           </TableCard>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+          <m.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: ease.emerge }}
+            className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs"
+          >
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[720px] border-collapse text-start">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th scope="col" className="px-6 py-3.5 text-start font-semibold">
+                  <tr className="border-b border-border/70 bg-surface-sunken/40 text-xs font-medium text-muted-foreground">
+                    <th scope="col" className="px-6 py-3 text-start font-medium">
                       {tAdmin('learnerAccess.colLearner', { default: 'Learner' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3 text-start font-medium">
                       {tAdmin('access.colStatus', { default: 'Status' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3 text-start font-medium">
                       {tAdmin('learnerAccess.colMemberSince', { default: 'Member since' })}
                     </th>
-                    <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-semibold">
+                    <th scope="col" className="py-3 pe-6 ps-4 text-end font-medium">
                       {tAdmin('access.colActions', { default: 'Actions' })}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-13">
-                  {rows.map((u) => {
+                <tbody className="divide-y divide-border/60 text-13">
+                  {rows.map((u, index) => {
                     const key = (u.accountStatus in STATUS_TONE
                       ? u.accountStatus
                       : 'active') as StatusKey;
                     const selected = focusId === u.id;
                     return (
-                      <tr
+                      <m.tr
                         key={u.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3, ease: ease.emerge, delay: Math.min(index * 0.03, 0.36) }}
                         onClick={() => push({ focus: u.id })}
                         tabIndex={0}
                         onKeyDown={(e) => {
@@ -409,15 +435,15 @@ export default function AdminUsersPage() {
                           }
                         }}
                         className={cn(
-                          'group cursor-pointer transition-colors duration-150 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none',
-                          selected && 'bg-primary/[0.04]',
+                          'group cursor-pointer transition-colors duration-150 hover:bg-muted/40 focus-visible:bg-muted/50 focus-visible:outline-none',
+                          selected && 'bg-primary/[0.05] shadow-[inset_2px_0_0_0_var(--primary)] rtl:shadow-[inset_-2px_0_0_0_var(--primary)]',
                         )}
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-3.5">
                           <div className="flex items-center gap-3.5">
                             <Avatar name={u.name} email={u.email} src={u.avatarUrl} />
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-foreground transition group-hover:text-primary">
+                              <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
                                 {u.name || u.email.split('@')[0]}
                               </p>
                               <p className="truncate text-xs font-normal text-muted-foreground">
@@ -426,14 +452,14 @@ export default function AdminUsersPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <StatusPill
                             label={tStatus(u.accountStatus)}
                             tone={STATUS_TONE[key] ?? 'slate'}
                             pulse={u.accountStatus === 'active'}
                           />
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <p className="font-medium text-foreground">
                             {formatDate(u.createdAt, locale, {
                               month: 'short',
@@ -441,11 +467,11 @@ export default function AdminUsersPage() {
                               year: 'numeric',
                             })}
                           </p>
-                          <p className="text-2xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {timeAgo(u.createdAt, tCommon, locale)}
                           </p>
                         </td>
-                        <td className="py-4 pe-6 ps-4 text-end">
+                        <td className="py-3.5 pe-6 ps-4 text-end">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -453,19 +479,19 @@ export default function AdminUsersPage() {
                               push({ focus: u.id });
                             }}
                             title={tAdmin('learnerAccess.openProfile', { default: 'Open learner profile' })}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:border-border hover:bg-background hover:text-foreground focus-visible:opacity-100"
+                            className="inline-flex translate-x-1 items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-muted-foreground opacity-0 transition-[opacity,transform,background-color,border-color,color] duration-200 group-hover:translate-x-0 group-hover:opacity-100 hover:border-border/80 hover:bg-card hover:text-foreground hover:shadow-xs focus-visible:translate-x-0 focus-visible:opacity-100 rtl:-translate-x-1"
                           >
                             <Eye className="size-3.5" />
                             {tAdmin('learnerAccess.view', { default: 'View' })}
                           </button>
                         </td>
-                      </tr>
+                      </m.tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div className="divide-y divide-border sm:hidden">
+            <div className="divide-y divide-border/60 sm:hidden">
               {rows.map((u) => {
                 const key = (u.accountStatus in STATUS_TONE ? u.accountStatus : 'active') as StatusKey;
                 const selected = focusId === u.id;
@@ -475,13 +501,13 @@ export default function AdminUsersPage() {
                     type="button"
                     onClick={() => push({ focus: u.id })}
                     className={cn(
-                      'flex w-full items-center gap-3 px-4 py-3.5 text-start transition active:bg-muted/60',
+                      'flex w-full items-center gap-3 px-4 py-3 text-start transition active:bg-muted/60',
                       selected && 'bg-primary/[0.06]',
                     )}
                   >
                     <Avatar name={u.name} email={u.email} src={u.avatarUrl} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground">
+                      <p className="truncate text-sm font-medium text-foreground">
                         {u.name || u.email.split('@')[0]}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">{u.email}</p>
@@ -491,7 +517,7 @@ export default function AdminUsersPage() {
                           tone={STATUS_TONE[key] ?? 'slate'}
                           pulse={u.accountStatus === 'active'}
                         />
-                        <span className="text-2xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {formatDate(u.createdAt, locale, {
                             month: 'short',
                             day: 'numeric',
@@ -505,7 +531,7 @@ export default function AdminUsersPage() {
                 );
               })}
             </div>
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-border bg-muted/40 px-4 py-3.5 text-xs font-medium text-muted-foreground sm:flex-row sm:px-6">
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-border/70 bg-surface-sunken/30 px-4 py-3.5 text-xs text-muted-foreground sm:flex-row sm:px-6">
               <span>
                 {tAdmin('learnerAccess.showingOf', {
                   from: (page - 1) * PER_PAGE + 1,
@@ -522,7 +548,7 @@ export default function AdminUsersPage() {
                 onNext={() => push({ page: String(page + 1) })}
               />
             </div>
-          </div>
+          </m.div>
         )}
       </div>
 

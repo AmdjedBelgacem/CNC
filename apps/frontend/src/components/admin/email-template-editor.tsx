@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, m } from 'framer-motion';
+import { ease, spring } from '@/lib/motion';
 import type {
   EmailBlock,
   EmailBlockType,
@@ -326,7 +328,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-4 py-6 text-sm text-muted-foreground shadow-xs">
         <Loader2 className="size-4 animate-spin" />
         {t('loading')}
       </div>
@@ -334,26 +336,43 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
   }
 
   if (!layout || !template) {
-    return <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm">{error ?? t('loadError')}</div>;
+    return <div className="rounded-xl border border-destructive/20 bg-destructive/[0.06] p-4 text-sm text-destructive">{error ?? t('loadError')}</div>;
   }
 
   const readOnly = template.isSystem;
   const activeBlock = layout.blocks.find((b) => b.id === selected) ?? null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <AdminPageHeader
         title={template.name}
         description={template.slug}
         badge={
           <div className="flex flex-wrap items-center gap-2">
-            {saving && <span className="text-xs text-muted-foreground">{t('saving')}</span>}
-            {savedAt && !dirty && !saving && (
-              <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="size-3.5" />
-                {t('saved')}
-              </span>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              {saving ? (
+                <m.span
+                  key="saving"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.1 } }}
+                  className="text-xs text-muted-foreground"
+                >
+                  {t('saving')}
+                </m.span>
+              ) : savedAt && !dirty ? (
+                <m.span
+                  key="saved"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.1 } }}
+                  className="flex items-center gap-1 text-xs font-medium text-success"
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  {t('saved')}
+                </m.span>
+              ) : null}
+            </AnimatePresence>
             {!readOnly && (
               <>
                 <BarButton onClick={saveDraft} disabled={saving}>
@@ -369,15 +388,24 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
         }
       />
 
-      {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {error && (
+          <m.div
+            key="error"
+            role="alert"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: ease.emerge } }}
+            exit={{ opacity: 0, transition: { duration: 0.14 } }}
+            className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-3 text-sm text-destructive"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{error}</span>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {readOnly && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
+        <div className="rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning">
           {t('systemBadge')} — {t('noTrigger')}
         </div>
       )}
@@ -385,8 +413,8 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
       <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)_300px]">
         {/* ---------------------------------------------------- left rail */}
         <div className="space-y-4">
-          <div className="rounded-lg border p-3">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t('blocks')}</Label>
+          <div className="rounded-xl border border-border/70 bg-card p-4 shadow-xs">
+            <Label className="text-xs font-medium text-muted-foreground">{t('blocks')}</Label>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {ADDABLE.map((type) => (
                 <button
@@ -399,7 +427,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                       setSelected(b.id);
                     })
                   }
-                  className="rounded-md border px-2 py-1 text-xs font-medium transition hover:bg-muted disabled:opacity-50"
+                  className="rounded-full border border-border/80 bg-card px-2.5 py-1 text-xs font-medium transition-[background-color,border-color,transform] hover:border-border-strong hover:bg-muted/60 active:scale-95 disabled:opacity-50"
                 >
                   <Plus className="me-0.5 inline size-3" />
                   {t(BLOCK_LABEL[type] as never)}
@@ -408,22 +436,36 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
             </div>
           </div>
 
-          <div className="rounded-lg border">
-            <Label className="block border-b px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            <Label className="block border-b border-border/60 bg-surface-sunken/40 px-3 py-2.5 text-xs font-medium text-muted-foreground">
               {t('blocks')}
             </Label>
             {layout.blocks.length === 0 ? (
               <p className="px-3 py-4 text-xs text-muted-foreground">{t('emptyLayout')}</p>
             ) : (
               <ul className="max-h-80 overflow-y-auto">
+                <AnimatePresence initial={false}>
                 {layout.blocks.map((b, i) => (
-                  <li
+                  <m.li
                     key={b.id}
+                    layout="position"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0, transition: { duration: 0.16, ease: ease.exit } }}
+                    transition={spring.layout}
                     className={cn(
-                      'flex items-center gap-1 border-b px-2 py-1.5 text-xs last:border-b-0',
-                      selected === b.id ? 'bg-primary/10' : 'hover:bg-muted/40',
+                      'relative flex items-center gap-1 border-b border-border/60 px-2.5 py-2 text-xs transition-colors last:border-b-0 [&>button:not(:first-child)]:rounded-md [&>button:not(:first-child)]:p-1 [&>button:not(:first-child)]:text-muted-foreground [&>button:not(:first-child):hover]:bg-muted [&>button:not(:first-child):hover]:text-foreground [&>button:disabled]:opacity-40',
+                      selected === b.id ? 'bg-primary/[0.07]' : 'hover:bg-muted/40',
                     )}
                   >
+                    {selected === b.id && (
+                      <m.span
+                        layoutId="email-block-selected"
+                        aria-hidden="true"
+                        className="absolute inset-y-1.5 start-0 w-[3px] rounded-e-full bg-primary"
+                        transition={spring.smooth}
+                      />
+                    )}
                     <button
                       onClick={() => setSelected(b.id)}
                       className="flex-1 truncate text-start font-medium"
@@ -443,8 +485,9 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                     <button onClick={() => removeBlock(b.id)} disabled={readOnly} aria-label={t('removeBlock')}>
                       <Trash2 className="size-3 text-destructive" />
                     </button>
-                  </li>
+                  </m.li>
                 ))}
+                </AnimatePresence>
               </ul>
             )}
           </div>
@@ -452,7 +495,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
 
         {/* ------------------------------------------------------- canvas */}
         <div className="space-y-4">
-          <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+          <div className="grid gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-xs sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="subject">{t('subject')}</Label>
               <Input
@@ -476,12 +519,12 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                   setDirty(true);
                 }}
               />
-              <p className="text-[11px] text-muted-foreground">{t('preheaderHint')}</p>
+              <p className="text-xs text-muted-foreground">{t('preheaderHint')}</p>
             </div>
           </div>
 
           {previewError && (
-            <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex animate-fade-in-up items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-4 py-3 text-sm text-destructive">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <div>
                 <div className="font-medium">{t('renderError')}</div>
@@ -490,30 +533,55 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
             </div>
           )}
 
-          {activeBlock && <BlockFields block={activeBlock} onChange={(p) => patchBlock(activeBlock.id, p)} readOnly={readOnly} />}
+          <AnimatePresence mode="wait" initial={false}>
+            {activeBlock && (
+              <m.div
+                key={activeBlock.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: ease.emerge } }}
+                exit={{ opacity: 0, y: -4, transition: { duration: 0.12, ease: ease.exit } }}
+              >
+                <BlockFields block={activeBlock} onChange={(p) => patchBlock(activeBlock.id, p)} readOnly={readOnly} />
+              </m.div>
+            )}
+          </AnimatePresence>
 
-          <div className="overflow-hidden rounded-lg border">
-            <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2">
-              <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-surface-sunken/40 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <Eye className="size-3.5" />
                 {t('preview')}
               </span>
               <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 rounded-lg bg-muted/70 p-0.5">
                 {(Object.keys(WIDTHS) as WidthKey[]).map((k) => (
                   <button
                     key={k}
                     onClick={() => setWidth(k)}
                     className={cn(
-                      'rounded px-2 py-0.5 text-xs',
-                      width === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+                      'relative rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                      width === k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    {t(WIDTH_LABEL[k])}
+                    {width === k && (
+                      <m.span
+                        layoutId="email-preview-width"
+                        aria-hidden="true"
+                        className="absolute inset-0 rounded-md bg-card shadow-xs"
+                        transition={spring.smooth}
+                      />
+                    )}
+                    <span className="relative">{t(WIDTH_LABEL[k])}</span>
                   </button>
                 ))}
+                </div>
                 <button
                   onClick={() => setShowText((v) => !v)}
-                  className="ms-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+                  aria-pressed={showText}
+                  className={cn(
+                    'ms-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                    showText ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
                 >
                   {t('showText')}
                 </button>
@@ -527,7 +595,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                 {preview?.text ?? ''}
               </pre>
             ) : (
-              <div className="flex justify-center overflow-x-auto bg-muted/30 p-4">
+              <div className="flex justify-center overflow-x-auto bg-surface-sunken/50 p-5">
                 <iframe
                   title="email-preview"
                   // sandboxed with no allow-scripts: a template can never run
@@ -535,7 +603,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                   sandbox=""
                   srcDoc={preview?.html ?? ''}
                   style={{ width: WIDTHS[width], height: 640, border: 0, background: '#fff' }}
-                  className="max-w-full rounded shadow-sm"
+                  className="max-w-full rounded-lg shadow-md ring-1 ring-border/60 transition-[width] duration-300 ease-out"
                 />
               </div>
             )}
@@ -544,8 +612,8 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
 
         {/* ------------------------------------------------- right panel */}
         <div className="space-y-4">
-          <div className="rounded-lg border p-3">
-            <Label htmlFor="trigger" className="text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="rounded-xl border border-border/70 bg-card p-4 shadow-xs">
+            <Label htmlFor="trigger" className="text-xs font-medium text-muted-foreground">
               {t('bindTrigger')}
             </Label>
             <Select value={boundTrigger || 'none'} onValueChange={(v) => setBoundTrigger(v === 'none' ? '' : v)}>
@@ -561,11 +629,11 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                 ))}
               </SelectContent>
             </Select>
-            {trigger && <p className="mt-2 text-[11px] text-muted-foreground">{trigger.description}</p>}
+            {trigger && <p className="mt-2 text-xs text-muted-foreground">{trigger.description}</p>}
           </div>
 
-          <div className="rounded-lg border">
-            <Label className="block border-b px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            <Label className="block border-b border-border/60 bg-surface-sunken/40 px-3 py-2.5 text-xs font-medium text-muted-foreground">
               {t('variables')}
             </Label>
 
@@ -585,7 +653,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
             )}
 
             {trigger && (
-              <ul className="max-h-96 divide-y overflow-y-auto">
+              <ul className="max-h-96 divide-y divide-border/60 overflow-y-auto">
                 {trigger.variables.map((v) => {
                   const unknown = lint?.unknown.includes(v.path) ?? false;
                   return (
@@ -601,20 +669,20 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                         </button>
                         <span
                           className={cn(
-                            'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                            'shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium',
                             v.required
-                              ? 'bg-destructive/15 text-destructive'
+                              ? 'bg-destructive/10 text-destructive'
                               : 'bg-muted text-muted-foreground',
                           )}
                         >
                           {v.required ? t('required') : t('optional')}
                         </span>
                       </div>
-                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      <div className="mt-0.5 text-xs text-muted-foreground">
                         {v.label} · {v.type}
                         {unknown && <span className="ms-1 text-destructive">— {t('unknownVariables')}</span>}
                       </div>
-                      <div className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/70">
+                      <div className="mt-0.5 truncate font-mono text-2xs text-muted-foreground/70">
                         {t('example')}: {v.example}
                       </div>
                     </li>
@@ -624,14 +692,14 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
             )}
 
             {lint && lint.valid && (
-              <p className="flex items-center gap-1.5 border-t px-3 py-2 text-xs text-emerald-600 dark:text-emerald-400">
+              <p className="flex items-center gap-1.5 border-t px-3 py-2 text-xs text-success">
                 <CheckCircle2 className="size-3.5" />
                 {t('validTemplate')}
               </p>
             )}
           </div>
 
-          <p className="text-[11px] leading-relaxed text-muted-foreground">{t('publishHint')}</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">{t('publishHint')}</p>
         </div>
       </div>
     </div>
@@ -681,13 +749,13 @@ function BlockFields({
   );
 
   const label = (children: React.ReactNode) => (
-    <Label className="text-xs uppercase tracking-wide text-muted-foreground">{children}</Label>
+    <Label className="text-xs font-medium text-muted-foreground">{children}</Label>
   );
 
   return (
-    <div className="rounded-lg border p-3">
+    <div className="rounded-xl border border-border/70 bg-card p-4 shadow-xs">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-medium">{t(BLOCK_LABEL[block.type] as never)}</span>
+        <span className="font-display text-base font-medium tracking-[-0.01em]">{t(BLOCK_LABEL[block.type] as never)}</span>
         {block.type !== 'footer' && align()}
       </div>
 
@@ -731,9 +799,9 @@ function BlockFields({
                 disabled={readOnly}
                 onChange={(e) => onChange({ html: e.target.value })}
                 rows={4}
-                className="w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
+                className="w-full rounded-lg border border-border/90 bg-card px-3 py-2 font-mono text-xs shadow-xs outline-none transition-[border-color,box-shadow] hover:border-border-strong focus:border-primary/50 focus:ring-[3px] focus:ring-primary/15"
               />
-              <p className="text-[11px] text-muted-foreground">{te('allowedHtmlHint')}</p>
+              <p className="text-xs text-muted-foreground">{te('allowedHtmlHint')}</p>
             </div>
           </>
         )}
@@ -747,7 +815,7 @@ function BlockFields({
             <div className="space-y-1.5">
               {label(t('labelUrl'))}
               <Input value={String(p.url ?? '')} disabled={readOnly} onChange={(e) => onChange({ url: e.target.value })} className="font-mono text-xs" />
-              <p className="text-[11px] text-muted-foreground">{te('httpsOnlyHint')}</p>
+              <p className="text-xs text-muted-foreground">{te('httpsOnlyHint')}</p>
             </div>
             <div className="space-y-1.5">
               {label(t('labelVariant'))}
@@ -776,7 +844,7 @@ function BlockFields({
             <div className="space-y-1.5">
               {label(t('labelAlt'))}
               <Input value={String(p.alt ?? '')} disabled={readOnly} onChange={(e) => onChange({ alt: e.target.value })} />
-              <p className="text-[11px] text-muted-foreground">{te('imageAltHint')}</p>
+              <p className="text-xs text-muted-foreground">{te('imageAltHint')}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -836,7 +904,7 @@ function BlockFields({
                 className="font-mono text-xs"
                 placeholder="order.items"
               />
-              <p className="text-[11px] text-muted-foreground">{te('payloadPathHint')}</p>
+              <p className="text-xs text-muted-foreground">{te('payloadPathHint')}</p>
             </div>
             <div className="space-y-1.5">
               {label(t('type'))}
@@ -908,7 +976,7 @@ function BlockFields({
         {block.type === 'columns' && (
           <div className="space-y-2">
             {label(t('labelColumns'))}
-            <p className="text-[11px] text-muted-foreground">{te('twoUpColumnsHint')}</p>
+            <p className="text-xs text-muted-foreground">{te('twoUpColumnsHint')}</p>
             <Input
               placeholder={te('widthsPlaceholder')}
               className="font-mono text-xs"
@@ -949,7 +1017,7 @@ function BlockFields({
               />
               {t('showUnsubscribe')}
             </label>
-            <p className="text-[11px] text-muted-foreground">{te('unsubscribeHint')}</p>
+            <p className="text-xs text-muted-foreground">{te('unsubscribeHint')}</p>
           </>
         )}
       </div>

@@ -69,7 +69,7 @@ export function TranslateAction({
               )}
               {busy ? t('working') : t('button')}
               {hasCoverage && (
-                <span className="ms-1.5 border-s border-border-strong ps-1.5 font-mono text-[11px] tabular-nums text-muted-foreground">
+                <span className="ms-1.5 border-s border-border ps-1.5 text-xs tabular-nums text-muted-foreground">
                   {coverage.translated}/{coverage.total}
                 </span>
               )}
@@ -77,7 +77,7 @@ export function TranslateAction({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel className="flex items-center justify-between gap-3 font-normal">
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t('menu.title')}
               </span>
               <TranslationCoverageBadge coverage={coverage} />
