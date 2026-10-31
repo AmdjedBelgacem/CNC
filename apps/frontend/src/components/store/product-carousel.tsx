@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { ProductCard, type Product } from '@/components/store/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 interface ProductCarouselProps {
   title?: string;
   tags?: string[];
@@ -26,30 +27,34 @@ export function ProductCarousel({ title, tags, endpoint }: ProductCarouselProps)
   }, [tags, endpoint]);
   if (!loading && products.length === 0) return null;
   return (
-    <section className="py-12">
-      {' '}
+    <section className="py-16 md:py-20">
       <div className="container mx-auto px-4">
-        {' '}
         {title && (
-          <h2 className="mb-8 font-display text-2xl font-semibold tracking-tight text-foreground">
-            {title}
-          </h2>
-        )}{' '}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {' '}
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  {' '}
-                  <Skeleton className="aspect-square w-full rounded-lg" />{' '}
-                  <Skeleton className="h-4 w-2/3" /> <Skeleton className="h-4 w-1/3" />{' '}
-                </div>
-              ))
-            : (Array.isArray(products) ? products : []).map((product) => (
-                <ProductCard key={product.id || product.slug} product={product} />
-              ))}{' '}
-        </div>{' '}
-      </div>{' '}
+          <Reveal>
+            <h2 className="mb-10 text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground">
+              {title}
+            </h2>
+          </Reveal>
+        )}
+        {loading ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-3 rounded-2xl border border-border/70 bg-card p-3 shadow-xs">
+                <Skeleton className="aspect-square w-full rounded-xl" />
+                <Skeleton className="h-4 w-2/3" /> <Skeleton className="h-4 w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Stagger inViewOnly className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {(Array.isArray(products) ? products : []).map((product, i) => (
+              <StaggerItem key={product.id || product.slug} index={i} className="h-full">
+                <ProductCard product={product} />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        )}
+      </div>
     </section>
   );
 }

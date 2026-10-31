@@ -9,6 +9,7 @@ import { getImageSrc } from '@/lib/images';
 import { coerceCurrency, formatMinorUnits } from '@/lib/money';
 import { cardPrice, isQuoteOnly } from '@/lib/product-pricing';
 import { cn } from '@/lib/utils';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import type { Product as ApiProduct } from '@/lib/api/types';
 
 /**
@@ -42,7 +43,7 @@ export async function ProductsFeatured({
     <section
       id="on-the-bench"
       className={cn(
-        'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16',
+        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop py-16 md:py-24',
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -50,67 +51,63 @@ export async function ProductsFeatured({
         {bodyOnly
           ? null
           : header ?? (
-              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+              <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                    {t('featuredHeading')}
-                  </p>
-                  <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                  <p className="eyebrow">{t('featuredHeading')}</p>
+                  <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground md:text-4xl">
                     Featured this week
                   </h2>
                 </div>
-                <a
-                  href="#inventory"
-                  className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary"
-                >
+                <a href="#inventory" className="link-pill group">
                   Full catalog
-                  <ArrowRight className="flip-rtl size-3.5" />
+                  <ArrowRight className="flip-rtl size-3.5 transition-transform group-hover:translate-x-0.5" />
                 </a>
-              </div>
+              </Reveal>
             )}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {featured.map((product) => (
+        <Stagger inViewOnly className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {featured.map((product, i) => (
+            <StaggerItem key={product.id} index={i} className="h-full">
             <Link
-              key={product.id}
               href={`/products/${product.slug}`}
-              className="group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-xs transition-colors hover:border-primary/40"
+              className="card-hover group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div className="relative aspect-square overflow-hidden border-b border-border bg-surface-sunken">
+              <div className="relative aspect-square overflow-hidden bg-surface-sunken">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={getImageSrc(product.thumbnailUrl, 'product')}
                   alt={product.title}
                   loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                 />
-                <span className="absolute start-3 top-3 rounded-sm bg-primary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-primary-foreground">
+                <span className="absolute start-3 top-3 rounded-full bg-card/90 px-2.5 py-0.5 text-[11px] font-medium text-foreground shadow-xs ring-1 ring-border/60 backdrop-blur-sm">
                   Featured
                 </span>
               </div>
-              <div className="flex flex-1 flex-col gap-1 p-4">
+              <div className="flex flex-1 flex-col gap-1.5 border-t border-border/60 p-4">
                 {product.category || product.productType ? (
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {[product.category, product.productType].filter(Boolean).join(' · ')}
                   </span>
                 ) : null}
-                <h3 className="font-display text-sm font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary">
+                <h3 className="text-pretty font-display text-[15px] font-medium leading-snug tracking-[-0.01em] text-foreground transition-colors group-hover:text-primary">
                   {product.title}
                 </h3>
                 <div className="mt-auto flex items-center justify-between pt-3">
-                  <span className="font-mono text-sm font-semibold text-foreground tabular-nums">
+                  <span className="text-sm font-semibold tabular-nums text-foreground">
                     {isQuoteOnly(product)
                       ? t('priceOnRequest')
                       : money(cardPrice(product), product.currency || 'USD')}
                   </span>
-                  <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
                     {t('view')}
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
                   </span>
                 </div>
               </div>
             </Link>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </div>
     </section>
   );
@@ -139,25 +136,23 @@ export async function ProductsInventory({
     <section
       id="inventory"
       className={cn(
-        'px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-[1800px] py-14 md:py-20',
+        'px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-[1800px] py-16 md:py-24',
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       {bodyOnly
         ? null
         : header ?? (
-            <div className="mb-8 flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-10">
+            <Reveal className="mb-10 flex flex-col gap-8 border-b border-border/70 pb-10 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-10">
               <div className="max-w-2xl lg:min-w-[380px] lg:flex-1">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                  {t('liveInventory')}
+                <p className="eyebrow">{t('liveInventory')}</p>
+                <h2 className="section-title mt-3">{t('catalogTitle')}</h2>
+                <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-muted-foreground">
+                  {t('catalogSubtitle')}
                 </p>
-                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                  {t('catalogTitle')}
-                </h2>
-                <p className="mt-3 text-muted-foreground">{t('catalogSubtitle')}</p>
               </div>
               <ProductsTrustStrip />
-            </div>
+            </Reveal>
           )}
       <ProductsCatalog
         categories={categories.map((c) => c.name)}
@@ -183,12 +178,14 @@ async function ProductsTrustStrip() {
       {items.map((item) => (
         <li
           key={item.title}
-          className="flex items-start gap-3 rounded-lg border border-border bg-card/60 px-4 py-3"
+          className="flex items-start gap-3 rounded-xl border border-border/70 bg-card px-4 py-3.5 shadow-xs"
         >
-          <item.icon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <item.icon className="size-4" aria-hidden />
+          </span>
           <div className="min-w-0">
-            <p className="font-display text-sm font-semibold text-foreground">{item.title}</p>
-            <p className="font-mono text-[11px] leading-snug text-muted-foreground">{item.hint}</p>
+            <p className="text-sm font-medium text-foreground">{item.title}</p>
+            <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{item.hint}</p>
           </div>
         </li>
       ))}
@@ -208,7 +205,7 @@ export async function ProductsDepartments({
     <section
       id="departments"
       className={cn(
-        'border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-14 md:py-20',
+        'border-y border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop py-16 md:py-24',
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -216,31 +213,29 @@ export async function ProductsDepartments({
         {bodyOnly
           ? null
           : header ?? (
-              <div className="mb-8 max-w-2xl">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                  {t('directory')}
+              <Reveal className="mb-10 max-w-2xl">
+                <p className="eyebrow">{t('directory')}</p>
+                <h2 className="section-title mt-3">{t('shopByDepartment')}</h2>
+                <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
+                  {t('shopByDepartmentHint')}
                 </p>
-                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                  {t('shopByDepartment')}
-                </h2>
-                <p className="mt-3 text-muted-foreground">{t('shopByDepartmentHint')}</p>
-              </div>
+              </Reveal>
             )}
 
         {categories.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border bg-card/60 px-6 py-14 text-center text-sm text-muted-foreground">
             {t('noDepartments')}
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <Stagger as="ul" inViewOnly className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {categories.map((dept, i) => (
-              <li key={dept.name}>
+              <StaggerItem as="li" key={dept.name} index={i}>
                 <DepartmentLink name={dept.name} index={i + 1} count={t('skuCount', { count: dept.count })}>
                   <ArrowRight className="size-4 shrink-0 text-primary opacity-0 transition group-hover:opacity-100 rtl:rotate-180" />
                 </DepartmentLink>
-              </li>
+              </StaggerItem>
             ))}
-          </ul>
+          </Stagger>
         )}
       </div>
     </section>

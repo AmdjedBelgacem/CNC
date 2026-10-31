@@ -35,6 +35,8 @@ import { useFxRates } from '@/hooks/use-fx-rates';
 import { STOREFRONT_CURRENCIES, convertMinorUnits, currencySymbol } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { LayoutBox, Stagger, StaggerItem } from '@/components/ui/motion';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
 
 type SortKey = 'featured' | 'newest' | 'price-asc' | 'price-desc' | 'name';
 type FormatFilter = 'all' | 'digital' | 'physical';
@@ -478,16 +480,26 @@ export function ProductsCatalog({
   const filterPanel = (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground">
-          <SlidersHorizontal className="size-3.5 text-primary" />
+        <h3 className="inline-flex items-center gap-2 font-display text-lg font-medium tracking-[-0.015em] text-foreground">
+          <SlidersHorizontal className="size-4 text-primary" />
           {t('filters')}
         </h3>
-        {activeFilterCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearAll} className="h-7 px-2 text-xs">
-            <X className="size-3.5 rtl:rotate-0" />
-            {t('clearAll')}
-          </Button>
-        )}
+        <AnimatePresence initial={false}>
+          {activeFilterCount > 0 && (
+            <m.div
+              key="clear"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={spring.snappy}
+            >
+              <Button variant="ghost" size="sm" onClick={clearAll} className="h-7 rounded-full px-2.5 text-xs">
+                <X className="size-3.5 rtl:rotate-0" />
+                {t('clearAll')}
+              </Button>
+            </m.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Desktop/tablet: the product search lives at the top of the rail. Phones
@@ -497,7 +509,7 @@ export function ProductsCatalog({
       <div className="space-y-2">
         <Label
           htmlFor="catalog-category"
-          className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground"
+          className="text-[13px] font-medium text-foreground"
         >
           {t('category')}
         </Label>
@@ -519,7 +531,7 @@ export function ProductsCatalog({
       <div className="space-y-2">
         <Label
           htmlFor="catalog-type"
-          className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground"
+          className="text-[13px] font-medium text-foreground"
         >
           {t('productType')}
         </Label>
@@ -544,7 +556,7 @@ export function ProductsCatalog({
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+        <legend className="text-[13px] font-medium text-foreground">
           {t('availability')}
         </legend>
         <div className="space-y-1.5">
@@ -567,7 +579,7 @@ export function ProductsCatalog({
       </fieldset>
 
       <fieldset className="space-y-2">
-        <legend className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+        <legend className="text-[13px] font-medium text-foreground">
           {t('formatFilter')}
         </legend>
         <div className="space-y-1.5">
@@ -593,7 +605,7 @@ export function ProductsCatalog({
       </fieldset>
 
       <div className="space-y-2">
-        <Label className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+        <Label className="text-[13px] font-medium text-foreground">
           {t('priceRange')}
         </Label>
         {/* Amounts are entered in major units; the symbol is pinned inside the
@@ -601,7 +613,7 @@ export function ProductsCatalog({
         <div className="flex items-center gap-2" dir="ltr">
           <div className="relative flex-1">
             <span
-              className="pointer-events-none absolute inset-y-0 start-3 flex items-center font-mono text-xs text-muted-foreground"
+              className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-xs text-muted-foreground"
               aria-hidden
             >
               {currencySymbolLabel}
@@ -619,7 +631,7 @@ export function ProductsCatalog({
           <span className="text-muted-foreground">–</span>
           <div className="relative flex-1">
             <span
-              className="pointer-events-none absolute inset-y-0 start-3 flex items-center font-mono text-xs text-muted-foreground"
+              className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-xs text-muted-foreground"
               aria-hidden
             >
               {currencySymbolLabel}
@@ -636,7 +648,7 @@ export function ProductsCatalog({
           </div>
         </div>
         {bounds.max > 0 && (
-          <p className="font-mono text-[11px] text-muted-foreground" dir="ltr">
+          <p className="text-xs tabular-nums text-muted-foreground" dir="ltr">
             {currency(bounds.min)} – {currency(bounds.max)}
           </p>
         )}
@@ -647,7 +659,7 @@ export function ProductsCatalog({
       <div className="space-y-2">
         <Label
           htmlFor="catalog-currency"
-          className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground"
+          className="text-[13px] font-medium text-foreground"
         >
           {t('currency')}
         </Label>
@@ -665,7 +677,7 @@ export function ProductsCatalog({
           </SelectContent>
         </Select>
         <div className="flex items-start justify-between gap-2">
-          <p className="font-mono text-[10px] leading-snug text-muted-foreground">
+          <p className="text-xs leading-snug text-muted-foreground">
             {ratesError
               ? t('currencyRatesError')
               : ratesPending
@@ -679,7 +691,7 @@ export function ProductsCatalog({
             onClick={refresh}
             disabled={ratesLoading}
             aria-label={t('refreshRates')}
-            className="mt-0.5 shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="mt-0.5 shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
           >
             <RefreshCw className={cn('size-3.5', ratesLoading && 'animate-spin')} />
           </button>
@@ -693,7 +705,7 @@ export function ProductsCatalog({
       {/* Filters live on the left from tablet up; below `md` they collapse into
           the sheet toggled from the results header. */}
       <aside className={cn('md:block', filtersOpen ? 'block' : 'hidden')}>
-        <div className="rounded-xl border border-border bg-card/60 p-5 shadow-xs md:sticky md:top-24">
+        <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs md:sticky md:top-24 lg:p-6">
           {filterPanel}
           {filtersOpen && (
             <Button className="mt-5 w-full md:hidden" onClick={() => setFiltersOpen(false)}>
@@ -709,7 +721,7 @@ export function ProductsCatalog({
         <div className="md:hidden">{searchField(t('searchPlaceholder'))}</div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+          <p className="text-sm tabular-nums text-muted-foreground" aria-live="polite">
             {t('showing', { visible: filtered.length, total: products.length })}
           </p>
 
@@ -723,31 +735,43 @@ export function ProductsCatalog({
               <SlidersHorizontal className="size-4" />
               {t('filters')}
               {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ms-1 px-1.5 py-0 text-[10px]">
+                <Badge className="ms-1 px-1.5 py-0 text-[10px] tabular-nums">
                   {activeFilterCount}
                 </Badge>
               )}
             </Button>
 
-            <div className="flex items-center gap-1">
-              <Button
-                variant={density === 'comfortable' ? 'secondary' : 'ghost'}
-                size="icon"
-                aria-label={t('viewGrid')}
-                aria-pressed={density === 'comfortable'}
-                onClick={() => setDensity('comfortable')}
-              >
-                <LayoutGrid className="size-4" />
-              </Button>
-              <Button
-                variant={density === 'dense' ? 'secondary' : 'ghost'}
-                size="icon"
-                aria-label={t('viewList')}
-                aria-pressed={density === 'dense'}
-                onClick={() => setDensity('dense')}
-              >
-                <List className="size-4" />
-              </Button>
+            <div className="flex items-center gap-0.5 rounded-full border border-border/70 bg-muted/60 p-0.5">
+              {(
+                [
+                  { value: 'comfortable', label: t('viewGrid'), Icon: LayoutGrid },
+                  { value: 'dense', label: t('viewList'), Icon: List },
+                ] as const
+              ).map(({ value, label, Icon }) => {
+                const active = density === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-label={label}
+                    aria-pressed={active}
+                    onClick={() => setDensity(value)}
+                    className={cn(
+                      'relative flex size-8 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {active && (
+                      <m.span
+                        layoutId="catalog-density-pill"
+                        className="absolute inset-0 rounded-full bg-card shadow-xs ring-1 ring-border/70"
+                        transition={spring.smooth}
+                      />
+                    )}
+                    <Icon className="relative size-4" />
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex w-full items-center gap-2 sm:w-auto sm:min-w-[200px]">
@@ -784,8 +808,8 @@ export function ProductsCatalog({
           * the products stay, with the problem reported alongside them.
           */}
         {error && !loading && filtered.length === 0 && (
-          <div className="rounded-xl border border-destructive/40 bg-destructive/5 px-5 py-8 text-center">
-            <p className="text-sm font-medium text-foreground">{t('loadFailedShort')}</p>
+          <div className="rounded-2xl border border-destructive/25 bg-destructive/[0.04] px-5 py-10 text-center">
+            <p className="font-display text-lg font-medium text-foreground">{t('loadFailedShort')}</p>
             <p className="mt-1 font-mono text-xs text-muted-foreground">{error}</p>
             <Button variant="outline" className="mt-4" onClick={() => setReloadKey((k) => k + 1)}>
               {t('retry')}
@@ -796,7 +820,7 @@ export function ProductsCatalog({
         {error && !loading && filtered.length > 0 && (
           <div
             role="status"
-            className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-muted-foreground"
+            className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-destructive/25 bg-destructive/[0.04] px-4 py-2 text-xs text-muted-foreground"
           >
             <span>{t('loadFailedShort')}</span>
             <span className="font-mono">{error}</span>
@@ -821,8 +845,8 @@ export function ProductsCatalog({
             )}
           >
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3 rounded-xl border border-border bg-card p-3">
-                <Skeleton className="aspect-square w-full" />
+              <div key={i} className="space-y-3 rounded-2xl border border-border/70 bg-card p-2.5 shadow-xs">
+                <Skeleton className="aspect-square w-full rounded-xl" />
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
                 <Skeleton className="h-9 w-full" />
@@ -832,20 +856,27 @@ export function ProductsCatalog({
         )}
 
         {!error && !loading && filtered.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border bg-card/60 px-6 py-16 text-center">
-            <PackageSearch className="mx-auto size-8 text-muted-foreground" aria-hidden />
-            <p className="mt-4 font-display text-lg font-semibold text-foreground">
+          <m.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transition.enter}
+            className="rounded-2xl border border-dashed border-border bg-card/60 px-6 py-20 text-center"
+          >
+            <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <PackageSearch className="size-6" aria-hidden />
+            </span>
+            <p className="mt-5 font-display text-xl font-medium tracking-[-0.015em] text-foreground">
               {products.length === 0 ? t('noProducts') : t('emptyTitle')}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               {products.length === 0 ? t('shopByDepartmentHint') : t('emptyHint')}
             </p>
             {activeFilterCount > 0 && (
-              <Button variant="outline" className="mt-5" onClick={clearAll}>
+              <Button variant="outline" className="mt-6" onClick={clearAll}>
                 {t('clearAll')}
               </Button>
             )}
-          </div>
+          </m.div>
         )}
 
         {!error && !loading && filtered.length > 0 && (
@@ -853,9 +884,9 @@ export function ProductsCatalog({
             <Stagger
               key={page}
               className={cn(
-                'grid gap-4',
+                'grid gap-5',
                 density === 'dense'
-                  ? 'sm:grid-cols-2 xl:grid-cols-4'
+                  ? 'gap-4 sm:grid-cols-2 xl:grid-cols-4'
                   : 'sm:grid-cols-2 xl:grid-cols-3',
               )}
               // Products cascade in per page load. `maxDelay` keeps a 4-column
@@ -866,8 +897,8 @@ export function ProductsCatalog({
               {records ? <div className="contents">{records}</div> : null}
               {fallbackProducts.map((product, i) => (
                 <div key={product.id} style={{ order: paged.length + i }}>
-                  <StaggerItem index={paged.length + i}>
-                    <LayoutBox>
+                  <StaggerItem index={paged.length + i} className="h-full">
+                    <LayoutBox className="h-full">
                       <ProductCard product={product} />
                     </LayoutBox>
                   </StaggerItem>
@@ -879,13 +910,14 @@ export function ProductsCatalog({
 
         {!error && !loading && totalPages > 1 && (
           <nav
-            className="flex flex-wrap items-center justify-center gap-2 pt-2"
+            className="flex flex-wrap items-center justify-center gap-2 pt-6"
             aria-label={t('pageOf', { current: page, total: totalPages })}
           >
             <Button
               variant="outline"
               size="sm"
               disabled={page === 1}
+              className="rounded-full"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               {t('previous')}
@@ -894,23 +926,33 @@ export function ProductsCatalog({
               const number = i + 1;
               const active = number === page;
               return (
-                <Button
+                <button
                   key={number}
-                  variant={active ? 'default' : 'outline'}
-                  size="icon"
-                  className="size-9"
+                  type="button"
+                  className={cn(
+                    'relative flex size-9 items-center justify-center rounded-full text-sm font-medium tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    active ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
                   aria-current={active ? 'page' : undefined}
                   aria-label={t('pageOf', { current: number, total: totalPages })}
                   onClick={() => setPage(number)}
                 >
-                  {number}
-                </Button>
+                  {active && (
+                    <m.span
+                      layoutId="catalog-page-pill"
+                      className="absolute inset-0 rounded-full bg-primary shadow-xs"
+                      transition={spring.smooth}
+                    />
+                  )}
+                  <span className="relative">{number}</span>
+                </button>
               );
             })}
             <Button
               variant="outline"
               size="sm"
               disabled={page === totalPages}
+              className="rounded-full"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             >
               {t('next')}
@@ -937,13 +979,35 @@ function CheckRow({
     <label className="flex cursor-pointer items-center gap-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
       <span
         className={cn(
-          'flex size-4 shrink-0 items-center justify-center border transition-colors',
-          radio ? 'rounded-full' : 'rounded',
+          'flex size-[18px] shrink-0 items-center justify-center border transition-colors duration-150',
+          radio ? 'rounded-full' : 'rounded-[5px]',
           checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card',
         )}
         aria-hidden
       >
-        {checked && <Check className="size-3" />}
+        <AnimatePresence initial={false}>
+          {checked &&
+            (radio ? (
+              <m.span
+                key="dot"
+                className="size-1.5 rounded-full bg-primary-foreground"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                transition={spring.snappy}
+              />
+            ) : (
+              <m.span
+                key="check"
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.4, opacity: 0 }}
+                transition={spring.snappy}
+              >
+                <Check className="size-3" strokeWidth={3} />
+              </m.span>
+            ))}
+        </AnimatePresence>
       </span>
       <input
         type={radio ? 'radio' : 'checkbox'}

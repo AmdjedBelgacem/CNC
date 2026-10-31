@@ -4,7 +4,8 @@ import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api-client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
+import { AuthStatus, AuthStatusIcon, AuthSteps } from '@/components/auth/auth-kit';
 function CallbackInner() {
   const params = useSearchParams();
   const router = useRouter();
@@ -33,34 +34,41 @@ if (twoFactorRequired && userId) {
       }
     })();
   }, [params, router, setUser]);
-  if (error) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
-        {' '}
-        <p className="text-sm font-medium text-destructive">{error}</p>{' '}
-      </div>
-    );
-  }
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-muted-foreground">
-      {' '}
-      <Loader2 className="size-5 animate-spin" />{' '}
-      <p className="text-sm">Completing sign-in…</p>{' '}
-    </div>
+    <AuthSteps step={error ? 'error' : 'pending'}>
+      {error ? (
+        <AuthStatus
+          icon={
+            <AuthStatusIcon tone="error">
+              <X className="size-6" aria-hidden />
+            </AuthStatusIcon>
+          }
+          title={<span role="alert">{error}</span>}
+          className="min-h-[40vh]"
+        />
+      ) : (
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 text-muted-foreground">
+          <span className="relative flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/15">
+            <Loader2 className="size-5 animate-spin" />
+          </span>
+          <p className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
+            Completing sign-in…
+          </p>
+        </div>
+      )}
+    </AuthSteps>
   );
 }
 export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center">
-          {' '}
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />{' '}
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       }
     >
-      {' '}
-      <CallbackInner />{' '}
+      <CallbackInner />
     </Suspense>
   );
 }

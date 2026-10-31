@@ -26,13 +26,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, hydrated, pathname, router]);
   if (checking) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        {' '}
-        <div className="space-y-4 w-full max-w-md">
-          {' '}
-          <Skeleton className="h-8 w-3/4 mx-auto" /> <Skeleton className="h-4 w-1/2 mx-auto" />{' '}
-          <Skeleton className="h-32 w-full" />{' '}
-        </div>{' '}
+      <div className="flex min-h-[60vh] items-center justify-center px-4" aria-busy="true">
+        <div className="w-full max-w-md space-y-4 rounded-2xl border border-border/70 bg-card p-8 shadow-xs">
+          <Skeleton className="mx-auto h-8 w-3/4 rounded-lg" />
+          <Skeleton className="mx-auto h-4 w-1/2" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
       </div>
     );
   }

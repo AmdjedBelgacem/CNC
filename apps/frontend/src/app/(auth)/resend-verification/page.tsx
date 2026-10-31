@@ -3,7 +3,18 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { MailCheck } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import {
+  AuthField,
+  AuthHeading,
+  AuthInput,
+  AuthStatus,
+  AuthStatusIcon,
+  AuthSteps,
+  AuthSubmit,
+  authLinkClass,
+} from '@/components/auth/auth-kit';
 export default function ResendVerificationPage() {
   const t = useTranslations('auth');
   const { resendVerification } = useAuth();
@@ -28,76 +39,53 @@ export default function ResendVerificationPage() {
     }
   };
   return (
-    <div className="flex h-full flex-col justify-center">
-      {' '}
-      <div className="mb-6">
-        {' '}
-        <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
-          {' '}
-          {t('resend.eyebrow')}{' '}
-        </p>{' '}
-        <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
-          {' '}
-          {t('verification.resend')}{' '}
-        </h1>{' '}
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          {' '}
-          {sent ? t('resend.sent') : t('resend.hint')}{' '}
-        </p>{' '}
-      </div>{' '}
-      {!sent && (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {' '}
-          <div className="space-y-1">
-            {' '}
-            <label
-              htmlFor="email"
-              className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
-            >
-              {' '}
-              {t('email')}{' '}
-            </label>{' '}
-            <input
-              id="email"
-              type="email"
-              placeholder={t('emailPlaceholder')}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-              className="h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
-            />{' '}
-          </div>{' '}
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 disabled:opacity-50"
-          >
-            {' '}
-            {loading ? t('sending') : t('resend.sendLink')}{' '}
-          </button>{' '}
-        </form>
-      )}{' '}
-      {sent && (
-        <button
-          onClick={() => (window.location.href = '/login')}
-          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
+    <AuthSteps step={sent ? 'sent' : 'form'}>
+      {sent ? (
+        <AuthStatus
+          icon={
+            <AuthStatusIcon tone="primary">
+              <MailCheck className="size-6" strokeWidth={1.75} aria-hidden />
+            </AuthStatusIcon>
+          }
+          title={t('verification.resend')}
         >
-          {' '}
-          {t('backToSignIn')}{' '}
-        </button>
-      )}{' '}
-      {!sent && (
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {' '}
-          <Link
-            href="/login"
-            className="font-bold text-primary transition-all duration-200 hover:text-primary/80"
-          >
+          <p className="mb-7 mt-3 text-[15px] leading-relaxed text-muted-foreground">
+            {t('resend.sent')}
+          </p>
+          <AuthSubmit type="button" onClick={() => (window.location.href = '/login')}>
             {t('backToSignIn')}
-          </Link>{' '}
-        </p>
-      )}{' '}
-    </div>
+          </AuthSubmit>
+        </AuthStatus>
+      ) : (
+        <div className="flex h-full flex-col justify-center">
+          <AuthHeading
+            eyebrow={t('resend.eyebrow')}
+            title={t('verification.resend')}
+            subtitle={t('resend.hint')}
+          />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <AuthField id="email" label={t('email')}>
+              <AuthInput
+                id="email"
+                type="email"
+                placeholder={t('emailPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+              />
+            </AuthField>
+            <AuthSubmit type="submit" disabled={loading} loading={loading}>
+              {loading ? t('sending') : t('resend.sendLink')}
+            </AuthSubmit>
+          </form>
+          <p className="mt-7 text-center text-sm text-muted-foreground">
+            <Link href="/login" className={authLinkClass}>
+              {t('backToSignIn')}
+            </Link>
+          </p>
+        </div>
+      )}
+    </AuthSteps>
   );
 }

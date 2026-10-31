@@ -28,6 +28,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, m } from 'framer-motion';
+import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
+import { spring } from '@/lib/motion';
 
 type SearchSort = 'relevance' | 'title' | 'newest';
 
@@ -124,32 +127,50 @@ function SearchPageInner() {
   const resultTypes = scope === 'admin' ? SEARCH_RESULT_TYPES : PUBLIC_SEARCH_RESULT_TYPES;
   const groupLabel = (type: SearchResultType) => t(type);
 
+  const chip = (active: boolean) =>
+    cn(
+      'relative inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      active ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+    );
+  const chipPill = (
+    <m.span
+      layoutId="search-type-pill"
+      aria-hidden
+      className="absolute inset-0 rounded-full bg-primary shadow-xs"
+      transition={spring.smooth}
+    />
+  );
+
   return (
     <div className="min-h-[calc(100dvh-4rem)] bg-background">
-      <section className="relative overflow-hidden border-b border-secondary/20 bg-secondary text-secondary-foreground">
-        <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:32px_32px]" />
-        <div className="pointer-events-none absolute -end-24 -top-32 size-[28rem] rounded-full bg-primary/20 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary-foreground/65">
-            <span className="inline-flex items-center gap-2 rounded-full border border-secondary-foreground/20 bg-secondary-foreground/10 px-3 py-1.5">
+      <section className="relative overflow-hidden border-b border-border/70">
+        <div className="pointer-events-none absolute inset-0 ambient-wash" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 blueprint-grid opacity-40" aria-hidden />
+        <div className="relative mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/80 px-3 py-1 font-medium text-foreground shadow-xs backdrop-blur-sm">
               <Command className="size-3.5 text-primary" />
               {scope === 'admin' ? t('adminWorkspace') : t('publicCatalog')}
             </span>
             <span className="hidden sm:inline">{t('searchEverywhere')}</span>
           </div>
-          <div className="mt-6 max-w-3xl">
-            <h1 className="font-display text-4xl font-semibold tracking-[-0.04em] sm:text-5xl lg:text-6xl">{t('heroTitle')}</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-secondary-foreground/70 sm:text-base">{t('heroHint')}</p>
+          <div className="mx-auto mt-6 max-w-3xl">
+            <h1 className="text-balance font-display text-4xl font-medium tracking-[-0.025em] text-foreground sm:text-5xl lg:text-[56px] lg:leading-[1.05]">
+              {t('heroTitle')}
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
+              {t('heroHint')}
+            </p>
           </div>
           <form
-            className="relative mt-8 max-w-3xl"
+            className="group relative mx-auto mt-9 max-w-2xl"
             onSubmit={(event) => {
               event.preventDefault();
               setQuery(inputValue.trim());
               setPage(1);
             }}
           >
-            <Search className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <input
               type="search"
               value={inputValue}
@@ -157,31 +178,50 @@ function SearchPageInner() {
               placeholder={t('placeholder')}
               aria-label={t('title')}
               autoFocus
-              className="h-16 w-full rounded-2xl border border-white/15 bg-background px-12 pe-28 text-base text-foreground shadow-2xl outline-none placeholder:text-muted-foreground/70 focus:ring-4 focus:ring-primary/25 sm:h-[4.5rem] sm:text-lg"
+              className="h-16 w-full rounded-2xl border border-border bg-card px-14 pe-28 text-base text-foreground shadow-lg outline-none transition-[box-shadow,border-color] placeholder:text-muted-foreground/70 focus:border-ring/50 focus:ring-4 focus:ring-ring/15 sm:text-lg [&::-webkit-search-cancel-button]:hidden"
             />
-            {isFetching && <Loader2 className="absolute end-20 top-1/2 size-4 -translate-y-1/2 animate-spin text-primary" />}
-            {inputValue && (
-              <button
-                type="button"
-                onClick={clear}
-                className="absolute end-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                aria-label={t('clear')}
-              >
-                <X className="size-4" />
-              </button>
-            )}
-            <kbd className="pointer-events-none absolute end-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-border bg-muted px-2 py-1 font-mono text-[10px] font-semibold text-muted-foreground sm:block">
+            <AnimatePresence>
+              {isFetching && (
+                <m.span
+                  key="spin"
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.6 }}
+                  className="absolute end-20 top-1/2 -mt-2"
+                >
+                  <Loader2 className="size-4 animate-spin text-primary" />
+                </m.span>
+              )}
+            </AnimatePresence>
+            <AnimatePresence initial={false}>
+              {inputValue && (
+                <m.button
+                  key="clear"
+                  type="button"
+                  onClick={clear}
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  transition={spring.snappy}
+                  className="absolute end-3 top-1/2 z-10 -mt-[18px] rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label={t('clear')}
+                >
+                  <X className="size-4" />
+                </m.button>
+              )}
+            </AnimatePresence>
+            <kbd className="pointer-events-none absolute end-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-border bg-muted px-2 py-1 font-mono text-[10px] font-medium text-muted-foreground sm:block">
               ⌘K
             </kbd>
           </form>
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-secondary-foreground/60">
-            <span className="uppercase tracking-[0.14em]">{t('trySearching')}</span>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+            <span>{t('trySearching')}</span>
             {['CNC', 'Titanium', 'Machining'].map((value) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => chooseQuickSearch(value)}
-                className="rounded-full border border-secondary-foreground/15 bg-secondary-foreground/5 px-3 py-1.5 font-medium text-secondary-foreground/80 transition hover:border-primary/50 hover:bg-primary/10 hover:text-secondary-foreground"
+                className="link-pill min-h-0 px-3 py-1.5 text-xs"
               >
                 {value}
               </button>
@@ -190,33 +230,35 @@ function SearchPageInner() {
         </div>
       </section>
 
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-8 focus:outline-none sm:px-6 sm:py-10 lg:px-8 lg:py-14">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-5xl px-4 py-10 focus:outline-none sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+        <Crossfade value={hasQuery ? 'results' : 'discover'}>
         {!hasQuery ? (
-          <div className="grid gap-4 md:grid-cols-[1.15fr_.85fr]">
-            <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-xs sm:p-8">
-              <div className="absolute end-0 top-0 size-40 rounded-full bg-primary/10 blur-3xl" />
+          <div className="grid gap-5 md:grid-cols-[1.15fr_.85fr]">
+            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-6 shadow-xs sm:p-8">
               <div className="relative">
-                <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><Compass className="size-5" /></div>
-                <h2 className="mt-6 font-display text-2xl font-semibold tracking-tight">{t('discoverTitle')}</h2>
+                <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary"><Compass className="size-5" /></div>
+                <h2 className="mt-6 font-display text-2xl font-medium tracking-[-0.018em]">{t('discoverTitle')}</h2>
                 <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{t('discoverHint')}</p>
-                <div className="mt-7 grid gap-2 sm:grid-cols-2">
+                <Stagger className="mt-7 grid gap-2 sm:grid-cols-2">
                   {[
                     { href: '/courses', label: t('courses'), icon: BookOpen },
                     { href: '/products', label: t('products'), icon: Sparkles },
                     { href: '/feed', label: t('posts'), icon: FileSearch },
                     { href: '/events', label: t('events'), icon: Compass },
-                  ].map((item) => (
-                    <Link key={item.href} href={item.href} className="group flex items-center gap-3 rounded-xl border border-border bg-background/60 px-3 py-3 transition hover:border-primary/30 hover:bg-primary/[0.03]">
-                      <item.icon className="size-4 text-muted-foreground transition group-hover:text-primary" />
-                      <span className="flex-1 text-sm font-medium">{item.label}</span>
-                      <ArrowRight className="flip-rtl size-3.5 text-muted-foreground/50 transition group-hover:translate-x-0.5 group-hover:text-primary" />
-                    </Link>
+                  ].map((item, i) => (
+                    <StaggerItem key={item.href} index={i}>
+                      <Link href={item.href} className="card-hover group flex items-center gap-3 rounded-xl border border-border/70 bg-background/60 px-3.5 py-3">
+                        <item.icon className="size-4 text-muted-foreground transition group-hover:text-primary" />
+                        <span className="flex-1 text-sm font-medium">{item.label}</span>
+                        <ArrowRight className="flip-rtl size-3.5 text-muted-foreground/50 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+                      </Link>
+                    </StaggerItem>
                   ))}
-                </div>
+                </Stagger>
               </div>
             </div>
-            <div className="rounded-2xl border border-border bg-surface-sunken/40 p-6 sm:p-8">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground"><Sparkles className="size-4 text-primary" />{t('searchTips')}</div>
+            <div className="rounded-2xl border border-border/70 bg-surface-sunken/50 p-6 sm:p-8">
+              <p className="eyebrow">{t('searchTips')}</p>
               <div className="mt-6 space-y-5">
                 {[
                   [t('tipOneTitle'), t('tipOneHint')],
@@ -224,8 +266,8 @@ function SearchPageInner() {
                   [t('tipThreeTitle'), t('tipThreeHint')],
                 ].map(([title, hint], index) => (
                   <div key={title} className="flex gap-4">
-                    <span className="font-mono text-xs text-primary">0{index + 1}</span>
-                    <div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p></div>
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-card font-mono text-[11px] text-primary ring-1 ring-border/70">{index + 1}</span>
+                    <div><p className="text-sm font-medium">{title}</p><p className="mt-1 text-[13px] leading-5 text-muted-foreground">{hint}</p></div>
                   </div>
                 ))}
               </div>
@@ -233,14 +275,16 @@ function SearchPageInner() {
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border/70 pb-6">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{t('resultsFor', { query })}</p>
-                <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{total} {t('results')}</h2>
-                {engine && <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{t('engineLabel')}: {engine}</p>}
+                <p className="text-sm text-muted-foreground">{t('resultsFor', { query })}</p>
+                <h2 className="mt-1.5 font-display text-3xl font-medium tracking-[-0.02em] sm:text-4xl">
+                  <AnimatedNumber value={total} animateOnChange durationSeconds={0.6} /> {t('results')}
+                </h2>
+                {engine && <p className="mt-1.5 text-xs text-muted-foreground">{t('engineLabel')}: <span className="font-mono">{engine}</span></p>}
               </div>
               <Select value={sort} onValueChange={(value) => { setSort(value as SearchSort); setPage(1); }}>
-                <SelectTrigger className="h-9 w-[10rem] rounded-lg border-border bg-card text-xs" aria-label={t('sortLabel')}><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-[10rem] rounded-full bg-card text-xs" aria-label={t('sortLabel')}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="relevance">{t('sortRelevance')}</SelectItem>
                   <SelectItem value="title">{t('sortTitle')}</SelectItem>
@@ -249,22 +293,29 @@ function SearchPageInner() {
               </Select>
             </div>
 
-            <div className="no-scrollbar -mx-1 mt-5 flex gap-2 overflow-x-auto px-1 pb-2" role="tablist" aria-label={t('typeFilter')}>
-              <button type="button" role="tab" aria-selected={activeType === 'all'} onClick={() => setType('all')} className={cn('inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition', activeType === 'all' ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border bg-card text-muted-foreground hover:border-border-strong hover:text-foreground')}>
-                {t('allResults')} <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px]">{total}</span>
+            <div className="no-scrollbar -mx-1 mt-5 flex gap-1 overflow-x-auto px-1 pb-2" role="tablist" aria-label={t('typeFilter')}>
+              <button type="button" role="tab" aria-selected={activeType === 'all'} onClick={() => setType('all')} className={chip(activeType === 'all')}>
+                {activeType === 'all' && chipPill}
+                <span className="relative">{t('allResults')}</span>
+                <span className={cn('relative rounded-full px-1.5 py-0.5 text-[10px] tabular-nums', activeType === 'all' ? 'bg-primary-foreground/20' : 'bg-muted')}>{total}</span>
               </button>
               {resultTypes.map((type) => {
                 const count = counts[type];
                 const Icon = SEARCH_TYPE_ICON[type];
+                const active = activeType === type;
                 return (
-                  <button key={type} type="button" role="tab" aria-selected={activeType === type} onClick={() => setType(type)} className={cn('inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition', activeType === type ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border bg-card text-muted-foreground hover:border-border-strong hover:text-foreground')}>
-                    <Icon className="size-3.5" />{t(type)} {count !== undefined && <span className="opacity-65">{count}</span>}
+                  <button key={type} type="button" role="tab" aria-selected={active} onClick={() => setType(type)} className={chip(active)}>
+                    {active && chipPill}
+                    <Icon className="relative size-3.5" />
+                    <span className="relative">{t(type)}</span>
+                    {count !== undefined && <span className="relative tabular-nums opacity-65">{count}</span>}
                   </button>
                 );
               })}
             </div>
 
             <div className="mt-7">
+              <Crossfade value={`${activeType}:${page}:${isError ? 'err' : isLoading || (isFetching && results.length === 0) ? 'load' : 'ok'}`}>
               {isError ? (
                 <ErrorState title={t('failed')} description={error instanceof Error ? error.message : undefined} onRetry={() => void refetch()} />
               ) : isLoading || (isFetching && results.length === 0) ? (
@@ -274,32 +325,40 @@ function SearchPageInner() {
               ) : total === 0 || visibleResults.length === 0 ? (
                 <EmptyState icon={Search} title={t('noResults')} description={t('noResultsHint')} action={<Button variant="outline" onClick={clear}>{t('clear')}</Button>} />
               ) : activeType === 'all' ? (
-                <div className="space-y-5">
-                  {visibleGroups.map((group) => (
-                    <section key={group.type} className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-                      <div className="flex items-center gap-3 border-b border-border bg-muted/30 px-4 py-3">
-                        <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><SearchTypeIcon type={group.type} /></span>
-                        <div className="flex-1"><h3 className="text-sm font-semibold">{groupLabel(group.type)}</h3><p className="text-[11px] text-muted-foreground">{group.items.length} {t('results')}</p></div>
-                        <button type="button" onClick={() => setType(group.type)} className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">{t('viewAll')} <ArrowRight className="flip-rtl size-3" /></button>
+                <Stagger className="space-y-5">
+                  {visibleGroups.map((group, gi) => (
+                    <StaggerItem as="section" key={group.type} index={gi} className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+                      <div className="flex items-center gap-3 border-b border-border/70 px-4 py-3.5">
+                        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary"><SearchTypeIcon type={group.type} /></span>
+                        <div className="flex-1"><h3 className="font-display text-[17px] font-medium tracking-[-0.01em]">{groupLabel(group.type)}</h3><p className="text-xs text-muted-foreground">{group.items.length} {t('results')}</p></div>
+                        <button type="button" onClick={() => setType(group.type)} className="group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/[0.06]">{t('viewAll')} <ArrowRight className="flip-rtl size-3 transition-transform group-hover:translate-x-0.5" /></button>
                       </div>
-                      <div className="divide-y divide-border/70 p-1.5">{group.items.slice(0, 4).map((item) => <SearchResultRow key={`${item.type}-${item.id}`} item={item} showType={false} />)}</div>
-                    </section>
+                      <div className="divide-y divide-border/60 p-1.5">{group.items.slice(0, 4).map((item) => <SearchResultRow key={`${item.type}-${item.id}`} item={item} showType={false} />)}</div>
+                    </StaggerItem>
                   ))}
-                </div>
+                </Stagger>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xs">{visibleResults.map((item) => <SearchResultRow key={`${item.type}-${item.id}`} item={item} />)}</div>
+                <Stagger className="overflow-hidden rounded-2xl border border-border/70 bg-card p-1.5 shadow-xs" gap={0.03}>
+                  {visibleResults.map((item, i) => (
+                    <StaggerItem key={`${item.type}-${item.id}`} index={i}>
+                      <SearchResultRow item={item} />
+                    </StaggerItem>
+                  ))}
+                </Stagger>
               )}
+              </Crossfade>
             </div>
 
             {hasQuery && !isError && pageCount > 1 && (
-              <nav className="mt-8 flex items-center justify-between gap-3" aria-label={t('pagination')}>
-                <Button variant="outline" size="sm" disabled={page <= 1 || isFetching} onClick={() => setPage((value) => Math.max(1, value - 1))}>{t('previous')}</Button>
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{t('pageOf', { page, pageCount })}</span>
-                <Button variant="outline" size="sm" disabled={page >= pageCount || isFetching} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>{t('next')}</Button>
+              <nav className="mt-10 flex items-center justify-between gap-3" aria-label={t('pagination')}>
+                <Button variant="outline" size="sm" className="rounded-full" disabled={page <= 1 || isFetching} onClick={() => setPage((value) => Math.max(1, value - 1))}>{t('previous')}</Button>
+                <span className="text-xs tabular-nums text-muted-foreground">{t('pageOf', { page, pageCount })}</span>
+                <Button variant="outline" size="sm" className="rounded-full" disabled={page >= pageCount || isFetching} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>{t('next')}</Button>
               </nav>
             )}
           </>
         )}
+        </Crossfade>
       </main>
     </div>
   );

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 
 /**
  * No-ops now that the service worker has been removed.
@@ -26,20 +28,37 @@ export function PWAUpdateToast() {
     window.location.reload();
   };
 
-  if (!visible) return null;
-
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-      <p className="text-sm font-medium">App updated — refresh to get the latest.</p>
-      <button
-        onClick={handleRefresh}
-        className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-      >
-        <RefreshCw className="size-3.5" /> Refresh
-      </button>
-      <button onClick={() => setVisible(false)} className="text-xs text-muted-foreground hover:text-foreground">
-        Later
-      </button>
-    </div>
+    <AnimatePresence>
+      {visible && (
+        <m.div
+          key="pwa-update"
+          role="status"
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 12, scale: 0.98, transition: { duration: 0.16 } }}
+          transition={spring.gentle}
+          className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md flex-wrap items-center gap-3 rounded-2xl border border-border/80 bg-card px-4 py-3 shadow-xl sm:inset-x-0"
+        >
+          <p className="min-w-0 flex-1 text-sm font-medium text-foreground">
+            App updated — refresh to get the latest.
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setVisible(false)}
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Later
+            </button>
+            <button
+              onClick={handleRefresh}
+              className="pressable inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              <RefreshCw className="size-3.5" /> Refresh
+            </button>
+          </div>
+        </m.div>
+      )}
+    </AnimatePresence>
   );
 }

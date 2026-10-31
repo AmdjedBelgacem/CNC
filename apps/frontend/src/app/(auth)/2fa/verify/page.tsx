@@ -3,7 +3,19 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { ShieldCheck } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { Crossfade } from '@/components/ui/motion';
+import { cn } from '@/lib/utils';
+import {
+  AuthAlert,
+  AuthField,
+  AuthHeading,
+  AuthInput,
+  AuthStatusIcon,
+  AuthSubmit,
+  authLinkClass,
+} from '@/components/auth/auth-kit';
 function Verify2faForm() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -30,75 +42,50 @@ function Verify2faForm() {
       setLoading(false);
     }
   };
+  const mode = useRecovery ? 'recovery' : 'code';
   return (
     <div className="flex h-full flex-col justify-center">
-      {' '}
-      <div className="mb-6 text-center">
-        {' '}
-        <div className="mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
-          {' '}
-          <svg
-            className="size-6 text-primary"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            {' '}
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-            />{' '}
-          </svg>{' '}
-        </div>{' '}
-        <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
-          {' '}
-          {t('twoFactor.eyebrow')}{' '}
-        </p>{' '}
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {' '}
-          {useRecovery ? t('twoFactor.recoveryHint') : t('twoFactor.codeHint')}{' '}
-        </p>{' '}
-      </div>{' '}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {' '}
-        {error && (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-destructive">
-            {' '}
-            {error}{' '}
-          </div>
-        )}{' '}
-        <div className="space-y-1">
-          {' '}
-          <label
-            htmlFor="token"
-            className="block text-center text-2xs font-bold uppercase tracking-[0.15em] text-primary"
-          >
-            {' '}
-            {useRecovery ? t('twoFactor.recoveryLabel') : t('twoFactor.codeLabel')}{' '}
-          </label>{' '}
-          <input
+      <AuthHeading
+        align="center"
+        icon={
+          <AuthStatusIcon tone="primary">
+            <ShieldCheck className="size-6" strokeWidth={1.6} aria-hidden />
+          </AuthStatusIcon>
+        }
+        title={t('twoFactor.eyebrow')}
+        subtitle={
+          <Crossfade value={mode} axis="none">
+            <p>{useRecovery ? t('twoFactor.recoveryHint') : t('twoFactor.codeHint')}</p>
+          </Crossfade>
+        }
+      />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <AuthAlert show={!!error}>{error}</AuthAlert>
+        <Crossfade value={mode} axis="x" distance={12}>
+          <AuthField
             id="token"
-            type="text"
-            inputMode={useRecovery ? 'text' : 'numeric'}
-            placeholder={useRecovery ? 'XXXX-XXXXXX' : '000000'}
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            required
-            autoFocus
-            maxLength={useRecovery ? 10 : 6}
-            className="h-12 w-full rounded-xl border border-border bg-background text-center text-xl tracking-[0.3em] text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
-          />{' '}
-        </div>{' '}
-        <button
-          type="submit"
-          disabled={loading}
-          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
-        >
-          {' '}
-          {loading ? t('twoFactor.verifying') : t('twoFactor.verify')}{' '}
-        </button>{' '}
+            label={useRecovery ? t('twoFactor.recoveryLabel') : t('twoFactor.codeLabel')}
+            labelClassName="block w-full text-center text-muted-foreground"
+          >
+            <AuthInput
+              id="token"
+              type="text"
+              inputMode={useRecovery ? 'text' : 'numeric'}
+              placeholder={useRecovery ? 'XXXX-XXXXXX' : '000000'}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              required
+              autoFocus
+              autoComplete="one-time-code"
+              maxLength={useRecovery ? 10 : 6}
+              invalid={!!error}
+              className="h-14 rounded-xl bg-background/60 text-center font-mono text-2xl tracking-[0.4em] placeholder:text-muted-foreground/50 sm:text-2xl"
+            />
+          </AuthField>
+        </Crossfade>
+        <AuthSubmit type="submit" disabled={loading} loading={loading}>
+          {loading ? t('twoFactor.verifying') : t('twoFactor.verify')}
+        </AuthSubmit>
         <button
           type="button"
           onClick={() => {
@@ -106,12 +93,11 @@ function Verify2faForm() {
             setToken('');
             setError('');
           }}
-          className="w-full text-center text-2xs font-medium text-primary transition-all duration-200 hover:text-primary/80"
+          className={cn('mx-auto block text-sm', authLinkClass)}
         >
-          {' '}
-          {useRecovery ? t('twoFactor.useAuthenticator') : t('twoFactor.useRecovery')}{' '}
-        </button>{' '}
-      </form>{' '}
+          {useRecovery ? t('twoFactor.useAuthenticator') : t('twoFactor.useRecovery')}
+        </button>
+      </form>
     </div>
   );
 }
@@ -121,13 +107,11 @@ export default function Verify2faPage() {
     <Suspense
       fallback={
         <div className="flex h-full flex-col items-center justify-center">
-          {' '}
-          <p className="text-sm text-muted-foreground">{tCommon('loading')}</p>{' '}
+          <p className="text-sm text-muted-foreground">{tCommon('loading')}</p>
         </div>
       }
     >
-      {' '}
-      <Verify2faForm />{' '}
+      <Verify2faForm />
     </Suspense>
   );
 }

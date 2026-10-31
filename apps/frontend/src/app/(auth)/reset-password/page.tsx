@@ -3,7 +3,21 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { m } from 'framer-motion';
 import { toast } from '@/components/ui/toast';
+import { spring } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+import {
+  AuthAlert,
+  AuthField,
+  AuthHeading,
+  AuthInput,
+  AuthStatus,
+  AuthStatusIcon,
+  AuthSteps,
+  AuthSubmit,
+  DrawnCheck,
+} from '@/components/auth/auth-kit';
 function ResetPasswordForm() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -43,130 +57,90 @@ function ResetPasswordForm() {
       setLoading(false);
     }
   };
-  if (success) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center text-center">
-        {' '}
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-success/60 bg-success/40">
-          {' '}
-          <svg
-            className="h-7 w-7 text-success"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            {' '}
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />{' '}
-          </svg>{' '}
-        </div>{' '}
-        <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
-          {' '}
-          {t('reset.successTitle')}{' '}
-        </h1>{' '}
-        <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">
-          {' '}
-          {t('reset.successHint')}{' '}
-        </p>{' '}
-        <button
-          onClick={() => router.push('/login')}
-          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
-        >
-          {' '}
-          {t('reset.signInNewPassword')}{' '}
-        </button>{' '}
-      </div>
-    );
-  }
   return (
-    <div className="flex h-full flex-col justify-center">
-      {' '}
-      <div className="mb-6">
-        {' '}
-        <p className="mb-1.5 text-2xs font-bold uppercase tracking-[0.15em] text-primary">
-          {' '}
-          {t('reset.eyebrow')}{' '}
-        </p>{' '}
-        <h1 className="font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
-          {' '}
-          {t('reset.title')}{' '}
-        </h1>{' '}
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          {' '}
-          {t('reset.hint')}{' '}
-        </p>{' '}
-      </div>{' '}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {' '}
-        {error && (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-destructive">
-            {' '}
-            {error}{' '}
-          </div>
-        )}{' '}
-        {!token && (
-          <div className="rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-2.5 text-sm text-destructive">
-            {' '}
-            {t('reset.missingToken')}{' '}
-          </div>
-        )}{' '}
-        <div className="space-y-1">
-          {' '}
-          <label
-            htmlFor="password"
-            className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
-          >
-            {' '}
-            {t('newPasswordLabel')}{' '}
-          </label>{' '}
-          <input
-            id="password"
-            type="password"
-            placeholder={t('newPasswordPlaceholder')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoFocus
-            className="h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
-          />{' '}
-        </div>{' '}
-        <div className="space-y-1">
-          {' '}
-          <label
-            htmlFor="confirmPassword"
-            className="text-2xs font-bold uppercase tracking-[0.15em] text-primary"
-          >
-            {' '}
-            {t('confirmNewPasswordLabel')}{' '}
-          </label>{' '}
-          <input
-            id="confirmPassword"
-            type="password"
-            placeholder={t('confirmPasswordPlaceholder')}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            className="h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground outline-none ring-0 transition-all duration-200 placeholder:text-muted-foreground focus:border-primary/60 focus:ring-1 focus:ring-ring/30"
-          />{' '}
-        </div>{' '}
-        <button
-          type="submit"
-          disabled={loading || !token}
-          className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+    <AuthSteps step={success ? 'done' : 'form'}>
+      {success ? (
+        <AuthStatus
+          icon={
+            <AuthStatusIcon tone="success">
+              <DrawnCheck />
+            </AuthStatusIcon>
+          }
+          title={t('reset.successTitle')}
         >
-          {' '}
-          {loading ? t('reset.resetting') : t('reset.resetButton')}{' '}
-        </button>{' '}
-      </form>{' '}
+          <p className="mb-7 mt-3 text-[15px] leading-relaxed text-muted-foreground">
+            {t('reset.successHint')}
+          </p>
+          <AuthSubmit type="button" onClick={() => router.push('/login')}>
+            {t('reset.signInNewPassword')}
+          </AuthSubmit>
+        </AuthStatus>
+      ) : (
+        <div className="flex h-full flex-col justify-center">
+          <AuthHeading eyebrow={t('reset.eyebrow')} title={t('reset.title')} subtitle={t('reset.hint')} />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <AuthAlert show={!!error}>{error}</AuthAlert>
+            <AuthAlert show={!token}>{t('reset.missingToken')}</AuthAlert>
+            <AuthField id="password" label={t('newPasswordLabel')}>
+              <AuthInput
+                id="password"
+                type="password"
+                placeholder={t('newPasswordPlaceholder')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoFocus
+              />
+              <PasswordMeter length={password.length} />
+            </AuthField>
+            <AuthField id="confirmPassword" label={t('confirmNewPasswordLabel')}>
+              <AuthInput
+                id="confirmPassword"
+                type="password"
+                placeholder={t('confirmPasswordPlaceholder')}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                invalid={!!error && password !== confirmPassword}
+              />
+            </AuthField>
+            <AuthSubmit type="submit" disabled={loading || !token} loading={loading}>
+              {loading ? t('reset.resetting') : t('reset.resetButton')}
+            </AuthSubmit>
+          </form>
+        </div>
+      )}
+    </AuthSteps>
+  );
+}
+
+/** Quiet 3-segment length meter (decorative; the real rule is enforced on submit). */
+function PasswordMeter({ length }: { length: number }) {
+  const filled = length === 0 ? 0 : length < 8 ? 1 : length < 12 ? 2 : 3;
+  return (
+    <div className="flex gap-1.5 pt-1" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <span key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+          <m.span
+            className={cn(
+              'block h-full origin-left rounded-full rtl:origin-right',
+              filled === 1 ? 'bg-warning' : 'bg-success',
+            )}
+            initial={false}
+            animate={{ scaleX: i < filled ? 1 : 0 }}
+            transition={spring.smooth}
+          />
+        </span>
+      ))}
     </div>
   );
 }
+
 export default function ResetPasswordPage() {
   const tCommon = useTranslations('common');
   return (
     <Suspense fallback={<div className="text-sm text-muted-foreground">{tCommon('loading')}</div>}>
-      {' '}
-      <ResetPasswordForm />{' '}
+      <ResetPasswordForm />
     </Suspense>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, m } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -39,6 +40,8 @@ import { cn } from '@/lib/utils';
 import { getImageSrc } from '@/lib/images';
 import { QuoteRequestDialog } from '@/components/store/quote-request-dialog';
 import type { Product, ProductVariant } from '@/lib/api/types';
+import { Reveal } from '@/components/ui/motion';
+import { ease, spring, transition } from '@/lib/motion';
 
 interface ProductGalleryEntry {
   id: string;
@@ -70,6 +73,19 @@ export function ProductDetailClient({
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
+  // The first image renders without an entrance (it is the LCP); only images the
+  // shopper navigates to crossfade in. `galleryDir` picks which side they arrive from.
+  const [galleryMoved, setGalleryMoved] = useState(false);
+  const [galleryDir, setGalleryDir] = useState<1 | -1>(1);
+  // Declared before the early returns below: a hook after a conditional return
+  // changes the hook count between the loading and loaded renders.
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const selectImage = (next: number | ((i: number) => number), dir?: 1 | -1) => {
+    const value = typeof next === 'function' ? next(imageIndex) : next;
+    setGalleryMoved(true);
+    setGalleryDir(dir ?? (value >= imageIndex ? 1 : -1));
+    setImageIndex(value);
+  };
 
   // Reset selections when navigating between products.
   useEffect(() => {
@@ -155,12 +171,12 @@ export function ProductDetailClient({
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <Skeleton className="mb-6 h-5 w-48 rounded-md" />
-        <div className="grid gap-10 lg:grid-cols-2">
-          <Skeleton className="aspect-square rounded-lg" />
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <Skeleton className="mb-8 h-5 w-48 rounded-full" />
+        <div className="grid gap-12 lg:grid-cols-2">
+          <Skeleton className="aspect-square rounded-2xl" />
           <div className="space-y-4">
-            <Skeleton className="h-8 w-2/3 rounded-lg" />
+            <Skeleton className="h-10 w-2/3 rounded-lg" />
             <Skeleton className="h-4 w-1/3 rounded-md" />
             <Skeleton className="h-24 w-full rounded-lg" />
             <Skeleton className="h-12 w-full rounded-lg" />
@@ -223,7 +239,6 @@ export function ProductDetailClient({
    * which must not be mistaken for "no price".
    */
   const headlinePrice = isQuoteOnly ? null : pricingMode === 'from' ? fromPrice : displayPrice;
-  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const add = () => {
     if (displayPrice == null) return;
@@ -240,26 +255,29 @@ export function ProductDetailClient({
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12 lg:px-8">
       {/* -------------------------------------------------------- breadcrumb */}
-      <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link href="/products" className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
-          <ArrowLeft className="size-4 rtl:rotate-180" />
+      <nav className="mb-8 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+        <Link
+          href="/products"
+          className="group inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 -ms-2 transition-colors hover:bg-muted/70 hover:text-foreground"
+        >
+          <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5 rtl:rotate-180 rtl:group-hover:translate-x-0.5" />
           {t('title')}
         </Link>
-        <span aria-hidden>/</span>
+        <span aria-hidden className="text-border-strong">/</span>
         <span className="truncate text-foreground">{p.title}</span>
       </nav>
 
       {/* ------------------------------------------------------ hero / buy */}
-      <div className="grid gap-10 lg:grid-cols-2">
-        <div className="space-y-3">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-14">
+        <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <div
             id="product-image-panel"
             role="tabpanel"
             aria-labelledby={gallery.length > 1 ? `product-image-tab-${Math.min(imageIndex, gallery.length - 1)}` : undefined}
             className={cn(
-              'relative overflow-hidden rounded-lg border border-border bg-muted',
+              'group/gallery relative overflow-hidden rounded-2xl border border-border/70 bg-muted shadow-xs',
               // An annotated product must not be cropped: the admin placed the
               // markers against the whole image, so a cover crop here would put
               // every marker on the wrong feature.
@@ -269,12 +287,18 @@ export function ProductDetailClient({
             )}
           >
             <div className={cn('relative', hasPinpoints ? 'inline-block max-h-[34rem] max-w-full' : 'size-full')}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              {/* Keyed on the image so each newly selected picture eases in from the side
+                  the shopper moved toward. `initial={false}` on first paint keeps the LCP
+                  image visible without waiting for JS. */}
+              <m.img
+                key={activeImage}
                 src={getImageSrc(activeImage, 'product')}
                 alt={p.title}
                 className={hasPinpoints ? 'block max-h-[34rem] max-w-full object-contain' : 'size-full object-cover'}
                 loading="eager"
+                initial={galleryMoved ? { opacity: 0, x: galleryDir * 18, scale: 1.015 } : false}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ duration: 0.42, ease: ease.emerge }}
               />
 
               {pinpointList.map((h, index) => {
@@ -298,7 +322,7 @@ export function ProductDetailClient({
                       aria-expanded={isOpen}
                       onClick={() => setActiveHotspotId(isOpen ? null : h.id)}
                       className={cn(
-                        'relative flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow-lg transition hover:scale-110',
+                        'relative flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-card text-xs font-semibold shadow-lg transition hover:scale-110 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/40',
                         isOpen
                           ? 'z-10 bg-primary text-primary-foreground ring-4 ring-primary/30'
                           : 'bg-primary/90 text-primary-foreground',
@@ -307,12 +331,18 @@ export function ProductDetailClient({
                       {index + 1}
                     </button>
 
+                    <AnimatePresence>
                     {isOpen && (
-                      <span
+                      <m.span
+                        initial={{ opacity: 0, y: below ? -6 : 6, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.97, transition: transition.leave }}
+                        transition={spring.smooth}
+                        style={{ transformOrigin: below ? 'top center' : 'bottom center' }}
                         role="dialog"
                         aria-label={h.label}
                         className={cn(
-                          'absolute z-30 w-56 max-w-[min(16rem,72vw)] rounded-xl border border-primary/25 bg-card p-3 text-start shadow-2xl',
+                          'absolute z-30 w-56 max-w-[min(16rem,72vw)] rounded-xl border border-border/80 bg-card p-3.5 text-start shadow-xl',
                           below
                             ? 'top-[calc(100%+0.85rem)]'
                             : 'bottom-[calc(100%+0.85rem)]',
@@ -323,23 +353,24 @@ export function ProductDetailClient({
                         <span
                           aria-hidden
                           className={cn(
-                            'absolute size-3 rotate-45 border-primary/25 bg-card',
+                            'absolute size-3 rotate-45 border-border/80 bg-card',
                             below ? '-top-1.5 border-t border-l' : '-bottom-1.5 border-b border-r',
                             shiftRight ? 'right-3' : shiftLeft ? 'left-3' : 'left-1/2 -translate-x-1/2',
                           )}
                         />
-                        <span className="block text-2xs font-bold uppercase tracking-wider text-primary">
+                        <span className="block font-mono text-2xs font-medium text-primary">
                           {index + 1}
                         </span>
-                        <span className="mt-0.5 block text-sm font-semibold text-foreground">{h.label}</span>
+                        <span className="mt-0.5 block font-display text-[15px] font-medium text-foreground">{h.label}</span>
                         {h.tooltip && (
                           <span className="mt-1 block text-xs text-muted-foreground">{h.tooltip}</span>
                         )}
                         {h.detail && (
                           <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground">{h.detail}</span>
                         )}
-                      </span>
+                      </m.span>
                     )}
+                    </AnimatePresence>
                   </span>
                 );
               })}
@@ -351,17 +382,17 @@ export function ProductDetailClient({
                   type="button"
                   aria-label="Previous image"
                   onClick={() =>
-                    setImageIndex((i) => (i - 1 + gallery.length) % gallery.length)
+                    selectImage((i) => (i - 1 + gallery.length) % gallery.length, -1)
                   }
-                  className="absolute start-3 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-md border border-border bg-card/90 text-foreground shadow-xs transition hover:bg-muted"
+                  className="absolute start-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-card/90 text-foreground shadow-sm backdrop-blur-sm transition hover:bg-card active:scale-95 md:opacity-0 md:group-hover/gallery:opacity-100 md:focus-visible:opacity-100"
                 >
                   <ChevronLeft className="size-[18px] rtl:rotate-180" />
                 </button>
                 <button
                   type="button"
                   aria-label="Next image"
-                  onClick={() => setImageIndex((i) => (i + 1) % gallery.length)}
-                  className="absolute end-3 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-md border border-border bg-card/90 text-foreground shadow-xs transition hover:bg-muted"
+                  onClick={() => selectImage((i) => (i + 1) % gallery.length, 1)}
+                  className="absolute end-3 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-card/90 text-foreground shadow-sm backdrop-blur-sm transition hover:bg-card active:scale-95 md:opacity-0 md:group-hover/gallery:opacity-100 md:focus-visible:opacity-100"
                 >
                   <ChevronRight className="size-[18px] rtl:rotate-180" />
                 </button>
@@ -371,7 +402,7 @@ export function ProductDetailClient({
 
           {gallery.length > 1 ? (
             <div
-              className="flex gap-2 overflow-x-auto pb-1"
+              className="flex gap-2.5 overflow-x-auto p-1"
               role="tablist"
               aria-label="Product images"
               onKeyDown={(event) => {
@@ -380,7 +411,7 @@ export function ProductDetailClient({
                 if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
                 event.preventDefault();
                 const delta = event.key === 'ArrowRight' ? 1 : -1;
-                setImageIndex((i) => (i + delta + gallery.length) % gallery.length);
+                selectImage((i) => (i + delta + gallery.length) % gallery.length, delta as 1 | -1);
               }}
             >
               {galleryUrls.map((url, i) => (
@@ -392,7 +423,7 @@ export function ProductDetailClient({
                   aria-selected={i === imageIndex}
                   aria-controls="product-image-panel"
                   tabIndex={i === imageIndex ? 0 : -1}
-                  onClick={() => setImageIndex(i)}
+                  onClick={() => selectImage(i)}
                   aria-label={`Image ${i + 1} of ${gallery.length}`}
                   aria-current={i === imageIndex}
                   className={cn(
@@ -400,20 +431,30 @@ export function ProductDetailClient({
                     // positioned and resolves against the nearest positioned ancestor.
                     // Without it the tile escaped to the hero panel above and rendered
                     // that size — a full-bleed image over the product page.
-                    'relative size-16 shrink-0 overflow-hidden rounded-md border-2 bg-muted transition',
-                    i === imageIndex ? 'border-primary' : 'border-border hover:border-border-strong',
+                    'relative size-16 shrink-0 rounded-xl bg-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    i === imageIndex ? 'opacity-100' : 'opacity-70 hover:opacity-100',
                   )}
                 >
-                  <Image src={getImageSrc(url, 'product')} alt="" fill sizes="64px" className="object-cover" />
+                  <span className="absolute inset-0 overflow-hidden rounded-xl border border-border/70">
+                    <Image src={getImageSrc(url, 'product')} alt="" fill sizes="64px" className="object-cover" />
+                  </span>
+                  {i === imageIndex && (
+                    <m.span
+                      layoutId={`product-thumb-ring-${p.id}`}
+                      aria-hidden
+                      className="pointer-events-none absolute -inset-[3px] rounded-[14px] ring-2 ring-primary"
+                      transition={spring.smooth}
+                    />
+                  )}
                 </button>
               ))}
             </div>
           ) : null}
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-7">
           <div>
-            <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               {p.category && (
                 <Badge variant="soft" className="gap-1">
                   <Tag className="size-3.5" />
@@ -440,36 +481,47 @@ export function ProductDetailClient({
               )}
             </div>
 
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">{p.title}</h1>
-            {p.tagline && <p className="mt-1.5 text-lg text-muted-foreground">{p.tagline}</p>}
+            <h1 className="text-balance font-display text-[34px] font-medium leading-[1.08] tracking-[-0.022em] text-foreground md:text-[42px]">
+              {p.title}
+            </h1>
+            {p.tagline && (
+              <p className="mt-3 max-w-prose text-pretty text-lg leading-relaxed text-muted-foreground">
+                {p.tagline}
+              </p>
+            )}
           </div>
 
-          <div className="flex flex-wrap items-baseline gap-3">
+          <div className="flex flex-wrap items-baseline gap-3 border-y border-border/60 py-5">
             {pricingMode === 'from' && headlinePrice != null ? (
-              <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
+              <span className="font-display text-3xl font-medium tabular-nums tracking-[-0.02em] text-foreground">
                 {t('priceFrom', { price: showPrice(headlinePrice) })}
               </span>
             ) : (
-              <span className="font-mono text-3xl font-semibold tracking-tight text-foreground">
+              <span className="font-display text-3xl font-medium tabular-nums tracking-[-0.02em] text-foreground">
                 {headlinePrice == null ? t('priceOnRequest') : showPrice(headlinePrice)}
               </span>
             )}
             {/* Only meaningful in `fixed`: a struck-through figure beside "from X" or a
                 quote prompt would leak the very price the mode exists to withhold. */}
             {pricingMode === 'fixed' && displayPrice != null && !!p.compareAtPrice && p.compareAtPrice > (p.price ?? 0) && (
-              <span className="font-mono text-lg text-muted-foreground line-through">
+              <span className="text-lg tabular-nums text-muted-foreground line-through">
                 {showPrice(p.compareAtPrice)}
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-2 text-sm">
-            <span
-              className={cn(
-                'size-2 rounded-full',
-                outOfStock ? 'bg-destructive' : backorder ? 'bg-warning' : 'bg-success',
+            <span className="relative flex size-2">
+              {!outOfStock && !backorder && (
+                <span className="absolute inset-0 animate-ping rounded-full bg-success/50 [animation-duration:2.4s]" />
               )}
-            />
+              <span
+                className={cn(
+                  'relative size-2 rounded-full',
+                  outOfStock ? 'bg-destructive' : backorder ? 'bg-warning' : 'bg-success',
+                )}
+              />
+            </span>
             <span className={outOfStock ? 'text-destructive' : 'text-muted-foreground'}>
               {outOfStock ? t('outOfStock') : backorder ? t('backorder') : t('inStock')}
             </span>
@@ -477,7 +529,7 @@ export function ProductDetailClient({
 
           {!!p.variants?.length && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">{t('details')}</h3>
+              <h3 className="mb-3 text-sm font-medium text-foreground">{t('details')}</h3>
               <div className="flex flex-wrap gap-2">
                 {p.variants.map((v) => {
                   const active = selectedVariant?.id === v.id;
@@ -488,20 +540,31 @@ export function ProductDetailClient({
                       type="button"
                       disabled={soldOut}
                       onClick={() => setSelectedVariant(v)}
+                      aria-pressed={active}
                       className={cn(
-                        'rounded-md border px-4 py-2 text-sm font-medium transition-colors',
+                        'relative rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         active
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border hover:border-border-strong',
+                          ? 'border-primary/60 text-primary'
+                          : 'border-border bg-card hover:border-border-strong',
                         soldOut && 'cursor-not-allowed opacity-50 line-through',
                       )}
                     >
-                      {v.title}
-                      {!!v.price && v.price !== p.price && (
-                        <span className="ms-2 text-muted-foreground">
-                          {showPrice(v.price)}
-                        </span>
+                      {active && (
+                        <m.span
+                          layoutId={`variant-pill-${p.id}`}
+                          aria-hidden
+                          className="absolute inset-0 rounded-full bg-primary/10"
+                          transition={spring.smooth}
+                        />
                       )}
+                      <span className="relative">
+                        {v.title}
+                        {!!v.price && v.price !== p.price && (
+                          <span className="ms-2 tabular-nums text-muted-foreground">
+                            {showPrice(v.price)}
+                          </span>
+                        )}
+                      </span>
                     </button>
                   );
                 })}
@@ -543,7 +606,7 @@ export function ProductDetailClient({
           </div>
 
           {backorder && (
-            <p className="flex items-start gap-2 text-sm text-warning">
+            <p className="flex items-start gap-2 rounded-xl border border-warning/25 bg-warning/[0.07] px-3.5 py-3 text-sm text-warning">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               {t('backorder')} — {(p as { backorderLeadDays?: number }).backorderLeadDays ?? 7}{' '}
               {t('inStock').toLowerCase()}
@@ -553,34 +616,36 @@ export function ProductDetailClient({
       </div>
 
       {/* --------------------------------------------------------- sections */}
-      <div className="mt-14 grid gap-8 lg:grid-cols-3">
-        <div className="space-y-8 lg:col-span-2">
+      <div className="mt-20 grid gap-10 border-t border-border/70 pt-14 lg:grid-cols-3 lg:gap-14">
+        <div className="space-y-12 lg:col-span-2">
           {p.description && (
-            <section>
-              <h2 className="mb-3 font-display text-lg font-semibold text-foreground">{t('description')}</h2>
-              <p className="whitespace-pre-line leading-relaxed text-muted-foreground">
+            <Reveal as="section">
+              <h2 className="mb-4 font-display text-2xl font-medium tracking-[-0.018em] text-foreground">{t('description')}</h2>
+              <p className="max-w-prose whitespace-pre-line text-[15px] leading-[1.75] text-muted-foreground">
                 {p.description}
               </p>
-            </section>
+            </Reveal>
           )}
 
           {!!p.features?.length && (
-            <section>
-              <h2 className="mb-3 font-display text-lg font-semibold text-foreground">{t('includes')}</h2>
-              <ul className="grid gap-2 sm:grid-cols-2">
+            <Reveal as="section">
+              <h2 className="mb-4 font-display text-2xl font-medium tracking-[-0.018em] text-foreground">{t('includes')}</h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
                 {p.features.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <li key={i} className="flex items-start gap-3 text-[15px] leading-relaxed text-muted-foreground">
+                    <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Check className="size-3" strokeWidth={2.5} />
+                    </span>
                     {f}
                   </li>
                 ))}
               </ul>
-            </section>
+            </Reveal>
           )}
 
           {!!p.documents?.length && (
-            <section>
-              <h2 className="mb-3 font-display text-lg font-semibold text-foreground">{t('documents')}</h2>
+            <Reveal as="section">
+              <h2 className="mb-4 font-display text-2xl font-medium tracking-[-0.018em] text-foreground">{t('documents')}</h2>
               <ul className="space-y-2">
                 {p.documents.map((doc, index) => (
                   <li key={`${doc.url}-${index}`}>
@@ -588,23 +653,24 @@ export function ProductDetailClient({
                       href={doc.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/5"
+                      className="card-hover group flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-sm font-medium text-foreground shadow-xs"
                     >
-                      <span className="rounded-md border border-border bg-muted px-2 py-1 font-mono text-xs uppercase text-muted-foreground">PDF</span>
+                      <span className="rounded-lg bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">PDF</span>
                       <span className="min-w-0 flex-1 truncate">{doc.title || doc.name || t('documents')}</span>
-                      <Download className="size-4 shrink-0 text-primary" />
+                      <Download className="size-4 shrink-0 text-primary transition-transform group-hover:translate-y-0.5" />
                     </a>
                   </li>
                 ))}
               </ul>
-            </section>
+            </Reveal>
           )}
         </div>
 
+        <Reveal as="div" delay={0.05}>
         <aside>
-          <Card>
+          <Card className="rounded-2xl border-border/70 shadow-xs">
             <CardHeader className="pb-3">
-              <CardTitle className="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              <CardTitle className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
                 {t('specs')}
               </CardTitle>
             </CardHeader>
@@ -656,20 +722,23 @@ export function ProductDetailClient({
             </CardContent>
           </Card>
         </aside>
+        </Reveal>
       </div>
 
       {/* ------------------------------------------------------------ related */}
       {related.length > 0 && (
-        <section className="mt-14">
-          <h2 className="mb-4 font-display text-lg font-semibold text-foreground">{t('related')}</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mt-20 border-t border-border/70 pt-14">
+          <Reveal>
+            <h2 className="mb-8 font-display text-3xl font-medium tracking-[-0.02em] text-foreground">{t('related')}</h2>
+          </Reveal>
+          <Reveal delay={0.06} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {related.slice(0, 4).map((rp) => (
               // Pass the API row through unchanged. Forcing a null price to `0`
               // made every quote-only related machine look free; the card now
               // branches on `pricingMode` and ignores the stored reference price.
               <ProductCard key={rp.id} product={rp} />
             ))}
-          </div>
+          </Reveal>
         </section>
       )}
 
