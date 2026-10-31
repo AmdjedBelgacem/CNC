@@ -631,7 +631,7 @@ export type CtaBannerProps = z.infer<typeof ctaBannerPropsSchema>;
 
 export const ctaBannerDefaults: CtaBannerProps = {
   imageUrl: '',
-  overlayColor: '#C2410C',
+  overlayColor: '#B65433',
   overlayOpacity: 90,
   radialVeil: true,
   padding: 'p-12 md:p-24',

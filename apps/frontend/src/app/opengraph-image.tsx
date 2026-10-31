@@ -42,7 +42,7 @@ export default async function OpenGraphImage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#0a0a0a',
+        backgroundColor: '#1F1E1D',
         fontFamily: '"Inter", sans-serif',
       }}
     >
@@ -61,7 +61,7 @@ export default async function OpenGraphImage() {
           display: 'flex',
           fontSize: 72,
           fontWeight: 800,
-          color: '#ffffff',
+          color: '#F5F4EE',
           letterSpacing: '-0.02em',
           textAlign: 'center',
           lineHeight: 1.1,
@@ -75,7 +75,7 @@ export default async function OpenGraphImage() {
           display: 'flex',
           fontSize: 30,
           fontWeight: 600,
-          color: '#C2410C',
+          color: '#D97757',
           marginTop: 18,
           textAlign: 'center',
           letterSpacing: '0.08em',

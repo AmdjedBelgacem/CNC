@@ -53,13 +53,13 @@ export function Skeleton({ className, speed = 1.6, interval = 1.6, shimmer = tru
   return (
     <div
       aria-hidden
-      className={cn('relative overflow-hidden rounded-md bg-muted', className)}
+      className={cn('relative overflow-hidden rounded-md bg-muted/80', className)}
       style={style}
       {...props}
     >
       {shimmer && (
         <div
-          className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-foreground/10 to-transparent"
+          className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-foreground/[0.06] to-transparent"
           style={{ animationDuration: `${speed}s`, animationDelay: `${-interval}s` }}
         />
       )}
@@ -166,7 +166,7 @@ export function SkeletonHeading({
 /** A labelled stat / KPI block. */
 export function SkeletonStat({ className }: { className?: string }) {
   return (
-    <div className={cn('space-y-3 rounded-xl border border-border bg-card p-5', className)}>
+    <div className={cn('space-y-3 rounded-xl border border-border/70 bg-card p-5', className)}>
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-8 w-32" />
       <Skeleton className="h-3 w-20" />
@@ -198,7 +198,7 @@ export function SkeletonCard({
   footer?: boolean;
 }) {
   return (
-    <div className={cn('flex flex-col overflow-hidden rounded-xl border border-border bg-card', className)}>
+    <div className={cn('flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card', className)}>
       {media && <Skeleton className="aspect-video w-full rounded-none" />}
       <div className="flex flex-1 flex-col gap-3 p-5">
         <Skeleton className="h-4 w-3/4" />
@@ -265,7 +265,7 @@ export function SkeletonTable({
   className?: string;
 }) {
   return (
-    <div className={cn('overflow-hidden rounded-xl border border-border bg-card', className)}>
+    <div className={cn('overflow-hidden rounded-xl border border-border/70 bg-card', className)}>
       <div className="flex items-center gap-4 border-b border-border bg-muted/40 px-4 py-3">
         {columns.map((col, i) => (
           <Skeleton key={i} className="h-3" style={{ width: col }} />
@@ -318,7 +318,7 @@ export function SkeletonSplit({
 /** A single article / post / comment. */
 export function SkeletonArticle({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-xl border border-border bg-card p-5', className)}>
+    <div className={cn('rounded-xl border border-border/70 bg-card p-5', className)}>
       <div className="mb-4 flex items-center gap-3">
         <SkeletonCircle className="size-10" />
         <div className="flex-1 space-y-1.5">
@@ -355,7 +355,7 @@ export function SkeletonProducts({ count = 4, className }: { count?: number; cla
 /** An event row: date block, title, venue. */
 export function SkeletonEvent({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center gap-5 rounded-xl border border-border bg-card p-4', className)}>
+    <div className={cn('flex items-center gap-5 rounded-xl border border-border/70 bg-card p-4', className)}>
       <div className="flex size-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-border bg-muted/50">
         <Skeleton className="h-2.5 w-7" />
         <Skeleton className="h-4 w-7" />
@@ -373,7 +373,7 @@ export function SkeletonEvent({ className }: { className?: string }) {
 /** A course card: thumbnail, title, meta, progress. */
 export function SkeletonCourseCard({ className }: { className?: string }) {
   return (
-    <div className={cn('overflow-hidden rounded-xl border border-border bg-card', className)}>
+    <div className={cn('overflow-hidden rounded-xl border border-border/70 bg-card', className)}>
       <Skeleton className="aspect-video w-full rounded-none" />
       <div className="space-y-3 p-5">
         <Skeleton className="h-2.5 w-24 rounded-full" />
@@ -409,7 +409,7 @@ function SkeletonListItem({
   trailing?: boolean;
 }) {
   return (
-    <div className={cn('flex items-start gap-4 rounded-xl border border-border bg-card p-4', className)}>
+    <div className={cn('flex items-start gap-4 rounded-xl border border-border/70 bg-card p-4', className)}>
       <SkeletonCircle className={cn('shrink-0', avatar ? 'size-10 rounded-full' : 'size-10')} />
       <div className="min-w-0 flex-1 space-y-2">
         <Skeleton className="h-3.5 w-1/3" />
@@ -423,7 +423,7 @@ function SkeletonListItem({
 /** A panel of fields with a right-aligned action row. */
 function SkeletonForm({ fields = 4 }: { fields?: number }) {
   return (
-    <div className="space-y-6 rounded-xl border border-border bg-card p-6">
+    <div className="space-y-6 rounded-xl border border-border/70 bg-card p-6">
       {Array.from({ length: fields }).map((_, i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="h-3 w-28" />
@@ -442,7 +442,7 @@ function SkeletonForm({ fields = 4 }: { fields?: number }) {
 /** A product tile: square image, title, price, add-to-cart. */
 function SkeletonProduct() {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
       <Skeleton className="aspect-square w-full rounded-none" />
       <div className="space-y-2.5 p-4">
         <Skeleton className="h-2.5 w-16 rounded-full" />
