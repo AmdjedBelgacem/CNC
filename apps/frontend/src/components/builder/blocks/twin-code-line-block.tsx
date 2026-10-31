@@ -4,10 +4,11 @@ import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 
 const LINE_TONE: Record<string, string> = {
-  comment: 'text-white/40',
-  code: 'text-white/80',
-  highlight: 'text-success bg-primary/20 px-2 py-1 rounded border-s-2 border-primary font-semibold',
-  ok: 'text-success font-semibold pt-2',
+  comment: 'text-muted-foreground/70 italic',
+  code: 'text-foreground/85',
+  highlight:
+    '-mx-2 rounded-md border-s-2 border-primary bg-primary/[0.07] px-2 py-1 font-medium text-primary',
+  ok: 'pt-2 font-medium text-success',
 };
 
 /** One syntax-highlighted line in the digital-twin terminal. */

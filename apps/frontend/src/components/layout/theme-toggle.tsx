@@ -1,6 +1,6 @@
 'use client';
 import { AnimatePresence, m } from 'framer-motion';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Check, Monitor, Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTheme, type ColorMode } from '@/components/providers/theme-provider';
 import { Button } from '@/components/ui/button';
@@ -53,11 +53,13 @@ export function ThemeToggle() {
             <DropdownMenuItem
               key={opt.value}
               onSelect={() => setColorMode(opt.value)}
-              className={colorMode === opt.value ? 'font-semibold text-primary' : undefined}
+              className={colorMode === opt.value ? 'font-medium text-foreground' : undefined}
             >
               <Icon />
               {t(opt.key)}
-              {colorMode === opt.value && <span className="ms-auto text-xs">✓</span>}
+              {colorMode === opt.value && (
+                <Check className="ms-auto !size-3.5 text-primary" aria-hidden />
+              )}
             </DropdownMenuItem>
           );
         })}

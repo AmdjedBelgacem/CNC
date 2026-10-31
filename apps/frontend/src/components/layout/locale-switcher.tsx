@@ -1,6 +1,6 @@
 'use client';
 import { useTransition } from 'react';
-import { Languages } from 'lucide-react';
+import { Check, Languages } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { LOCALES, LOCALE_COOKIE, LOCALE_NATIVE_LABELS, type Locale } from '@/i18n/config';
 import { Button } from '@/components/ui/button';
@@ -43,11 +43,11 @@ export function LocaleSwitcher() {
           <DropdownMenuItem
             key={code}
             onSelect={() => setLocale(code)}
-            className={code === locale ? 'font-semibold text-primary' : undefined}
+            className={code === locale ? 'font-medium text-foreground' : undefined}
           >
             <span aria-hidden>{code === 'ar' ? '🇸🇦' : '🇬🇧'}</span>
             {LOCALE_NATIVE_LABELS[code]}
-            {code === locale && <span className="ms-auto text-xs">✓</span>}
+            {code === locale && <Check className="ms-auto !size-3.5 text-primary" aria-hidden />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

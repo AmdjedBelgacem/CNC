@@ -4,8 +4,9 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { ClosingCtaActionLink } from './closing-cta-action-block';
+import { Reveal } from '@/components/ui/motion';
 
-/** Dark overlay closing band with copy column + primary/secondary CTAs. */
+/** Paper closing band with copy column + primary/secondary CTAs. */
 export function ClosingCtaBlock({ props, puck }: BlockComponentProps<ClosingCtaProps>) {
   const {
     id,
@@ -29,23 +30,22 @@ export function ClosingCtaBlock({ props, puck }: BlockComponentProps<ClosingCtaP
     <section
       id={id}
       className={cn(
-        'bg-overlay px-margin-mobile md:px-margin-desktop py-16 text-white md:py-20',
+        'px-margin-mobile md:px-margin-desktop py-16 md:py-24',
         borderTop && 'border-t border-border',
         className,
       )}
       style={layoutStyle(props)}
     >
-      <div className="max-w-container-max mx-auto flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
-        <div className="max-w-xl">
-          {eyebrow ? (
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              {eyebrow}
-            </p>
-          ) : null}
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">{title}</h2>
-          {body ? <p className="mt-3 text-white/70">{body}</p> : null}
+      <Reveal className="relative max-w-container-max mx-auto flex flex-col items-start justify-between gap-8 overflow-hidden rounded-3xl border border-border/70 bg-card px-6 py-10 shadow-sm sm:px-10 md:flex-row md:items-center md:px-14 md:py-14">
+        <div aria-hidden className="pointer-events-none absolute inset-0 ambient-wash opacity-80" />
+        <div className="relative max-w-xl">
+          {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+          <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-4xl">
+            {title}
+          </h2>
+          {body ? <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{body}</p> : null}
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="relative flex flex-wrap gap-3">
           {hasSlotActions ? (
             puck.renderSlot('actions')
           ) : (
@@ -69,7 +69,7 @@ export function ClosingCtaBlock({ props, puck }: BlockComponentProps<ClosingCtaP
             </>
           )}
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

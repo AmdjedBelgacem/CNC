@@ -21,9 +21,11 @@ const WEIGHT_CLASS: Record<string, string> = {
 const TRACKING_CLASS: Record<string, string> = {
   '0.025em': 'tracking-[0.025em]',
   '0.05em': 'tracking-[0.05em]',
-  '0.1em': 'tracking-[0.1em]',
-  '0.15em': 'tracking-[0.15em]',
-  '0.2em': 'tracking-[0.2em]',
+  // The wide presets are tempered: Ivory & Clay labels are quiet, so even an
+  // authored "wide" setting stays close to the type's natural spacing.
+  '0.1em': 'tracking-[0.05em]',
+  '0.15em': 'tracking-[0.06em]',
+  '0.2em': 'tracking-[0.07em]',
 };
 const ALIGN_CLASS: Record<string, string> = { center: 'text-center', right: 'text-right' };
 const LEADING_CLASS: Record<string, string> = {

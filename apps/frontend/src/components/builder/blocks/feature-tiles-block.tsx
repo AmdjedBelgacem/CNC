@@ -39,8 +39,8 @@ export function FeatureTilesBlock({ props, puck }: BlockComponentProps<FeatureTi
         >
           {' '}
           <div
-            className="relative z-10 rounded-3xl overflow-hidden shadow-sm"
-            style={{ border: `${imageBorder}px solid #fff` }}
+            className="relative z-10 overflow-hidden rounded-3xl shadow-lg ring-1 ring-border/70"
+            style={{ border: `${imageBorder}px solid rgb(var(--c-card))` }}
           >
             {' '}
             {!imageUrl || imageFailed ? (

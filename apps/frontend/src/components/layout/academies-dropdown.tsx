@@ -88,7 +88,7 @@ export function AcademiesDropdown() {
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
-      <button className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+      <button className="flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground">
         {tn('academies')}{' '}
         <m.span
           className="flex"
@@ -108,10 +108,16 @@ export function AcademiesDropdown() {
         {open && (
           <m.div
             key="panel"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0, transition: spring.snappy }}
-            exit={{ opacity: 0, y: -2, transition: { duration: 0.1, ease: [0.4, 0, 1, 1] } }}
-            className="absolute start-0 top-full z-50 mt-1 w-72 rounded-xl border border-border bg-popover p-2 shadow-lg"
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: spring.smooth }}
+            exit={{
+              opacity: 0,
+              y: -4,
+              scale: 0.98,
+              transition: { duration: 0.12, ease: [0.4, 0, 1, 1] },
+            }}
+            style={{ transformOrigin: 'top left' }}
+            className="absolute start-0 top-full z-50 mt-2 w-80 rounded-2xl border border-border/70 bg-popover p-1.5 shadow-lg"
           >
             {academies === null ? (
               <div className="space-y-2 p-2">
@@ -128,18 +134,22 @@ export function AcademiesDropdown() {
                     <StaggerItem as="div" key={a.slug || a.label} index={i}>
                       <Link
                         href={a.slug ? `/academy/${a.slug}` : '/academy'}
-                        className="flex items-start gap-3 rounded-lg p-3 transition-colors hover:bg-muted"
+                        className="group flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-muted/70"
                         onClick={() => setOpen(false)}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={getImageSrc(a.logoUrl, 'academy')}
                           alt=""
-                          className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                          className="size-10 shrink-0 rounded-lg object-cover ring-1 ring-border/70"
                         />
                         <div>
-                          <p className="text-sm font-medium text-foreground">{a.label}</p>
-                          <p className="line-clamp-2 text-xs text-muted-foreground">{a.desc}</p>
+                          <p className="font-display text-[15px] font-medium leading-snug text-foreground">
+                            {a.label}
+                          </p>
+                          <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                            {a.desc}
+                          </p>
                         </div>
                       </Link>
                     </StaggerItem>

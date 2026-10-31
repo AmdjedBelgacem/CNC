@@ -11,8 +11,8 @@ export function ConsoleAxisBlock({ props, puck }: BlockComponentProps<ConsoleAxi
   return (
     <div
       className={cn(
-        'flex-1 min-w-0 rounded border bg-white/10 p-1 sm:p-1.5',
-        accent ? 'border-primary/50' : 'border-white/10',
+        'flex-1 min-w-0 rounded-md border bg-background/70 p-1 sm:p-1.5',
+        accent ? 'border-primary/40 bg-primary/[0.06]' : 'border-border/70',
         className,
       )}
       style={layoutStyle(props)}
@@ -20,12 +20,12 @@ export function ConsoleAxisBlock({ props, puck }: BlockComponentProps<ConsoleAxi
       <span
         className={cn(
           'block truncate text-[9px] sm:text-[10px]',
-          accent ? 'text-white' : 'text-white/60',
+          accent ? 'text-primary' : 'text-muted-foreground',
         )}
       >
         {label}
       </span>
-      <span className="block truncate text-[11px] font-bold text-white sm:text-xs">
+      <span className="block truncate text-[11px] font-semibold text-foreground tabular-nums sm:text-xs">
         {value || '0.000'}
       </span>
     </div>

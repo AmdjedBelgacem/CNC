@@ -11,19 +11,19 @@ export function CardGridItemBlock({ props }: BlockComponentProps<CardGridItemPro
     <div
       role="listitem"
       className={cn(
-        'card-grid-item relative rounded-lg border border-border bg-card p-6 shadow-xs',
+        'card-grid-item card-hover relative rounded-2xl border border-border/70 bg-card p-6 shadow-xs md:p-7',
         className,
       )}
       style={layoutStyle(props)}
     >
       <span
-        className="card-grid-index absolute end-5 top-5 font-mono text-xs font-bold tracking-[0.1em] text-border-strong tabular-nums"
+        className="card-grid-index absolute end-6 top-6 font-display text-sm font-medium text-muted-foreground/50 tabular-nums"
         aria-hidden
       />
-      <div className="mb-4 flex size-11 items-center justify-center rounded-md bg-primary/10 text-primary">
+      <div className="mb-5 flex size-11 items-center justify-center rounded-xl bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10">
         <Icon name={icon} className="size-5" />
       </div>
-      <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">{title}</h3>
+      <h3 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">{title}</h3>
       {body ? (
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
       ) : null}

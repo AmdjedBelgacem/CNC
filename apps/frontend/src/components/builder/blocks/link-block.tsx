@@ -11,8 +11,8 @@ export function LinkBlock({ props }: BlockComponentProps<LinkProps>) {
   const iconOnly = !!icon && !label;
   const classes = cn(
     iconOnly
-      ? 'w-10 h-10 rounded-full border border-glass-border flex items-center justify-center text-text-muted hover:text-primary transition-colors'
-      : 'font-body-md text-text-muted hover:text-primary transition-colors opacity-80',
+      ? 'flex size-10 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted/60 hover:text-foreground'
+      : 'font-body-md text-muted-foreground transition-colors hover:text-foreground',
     className,
   );
   const style = layoutStyle(props);

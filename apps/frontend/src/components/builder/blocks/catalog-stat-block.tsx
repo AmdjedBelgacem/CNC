@@ -22,11 +22,11 @@ export function CatalogStatBlock({ props }: BlockComponentProps<CatalogStatProps
   const liveValue = id ? overrides?.get(id) : undefined;
   const displayValue = liveValue && isPlaceholderValue(value) ? liveValue : value;
   return (
-    <div className={cn('bg-card px-4 py-3.5', className)} style={layoutStyle(props)}>
-      <dt className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+    <div className={cn('bg-card px-5 py-4', className)} style={layoutStyle(props)}>
+      <dt className="text-xs font-medium text-muted-foreground">
         {label}
       </dt>
-      <dd className="mt-1 font-display text-xl font-bold tracking-tight text-foreground tabular-nums">
+      <dd className="mt-1.5 font-display text-2xl font-medium tracking-[-0.02em] text-foreground tabular-nums">
         {displayValue}
       </dd>
     </div>

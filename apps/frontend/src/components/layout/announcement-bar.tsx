@@ -9,7 +9,10 @@ import { spring, transition } from '@/lib/motion';
 // Static promo slots (brand copy only — no metrics, no guessed academy slugs).
 const PROMOS = [
   { text: 'New academies are live — browse courses and start learning', link: '/academy' },
-  { text: 'Explore industry-grade CNC tools and workholding', link: '/products?category=Workholding' },
+  {
+    text: 'Explore industry-grade CNC tools and workholding',
+    link: '/products?category=Workholding',
+  },
   { text: 'Join the manufacturing community', link: '/feed' },
 ];
 
@@ -32,7 +35,7 @@ export function AnnouncementBar() {
           initial={false}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0, transition: transition.leave }}
-          className="relative overflow-hidden border-b border-primary-foreground/10 bg-primary text-primary-foreground"
+          className="relative overflow-hidden border-b border-border/70 bg-surface-sunken/70 text-foreground"
         >
           <div className="mx-auto flex h-9 max-w-7xl items-center justify-center px-12">
             {/* Keyed on `idx` so each promo crossfades and rises in turn. The
@@ -49,10 +52,14 @@ export function AnnouncementBar() {
               >
                 <Link
                   href={PROMOS[idx]!.link}
-                  className="flex items-center gap-1.5 truncate text-xs font-medium opacity-90 transition-opacity hover:opacity-100"
+                  className="group flex items-center gap-2 truncate text-[13px] text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {PROMOS[idx]!.text}
-                  <ChevronRight className="size-3.5 shrink-0 rtl:rotate-180" />
+                  <span
+                    aria-hidden
+                    className="size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_0_3px_rgb(var(--c-primary)/0.15)]"
+                  />
+                  <span className="truncate">{PROMOS[idx]!.text}</span>
+                  <ChevronRight className="size-3.5 shrink-0 text-primary transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
                 </Link>
               </m.div>
             </AnimatePresence>
@@ -65,17 +72,17 @@ export function AnnouncementBar() {
                     type="button"
                     onClick={() => setIdx(i)}
                     aria-label={`Show announcement ${i + 1}`}
-                    className={cn(
-                      'h-1.5 rounded-full bg-current',
-                      i === idx ? 'w-4 opacity-100' : 'w-1.5 opacity-50',
-                    )}
+                    className="flex h-4 items-center"
                   >
                     {/* The active dot's width animates as a spring rather than a
                         `transition-all`, so the dots feel like one control that
                         deforms instead of three independent bars changing size. */}
                     <m.span
-                      className="block h-full rounded-full bg-current"
-                      animate={{ width: i === idx ? 16 : 6, opacity: i === idx ? 1 : 0.5 }}
+                      className={cn(
+                        'block h-1.5 rounded-full transition-colors',
+                        i === idx ? 'bg-primary' : 'bg-border-strong',
+                      )}
+                      animate={{ width: i === idx ? 16 : 6 }}
                       transition={spring.snappy}
                     />
                   </button>
@@ -85,7 +92,7 @@ export function AnnouncementBar() {
                 type="button"
                 onClick={() => setDismissed(true)}
                 aria-label="Dismiss announcement"
-                className="opacity-70 transition-opacity hover:opacity-100"
+                className="grid size-6 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-3.5" />
               </button>

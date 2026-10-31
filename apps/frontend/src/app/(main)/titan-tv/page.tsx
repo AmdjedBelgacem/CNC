@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Play, Clock, Film, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getImageSrc } from '@/lib/images';
+import { Reveal } from '@/components/ui/motion';
 interface Video {
   id: string;
   title: string;
@@ -34,31 +35,28 @@ function VideoCard({ video }: { video: Video }) {
       href={video.videoUrl || '#'}
       target={video.videoUrl ? '_blank' : undefined}
       rel="noopener noreferrer"
-      className="group w-72 shrink-0"
+      className="group w-72 shrink-0 snap-start rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-4 focus-visible:ring-offset-background"
     >
-      {' '}
-      <div className="relative aspect-video rounded-xl overflow-hidden bg-secondary/50">
-        {' '}
+      <div className="relative aspect-video overflow-hidden rounded-2xl bg-muted shadow-xs ring-1 ring-inset ring-border/70 transition-shadow duration-300 group-hover:shadow-lg">
         <img
           src={getImageSrc(video.thumbnailUrl, 'video')}
           alt={video.title}
-          className="h-full w-full object-cover transition-transform group-hover:scale-105"
-        />{' '}
-        <div className="absolute inset-0 flex items-center justify-center bg-transparent group-hover:bg-overlay transition-colors">
-          {' '}
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/90 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-            {' '}
-            <Play className="size-5 fill-current" />{' '}
-          </div>{' '}
-        </div>{' '}
+          className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.04]"
+        />
+        <div className="absolute inset-0 flex items-center justify-center bg-overlay/0 transition-colors duration-300 group-hover:bg-overlay/25">
+          <div className="flex size-12 scale-90 items-center justify-center rounded-full bg-card/95 text-primary opacity-0 shadow-lg backdrop-blur transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-100 group-hover:opacity-100">
+            <Play className="ms-0.5 size-5 fill-current" />
+          </div>
+        </div>
         {video.duration && (
-          <span className="absolute bottom-2 end-2 rounded-md bg-overlay px-1.5 py-0.5 text-xs text-white flex items-center gap-1">
-            {' '}
-            <Clock className="size-3.5" /> {formatDuration(video.duration)}{' '}
+          <span className="absolute bottom-2 end-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-0.5 text-xs font-medium tabular-nums text-foreground shadow-sm backdrop-blur">
+            <Clock className="size-3.5" /> {formatDuration(video.duration)}
           </span>
-        )}{' '}
-      </div>{' '}
-      <h4 className="mt-2 text-sm font-medium line-clamp-2">{video.title}</h4>{' '}
+        )}
+      </div>
+      <h4 className="mt-3 line-clamp-2 font-display text-base font-medium leading-snug tracking-[-0.01em] transition-colors group-hover:text-primary">
+        {video.title}
+      </h4>
     </a>
   );
 }
@@ -76,95 +74,90 @@ export default function TitanTvPage() {
   });
   return (
     <div>
-      {' '}
-      <section className="relative overflow-hidden border-b bg-surface-sunken/60 blueprint-grid py-20">
-        {' '}
+      <section className="relative isolate overflow-hidden border-b border-border/70 py-20 md:py-28">
+        <div aria-hidden className="absolute inset-0 -z-10 ambient-wash" />
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 blueprint-grid opacity-70 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]"
+        />
         <div className="container mx-auto px-4 text-center">
-          {' '}
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-secondary/50 px-4 py-1.5 text-sm">
-            {' '}
-            <Film className="size-4" /> TITAN TV{' '}
-          </div>{' '}
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t('title')}</h1>{' '}
-          <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-            {' '}
-            {t('subtitle')}{' '}
-          </p>{' '}
-        </div>{' '}
-      </section>{' '}
-      <section className="py-16">
-        {' '}
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3.5 py-1.5 text-[13px] font-medium text-foreground/80 shadow-xs">
+            <Film className="size-4 text-primary" /> TITAN TV
+          </div>
+          <h1 className="mx-auto max-w-3xl text-balance font-display text-4xl font-medium tracking-[-0.025em] sm:text-5xl md:text-6xl">
+            {t('title')}
+          </h1>
+          <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
+            {t('subtitle')}
+          </p>
+        </div>
+      </section>
+      <section className="py-20">
         <div className="container mx-auto px-4">
-          {' '}
           {isLoading && (
             <div className="space-y-16">
-              {' '}
               {[1, 2, 3].map((i) => (
                 <div key={i}>
-                  {' '}
-                  <Skeleton className="mb-4 h-7 w-64" /> <Skeleton className="mb-6 h-4 w-96" />{' '}
-                  <div className="flex gap-4 overflow-hidden">
-                    {' '}
+                  <Skeleton className="mb-4 h-7 w-64" /> <Skeleton className="mb-6 h-4 w-96" />
+                  <div className="flex gap-5 overflow-hidden">
                     {[1, 2, 3, 4].map((j) => (
-                      <Skeleton key={j} className="h-40 w-72 shrink-0 rounded-xl" />
-                    ))}{' '}
-                  </div>{' '}
+                      <Skeleton key={j} className="h-40 w-72 shrink-0 rounded-2xl" />
+                    ))}
+                  </div>
                 </div>
-              ))}{' '}
+              ))}
             </div>
-          )}{' '}
+          )}
           {error && (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              {' '}
-              <Film className="mb-4 h-12 w-12 text-muted-foreground/50" />{' '}
-              <h3 className="text-lg font-semibold">{t('loadFailedTitle')}</h3>{' '}
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('loadFailedHint')}
-              </p>{' '}
-            </div>
-          )}{' '}
+            <Reveal className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
+              <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-muted ring-1 ring-inset ring-border/70">
+                <Film className="size-6 text-muted-foreground" />
+              </span>
+              <h3 className="font-display text-xl font-medium">{t('loadFailedTitle')}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t('loadFailedHint')}</p>
+            </Reveal>
+          )}
           {data?.data && data.data.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              {' '}
-              <Film className="mb-4 h-12 w-12 text-muted-foreground/50" />{' '}
-              <h3 className="text-lg font-semibold">{t('emptyTitle')}</h3>{' '}
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('emptyHint')}
-              </p>{' '}
-            </div>
-          )}{' '}
+            <Reveal className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
+              <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-muted ring-1 ring-inset ring-border/70">
+                <Film className="size-6 text-muted-foreground" />
+              </span>
+              <h3 className="font-display text-xl font-medium">{t('emptyTitle')}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t('emptyHint')}</p>
+            </Reveal>
+          )}
           {data?.data && data.data.length > 0 && (
-            <div className="space-y-16">
-              {' '}
+            <div className="space-y-20">
               {data.data.map((series) => (
-                <div key={series.id}>
-                  {' '}
-                  <div className="mb-1 flex items-center justify-between">
-                    {' '}
-                    <h2 className="text-2xl font-bold">{series.title}</h2>{' '}
+                <Reveal key={series.id}>
+                  <div className="mb-1 flex items-end justify-between gap-4">
+                    <h2 className="font-display text-2xl font-medium tracking-[-0.018em] md:text-3xl">
+                      {series.title}
+                    </h2>
                     <a
                       href="#"
-                      className="flex items-center gap-1 text-sm text-primary hover:underline"
+                      className="group flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
                     >
-                      {' '}
-                      {tCommon('viewAll')} <ChevronRight className="flip-rtl size-4" />{' '}
-                    </a>{' '}
-                  </div>{' '}
+                      {tCommon('viewAll')}{' '}
+                      <ChevronRight className="flip-rtl size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </a>
+                  </div>
                   {series.description && (
-                    <p className="mb-4 text-sm text-muted-foreground">{series.description}</p>
-                  )}{' '}
-                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
-                    {' '}
+                    <p className="mb-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                      {series.description}
+                    </p>
+                  )}
+                  <div className="-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 pt-1 scrollbar-thin">
                     {series.videos.map((video) => (
                       <VideoCard key={video.id} video={video} />
-                    ))}{' '}
-                  </div>{' '}
-                </div>
-              ))}{' '}
+                    ))}
+                  </div>
+                </Reveal>
+              ))}
             </div>
-          )}{' '}
-        </div>{' '}
-      </section>{' '}
+          )}
+        </div>
+      </section>
     </div>
   );
 }

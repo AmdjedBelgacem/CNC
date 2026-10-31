@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
+import { Reveal } from '@/components/ui/motion';
 
 /** Numbered/icon card grid — steps, promises, formats, house rules. */
 export function CardGridBlock({ props, puck }: BlockComponentProps<CardGridProps>) {
@@ -30,27 +31,27 @@ export function CardGridBlock({ props, puck }: BlockComponentProps<CardGridProps
       id={id}
       className={cn(
         'px-margin-mobile md:px-margin-desktop',
-        band === 'sunken' && 'border-y border-border bg-surface-sunken/50',
+        band === 'sunken' && 'border-y border-border/70 bg-surface-sunken/50',
         className,
       )}
       style={layoutStyle(props)}
     >
-      <div className="max-w-container-max mx-auto py-16 md:py-20">
-        <div className="mb-8 max-w-2xl">
-          {eyebrow ? (
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              {eyebrow}
-            </p>
-          ) : null}
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+      <div className="max-w-container-max mx-auto py-20 md:py-28">
+        <Reveal className="mb-10 max-w-2xl md:mb-12">
+          {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+          <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-[2.5rem] md:leading-[1.1]">
             {title}
           </h2>
-          {subtitle ? <p className="mt-3 text-muted-foreground">{subtitle}</p> : null}
-        </div>
+          {subtitle ? (
+            <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+              {subtitle}
+            </p>
+          ) : null}
+        </Reveal>
 
         <div
           role="list"
-          className={cn('grid gap-4', columns, showNumbers && 'card-grid-numbered')}
+          className={cn('grid gap-5 md:gap-6', columns, showNumbers && 'card-grid-numbered')}
         >
           {hasSlotCards
             ? puck.renderSlot('cards')
@@ -61,17 +62,17 @@ export function CardGridBlock({ props, puck }: BlockComponentProps<CardGridProps
                     <div
                       key={`${item.title}-${index}`}
                       role="listitem"
-                      className="relative rounded-lg border border-border bg-card p-6 shadow-xs"
+                      className="card-hover relative rounded-2xl border border-border/70 bg-card p-6 shadow-xs md:p-7"
                     >
                       {showNumbers ? (
-                        <span className="absolute end-5 top-5 font-mono text-xs font-bold tracking-[0.1em] text-border-strong tabular-nums">
+                        <span className="absolute end-6 top-6 font-display text-sm font-medium text-muted-foreground/50 tabular-nums">
                           {num}
                         </span>
                       ) : null}
-                      <div className="mb-4 flex size-11 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <div className="mb-5 flex size-11 items-center justify-center rounded-xl bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10">
                         <Icon name={item.icon} className="size-5" />
                       </div>
-                      <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
+                      <h3 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
                         {item.title}
                       </h3>
                       {item.body ? (
@@ -86,7 +87,7 @@ export function CardGridBlock({ props, puck }: BlockComponentProps<CardGridProps
         </div>
 
         {note ? (
-          <p className="mt-6 inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-xs">
+          <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2.5 text-sm text-muted-foreground shadow-xs">
             <Icon name="verified_user" className="size-4 shrink-0 text-primary" />
             {note}
           </p>

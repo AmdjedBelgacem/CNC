@@ -183,11 +183,11 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
 
   const badge = (
     <div className="pointer-events-none absolute end-3 top-3 z-20 flex max-w-[min(22rem,calc(100%-1.5rem))] flex-col items-end gap-1">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-background/95 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-primary shadow-sm backdrop-blur">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-primary shadow-sm backdrop-blur">
         <Icon name="bolt" className="size-3" />
         {copy.fixed ? 'Fixed' : 'Live'} · {copy.label}
       </span>
-      <span className="max-w-[22rem] rounded-md bg-background/95 px-2.5 py-1 text-[11px] leading-snug text-muted-foreground opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100">
+      <span className="max-w-[22rem] rounded-lg border border-border/70 bg-background/95 px-2.5 py-1 text-[11px] leading-snug text-muted-foreground opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100">
         {copy.detail}
       </span>
     </div>

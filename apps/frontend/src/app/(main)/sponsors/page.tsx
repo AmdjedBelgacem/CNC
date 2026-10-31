@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getImageSrc } from '@/lib/images';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 interface Sponsor {
   id: string;
   name: string;
@@ -14,10 +15,14 @@ interface Sponsor {
   websiteUrl: string | null;
   logoUrl: string | null;
 }
-const tierConfig: Record<string, { icon: typeof Crown; className: string }> = {
-  Platinum: { icon: Crown, className: 'border-yellow-500/50 bg-yellow-500/5' },
-  Gold: { icon: Shield, className: 'border-yellow-600/30 bg-yellow-600/5' },
-  Silver: { icon: Medal, className: 'border-border bg-muted/40' },
+const tierConfig: Record<string, { icon: typeof Crown; className: string; chip: string }> = {
+  Platinum: {
+    icon: Crown,
+    className: 'border-primary/25 ring-1 ring-inset ring-primary/10',
+    chip: 'bg-primary/10 text-primary',
+  },
+  Gold: { icon: Shield, className: 'border-warning/25', chip: 'bg-warning/10 text-warning' },
+  Silver: { icon: Medal, className: 'border-border/70', chip: 'bg-muted text-muted-foreground' },
 };
 export default function SponsorsPage() {
   const t = useTranslations('pages.sponsors');
@@ -48,113 +53,109 @@ export default function SponsorsPage() {
   };
   return (
     <div>
-      {' '}
-      <section className="border-b bg-surface-sunken/60 blueprint-grid py-20 text-center">
-        {' '}
+      <section className="relative isolate overflow-hidden border-b border-border/70 py-20 text-center md:py-28">
+        <div aria-hidden className="absolute inset-0 -z-10 ambient-wash" />
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 blueprint-grid opacity-70 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]"
+        />
         <div className="container mx-auto px-4">
-          {' '}
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-4">{t('title')}</h1>{' '}
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            {' '}
-            {t('subtitle')}{' '}
-          </p>{' '}
+          <h1 className="mx-auto mb-5 max-w-3xl text-balance font-display text-4xl font-medium tracking-[-0.025em] sm:text-5xl md:text-6xl">
+            {t('title')}
+          </h1>
+          <p className="mx-auto mb-9 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
+            {t('subtitle')}
+          </p>
           <Button asChild size="lg">
-            {' '}
-            <Link href="/partners">{t('becomePartner')}</Link>{' '}
-          </Button>{' '}
-        </div>{' '}
-      </section>{' '}
-      <section className="py-16">
-        {' '}
+            <Link href="/partners">{t('becomePartner')}</Link>
+          </Button>
+        </div>
+      </section>
+      <section className="py-20 md:py-24">
         <div className="container mx-auto px-4">
-          {' '}
           {isLoading && (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {' '}
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-40 rounded-xl" />
-              ))}{' '}
+                <Skeleton key={i} className="h-44 rounded-2xl" />
+              ))}
             </div>
-          )}{' '}
+          )}
           {error && (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              {' '}
-              <p className="text-muted-foreground">
-                {t('loadFailed')}
-              </p>{' '}
-            </div>
-          )}{' '}
+            <Reveal className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
+              <p className="text-muted-foreground">{t('loadFailed')}</p>
+            </Reveal>
+          )}
           {!isLoading && !error && sponsors.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              {' '}
-              <h3 className="text-lg font-semibold">{t('emptyTitle')}</h3>{' '}
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('emptyHint')}
-              </p>{' '}
-            </div>
-          )}{' '}
+            <Reveal className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
+              <h3 className="font-display text-xl font-medium">{t('emptyTitle')}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t('emptyHint')}</p>
+            </Reveal>
+          )}
           {tierOrder.map((tier) => {
             const items = grouped[tier];
             if (!items?.length) return null;
             const config = tierConfig[tier];
             const Icon = config?.icon || Shield;
             return (
-              <div key={tier} className="mb-16 last:mb-0">
-                {' '}
-                <div className="flex items-center gap-3 mb-6">
-                  {' '}
-                  <Icon className="size-5 text-primary" />{' '}
-                  <h2 className="text-2xl font-bold">{t('tierHeading', { tier: tierLabels[tier] ?? tier })}</h2>{' '}
-                </div>{' '}
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {' '}
-                  {items.map((s) => (
-                    <div
+              <div key={tier} className="mb-20 last:mb-0">
+                <Reveal className="mb-8 flex items-center gap-3">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10">
+                    <Icon className="size-4" />
+                  </span>
+                  <h2 className="font-display text-2xl font-medium tracking-[-0.018em] md:text-3xl">
+                    {t('tierHeading', { tier: tierLabels[tier] ?? tier })}
+                  </h2>
+                </Reveal>
+                <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {items.map((s, i) => (
+                    <StaggerItem
                       key={s.id}
-                      className={`rounded-xl border bg-card p-6 transition-all hover:shadow-lg ${config?.className || ''}`}
+                      index={i}
+                      className={`card-hover rounded-2xl border bg-card p-6 shadow-xs ${config?.className || 'border-border/70'}`}
                     >
-                      {' '}
-                      <div className="flex items-start justify-between mb-3">
-                        {' '}
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/50 font-bold text-sm">
-                          {' '}
+                      <div className="mb-5 flex items-start justify-between">
+                        <div className="flex size-14 items-center justify-center rounded-xl border border-border/70 bg-background p-2">
                           <img
                             src={getImageSrc(s.logoUrl, 'sponsor')}
                             alt={s.name}
-                            className="h-10 w-10 object-contain"
+                            className="size-10 object-contain"
                           />
-                        </div>{' '}
+                        </div>
                         {s.tier && (
-                          <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${config?.chip || 'bg-muted text-muted-foreground'}`}
+                          >
                             {tierLabels[s.tier] ?? s.tier}
                           </span>
-                        )}{' '}
-                      </div>{' '}
-                      <h3 className="font-bold">{s.name}</h3>{' '}
+                        )}
+                      </div>
+                      <h3 className="font-display text-lg font-medium tracking-[-0.01em]">
+                        {s.name}
+                      </h3>
                       {s.description && (
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                           {s.description}
                         </p>
-                      )}{' '}
+                      )}
                       {s.websiteUrl && (
                         <a
                           href={s.websiteUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-primary mt-3 hover:underline"
+                          className="group mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
                         >
-                          {' '}
-                          {t('visitWebsite')} <ExternalLink className="size-3.5" />{' '}
+                          {t('visitWebsite')}{' '}
+                          <ExternalLink className="size-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </a>
-                      )}{' '}
-                    </div>
-                  ))}{' '}
-                </div>{' '}
+                      )}
+                    </StaggerItem>
+                  ))}
+                </Stagger>
               </div>
             );
-          })}{' '}
-        </div>{' '}
-      </section>{' '}
+          })}
+        </div>
+      </section>
     </div>
   );
 }

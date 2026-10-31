@@ -23,7 +23,7 @@ export function ConsoleAxisDrawerBlock({
     <div
       className={cn(
         CONSOLE_DARK_GLASS,
-        'absolute rounded-xl p-2.5 z-20 !pointer-events-auto sm:p-3.5',
+        'absolute z-20 rounded-2xl p-2.5 !pointer-events-auto sm:p-3.5',
         PLACEMENT[placement] ?? PLACEMENT.bottom,
         className,
       )}
@@ -31,13 +31,13 @@ export function ConsoleAxisDrawerBlock({
     >
       <div className="flex items-center justify-between mb-2 gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Icon name="tune" className="size-3.5 text-white/70 shrink-0" />
-          <span className="text-[10px] font-mono font-medium text-white/90 truncate sm:text-xs">
+          <Icon name="tune" className="size-3.5 text-muted-foreground shrink-0" />
+          <span className="text-[11px] font-medium text-foreground/90 truncate sm:text-xs">
             {title}
           </span>
         </div>
         {vibration ? (
-          <span className="text-[11px] font-mono text-success shrink-0 hidden sm:inline">
+          <span className="text-[11px] font-mono text-success/90 shrink-0 hidden sm:inline">
             {vibration}
           </span>
         ) : null}

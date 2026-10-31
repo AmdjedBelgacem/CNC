@@ -66,13 +66,13 @@ export function ProgramCardsBlock({ props, puck }: BlockComponentProps<ProgramCa
             Array.from({ length: 3 }).map((_, index) => (
               <div
                 key={index}
-                className="h-[430px] animate-pulse rounded-2xl border border-border bg-surface-sunken"
+                className="h-[430px] animate-pulse rounded-2xl border border-border/70 bg-surface-sunken"
                 aria-hidden
               />
             ))
           ) : live.courses.length === 0 ? (
-            <div className="col-span-full rounded-2xl border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
-              <p className="font-semibold text-foreground">No published courses</p>
+            <div className="col-span-full rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-16 text-center">
+              <p className="font-display text-lg font-medium text-foreground">No published courses</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 This section is hidden on the live site until a course is published.
               </p>

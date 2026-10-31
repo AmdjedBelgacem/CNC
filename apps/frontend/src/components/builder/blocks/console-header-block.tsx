@@ -9,7 +9,7 @@ export function ConsoleHeaderBlock({ props }: BlockComponentProps<ConsoleHeaderP
   return (
     <div
       className={cn(
-        'bg-card rounded-lg p-3 mb-2 flex items-center justify-between border-b border-glass-border',
+        'mb-2 flex items-center justify-between rounded-xl bg-card px-3.5 py-2.5',
         className,
       )}
       style={layoutStyle(props)}
@@ -17,17 +17,17 @@ export function ConsoleHeaderBlock({ props }: BlockComponentProps<ConsoleHeaderP
       <div className="flex items-center gap-2 min-w-0">
         {showTrafficLights ? (
           <div className="flex gap-1.5 shrink-0">
-            <span className="size-2.5 rounded-full bg-destructive/70" />
-            <span className="size-2.5 rounded-full bg-warning/70" />
-            <span className="size-2.5 rounded-full bg-success/70" />
+            <span className="size-2.5 rounded-full bg-destructive/45" />
+            <span className="size-2.5 rounded-full bg-warning/45" />
+            <span className="size-2.5 rounded-full bg-success/45" />
           </div>
         ) : null}
         {fileName ? (
-          <span className="text-xs font-mono text-text-muted ms-2 truncate">{fileName}</span>
+          <span className="ms-2 truncate font-mono text-[11px] text-muted-foreground">{fileName}</span>
         ) : null}
       </div>
       {syncLabel ? (
-        <span className="inline-flex items-center gap-1 text-2xs font-mono px-2 py-0.5 rounded bg-success/15 text-success font-semibold shrink-0">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 font-mono text-2xs font-medium text-success">
           <span className="size-1.5 rounded-full bg-success animate-pulse" />
           {syncLabel}
         </span>

@@ -4,32 +4,35 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Base treatment per tag (applied when no size is set). */
 const HEADING_BASE: Record<string, string> = {
-  h1: 'font-display-hero text-text-primary',
-  h2: 'font-headline-lg text-text-primary',
-  h3: 'font-headline-md text-text-primary',
-  h4: 'font-headline-md text-text-primary',
-  span: 'font-headline-md text-text-primary',
-  strong: 'font-headline-md text-text-primary',
+  h1: 'font-display font-medium tracking-[-0.022em] text-balance text-text-primary',
+  h2: 'font-display font-medium tracking-[-0.02em] text-balance text-text-primary',
+  h3: 'font-display font-medium tracking-[-0.015em] text-text-primary',
+  h4: 'font-display font-medium tracking-[-0.01em] text-text-primary',
+  span: 'font-display font-medium text-text-primary',
+  strong: 'font-display font-medium text-text-primary',
 }; /** Mockup heading treatments (a size replaces the base font/colour classes entirely). */
 const HEADING_SIZE: Record<string, string> = {
-  hero: 'font-display-hero text-[clamp(32px,8vw,54px)] md:text-display-hero leading-[1.1] break-words',
-  'headline-lg': 'font-headline-lg text-[clamp(28px,7vw,44px)] break-words',
-  'headline-md': 'font-headline-md text-headline-md break-words',
-  stats: 'font-stats-number text-[clamp(32px,8vw,40px)] tracking-tighter',
-  '2xl': 'font-headline-md text-2xl break-words',
-  xl: 'font-headline-md text-xl break-words',
-  lg: 'font-headline-md text-lg break-words',
-  md: 'font-headline-md text-base break-words',
-  sm: 'font-headline-md text-sm break-words',
-  label: 'font-label-sm text-2xs uppercase tracking-[0.2em] font-bold break-words',
-  logo: 'font-headline-lg text-xl md:text-2xl break-words',
+  hero: 'font-display font-medium text-[clamp(2.5rem,7vw,3.5rem)] md:text-[clamp(3.25rem,5.2vw,4.75rem)] leading-[1.04] tracking-[-0.028em] break-words',
+  'headline-lg': 'font-display font-medium text-[clamp(1.875rem,5vw,3rem)] leading-[1.08] tracking-[-0.022em] text-balance break-words',
+  'headline-md': 'font-display font-medium text-headline-md tracking-[-0.018em] text-balance break-words',
+  stats: 'font-display font-medium text-[clamp(2.25rem,6vw,2.75rem)] leading-none tracking-[-0.025em] tabular-nums',
+  '2xl': 'font-display font-medium text-2xl tracking-[-0.015em] break-words',
+  xl: 'font-display font-medium text-xl tracking-[-0.012em] break-words',
+  lg: 'font-display font-medium text-lg tracking-[-0.01em] break-words',
+  md: 'font-display font-medium text-base break-words',
+  sm: 'font-display font-medium text-sm break-words',
+  // Labels are UI, not voice: sentence-case muted sans.
+  label: 'font-sans text-[13px] font-medium break-words',
+  logo: 'font-display font-medium text-xl md:text-2xl tracking-[-0.015em] break-words',
 }; /** Letter-spacing + line-height overrides (literal classes so Tailwind picks them up). */
 const TRACKING_CLASS: Record<string, string> = {
   '0.025em': 'tracking-[0.025em]',
   '0.05em': 'tracking-[0.05em]',
-  '0.1em': 'tracking-[0.1em]',
-  '0.15em': 'tracking-[0.15em]',
-  '0.2em': 'tracking-[0.2em]',
+  // The wide presets are tempered: Ivory & Clay labels are quiet, so even an
+  // authored "wide" setting stays close to the type's natural spacing.
+  '0.1em': 'tracking-[0.05em]',
+  '0.15em': 'tracking-[0.06em]',
+  '0.2em': 'tracking-[0.07em]',
 };
 const LEADING_CLASS: Record<string, string> = {
   tight: 'leading-tight',
@@ -66,7 +69,7 @@ export function HeadingBlock({ props }: BlockComponentProps<HeadingProps>) {
       {accentText ? (
         <>
           {' '}
-          <span className="italic text-primary font-normal">{accentText}</span>{' '}
+          <span className="font-normal italic text-primary">{accentText}</span>{' '}
         </>
       ) : null}
       {suffixText ? ` ${suffixText}` : null}

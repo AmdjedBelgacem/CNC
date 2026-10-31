@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import { spring, transition } from '@/lib/motion';
+import { dialogMotion } from '@/components/ui/dialog';
+import { Stagger } from '@/components/ui/motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -65,6 +67,22 @@ export function NavMain({ items }: { items: NavItemView[] }) {
   useEffect(() => setHasHydrated(true), []);
   useEffect(() => setMobileOpen(false), [pathname]);
 
+  // The open mobile sheet behaves like a lightweight dialog: Escape closes it
+  // and the page underneath stops scrolling while it is up.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [mobileOpen]);
+
   // ── Scroll-aware header ──────────────────────────────────────────────
   // The header is `sticky top-0`, so it is the first thing you see after the
   // announcement bar scrolls away. It stays borderless and shadowless while
@@ -119,17 +137,22 @@ export function NavMain({ items }: { items: NavItemView[] }) {
     <>
       <header
         className={cn(
-          'sticky top-0 z-40 w-full bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/75',
-          // Transitioning only the two properties that change keeps this off the
-          // layout path — no reflow while scrolling.
-          'transition-[border-color,box-shadow] duration-200',
-          lifted ? 'border-b border-border shadow-xs' : 'border-b border-transparent',
+          'sticky top-0 z-40 w-full',
+          // Transitioning only paint properties keeps this off the layout path —
+          // no reflow while scrolling. At rest the bar is part of the page; once
+          // content slides beneath it, it lifts into a frosted paper strip.
+          'transition-[background-color,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+          mobileOpen
+            ? 'border-b border-border/70 bg-background'
+            : lifted
+              ? 'border-b border-border/70 bg-background/80 shadow-sm backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/70'
+              : 'border-b border-transparent bg-background',
         )}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
           <BrandMark />
 
-          {/* Desktop nav: managed tree, hairline active indicator at the lower edge. */}
+          {/* Desktop nav: managed tree with a sliding hover pill and clay active rule. */}
           <SiteNavDesktop items={items} />
 
           <div className="ms-auto flex items-center gap-1">
@@ -153,7 +176,7 @@ export function NavMain({ items }: { items: NavItemView[] }) {
                 {hasHydrated && cartCount > 0 && (
                   <span
                     ref={badgeRef}
-                    className="absolute end-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary font-mono text-[10px] font-semibold text-primary-foreground tabular-nums"
+                    className="absolute -end-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground tabular-nums ring-2 ring-background"
                   >
                     {cartCount > 99 ? '99+' : cartCount}
                   </span>
@@ -178,8 +201,9 @@ export function NavMain({ items }: { items: NavItemView[] }) {
                   }
                 }}
                 title={tEndImpersonation('title')}
-                className="hidden items-center gap-1.5 rounded-sm bg-warning/15 px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-warning transition hover:bg-warning/25 sm:inline-flex"
+                className="hidden items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning transition-colors hover:bg-warning/20 sm:inline-flex"
               >
+                <span aria-hidden className="size-1.5 rounded-full bg-warning" />
                 {tEndImpersonation('badge')}
                 <X className="size-3" />
               </button>
@@ -193,24 +217,24 @@ export function NavMain({ items }: { items: NavItemView[] }) {
                   <DropdownMenuTrigger asChild>
                     <button
                       aria-label={t('profile')}
-                      className="rounded-full ring-offset-2 ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="ms-1 rounded-full ring-offset-2 ring-offset-background transition-transform duration-200 hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
                     >
-                      <Avatar className="size-8 rounded-sm">
+                      <Avatar className="size-8 rounded-full ring-1 ring-border">
                         {user?.avatarUrl && (
                           <AvatarImage src={user.avatarUrl} alt={user?.name || 'User'} />
                         )}
-                        <AvatarFallback className="rounded-sm font-mono text-xs">
+                        <AvatarFallback className="rounded-full bg-primary/10 text-xs font-medium text-primary">
                           {initial}
                         </AvatarFallback>
                       </Avatar>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-60">
                     <DropdownMenuLabel className="normal-case">
-                      <span className="block truncate text-sm font-semibold text-foreground">
+                      <span className="block truncate font-display text-[15px] font-medium text-foreground">
                         {user?.name || 'User'}
                       </span>
-                      <span className="block truncate font-mono text-xs font-normal text-muted-foreground">
+                      <span className="block truncate text-xs font-normal text-muted-foreground">
                         {user?.email}
                       </span>
                     </DropdownMenuLabel>
@@ -251,7 +275,7 @@ export function NavMain({ items }: { items: NavItemView[] }) {
                 </DropdownMenu>
               </>
             ) : (
-              <div className="hidden items-center gap-2 lg:flex">
+              <div className="ms-2 hidden items-center gap-1.5 lg:flex">
                 <Button variant="ghost" asChild>
                   <Link href="/login">{t('signIn')}</Link>
                 </Button>
@@ -266,68 +290,102 @@ export function NavMain({ items }: { items: NavItemView[] }) {
               size="icon"
               className="md:hidden"
               aria-label={mobileOpen ? t('closeMenu') : t('openMenu')}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav-panel"
               onClick={() => setMobileOpen((v) => !v)}
             >
-              {mobileOpen ? <X /> : <Menu />}
+              {/* The two icons trade places with a quarter turn rather than snapping. */}
+              <AnimatePresence mode="wait" initial={false}>
+                <m.span
+                  key={mobileOpen ? 'close' : 'open'}
+                  className="flex"
+                  initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
+                  animate={{ opacity: 1, rotate: 0, scale: 1, transition: spring.snappy }}
+                  exit={{ opacity: 0, rotate: 90, scale: 0.8, transition: { duration: 0.1 } }}
+                >
+                  {mobileOpen ? <X /> : <Menu />}
+                </m.span>
+              </AnimatePresence>
             </Button>
           </div>
         </div>
 
-        {/* Inline expanding panel — left-edge active marker, route mono labels. */}
-        {/* The panel expands the header rather than overlaying it, so the page
-            below doesn't have to be padded to compensate. Height is animated
-            because it is a layout property — but the panel is short and the
-            header is already sticky, so the reflow is contained. */}
-        <AnimatePresence initial={false}>
+        {/* Mobile sheet. It drops out of the header as a rounded paper panel
+            over a soft scrim (rendered outside the header below, because the
+            header's backdrop-filter would otherwise become the containing block
+            for a `fixed` scrim). Rows cascade in; the panel scrolls on its own
+            if the menu is taller than the viewport. */}
+        <AnimatePresence>
           {mobileOpen && (
             <m.div
               key="mobile-nav"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1, transition: spring.gentle }}
-              exit={{ height: 0, opacity: 0, transition: transition.leave }}
-              className="overflow-hidden border-t border-border bg-background md:hidden"
+              id="mobile-nav-panel"
+              initial={{ opacity: 0, y: -8, scale: 0.985 }}
+              animate={{ opacity: 1, y: 0, scale: 1, transition: spring.gentle }}
+              exit={{ opacity: 0, y: -6, scale: 0.99, transition: transition.leave }}
+              style={{ transformOrigin: 'top center' }}
+              className="absolute inset-x-3 top-full z-50 mt-2 max-h-[calc(100dvh-5.5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border/70 bg-card shadow-xl md:hidden"
             >
-              <nav
-                className="mx-auto flex max-w-7xl flex-col gap-0.5 px-4 py-3"
-                aria-label="Mobile"
-              >
-                <SiteNavMobile items={items} onNavigate={() => setMobileOpen(false)} />
-                {!showAuthenticated && (
-                  <div className="mt-2 flex gap-2">
-                    <Button variant="outline" className="flex-1" asChild>
-                      <Link href="/login">{t('signIn')}</Link>
-                    </Button>
-                    <Button className="flex-1" asChild>
-                      <Link href="/register">{t('getStarted')}</Link>
-                    </Button>
-                  </div>
-                )}
-                {showAuthenticated && (
-                  <Button
-                    variant="ghost"
-                    className="mt-2 justify-start"
-                    onClick={() => void handleLogout()}
+              <nav aria-label="Mobile">
+                {items.length > 0 && (
+                  <Stagger
+                    gap={0.035}
+                    maxDelay={0.3}
+                    className="flex flex-col gap-0.5 border-b border-border/70 p-2"
                   >
-                    <LogOut />
-                    {t('signOut')}
-                  </Button>
+                    <SiteNavMobile items={items} onNavigate={() => setMobileOpen(false)} />
+                  </Stagger>
                 )}
-                <Button variant="outline" className="mt-2 justify-start" asChild>
-                  <Link href="/cart">
-                    <ShoppingCart className="size-4" />
-                    {tp('cart')}
-                    {hasHydrated && cartCount > 0 ? ` (${cartCount})` : ''}
-                  </Link>
-                </Button>
-                <div className="mt-2 flex items-center justify-between rounded-md border border-border px-3 py-2 md:hidden">
-                  <span className="text-sm text-muted-foreground">{t('toggleTheme')}</span>
-                  <ThemeToggle />
+                <div className="flex flex-col gap-2 p-3">
+                  {!showAuthenticated && (
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" asChild>
+                        <Link href="/login">{t('signIn')}</Link>
+                      </Button>
+                      <Button className="flex-1" asChild>
+                        <Link href="/register">{t('getStarted')}</Link>
+                      </Button>
+                    </div>
+                  )}
+                  {showAuthenticated && (
+                    <Button
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => void handleLogout()}
+                    >
+                      <LogOut />
+                      {t('signOut')}
+                    </Button>
+                  )}
+                  <Button variant="outline" className="justify-start" asChild>
+                    <Link href="/cart">
+                      <ShoppingCart className="size-4" />
+                      {tp('cart')}
+                      {hasHydrated && cartCount > 0 ? ` (${cartCount})` : ''}
+                    </Link>
+                  </Button>
+                  <div className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-1.5 md:hidden">
+                    <span className="text-sm text-muted-foreground">{t('toggleTheme')}</span>
+                    <ThemeToggle />
+                  </div>
                 </div>
               </nav>
             </m.div>
           )}
         </AnimatePresence>
       </header>
+
+      <AnimatePresence>
+        {mobileOpen && (
+          <m.div
+            key="mobile-nav-scrim"
+            aria-hidden
+            {...dialogMotion.overlay}
+            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 z-30 bg-overlay/45 backdrop-blur-[3px] md:hidden"
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

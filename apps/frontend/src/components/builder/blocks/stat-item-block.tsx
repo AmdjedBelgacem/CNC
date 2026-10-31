@@ -6,7 +6,7 @@ const STAT_PADDING: Record<string, string> = { none: '', sm: 'p-4', md: 'p-6', l
 const STAT_BG: Record<string, string> = {
   transparent: '',
   muted: 'bg-surface-container-low',
-  glass: 'bg-card border border-border',
+  glass: 'bg-card border border-border/70 shadow-xs',
   gradient: 'bg-primary text-primary-foreground',
   'gradient-muted': 'bg-surface-container-low',
 };
@@ -37,8 +37,9 @@ export function StatItemBlock({ props, puck }: BlockComponentProps<StatItemProps
         STAT_PADDING[padding],
         STAT_BG[bg],
         STAT_RADIUS[radius],
-        border && 'border border-glass-border',
-        hover && ' transition-all duration-300 group',
+        border && 'border border-border/70',
+        hover &&
+          'group transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-border-strong',
         accent && 'relative overflow-hidden',
         className,
       )}
@@ -48,7 +49,7 @@ export function StatItemBlock({ props, puck }: BlockComponentProps<StatItemProps
       {accent && (
         <div
           className={cn(
-            'absolute top-0 start-0 w-1 h-full opacity-0 group-hover:opacity-100 transition-opacity',
+            'absolute inset-y-4 start-0 w-[3px] rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100',
             accentColor,
           )}
         ></div>

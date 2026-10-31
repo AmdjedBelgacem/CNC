@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { BadgeCheck, XCircle } from 'lucide-react';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serverApiUrl } from '@/lib/server-api-url';
+import { Reveal } from '@/components/ui/motion';
 
 /**
  * Reads the tenant from a cookie, so this route cannot be statically generated. Same
@@ -51,44 +52,71 @@ export default async function VerifyNumberPage(props: Props) {
   const cert = await fetchCert(tenantSlug, number);
 
   return (
-    <div className="container mx-auto max-w-xl px-4 py-16">
-      <Link href="/verify" className="text-sm text-muted-foreground hover:text-foreground">
-        {'← '}
+    <div className="container mx-auto max-w-xl px-4 pb-24 pt-16 md:pt-20">
+      <Link
+        href="/verify"
+        className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <span
+          aria-hidden
+          className="inline-block transition-transform duration-200 group-hover:-translate-x-0.5 rtl:rotate-180"
+        >
+          ←
+        </span>{' '}
         {t('verifyAnother')}
       </Link>
-      <div className="mt-6 rounded-3xl border bg-card p-8 text-center">
-        {cert === undefined ? (
-          <>
-            <XCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
-            <h1 className="text-2xl font-bold">{t('unavailableTitle')}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t('unavailableHint')}
-            </p>
-          </>
-        ) : cert === null ? (
-          <>
-            <XCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-            <h1 className="text-2xl font-bold">{t('notFoundTitle')}</h1>
-            <p className="mt-2 font-mono text-sm text-muted-foreground">{number}</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t('notFoundHint')}
-            </p>
-          </>
-        ) : (
-          <>
-            <BadgeCheck className="mx-auto mb-4 h-12 w-12 text-success" />
-            <h1 className="text-2xl font-bold">{t('validTitle')}</h1>
-            <p className="mt-2 font-mono text-sm">{cert.certificateNumber}</p>
-            {cert.user?.name && <p className="mt-3 text-lg font-semibold">{cert.user.name}</p>}
-            {cert.course?.title && (
-              <p className="text-sm text-muted-foreground">{cert.course.title}</p>
-            )}
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t('issued', { date: new Date(cert.issuedAt).toLocaleDateString() })}
-            </p>
-          </>
-        )}
-      </div>
+      <Reveal className="relative mt-6 overflow-hidden rounded-3xl border border-border/70 bg-card px-8 py-12 text-center shadow-sm">
+        <div aria-hidden className="pointer-events-none absolute inset-0 ambient-wash opacity-60" />
+        <div className="relative">
+          {cert === undefined ? (
+            <>
+              <span className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-muted ring-1 ring-inset ring-border/70">
+                <XCircle className="size-7 text-muted-foreground" />
+              </span>
+              <h1 className="font-display text-3xl font-medium tracking-[-0.022em]">
+                {t('unavailableTitle')}
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">{t('unavailableHint')}</p>
+            </>
+          ) : cert === null ? (
+            <>
+              <span className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-destructive/[0.08] ring-1 ring-inset ring-destructive/20">
+                <XCircle className="size-7 text-destructive" />
+              </span>
+              <h1 className="font-display text-3xl font-medium tracking-[-0.022em]">
+                {t('notFoundTitle')}
+              </h1>
+              <p className="mt-3 inline-block rounded-md bg-muted px-2 py-0.5 font-mono text-sm text-muted-foreground">
+                {number}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{t('notFoundHint')}</p>
+            </>
+          ) : (
+            <>
+              <span className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-success/10 shadow-[0_0_0_8px_rgb(var(--c-success)/0.05)] ring-1 ring-inset ring-success/20">
+                <BadgeCheck className="size-8 text-success" />
+              </span>
+              <h1 className="font-display text-3xl font-medium tracking-[-0.022em]">
+                {t('validTitle')}
+              </h1>
+              <p className="mt-3 inline-block rounded-md bg-muted px-2 py-0.5 font-mono text-sm">
+                {cert.certificateNumber}
+              </p>
+              {cert.user?.name && (
+                <p className="mt-6 font-display text-2xl font-medium tracking-[-0.015em]">
+                  {cert.user.name}
+                </p>
+              )}
+              {cert.course?.title && (
+                <p className="text-sm text-muted-foreground">{cert.course.title}</p>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('issued', { date: new Date(cert.issuedAt).toLocaleDateString() })}
+              </p>
+            </>
+          )}
+        </div>
+      </Reveal>
     </div>
   );
 }

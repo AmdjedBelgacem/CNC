@@ -26,8 +26,8 @@ export function CatalogCtaLink({
   const external = href.startsWith('#') || href.startsWith('http');
   const cls = cn(
     isPrimary
-      ? 'inline-flex h-11 items-center justify-center gap-2 rounded-md bg-primary px-6 font-medium text-primary-foreground shadow-sm transition hover:opacity-90'
-      : 'inline-flex h-11 items-center justify-center gap-2 rounded-md border border-border bg-card px-6 font-medium text-foreground transition hover:bg-surface-sunken',
+      ? 'pressable inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground shadow-sm transition-[background-color,box-shadow] hover:bg-primary/90 hover:shadow-md'
+      : 'pressable inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 text-sm font-medium text-foreground shadow-xs transition-colors hover:border-border-strong hover:bg-muted/50',
     className,
   );
   const content = (

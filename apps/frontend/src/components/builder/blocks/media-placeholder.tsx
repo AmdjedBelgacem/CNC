@@ -29,7 +29,7 @@ export function MediaPlaceholder({
       className={cn(
         'relative flex w-full items-center justify-center overflow-hidden bg-surface-container-low',
         aspectClass,
-        editing ? 'border-2 border-dashed border-border' : 'blueprint-grid',
+        editing ? 'border border-dashed border-border-strong' : 'blueprint-grid',
         className,
       )}
       style={style}

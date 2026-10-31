@@ -24,7 +24,7 @@ export function ConsoleAuditBlock({ props, puck }: BlockComponentProps<ConsoleAu
       <div
         className={cn(
           CONSOLE_DARK_GLASS,
-          'flex min-w-0 max-w-full items-start gap-1.5 rounded-lg px-2.5 py-1.5 sm:items-center sm:gap-2 sm:px-3.5 sm:py-2',
+          'flex min-w-0 max-w-full items-start gap-1.5 rounded-xl px-2.5 py-1.5 sm:items-center sm:gap-2 sm:px-3.5 sm:py-2',
         )}
       >
         <Icon
@@ -32,10 +32,10 @@ export function ConsoleAuditBlock({ props, puck }: BlockComponentProps<ConsoleAu
           className="mt-0.5 size-3.5 shrink-0 text-success sm:mt-0 sm:size-4"
         />
         <div className="min-w-0 text-left">
-          <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-success sm:text-[10px]">
+          <div className="text-[10px] font-medium leading-tight text-success sm:text-[11px]">
             {title}
           </div>
-          <div className="break-words text-[10px] font-mono font-bold leading-tight sm:text-xs">
+          <div className="break-words text-[10px] font-mono font-semibold leading-tight tabular-nums sm:text-xs">
             {value || 'Value'}
           </div>
         </div>

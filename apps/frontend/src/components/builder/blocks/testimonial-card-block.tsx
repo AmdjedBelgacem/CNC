@@ -23,7 +23,7 @@ export function TestimonialCardBlock({ props }: BlockComponentProps<TestimonialC
   return (
     <figure
       className={cn(
-        'liquid-glass p-8 rounded-2xl flex flex-col justify-between hover:shadow-xl transition-shadow h-full',
+        'card-hover flex h-full flex-col justify-between gap-6 rounded-2xl border border-border/70 bg-card p-8 shadow-xs',
         className,
       )}
       style={layoutStyle(props)}
@@ -36,12 +36,12 @@ export function TestimonialCardBlock({ props }: BlockComponentProps<TestimonialC
             ))}
           </div>
         ) : null}
-        <blockquote className="text-body-md leading-relaxed italic text-foreground/80">
+        <blockquote className="font-display text-lg leading-relaxed text-foreground/90">
           &ldquo;{quote}&rdquo;
         </blockquote>
       </div>
-      <figcaption className="flex items-center gap-4 pt-4 border-t border-glass-border">
-        <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-bold text-primary shadow-sm">
+      <figcaption className="flex items-center gap-4 border-t border-border/70 pt-5">
+        <div className="relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-medium text-primary ring-1 ring-border/70">
           <span aria-hidden="true">{initials}</span>
           {avatarUrl && !avatarFailed ? (
             <img
@@ -55,7 +55,7 @@ export function TestimonialCardBlock({ props }: BlockComponentProps<TestimonialC
           ) : null}
         </div>
         <div className="min-w-0">
-          <div className="font-bold text-foreground">{name}</div>
+          <div className="font-medium text-foreground">{name}</div>
           {role ? <div className="text-xs text-muted-foreground mt-0.5">{role}</div> : null}
         </div>
       </figcaption>

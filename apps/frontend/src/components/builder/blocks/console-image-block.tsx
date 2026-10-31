@@ -16,7 +16,7 @@ export function ConsoleImageBlock({ props, puck }: BlockComponentProps<ConsoleIm
   if (!src || failed) {
     if (!editing) return null;
     return (
-      <span className="absolute start-1/2 top-4 z-30 -translate-x-1/2 rounded bg-background/90 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shadow-sm">
+      <span className="absolute start-1/2 top-4 z-30 -translate-x-1/2 rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
         {failed ? 'Image failed' : 'Add console image'}
       </span>
     );

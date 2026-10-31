@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { fetchPublishedAcademies } from '@/lib/academies';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { BrandMark } from '@/components/layout/brand';
-import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { Reveal } from '@/components/ui/motion';
 
 const STATIC_COLUMNS = [
   {
@@ -58,63 +58,62 @@ export async function Footer() {
   ];
 
   return (
-    <footer className="mt-auto border-t border-border bg-surface-sunken/40">
-      {/* Forge signature: 2px brand rule along the footer's top edge. */}
-      <div className="h-0.5 w-full bg-primary" aria-hidden />
+    <footer className="relative mt-auto overflow-hidden border-t border-border/70 bg-surface-sunken/50">
+      {/* A whisper of clay bloom in the corner — the page "settles" into the footer. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 start-[-10%] h-80 w-[60%] rounded-full bg-primary/[0.05] blur-3xl"
+      />
       {/* The footer is a server component (it fetches academies and translations),
-          so the motion is applied by client wrappers taking it as `children` —
-          the markup still renders on the server, so nothing here waits on JS to
-          paint. `Stagger` needs a DOM parent for the cascade to read correctly,
-          hence the grid wrapper staying put and only the cells animating. */}
-      <Stagger
-        className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8"
-        inViewOnly
-      >
-        <StaggerItem className="lg:col-span-1">
-          <Reveal from="up">
-            <BrandMark />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Precision manufacturing education — academies, products and a community
-              built for modern machinists and engineers.
-            </p>
-          </Reveal>
-        </StaggerItem>
+          so motion comes from client wrappers taking it as `children` — the markup
+          still renders on the server, so nothing here waits on JS to paint. */}
+      <div className="relative mx-auto grid max-w-7xl grid-cols-1 gap-12 px-4 pb-12 pt-16 sm:px-6 md:pt-20 lg:grid-cols-12 lg:gap-8 lg:px-8">
+        <Reveal className="lg:col-span-5 lg:pe-12">
+          <BrandMark />
+          <p className="mt-6 max-w-sm text-balance font-display text-xl font-normal leading-snug tracking-[-0.01em] text-foreground/85">
+            Precision manufacturing education — academies, products and a community built for modern
+            machinists and engineers.
+          </p>
+        </Reveal>
 
-        {columns.map((column, i) => (
-          <StaggerItem key={column.title} index={i + 1}>
-            <div className="flex flex-col gap-3">
-              <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-foreground">
-                <span className="me-2 text-primary">{String(i + 1).padStart(2, '0')}</span>
-                {column.title}
-              </h2>
-              {column.links.map((link) => (
-                <Link
-                  key={`${link.label}-${link.href}`}
-                  href={link.href}
-                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </StaggerItem>
-        ))}
-      </Stagger>
+        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:col-span-7">
+          {columns.map((column, i) => (
+            <Reveal key={column.title} delay={0.06 * (i + 1)} className="flex flex-col">
+              <h2 className="text-sm font-medium text-foreground">{column.title}</h2>
+              <ul className="mt-4 flex flex-col gap-2.5">
+                {column.links.map((link) => (
+                  <li key={`${link.label}-${link.href}`}>
+                    <Link
+                      href={link.href}
+                      className="group inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                    >
+                      <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat pb-px transition-[background-size] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:bg-[length:100%_1px]">
+                        {link.label}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          ))}
+        </div>
+      </div>
 
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 border-t border-border px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
-        <span className="font-mono tracking-[0.04em]">
-          © {new Date().getFullYear()} Baroot CNC Solutions. All rights reserved.
-        </span>
-        <div className="flex flex-wrap justify-center gap-6">
-          <Link href="/privacy" className="transition-colors hover:text-primary">
-            Privacy
-          </Link>
-          <Link href="/terms" className="transition-colors hover:text-primary">
-            Terms
-          </Link>
-          <Link href="/refunds" className="transition-colors hover:text-primary">
-            Refunds
-          </Link>
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="hairline" aria-hidden />
+        <div className="flex flex-col items-center justify-between gap-4 py-6 text-xs text-muted-foreground sm:flex-row">
+          <span>© {new Date().getFullYear()} Baroot CNC Solutions. All rights reserved.</span>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <Link href="/privacy" className="transition-colors hover:text-foreground">
+              Privacy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-foreground">
+              Terms
+            </Link>
+            <Link href="/refunds" className="transition-colors hover:text-foreground">
+              Refunds
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

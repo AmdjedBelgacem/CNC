@@ -9,7 +9,7 @@ export function ConsoleModeBarBlock({ props, puck }: BlockComponentProps<Console
   return (
     <div
       className={cn(
-        'p-2 flex items-center justify-between gap-2 text-xs text-text-secondary',
+        'flex items-center justify-between gap-2 px-1.5 pb-1 pt-2.5 text-xs text-muted-foreground',
         className,
       )}
       style={layoutStyle(props)}
@@ -18,7 +18,7 @@ export function ConsoleModeBarBlock({ props, puck }: BlockComponentProps<Console
         {puck.renderSlot('content', { className: 'flex items-center gap-2 flex-wrap' })}
       </div>
       {controllerLabel ? (
-        <span className="text-[11px] text-text-muted hidden sm:inline-block shrink-0">
+        <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline-block">
           {controllerLabel}
         </span>
       ) : null}
