@@ -13,6 +13,9 @@ import { Switch } from '@/components/ui/switch';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api-client';
+import { AnimatePresence, m } from 'framer-motion';
+import { Reveal } from '@/components/ui/motion';
+import { ease } from '@/lib/motion';
 
 interface PaymentConfig {
   provider: string;
@@ -189,11 +192,12 @@ export function PaymentSettingsPanel() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      <Reveal>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <CreditCard className="size-4" />
+        <CardHeader className="border-b border-border/70 pb-5">
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="size-4 text-primary" />
             {t('title')} — {t('moyasar')}
           </CardTitle>
           <CardDescription>
@@ -212,25 +216,31 @@ export function PaymentSettingsPanel() {
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 pt-6">
           {config.isPending ? (
             <LoadingState />
           ) : config.isError ? (
             <ErrorState title={tAdmin('loadFailed')} onRetry={() => void config.refetch()} />
           ) : (
             <>
-              {saveError && (
-                <p
-                  role="alert"
-                  className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive"
-                >
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  {saveError}
-                </p>
-              )}
+              <AnimatePresence initial={false}>
+                {saveError && (
+                  <m.p
+                    key="save-error"
+                    role="alert"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0, transition: { duration: 0.24, ease: ease.emerge } }}
+                    exit={{ opacity: 0, y: -4, transition: { duration: 0.14, ease: ease.exit } }}
+                    className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs text-destructive"
+                  >
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    {saveError}
+                  </m.p>
+                )}
+              </AnimatePresence>
 
               {!data?.health.webhookSecretPresent && data?.health.enabled && (
-                <p className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 p-2 text-xs text-warning">
+                <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-xs text-warning">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                   {tAdmin('webhookSecretWarning')}
                 </p>
@@ -330,20 +340,22 @@ export function PaymentSettingsPanel() {
           )}
         </CardContent>
       </Card>
+      </Reveal>
 
+      <Reveal>
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">{t('orders')}</CardTitle>
+        <CardHeader className="border-b border-border/70 pb-5">
+          <CardTitle>{t('orders')}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {orders.isPending ? (
             <LoadingState />
           ) : (orders.data?.data.length ?? 0) === 0 ? (
             <p className="text-sm text-muted-foreground">—</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="text-2xs uppercase tracking-wide text-muted-foreground">
+              <table className="w-full text-start text-xs">
+                <thead className="text-xs font-medium text-muted-foreground">
                   <tr>
                     <th className="py-2 pe-3">{t('order')}</th>
                     <th className="py-2 pe-3">{t('status')}</th>
@@ -354,11 +366,11 @@ export function PaymentSettingsPanel() {
                 <tbody>
                   {orders.data!.data.map((order) => (
                     <Fragment key={order.id}>
-                      <tr className="border-t border-border">
+                      <tr className="border-t border-border/70 transition-colors hover:bg-muted/40">
                         <td className="py-2 pe-3 font-mono text-2xs text-foreground">
                           <button
                             type="button"
-                            className="text-left hover:underline"
+                            className="text-start underline-offset-2 hover:text-primary hover:underline"
                             onClick={() => void toggleDetail(order.id)}
                           >
                             {order.id.slice(0, 8)} · {order.provider}
@@ -381,7 +393,7 @@ export function PaymentSettingsPanel() {
                         </td>
                       </tr>
                       {expanded === order.id && orderDetail && (
-                        <tr className="border-t border-border bg-muted/30">
+                        <tr className="border-t border-border/70 bg-muted/40">
                           <td colSpan={4} className="py-3">
                             <dl className="grid gap-1.5 text-2xs text-muted-foreground sm:grid-cols-3">
                               <div>
@@ -452,6 +464,7 @@ export function PaymentSettingsPanel() {
           )}
         </CardContent>
       </Card>
+      </Reveal>
     </div>
   );
 }

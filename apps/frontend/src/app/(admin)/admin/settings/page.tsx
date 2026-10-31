@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { AnimatePresence, m } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import {
   AlertTriangle,
@@ -21,6 +22,8 @@ import { ErrorBanner } from '@/components/admin/admin-ui';
 import { useAuthStore } from '@/stores/auth-store';
 import { PlatformAlertSettings } from './platform-alert-settings';
 import { toast } from '@/components/ui/toast';
+import { HoverLift, Reveal } from '@/components/ui/motion';
+import { ease, spring } from '@/lib/motion';
 import {
   AdminCommandBar,
   AdminPageHeader,
@@ -68,9 +71,9 @@ const EMPTY: FormState = {
   description: '',
   logoUrl: '',
   faviconUrl: '',
-  primaryColor: '#C2410C',
-  secondaryColor: '#333F4C',
-  accentColor: '#0F766E',
+  primaryColor: '#B65433',
+  secondaryColor: '#3D3D3A',
+  accentColor: '#4D6E58',
   fontFamily: '',
   domain: '',
   gaMeasurementId: '',
@@ -156,9 +159,9 @@ export default function AdminSettingsPage() {
         description: data.description ?? '',
         logoUrl: data.logoUrl ?? '',
         faviconUrl: data.faviconUrl ?? '',
-        primaryColor: data.primaryColor ?? '#C2410C',
-        secondaryColor: data.secondaryColor ?? '#333F4C',
-        accentColor: data.accentColor ?? '#0F766E',
+        primaryColor: data.primaryColor ?? '#B65433',
+        secondaryColor: data.secondaryColor ?? '#3D3D3A',
+        accentColor: data.accentColor ?? '#4D6E58',
         fontFamily: data.fontFamily ?? '',
         domain: data.domain ?? '',
         gaMeasurementId: data.settings?.analytics?.gaMeasurementId ?? '',
@@ -332,6 +335,7 @@ export default function AdminSettingsPage() {
       />
 
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
+        <Reveal>
         <AdminPageHeader
           title={tAdmin('settings', { default: 'Settings' })}
           description={t('description', {
@@ -339,22 +343,23 @@ export default function AdminSettingsPage() {
               'Tenant identity, brand appearance, measurement and connected tools for this workspace.',
           })}
           badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground md:self-auto">
-              <Store className="size-4" />
-              {profile?.slug ?? '—'}
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-xs md:self-auto">
+              <Store className="size-3.5" />
+              <span className="font-mono" dir="ltr">{profile?.slug ?? '—'}</span>
             </span>
           }
         />
+        </Reveal>
 
         {error && <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry')} />}
 
-        <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
           {/* Section nav */}
           <nav
             aria-label={t('sections', { default: 'Settings sections' })}
             className="hidden lg:block"
           >
-            <div className="sticky top-24 space-y-1">
+            <div className="sticky top-24 space-y-0.5">
               {sections.map((s) => {
                 const Icon = s.icon;
                 const isActive = active === s.key;
@@ -365,36 +370,63 @@ export default function AdminSettingsPage() {
                     onClick={() => scrollTo(s.key)}
                     aria-current={isActive ? 'true' : undefined}
                     className={cn(
-                      'flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-start text-13 font-semibold transition',
+                      'relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-start text-13 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        ? 'text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                     )}
                   >
-                    <Icon className={cn('size-4', isActive ? 'text-primary' : 'text-muted-foreground')} />
-                    {t(`nav.${s.key}`, { default: s.key })}
+                    {isActive && (
+                      <m.span
+                        layoutId="settings-nav-active"
+                        transition={spring.smooth}
+                        className="absolute inset-0 rounded-lg border border-border/70 bg-card shadow-xs"
+                        aria-hidden="true"
+                      >
+                        <span className="absolute inset-y-2 start-0 w-0.5 rounded-full bg-primary" />
+                      </m.span>
+                    )}
+                    <Icon
+                      className={cn(
+                        'relative size-4 transition-colors',
+                        isActive ? 'text-primary' : 'text-muted-foreground',
+                      )}
+                    />
+                    <span className="relative">{t(`nav.${s.key}`, { default: s.key })}</span>
                   </button>
                 );
               })}
 
-              <div className="mt-4 rounded-xl border border-border bg-card p-3">
-                <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="mt-6 rounded-xl border border-border/70 bg-card p-3.5 shadow-xs">
+                <p className="text-xs font-medium text-muted-foreground">
                   {t('tenantSlug', { default: 'Tenant slug' })}
                 </p>
-                <p className="mt-1 truncate font-mono text-xs text-foreground">{profile?.slug ?? '—'}</p>
+                <p className="mt-1 truncate font-mono text-xs text-foreground" dir="ltr">
+                  {profile?.slug ?? '—'}
+                </p>
                 <button
                   type="button"
                   onClick={() => void copySlug()}
-                  className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5 text-2xs font-semibold text-foreground transition hover:bg-muted"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-background px-2 py-1.5 text-xs font-medium text-foreground transition hover:border-border-strong hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
                 >
-                  {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-                  {copied ? t('copied', { default: 'Copied' }) : t('copy', { default: 'Copy' })}
+                  <AnimatePresence mode="wait" initial={false}>
+                    <m.span
+                      key={copied ? 'copied' : 'copy'}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0, transition: spring.snappy }}
+                      exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: ease.exit } }}
+                      className="inline-flex items-center gap-1.5"
+                    >
+                      {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+                      {copied ? t('copied', { default: 'Copied' }) : t('copy', { default: 'Copy' })}
+                    </m.span>
+                  </AnimatePresence>
                 </button>
               </div>
             </div>
           </nav>
 
-          <div className="min-w-0 space-y-6">
+          <div className="min-w-0 space-y-8">
             {/* ---------------- Identity ---------------- */}
             <section
               ref={(el) => {
@@ -402,6 +434,7 @@ export default function AdminSettingsPage() {
               }}
               className="scroll-mt-24"
             >
+              <Reveal>
               <FormSection
                 title={t('identity.title', { default: 'Identity' })}
                 icon={Store}
@@ -442,6 +475,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
               </FormSection>
+              </Reveal>
             </section>
 
             {/* ---------------- Branding ---------------- */}
@@ -451,6 +485,7 @@ export default function AdminSettingsPage() {
               }}
               className="scroll-mt-24"
             >
+              <Reveal>
               <FormSection
                 title={t('branding.title', { default: 'Branding' })}
                 icon={Palette}
@@ -460,7 +495,7 @@ export default function AdminSettingsPage() {
                 bodyClassName="p-0"
               >
                 <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="space-y-5 p-5">
+                  <div className="space-y-6 p-5 sm:p-6">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <TextField
                         label={t('branding.logo', { default: 'Logo URL' })}
@@ -512,7 +547,7 @@ export default function AdminSettingsPage() {
                                     value={valid ? value : '#000000'}
                                     onChange={(e) => set({ [key]: e.target.value } as Partial<FormState>)}
                                     aria-label={label}
-                                    className="size-10 cursor-pointer rounded-xl border border-border bg-transparent p-1"
+                                    className="size-10 cursor-pointer rounded-full border border-border/70 bg-card p-1 shadow-xs transition hover:border-border-strong"
                                   />
                                 </span>
                                 <TextInput
@@ -557,11 +592,13 @@ export default function AdminSettingsPage() {
                                 key={f}
                                 type="button"
                                 onClick={() => set({ fontFamily: f })}
+                                style={{ fontFamily: f }}
+                                aria-pressed={form.fontFamily === f}
                                 className={cn(
-                                  'rounded-lg border px-2 py-1 text-2xs font-semibold transition',
+                                  'rounded-full border px-2.5 py-1 text-xs font-medium transition active:scale-[0.97]',
                                   form.fontFamily === f
                                     ? 'border-primary/40 bg-primary/10 text-primary'
-                                    : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                                    : 'border-border/70 bg-background text-muted-foreground hover:border-border-strong hover:text-foreground',
                                 )}
                               >
                                 {f}
@@ -577,13 +614,14 @@ export default function AdminSettingsPage() {
                     name={form.name || t('preview.placeholderName', { default: 'Your academy' })}
                     tagline={form.description}
                     logoUrl={form.logoUrl}
-                    primary={HEX.test(form.primaryColor) ? form.primaryColor : '#C2410C'}
-                    secondary={HEX.test(form.secondaryColor) ? form.secondaryColor : '#333F4C'}
-                    accent={HEX.test(form.accentColor) ? form.accentColor : '#0F766E'}
+                    primary={HEX.test(form.primaryColor) ? form.primaryColor : '#B65433'}
+                    secondary={HEX.test(form.secondaryColor) ? form.secondaryColor : '#3D3D3A'}
+                    accent={HEX.test(form.accentColor) ? form.accentColor : '#4D6E58'}
                     fontFamily={form.fontFamily}
                   />
                 </div>
               </FormSection>
+              </Reveal>
             </section>
 
             {/* ---------------- Analytics ---------------- */}
@@ -593,6 +631,7 @@ export default function AdminSettingsPage() {
               }}
               className="scroll-mt-24"
             >
+              <Reveal>
               <FormSection
                 title={t('analytics.title', { default: 'Analytics & pixels' })}
                 icon={BarChart3}
@@ -632,6 +671,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
               </FormSection>
+              </Reveal>
             </section>
 
             {/* ---------------- Integrations ---------------- */}
@@ -641,6 +681,7 @@ export default function AdminSettingsPage() {
               }}
               className="scroll-mt-24"
             >
+              <Reveal>
               <FormSection
                 title={t('integrations.title', { default: 'Tools & integrations' })}
                 icon={Sparkles}
@@ -670,6 +711,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
               </FormSection>
+              </Reveal>
             </section>
 
             {isSuperAdmin && (
@@ -680,19 +722,26 @@ export default function AdminSettingsPage() {
                 }}
                 className="scroll-mt-28"
               >
+                <Reveal>
                 <PlatformAlertSettings />
+                </Reveal>
               </section>
             )}
 
             {/* Validation summary, so a blocked save explains itself. */}
+            <AnimatePresence initial={false}>
             {dirty && !canSave && (
-              <div
+              <m.div
+                key="cannot-save"
                 role="alert"
-                className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+                exit={{ opacity: 0, y: 4, transition: { duration: 0.16, ease: ease.exit } }}
+                className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3.5"
               >
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                 <div className="text-xs text-foreground">
-                  <p className="font-semibold">
+                  <p className="font-medium">
                     {t('cannotSave', { default: 'Some changes still need attention' })}
                   </p>
                   <ul className="mt-1 list-disc space-y-0.5 ps-4 text-muted-foreground">
@@ -702,8 +751,9 @@ export default function AdminSettingsPage() {
                     {!analyticsValid && <li>{t('analytics.fixIds', { default: 'Check the measurement IDs.' })}</li>}
                   </ul>
                 </div>
-              </div>
+              </m.div>
             )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -737,74 +787,99 @@ function BrandPreview({
   const readable = contrastWithWhite(primary) >= 3;
 
   return (
-    <div className="border-t border-border bg-muted/25 p-5 lg:border-s lg:border-t-0">
-      <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-        <Sparkles className="size-3" />
+    <div className="border-t border-border/70 bg-muted/30 p-5 sm:p-6 lg:border-s lg:border-t-0">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
         {t('preview.label', { default: 'Live preview' })}
       </p>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background shadow-xs">
-        <div
-          className="flex items-center justify-between gap-3 px-4 py-3"
-          style={{ backgroundColor: primary, fontFamily: fontFamily || undefined }}
-        >
+      <div
+        className="mt-3 overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm"
+        style={{ fontFamily: fontFamily || undefined }}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-card px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="" className="size-7 rounded-lg bg-white/90 object-contain p-0.5" />
+              <img
+                src={logoUrl}
+                alt=""
+                className="size-7 rounded-full border border-border/70 bg-card object-contain p-0.5"
+              />
             ) : (
               <span
-                className="flex size-7 items-center justify-center rounded-lg text-2xs font-bold"
-                style={{ backgroundColor: accent }}
+                className={cn(
+                  'flex size-7 items-center justify-center rounded-full text-xs font-medium transition-colors duration-300',
+                  readable ? 'text-white' : 'text-black',
+                )}
+                style={{ backgroundColor: primary }}
               >
                 {name.slice(0, 1).toUpperCase()}
               </span>
             )}
             <span
-              className={cn(
-                'truncate text-sm font-bold',
-                readable ? 'text-white' : 'text-black',
-              )}
+              className={cn('truncate text-sm font-medium text-foreground', !fontFamily && 'font-display')}
             >
               {name}
             </span>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <span
-              className="rounded-md px-2 py-1 text-2xs font-semibold"
-              style={{ backgroundColor: accent, color: readable ? '#fff' : '#000' }}
-            >
-              {t('preview.cta', { default: 'Enroll' })}
-            </span>
-          </div>
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-3 py-1 text-xs font-medium shadow-xs transition-colors duration-300',
+              readable ? 'text-white' : 'text-black',
+            )}
+            style={{ backgroundColor: primary }}
+          >
+            {t('preview.cta', { default: 'Enroll' })}
+          </span>
         </div>
 
-        <div className="space-y-2 p-4" style={{ fontFamily: fontFamily || undefined }}>
-          <p className="text-2xs font-semibold uppercase tracking-wider" style={{ color: accent }}>
+        <div className="space-y-2 px-4 pb-5 pt-5">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span
+              className="size-1.5 rounded-full transition-colors duration-300"
+              style={{ backgroundColor: accent }}
+              aria-hidden="true"
+            />
             {t('preview.section', { default: 'Featured' })}
           </p>
-          <p className="text-sm font-semibold text-foreground">
+          <p
+            className={cn(
+              'text-balance text-lg font-medium leading-snug tracking-[-0.015em] text-foreground',
+              !fontFamily && 'font-display',
+            )}
+          >
             {t('preview.headline', { default: 'Precision CNC training' })}
           </p>
-          <p className="line-clamp-2 text-2xs text-muted-foreground">
+          <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
             {tagline || t('preview.taglinePlaceholder', { default: 'Your description appears here.' })}
           </p>
-          <div className="flex items-center gap-1.5 pt-1">
-            <span className="h-1.5 w-10 rounded-full" style={{ backgroundColor: primary }} />
-            <span className="h-1.5 w-6 rounded-full" style={{ backgroundColor: secondary }} />
-            <span className="h-1.5 w-3 rounded-full" style={{ backgroundColor: accent }} />
+          <div className="flex items-center gap-1.5 pt-2">
+            <span className="h-1.5 w-10 rounded-full transition-colors duration-300" style={{ backgroundColor: primary }} />
+            <span className="h-1.5 w-6 rounded-full transition-colors duration-300" style={{ backgroundColor: secondary }} />
+            <span className="h-1.5 w-3 rounded-full transition-colors duration-300" style={{ backgroundColor: accent }} />
           </div>
         </div>
       </div>
 
-      {!readable && (
-        <p className="mt-2 flex items-start gap-1.5 text-2xs text-warning">
-          <AlertTriangle className="mt-px size-3 shrink-0" />
-          {t('preview.lowContrast', {
-            default: 'This primary colour is too light for white text.',
-          })}
-        </p>
-      )}
+      <AnimatePresence initial={false}>
+        {!readable && (
+          <m.p
+            key="low-contrast"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto', transition: { duration: 0.24, ease: ease.emerge } }}
+            exit={{ opacity: 0, height: 0, transition: { duration: 0.16, ease: ease.exit } }}
+            className="overflow-hidden"
+          >
+            <span className="flex items-start gap-1.5 pt-2.5 text-xs text-warning">
+              <AlertTriangle className="mt-px size-3 shrink-0" />
+              {t('preview.lowContrast', {
+                default: 'This primary colour is too light for white text.',
+              })}
+            </span>
+          </m.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -823,25 +898,29 @@ function IntegrationCard({
   actionLabel: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-primary/40 hover:bg-muted/40"
-    >
-      <span className="flex min-w-0 items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-primary">
-          <Icon className="size-5" />
+    <HoverLift className="h-full">
+      <Link
+        href={href}
+        className="group flex h-full items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-4 shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-border-strong hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Icon className="size-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-display text-base font-medium tracking-[-0.015em] text-foreground">
+              {title}
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">{description}</span>
+          </span>
         </span>
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold text-foreground">{title}</span>
-          <span className="block truncate text-xs text-muted-foreground">{description}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+          {actionLabel}
+          <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5">
+            →
+          </span>
         </span>
-      </span>
-      <span className="inline-flex shrink-0 items-center gap-1 text-2xs font-semibold text-primary">
-        {actionLabel}
-        <span aria-hidden="true" className="transition group-hover:translate-x-0.5">
-          →
-        </span>
-      </span>
-    </Link>
+      </Link>
+    </HoverLift>
   );
 }

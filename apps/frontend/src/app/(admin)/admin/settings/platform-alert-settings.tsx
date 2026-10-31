@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { AnimatePresence, m } from 'framer-motion';
 import {
   Activity,
   Building2,
@@ -19,6 +20,7 @@ import { StatusPill, type Tone } from '@/components/admin/admin-ui';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ease, spring } from '@/lib/motion';
 
 /**
  * Super-admin control over which platform-critical alerts are shown.
@@ -116,44 +118,58 @@ export function PlatformAlertSettings() {
           'Choose which platform-critical alerts reach you. These are separate from your personal notifications, and muting one here never affects those.',
       })}
     >
-      {error && (
-        <p
-          role="alert"
-          className="mb-4 rounded-lg border border-destructive/25 bg-destructive/8 px-3 py-2 text-xs text-destructive"
-        >
-          {error}
-        </p>
-      )}
+      <AnimatePresence initial={false}>
+        {error && (
+          <m.p
+            key="error"
+            role="alert"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto', transition: { duration: 0.24, ease: ease.emerge } }}
+            exit={{ opacity: 0, height: 0, transition: { duration: 0.16, ease: ease.exit } }}
+            className="overflow-hidden"
+          >
+            <span className="mb-4 block rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {error}
+            </span>
+          </m.p>
+        )}
+      </AnimatePresence>
 
       {groups === null ? (
         <div className="space-y-2">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 rounded-xl" />
+            <Skeleton key={i} className="h-[4.5rem] rounded-xl" />
           ))}
         </div>
       ) : (
         <ul className="space-y-2">
-          {groups.map((g) => {
+          {groups.map((g, index) => {
             const Icon = ICONS[g.icon] ?? ICONS[g.key] ?? Activity;
             const changed = g.enabled !== g.defaultEnabled;
             return (
-              <li
+              <m.li
                 key={g.key}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.32, ease: ease.emerge, delay: Math.min(index, 11) * 0.04 },
+                }}
                 className={cn(
-                  'flex flex-col gap-3 rounded-xl border p-4 transition sm:flex-row sm:items-center',
-                  g.enabled ? 'border-border bg-card' : 'border-border bg-muted/30',
+                  'flex flex-col gap-3 rounded-xl border border-border/70 p-4 transition-colors duration-300 sm:flex-row sm:items-center',
+                  g.enabled ? 'bg-card shadow-xs' : 'bg-muted/40',
                 )}
               >
                 <span
                   className={cn(
-                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                    'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-300',
                     !g.enabled
                       ? 'bg-muted text-muted-foreground'
                       : g.severity === 'critical'
-                        ? 'bg-destructive/12 text-destructive'
+                        ? 'bg-destructive/10 text-destructive'
                         : g.severity === 'warning'
-                          ? 'bg-warning/12 text-warning'
-                          : 'bg-info/12 text-info',
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-info/10 text-info',
                   )}
                 >
                   <Icon className="size-4" />
@@ -161,7 +177,7 @@ export function PlatformAlertSettings() {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-13 font-semibold text-foreground">
+                    <span className="text-sm font-medium text-foreground">
                       {t(`groups.${g.key}.label`, { default: g.label })}
                     </span>
                     <StatusPill
@@ -183,7 +199,7 @@ export function PlatformAlertSettings() {
                 </div>
 
                 <label className="flex shrink-0 cursor-pointer items-center gap-2.5 self-start sm:self-center">
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {g.enabled
                       ? t('shown', { default: 'Shown' })
                       : t('muted', { default: 'Muted' })}
@@ -201,26 +217,25 @@ export function PlatformAlertSettings() {
                       })}
                       onClick={() => void toggle(g.key, !g.enabled)}
                       className={cn(
-                        'relative h-6 w-11 rounded-full transition',
-                        g.enabled ? 'bg-primary' : 'bg-muted-foreground/30',
+                        'flex h-6 w-11 items-center rounded-full p-0.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                        g.enabled ? 'justify-end bg-primary' : 'justify-start bg-muted-foreground/30',
                       )}
                     >
-                      <span
-                        className={cn(
-                          'absolute top-0.5 size-5 rounded-full bg-white shadow transition-all',
-                          g.enabled ? 'start-0.5' : 'start-5.5',
-                        )}
+                      <m.span
+                        layout
+                        transition={spring.snappy}
+                        className="size-5 rounded-full bg-white shadow-sm"
                       />
                     </button>
                   )}
                 </label>
-              </li>
+              </m.li>
             );
           })}
         </ul>
       )}
 
-      <p className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-2xs leading-relaxed text-muted-foreground">
+      <p className="mt-5 flex items-start gap-2 rounded-lg bg-muted/50 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
         <Settings2 className="mt-px size-3.5 shrink-0" />
         {t('settingsFootNote', {
           default:

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { AnimatePresence, m } from 'framer-motion';
 import {
   Bot,
   CheckCircle2,
@@ -35,6 +36,8 @@ import { Switch } from '@/components/ui/switch';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { AnimatedNumber, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { ease } from '@/lib/motion';
 import { AiLearningPanel } from './ai-learning-panel';
 import { PaymentSettingsPanel } from './payment-settings-panel';
 import { AI_PROVIDER_PRESETS } from '@titan/shared';
@@ -159,7 +162,7 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
+      <Label htmlFor={htmlFor} className="text-sm font-medium">{label}</Label>
       {children}
       {hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
     </div>
@@ -405,7 +408,8 @@ const buildPayload = (): AiSettingsUpdate => {
         }
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 pt-6">
+      <div className="mx-auto w-full max-w-5xl space-y-8 pt-6">
+        <Reveal>
         <AdminPageHeader
           title={t('title')}
           description={t('description')}
@@ -419,42 +423,56 @@ const buildPayload = (): AiSettingsUpdate => {
             </Badge>
           }
         />
+        </Reveal>
 
+        <AnimatePresence initial={false}>
         {!settings.encryptionConfigured && (
-          <div
+          <m.div
+            key="encryption"
             role="status"
-            className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-warning"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+            exit={{ opacity: 0, y: -4, transition: { duration: 0.16, ease: ease.exit } }}
+            className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <span>{t('encryptionRequired')}</span>
-          </div>
+          </m.div>
         )}
 
         {operationError && (
-          <div
+          <m.div
+            key="operation-error"
             role="alert"
-            className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+            exit={{ opacity: 0, y: -4, transition: { duration: 0.16, ease: ease.exit } }}
+            className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <span>{getAiErrorMessage(operationError, { detailed: true })}</span>
-          </div>
+          </m.div>
         )}
+        </AnimatePresence>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        <Stagger className="grid gap-4 sm:grid-cols-3">
+          <StaggerItem index={0}>
+          <Card className="h-full p-5">
+            <p className="text-xs font-medium text-muted-foreground">
               {t('providerStatus')}
             </p>
-            <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
+            <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
               <Bot className="size-4 text-primary" />
               {settings.provider}
             </p>
           </Card>
-          <Card className="p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          </StaggerItem>
+          <StaggerItem index={1}>
+          <Card className="h-full p-5">
+            <p className="text-xs font-medium text-muted-foreground">
               {t('apiKeyStatus')}
             </p>
-            <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
+            <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
               {settings.apiKeyConfigured ? (
                 <CheckCircle2 className="size-4 text-success" />
               ) : (
@@ -468,11 +486,13 @@ const buildPayload = (): AiSettingsUpdate => {
               </p>
             )}
           </Card>
-          <Card className="p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          </StaggerItem>
+          <StaggerItem index={2}>
+          <Card className="h-full p-5">
+            <p className="text-xs font-medium text-muted-foreground">
               {t('encryptionStatus')}
             </p>
-            <p className="mt-2 flex items-center gap-2 text-sm font-semibold">
+            <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
               {settings.encryptionConfigured ? (
                 <CheckCircle2 className="size-4 text-success" />
               ) : (
@@ -481,24 +501,26 @@ const buildPayload = (): AiSettingsUpdate => {
               {settings.encryptionConfigured ? t('configured') : t('encryptionUnavailable')}
             </p>
           </Card>
-        </div>
+          </StaggerItem>
+        </Stagger>
 
+        <Reveal>
         <Card>
-          <CardHeader className="border-b border-border">
-            <CardTitle className="flex items-center gap-2 text-sm">
+          <CardHeader className="border-b border-border/70 pb-5">
+            <CardTitle className="flex items-center gap-2">
               <Sparkles className="size-4 text-primary" />
               {t('connection')}
             </CardTitle>
             <CardDescription>{t('connectionDescription')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5 p-5">
+          <CardContent className="space-y-6 p-6">
             <div className="grid gap-5 md:grid-cols-2">
               <Field label={t('provider')} htmlFor="ai-provider" hint={t('providerHint')}>
                 <select
                   id="ai-provider"
                   value={form.provider}
                   onChange={(event) => setField('provider', event.target.value as AiProviderName)}
-                  className="flex h-10 w-full rounded-md border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-10 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs outline-none transition-colors hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="openai-compatible">OpenAI-compatible</option>
                   <option value="deepseek">DeepSeek</option>
@@ -547,8 +569,8 @@ const buildPayload = (): AiSettingsUpdate => {
                    </Button>
                  )}
                </Field>
-              <div className="rounded-md border border-border bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
-                <p className="font-semibold text-foreground">{t('writeOnlyTitle')}</p>
+              <div className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">
+                <p className="mb-1 font-medium text-foreground">{t('writeOnlyTitle')}</p>
                 <p>{t('writeOnlyDescription')}</p>
               </div>
             </div>
@@ -593,7 +615,7 @@ const buildPayload = (): AiSettingsUpdate => {
               </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card p-4">
                 <div>
                   <Label htmlFor="ai-enabled">{t('enabled')}</Label>
                   <p className="mt-1 text-xs text-muted-foreground">{t('enabledHint')}</p>
@@ -606,7 +628,7 @@ const buildPayload = (): AiSettingsUpdate => {
               </div>
               <div
                 className={cn(
-                  'flex items-center justify-between rounded-md border border-border bg-card p-3',
+                  'flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card p-4 transition-opacity duration-200',
                   !form.enabled && 'opacity-60',
                 )}
               >
@@ -624,13 +646,15 @@ const buildPayload = (): AiSettingsUpdate => {
             </div>
           </CardContent>
         </Card>
+        </Reveal>
 
+        <Reveal>
         <Card>
-          <CardHeader className="border-b border-border">
-            <CardTitle className="text-sm">{t('generation')}</CardTitle>
+          <CardHeader className="border-b border-border/70 pb-5">
+            <CardTitle>{t('generation')}</CardTitle>
             <CardDescription>{t('generationDescription')}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-5 p-5 sm:grid-cols-2 lg:grid-cols-3">
+          <CardContent className="grid gap-5 p-6 sm:grid-cols-2 lg:grid-cols-3">
             <Field label={t('timeout')} htmlFor="ai-timeout">
               <Input
                 id="ai-timeout"
@@ -666,13 +690,15 @@ const buildPayload = (): AiSettingsUpdate => {
             </Field>
           </CardContent>
         </Card>
+        </Reveal>
 
+        <Reveal>
         <Card>
-          <CardHeader className="border-b border-border">
-            <CardTitle className="text-sm">{t('retrieval')}</CardTitle>
+          <CardHeader className="border-b border-border/70 pb-5">
+            <CardTitle>{t('retrieval')}</CardTitle>
             <CardDescription>{t('retrievalDescription')}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-5 p-5 sm:grid-cols-3">
+          <CardContent className="grid gap-5 p-6 sm:grid-cols-3">
             <Field label={t('topK')} htmlFor="ai-top-k">
               <Input
                 id="ai-top-k"
@@ -708,13 +734,15 @@ const buildPayload = (): AiSettingsUpdate => {
             </Field>
           </CardContent>
         </Card>
+        </Reveal>
 
+        <Reveal>
         <Card>
-          <CardHeader className="border-b border-border">
-            <CardTitle className="text-sm">{t('stylePrompt')}</CardTitle>
+          <CardHeader className="border-b border-border/70 pb-5">
+            <CardTitle>{t('stylePrompt')}</CardTitle>
             <CardDescription>{t('stylePromptHint')}</CardDescription>
           </CardHeader>
-          <CardContent className="p-5">
+          <CardContent className="p-6">
             <Textarea
               value={form.systemStyle}
               onChange={(event) => setField('systemStyle', event.target.value)}
@@ -724,33 +752,47 @@ const buildPayload = (): AiSettingsUpdate => {
             />
           </CardContent>
         </Card>
+        </Reveal>
 
+        <Reveal>
         <Card>
-          <CardHeader className="border-b border-border">
-            <CardTitle className="flex items-center gap-2 text-sm">
+          <CardHeader className="border-b border-border/70 pb-5">
+            <CardTitle className="flex items-center gap-2">
               <Database className="size-4 text-primary" />
               {t('indexStatus')}
             </CardTitle>
             <CardDescription>{t('indexDescription')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5 p-5">
+          <CardContent className="space-y-6 p-6">
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-md border border-border bg-muted/20 p-3">
-                <p className="text-xs text-muted-foreground">{t('documents')}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{corpus.documents}</p>
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs font-medium text-muted-foreground">{t('documents')}</p>
+                <AnimatedNumber
+                  value={corpus.documents}
+                  animateOnChange
+                  className="mt-1 block font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground"
+                />
               </div>
-              <div className="rounded-md border border-border bg-muted/20 p-3">
-                <p className="text-xs text-muted-foreground">{t('chunks')}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{corpus.chunks}</p>
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs font-medium text-muted-foreground">{t('chunks')}</p>
+                <AnimatedNumber
+                  value={corpus.chunks}
+                  animateOnChange
+                  className="mt-1 block font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground"
+                />
               </div>
-              <div className="rounded-md border border-border bg-muted/20 p-3">
-                <p className="text-xs text-muted-foreground">{t('embeddedChunks')}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{corpus.embeddedChunks}</p>
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs font-medium text-muted-foreground">{t('embeddedChunks')}</p>
+                <AnimatedNumber
+                  value={corpus.embeddedChunks}
+                  animateOnChange
+                  className="mt-1 block font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground"
+                />
               </div>
             </div>
             <div className="grid gap-4 text-sm sm:grid-cols-2">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   {t('lastIndex')}
                 </p>
                 <p className="mt-1">
@@ -768,7 +810,7 @@ const buildPayload = (): AiSettingsUpdate => {
                 )}
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   {t('lastTested')}
                 </p>
                 <p className="mt-1">
@@ -815,19 +857,25 @@ const buildPayload = (): AiSettingsUpdate => {
             </div>
           </CardContent>
         </Card>
+        </Reveal>
 
         <PaymentSettingsPanel />
 
         <AiLearningPanel />
 
+        <AnimatePresence initial={false}>
         {actionMessage && (
-          <div
+          <m.div
+            key="action-message"
             role="status"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+            exit={{ opacity: 0, y: 4, transition: { duration: 0.16, ease: ease.exit } }}
             className={cn(
-              'flex items-center gap-2 rounded-lg border p-3 text-sm',
+              'flex items-center gap-2 rounded-xl border p-3.5 text-sm',
               action === 'error'
-                ? 'border-destructive/30 bg-destructive/5 text-destructive'
-                : 'border-success/30 bg-success/5 text-success',
+                ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                : 'border-success/30 bg-success/10 text-success',
             )}
           >
             {action === 'error' ? (
@@ -836,8 +884,9 @@ const buildPayload = (): AiSettingsUpdate => {
               <CheckCircle2 className="size-4" />
             )}
             {actionMessage}
-          </div>
+          </m.div>
         )}
+        </AnimatePresence>
       </div>
     </div>
   );

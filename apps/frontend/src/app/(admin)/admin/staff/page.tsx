@@ -19,6 +19,18 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
+import { AnimatePresence, m } from 'framer-motion';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { ease, spring } from '@/lib/motion';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
@@ -530,6 +542,7 @@ export default function AdminStaffPage() {
       />
 
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
+        <Reveal>
         <AdminPageHeader
           title={tAdmin('access.title', { default: 'Staff & Access Control' })}
           description={tAdmin('access.description', {
@@ -537,16 +550,18 @@ export default function AdminStaffPage() {
               'Manage precision CNC cell operators, lead instructors, telemetry admins, and guest sponsor credentials across five-axis facilities.',
           })}
           badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success md:self-auto">
-              <BadgeCheck className="size-4" />
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/25 bg-success/10 px-3 py-1.5 text-xs font-medium text-success md:self-auto">
+              <BadgeCheck className="size-3.5" />
               {tAdmin('access.zeroTrustBadge', {
                 default: 'Zero-Trust Protocol Active (2FA Enforced)',
               })}
             </span>
           }
         />
+        </Reveal>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerItem index={0}>
           <AdminKpiCard
             icon={Users}
             label={tAdmin('access.totalActiveStaff', { default: 'Total Active Staff' })}
@@ -557,6 +572,8 @@ export default function AdminStaffPage() {
             })}
             tone="blue"
           />
+          </StaggerItem>
+          <StaggerItem index={1}>
           <AdminKpiCard
             icon={UserCog}
             label={tAdmin('access.roleTiers', { default: 'Role Tiers' })}
@@ -567,6 +584,8 @@ export default function AdminStaffPage() {
             sub={tAdmin('access.configured', { default: 'configured' })}
             tone="purple"
           />
+          </StaggerItem>
+          <StaggerItem index={2}>
           <AdminKpiCard
             icon={ShieldCheck}
             label={tAdmin('access.securityCompliance', { default: 'Security Compliance' })}
@@ -574,6 +593,8 @@ export default function AdminStaffPage() {
             sub={tAdmin('access.compliant', { default: '2FA / hardware key compliant' })}
             tone={compliancePct >= 80 ? 'emerald' : 'amber'}
           />
+          </StaggerItem>
+          <StaggerItem index={3}>
           <AdminKpiCard
             icon={Zap}
             label={tAdmin('access.activityIndex', { default: 'Activity Index' })}
@@ -581,23 +602,23 @@ export default function AdminStaffPage() {
             sub={tAdmin('access.past24h', { default: 'Past 24h' })}
             tone="cyan"
           />
-        </div>
+          </StaggerItem>
+        </Stagger>
 
         <Toolbar>
-          <div className="flex items-center gap-0.5 overflow-x-auto rounded-xl bg-muted p-1">
+          <div className="no-scrollbar flex items-center gap-0.5 overflow-x-auto rounded-xl bg-muted/70 p-1">
             <button
               type="button"
               onClick={() => push({ role: null })}
               aria-pressed={!role}
               className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition',
-                !role
-                  ? 'bg-card text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground',
+                'relative inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                !role ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <span>{tCommon('all')}</span>
-              <span className="rounded-full bg-muted-foreground/12 px-1.5 py-px text-2xs font-bold tabular-nums text-muted-foreground">
+              {!role && <RoleFilterPill />}
+              <span className="relative">{tCommon('all')}</span>
+              <span className="relative rounded-full bg-muted-foreground/10 px-1.5 py-px text-2xs font-medium tabular-nums text-muted-foreground">
                 {total}
               </span>
             </button>
@@ -611,15 +632,14 @@ export default function AdminStaffPage() {
                   onClick={() => push({ role: active ? null : r })}
                   aria-pressed={active}
                   className={cn(
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition',
-                    active
-                      ? 'bg-card text-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground',
+                    'relative inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
+                  {active && <RoleFilterPill />}
                   <span
                     className={cn(
-                      'size-2 rounded-full',
+                      'relative size-1.5 rounded-full',
                       roleTone(r) === 'blue'
                         ? 'bg-primary'
                         : roleTone(r) === 'purple'
@@ -631,8 +651,8 @@ export default function AdminStaffPage() {
                               : 'bg-warning',
                     )}
                   />
-                  {roleLabel(r)}
-                  <span className="rounded-full bg-muted-foreground/12 px-1.5 py-px text-2xs font-bold tabular-nums text-muted-foreground">
+                  <span className="relative">{roleLabel(r)}</span>
+                  <span className="relative rounded-full bg-muted-foreground/10 px-1.5 py-px text-2xs font-medium tabular-nums text-muted-foreground">
                     {count}
                   </span>
                 </button>
@@ -644,7 +664,7 @@ export default function AdminStaffPage() {
             value={status}
             onChange={(e) => push({ status: e.target.value || null })}
             aria-label={tAdmin('filterStatus', { default: 'Filter by status' })}
-            className="h-9 shrink-0 rounded-xl border border-border bg-card px-2.5 text-13 text-foreground shadow-xs outline-none transition hover:border-border-strong focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+            className="h-9 shrink-0 rounded-lg border border-border/70 bg-card px-2.5 text-13 text-foreground shadow-xs outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">{tAdmin('access.statusAll', { default: 'All statuses' })}</option>
             <option value="active">{tAdmin('status.active', { default: 'Active' })}</option>
@@ -678,16 +698,22 @@ export default function AdminStaffPage() {
                 onClear={() => push({ status: null })}
               />
             )}
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={clearAll}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
-              >
-                <X className="size-3.5" />
-                {tCommon('clear')}
-              </button>
-            )}
+            <AnimatePresence initial={false}>
+              {hasFilters && (
+                <m.button
+                  key="clear-filters"
+                  type="button"
+                  onClick={clearAll}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1, transition: spring.snappy }}
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.12, ease: ease.exit } }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="size-3.5" />
+                  {tCommon('clear')}
+                </m.button>
+              )}
+            </AnimatePresence>
             <SegmentedIconToggle
               label={tAdmin('access.viewMode', { default: 'View mode' })}
               value={view}
@@ -728,7 +754,7 @@ export default function AdminStaffPage() {
                   <button
                     type="button"
                     onClick={clearAll}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-xs transition hover:bg-muted"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
                   >
                     <X className="size-4" />
                     {tAdmin('access.clearFilters', { default: 'Clear filters' })}
@@ -737,7 +763,7 @@ export default function AdminStaffPage() {
                   <button
                     type="button"
                     onClick={() => setInviteOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
                   >
                     <UserPlus className="size-4" />
                     {tAdmin('access.inviteMember', { default: 'Invite member' })}
@@ -747,11 +773,11 @@ export default function AdminStaffPage() {
             />
           </TableCard>
         ) : view === 'table' ? (
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+          <Reveal className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[900px] border-collapse text-start">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <tr className="border-b border-border/70 bg-muted/40 text-xs font-medium text-muted-foreground">
                     <th scope="col" className="w-10 py-3.5 ps-6 pe-3">
                       <input
                         type="checkbox"
@@ -761,39 +787,45 @@ export default function AdminStaffPage() {
                         className="size-3.5 cursor-pointer rounded border-border text-primary focus:ring-primary/30"
                       />
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3.5 text-start font-medium">
                       {tAdmin('access.colStaff', { default: 'Staff Member' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3.5 text-start font-medium">
                       {tAdmin('access.colRoleTier', { default: 'Role Tier' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3.5 text-start font-medium">
                       {tAdmin('access.colDepartment', { default: 'Department / CNC Cell' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3.5 text-start font-medium">
                       {tAdmin('access.colStatus', { default: 'Status' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3.5 text-start font-medium">
                       {tAdmin('access.colSecurity', { default: 'Security' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3.5 text-start font-medium">
                       {tAdmin('access.colLastActive', { default: 'Last Active' })}
                     </th>
-                    <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-semibold">
+                    <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-medium">
                       {tAdmin('access.colActions', { default: 'Actions' })}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-13">
-                  {rows.map((u) => {
+                <tbody className="divide-y divide-border/70 text-13">
+                  {rows.map((u, rowIndex) => {
                     const checked = selected.has(u.id);
                     const displayName = u.name || u.email.split('@')[0];
                     const rm = roleMeta[u.role] ?? roleMeta.admin!;
                     return (
-                      <tr
+                      <m.tr
                         key={u.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          transition: { duration: 0.3, ease: ease.emerge, delay: Math.min(rowIndex, 11) * 0.03 },
+                        }}
                         className={cn(
-                          'group transition-colors duration-150 hover:bg-muted/50',
+                          'group transition-colors duration-150 hover:bg-muted/40',
                           checked && 'bg-primary/[0.04]',
                         )}
                       >
@@ -823,13 +855,13 @@ export default function AdminStaffPage() {
                               <button
                                 type="button"
                                 onClick={() => push({ focus: u.id })}
-                                className="flex max-w-full items-center gap-2 font-semibold text-foreground transition group-hover:text-primary"
+                                className="flex max-w-full items-center gap-2 font-medium text-foreground transition-colors group-hover:text-primary"
                               >
                                 <span className="truncate">{displayName}</span>
                                 {rm.tag && (
                                   <span
                                     className={cn(
-                                      'shrink-0 rounded px-1.5 py-0.5 text-2xs font-semibold',
+                                      'shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium',
                                       rm.tag.cls,
                                     )}
                                   >
@@ -901,13 +933,13 @@ export default function AdminStaffPage() {
                             </button>
                           </div>
                         </td>
-                      </tr>
+                      </m.tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div className="divide-y divide-border sm:hidden">
+            <div className="divide-y divide-border/70 sm:hidden">
               {rows.map((u) => {
                 const displayName = u.name || u.email.split('@')[0];
                 const rm = roleMeta[u.role] ?? roleMeta.admin!;
@@ -920,7 +952,7 @@ export default function AdminStaffPage() {
                   >
                     <Avatar name={u.name} email={u.email} size="sm" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-foreground">
+                      <span className="block truncate text-sm font-medium text-foreground">
                         {displayName}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
@@ -941,27 +973,27 @@ export default function AdminStaffPage() {
                 );
               })}
             </div>
-          </div>
+          </Reveal>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {rows.map((u) => {
+          <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {rows.map((u, cardIndex) => {
               const active = focusId === u.id;
               const displayName = u.name || u.email.split('@')[0];
               const rm = roleMeta[u.role] ?? roleMeta.admin!;
               return (
+                <StaggerItem key={u.id} index={cardIndex} className="h-full">
                 <button
-                  key={u.id}
                   type="button"
                   onClick={() => push({ focus: u.id })}
                   className={cn(
-                    'card-hover group flex flex-col rounded-xl border border-border bg-card p-5 text-start shadow-xs hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                    active && 'border-primary/50 ring-2 ring-primary/20',
+                    'card-hover group flex h-full w-full flex-col rounded-xl border border-border/70 bg-card p-6 text-start shadow-xs hover:border-border-strong hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    active && 'border-primary/40 ring-2 ring-primary/15',
                   )}
                 >
                   <span className="flex items-start gap-4">
                     <Avatar name={u.name} email={u.email} size="lg" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold tracking-tight text-foreground">
+                      <span className="block truncate font-display text-lg font-medium leading-snug tracking-[-0.015em] text-foreground">
                         {displayName}
                       </span>
                       <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
@@ -986,13 +1018,14 @@ export default function AdminStaffPage() {
                     </span>
                   </span>
                 </button>
+                </StaggerItem>
               );
             })}
-          </div>
+          </Stagger>
         )}
 
         {!loading && rows && rows.length > 0 && (
-          <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-xs sm:px-5">
+          <div className="rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs sm:px-5">
             <Pagination
               page={page}
               totalPages={pages}
@@ -1000,7 +1033,7 @@ export default function AdminStaffPage() {
               onPrev={() => push({ page: String(page - 1) })}
               onNext={() => push({ page: String(page + 1) })}
             />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted-foreground">
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
               <span>
                 {tAdmin('access.showingOf', {
                   from,
@@ -1009,7 +1042,7 @@ export default function AdminStaffPage() {
                   default: 'Showing {from}–{to} of {total} members',
                 })}
                 {selected.size > 0 && (
-                  <span className="ms-2 font-semibold text-primary">
+                  <span className="ms-2 font-medium text-primary">
                     {tAdmin('access.selectedCount', {
                       count: selected.size,
                       default: '· {count} selected',
@@ -1028,7 +1061,7 @@ export default function AdminStaffPage() {
                     next.delete('page');
                     router.replace(`/admin/staff?${next.toString()}`);
                   }}
-                  className="cursor-pointer rounded-lg border border-border bg-background px-2 py-1 font-semibold text-foreground outline-none transition focus:border-primary/60"
+                  className="cursor-pointer rounded-lg border border-border/70 bg-background px-2 py-1 font-medium text-foreground outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="10">10</option>
                   <option value="12">12</option>
@@ -1041,7 +1074,7 @@ export default function AdminStaffPage() {
         )}
 
         {/* Audit footnote */}
-        <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-5 py-4 text-xs text-muted-foreground sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-3 rounded-xl bg-muted/50 px-5 py-4 text-xs leading-relaxed text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <Lock className="size-4 shrink-0 text-primary" />
             <span>
@@ -1054,16 +1087,18 @@ export default function AdminStaffPage() {
           <button
             type="button"
             onClick={() => router.push('/admin/staff/roles')}
-            className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary hover:underline"
+            className="group inline-flex shrink-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
           >
             {tAdmin('access.viewAuditLogs', { default: 'View Audit Logs' })}
-            <ArrowRight className="flip-rtl size-3.5" />
+            <ArrowRight className="flip-rtl size-3.5 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
           </button>
         </div>
       </div>
 
+      <AnimatePresence>
       {focusId && (
         <StaffDrawer
+          key={focusId}
           userId={focusId}
           onClose={() => push({ focus: null })}
           onChanged={(msg) => {
@@ -1073,103 +1108,100 @@ export default function AdminStaffPage() {
           }}
         />
       )}
+      </AnimatePresence>
 
-      {inviteOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label={tAdmin('access.inviteStaffMember', { default: 'Invite staff member' })}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setInviteOpen(false);
-          }}
-        >
-          <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-            <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <UserPlus className="size-4 text-primary" />
-                {tAdmin('access.inviteStaffMember', { default: 'Invite staff member' })}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setInviteOpen(false)}
-                aria-label={tCommon('cancel')}
-                className="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <p className="border-b border-border bg-muted/40 px-5 py-2.5 text-xs text-muted-foreground">
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5">
+              <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary">
+                <UserPlus className="size-4" />
+              </span>
+              {tAdmin('access.inviteStaffMember', { default: 'Invite staff member' })}
+            </DialogTitle>
+            <DialogDescription>
               {tAdmin('access.inviteStaffHint', {
                 default: 'Creates a pending account in this tenant. Requires super_admin.',
               })}
-            </p>
-            <div className="space-y-3 px-5 py-4">
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {tAdmin('access.emailRequired', { default: 'Email *' })}
-                </span>
-                <input
-                  autoFocus
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="teammate@example.com"
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {tAdmin('access.name', { default: 'Name' })}
-                </span>
-                <input
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  placeholder={tAdmin('access.optionalDisplayName', {
-                    default: 'Optional display name',
-                  })}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {tAdmin('drawer.role', { default: 'Role' })}
-                </span>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as RoleKey)}
-                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {roleLabel(r)} ({r})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 border-t border-border bg-muted/30 px-5 py-3">
-              <button
-                type="button"
-                onClick={() => setInviteOpen(false)}
-                disabled={inviting}
-                className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-50"
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-foreground">
+                {tAdmin('access.emailRequired', { default: 'Email *' })}
+              </span>
+              <input
+                autoFocus
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="teammate@example.com"
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-xs outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-foreground">
+                {tAdmin('access.name', { default: 'Name' })}
+              </span>
+              <input
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder={tAdmin('access.optionalDisplayName', {
+                  default: 'Optional display name',
+                })}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-xs outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-foreground">
+                {tAdmin('drawer.role', { default: 'Role' })}
+              </span>
+              <select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as RoleKey)}
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-xs outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30"
               >
-                {tCommon('cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={() => void sendInvite()}
-                disabled={inviting}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary disabled:opacity-50"
-              >
-                {inviting
-                  ? tAdmin('access.inviting', { default: 'Inviting…' })
-                  : tAdmin('access.sendInvite', { default: 'Send invite' })}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {roleLabel(r)} ({r})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </DialogBody>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setInviteOpen(false)}
+              disabled={inviting}
+              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50"
+            >
+              {tCommon('cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => void sendInvite()}
+              disabled={inviting}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
+            >
+              {inviting
+                ? tAdmin('access.inviting', { default: 'Inviting…' })
+                : tAdmin('access.sendInvite', { default: 'Send invite' })}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+/** The sliding "selected" surface behind the active role filter. */
+function RoleFilterPill() {
+  return (
+    <m.span
+      layoutId="staff-role-filter"
+      transition={spring.smooth}
+      className="absolute inset-0 rounded-lg bg-card shadow-xs"
+      aria-hidden="true"
+    />
   );
 }

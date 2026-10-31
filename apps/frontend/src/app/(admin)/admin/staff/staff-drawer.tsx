@@ -27,6 +27,7 @@ import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnimatedNumber, Crossfade } from '@/components/ui/motion';
 import { toast } from '@/components/ui/toast';
 import { Modal, GLASS_SUB } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
@@ -126,7 +127,7 @@ const roleGrad: Record<string, string> = {
 function SectionLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-3">
-      <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h3 className="font-display text-base font-medium tracking-[-0.01em] text-foreground">
         {children}
       </h3>
       {hint && <span className="font-sans text-2xs text-muted-foreground/70">{hint}</span>}
@@ -151,7 +152,7 @@ function StatTile({
         className={cn(
           'flex size-8 shrink-0 items-center justify-center rounded-lg',
           tone === 'success' && 'bg-success/10 text-success',
-          tone === 'warning' && 'bg-warning/15 text-warning',
+          tone === 'warning' && 'bg-warning/10 text-warning',
           tone === 'danger' && 'bg-destructive/10 text-destructive',
           tone === 'info' && 'bg-info/10 text-info',
           tone === 'default' && 'bg-muted text-muted-foreground',
@@ -160,8 +161,8 @@ function StatTile({
         <Icon className="size-4" />
       </span>
       <div className="min-w-0">
-        <p className="font-sans text-lg font-semibold tabular-nums leading-tight text-foreground">
-          {value}
+        <p className="font-display text-xl font-medium tabular-nums leading-tight tracking-[-0.015em] text-foreground">
+          {typeof value === 'number' ? <AnimatedNumber value={value} animateOnChange /> : value}
         </p>
         <p className="truncate font-sans text-2xs text-muted-foreground">{label}</p>
       </div>
@@ -202,18 +203,18 @@ function ActionButton({
         }
       }}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 font-sans text-sm font-medium transition-all duration-200',
+        'flex w-full items-center gap-2.5 rounded-lg border px-3.5 py-2.5 font-sans text-sm font-medium shadow-xs transition-[background-color,border-color,color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] disabled:opacity-60',
         confirm
           ? variant === 'danger'
-            ? 'border-red-500 bg-destructive text-destructive-foreground'
-            : 'border-accent bg-accent text-accent-foreground'
+            ? 'border-destructive bg-destructive text-destructive-foreground'
+            : 'border-foreground bg-foreground text-background'
           : variant === 'danger'
-            ? 'border-destructive/70 text-destructive hover:bg-destructive/70 dark:border-red-900/40 dark:text-destructive dark:hover:bg-red-950/30'
+            ? 'border-destructive/30 bg-card text-destructive hover:bg-destructive/10'
             : variant === 'success'
-              ? 'border-success/70 text-success hover:bg-success/70 dark:border-success/40 dark:text-success dark:hover:bg-success/30'
+              ? 'border-success/30 bg-card text-success hover:bg-success/10'
               : variant === 'info'
-                ? 'border-primary/40 text-primary hover:bg-primary/10'
-                : 'border-border text-foreground hover:bg-muted',
+                ? 'border-primary/30 bg-card text-primary hover:bg-primary/10'
+                : 'border-border bg-card text-foreground hover:border-border-strong hover:bg-muted/60',
       )}
     >
       {busy ? <Loader2 className="size-4 animate-spin" /> : <Icon className="size-4" />}
@@ -903,13 +904,13 @@ export function StaffDrawer({
                   <Separator />
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <label className="min-w-0 flex-1 space-y-1.5">
-                      <span className="text-xs font-semibold text-muted-foreground">
+                      <span className="text-xs font-medium text-muted-foreground">
                         {tAdmin('drawer.changePrimaryRole', { default: 'Change primary role' })}
                       </span>
                       <select
                         value={pendingRole}
                         onChange={(e) => setPendingRole(e.target.value)}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 font-sans text-sm text-foreground outline-none focus:border-primary"
+                        className="w-full rounded-lg border border-input bg-card px-3 py-2 font-sans text-sm text-foreground shadow-xs outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30"
                       >
                         {['super_admin', 'admin', 'instructor', 'moderator', 'sponsor', 'learner'].map(
                           (r) => (
@@ -1240,7 +1241,7 @@ export function StaffDrawer({
                             tAdmin('drawer.sessionRevoked', { default: 'Session revoked' }),
                           ).then(() => loadAll())
                         }
-                        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive dark:hover:bg-red-950/30 dark:hover:text-destructive"
+                        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                       >
                         <ShieldX className="size-4" />
                       </button>
@@ -1320,10 +1321,10 @@ export function StaffDrawer({
         tAdmin('drawer.staffDetails', { default: 'Staff details' })
       }
       header={
-        <div className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5">
+        <div className="border-b border-border/70 bg-card px-4 py-4 sm:px-6 sm:py-5">
           {loading ? (
             <div className="flex items-center gap-3 sm:gap-4">
-              <Skeleton className="size-12 rounded-xl sm:size-14" />
+              <Skeleton className="size-12 rounded-full sm:size-14" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-40 rounded" />
                 <Skeleton className="h-3 w-56 rounded" />
@@ -1333,7 +1334,7 @@ export function StaffDrawer({
             <div className="flex items-start gap-3 sm:gap-4">
               <span
                 className={cn(
-                  'flex size-12 shrink-0 items-center justify-center rounded-xl font-sans text-lg font-semibold sm:size-14 sm:text-xl',
+                  'flex size-12 shrink-0 items-center justify-center rounded-full font-display text-lg font-medium shadow-xs sm:size-14 sm:text-xl',
                   roleGrad[user.role] ??
                     (user.accountStatus === 'suspended'
                       ? 'bg-destructive text-destructive-foreground'
@@ -1344,7 +1345,7 @@ export function StaffDrawer({
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-display text-xl font-semibold leading-tight text-foreground sm:text-[26px]">
+                  <p className="truncate font-display text-xl font-medium leading-tight tracking-[-0.018em] text-foreground sm:text-[26px]">
                     {user.name || user.email.split('@')[0] || user.email}
                   </p>
                   {statusMeta && (
@@ -1379,7 +1380,7 @@ export function StaffDrawer({
                   type="button"
                   aria-label={tAdmin('drawer.closePanel', { default: 'Close panel' })}
                   onClick={onClose}
-                  className="rounded-xl p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
+                  className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
                 >
                   <X className="size-5" />
                 </button>
@@ -1400,7 +1401,7 @@ export function StaffDrawer({
             description={loadError}
             onRetry={loadAll}
             compact
-            className="mb-4 rounded-xl border border-destructive/40 bg-destructive/5"
+            className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10"
           />
         )}
         {loading && !user ? (
@@ -1409,7 +1410,7 @@ export function StaffDrawer({
             rows={4}
           />
         ) : (
-          renderTab()
+          <Crossfade value={activeTab}>{renderTab() ?? <span />}</Crossfade>
         )}
       </div>
     </Modal>
