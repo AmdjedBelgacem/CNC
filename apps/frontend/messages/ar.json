@@ -2792,6 +2792,10 @@
         "save": "حفظ التغييرات",
         "discard": "تجاهل"
       },
+"blockVideo": "فيديو",
+"blockRichText": "نص منسق",
+"blockInteractiveImage": "صورة تفاعلية",
+"blockQuiz": "اختبار",
 "steps": {
         "basics": "الأساسيات",
         "curriculum": "المنهج",

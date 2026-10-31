@@ -188,7 +188,7 @@ export function StepBasics({
       >
         <div className="space-y-4">
           <TextField
-            label={t('studio.titleRequiredLabel', { default: 'Title' })}
+            label={t('studio.live.titleLabel', { default: 'Title' })}
             required
             dir="auto"
             value={title}
@@ -196,7 +196,7 @@ export function StepBasics({
             placeholder={t('studio.titlePlaceholder', { default: 'e.g. CNC Milling Fundamentals' })}
           />
           <Field
-            label={t('studio.slugLabel', { default: 'Slug' })}
+            label={t('studio.slug', { default: 'Slug' })}
             hint={t('studio.slugHint', { default: 'The public address of this course.' })}
           >
             {(field) => (

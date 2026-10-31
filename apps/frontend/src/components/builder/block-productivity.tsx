@@ -19,6 +19,7 @@ import { ease, spring, transition } from '@/lib/motion';
 import {
   ChevronRight,
   Copy,
+  ClipboardPaste,
   CopyPlus,
   Eye,
   EyeOff,
@@ -239,7 +240,7 @@ export function BlockProductivity() {
           disabled={!clipboard}
           onClick={pasteClipboard}
         >
-          <span className="text-2xs font-semibold">PASTE</span>
+          <ClipboardPaste className="size-3.5" />
         </ToolbarButton>
         <ToolbarButton
           label={selectedHidden ? tb('productivity.show') : tb('productivity.hide')}

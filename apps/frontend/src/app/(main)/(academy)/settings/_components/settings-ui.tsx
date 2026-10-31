@@ -212,7 +212,7 @@ export function SettingsSaveBar({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0, transition: spring.gentle }}
       className={cn(
-        'sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-xl border border-border/70 bg-card/90 px-4 py-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80',
+        'sticky bottom-4 z-20 mt-6 flex items-center justify-end gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-lg',
         className,
       )}
     >

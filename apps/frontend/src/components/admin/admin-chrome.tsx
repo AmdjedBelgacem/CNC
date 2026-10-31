@@ -385,7 +385,8 @@ export function AdminKpiCard({
               {typeof value === 'number' ? <AnimatedNumber value={value} animateOnChange /> : value}
             </span>
             {meta}
-            {typeof trendUp === 'boolean' && (
+            {/* `meta` (e.g. a delta badge) already carries the direction. */}
+            {!meta && typeof trendUp === 'boolean' && (
               <TrendIndicator up={trendUp} />
             )}
           </div>

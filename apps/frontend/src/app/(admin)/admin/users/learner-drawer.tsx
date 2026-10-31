@@ -108,6 +108,18 @@ const roleBadge: Record<string, 'default' | 'info' | 'success' | 'warning' | 'ac
   learner: 'secondary',
 };
 
+/** Soft tinted pills for the drawer header — solid fills read too loud (and
+ *  low-contrast in dark mode) next to the serif name. */
+const softBadge: Record<string, string> = {
+  default: 'border-primary/20 bg-primary/10 text-primary',
+  secondary: 'border-border/60 bg-muted text-muted-foreground',
+  accent: 'border-border/60 bg-muted text-muted-foreground',
+  destructive: 'border-destructive/20 bg-destructive/10 text-destructive',
+  success: 'border-success/20 bg-success/10 text-success',
+  warning: 'border-warning/20 bg-warning/10 text-warning',
+  info: 'border-info/20 bg-info/10 text-info',
+};
+
 function SectionLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -1092,11 +1104,14 @@ export function LearnerDrawer({
                     {user.name || user.email.split('@')[0] || user.email}
                   </p>
                   {statusMeta && (
-                    <Badge variant={statusMeta.variant}>
+                    <Badge variant={statusMeta.variant} className={softBadge[statusMeta.variant]}>
                       {tAdmin(`status.${user.accountStatus}`, { default: statusMeta.label })}
                     </Badge>
                   )}
-                  <Badge variant={roleBadge[user.role] ?? 'secondary'}>
+                  <Badge
+                    variant={roleBadge[user.role] ?? 'secondary'}
+                    className={softBadge[roleBadge[user.role] ?? 'secondary']}
+                  >
                     {tAdmin(`role.${user.role}`, { default: roleLabel[user.role] ?? user.role })}
                   </Badge>
                 </div>

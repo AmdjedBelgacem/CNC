@@ -2793,6 +2793,10 @@
           "save": "Save changes",
           "discard": "Discard"
         },
+"blockVideo": "Video",
+"blockRichText": "Rich text",
+"blockInteractiveImage": "Interactive image",
+"blockQuiz": "Quiz",
 "steps": {
         "basics": "Basics",
         "curriculum": "Curriculum",

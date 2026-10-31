@@ -193,11 +193,15 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
               </div>
             ) : (
               <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-border/70 bg-surface-sunken p-6 text-center">
-                <img
-                  src={getImageSrc(lesson.thumbnailUrl, 'lesson')}
-                  alt=""
-                  className="absolute inset-0 size-full object-cover opacity-15 blur-[1px]"
-                />
+                {/* Only a real thumbnail is washed in behind the prompt; the generic
+                    placeholder art carries its own play glyph and darkens the panel. */}
+                {lesson.thumbnailUrl && (
+                  <img
+                    src={getImageSrc(lesson.thumbnailUrl, 'lesson')}
+                    alt=""
+                    className="absolute inset-0 size-full object-cover opacity-[0.12] blur-[1px]"
+                  />
+                )}
                 <div className="blueprint-grid absolute inset-0" aria-hidden />
                 <m.div
                   initial={{ opacity: 0, y: 8 }}

@@ -362,7 +362,7 @@ export function LessonDrawer({
         {' '}
         <div className="space-y-1.5">
           {' '}
-           <label className={LABEL}>{t('studio.title', { default: 'Title' })} {locale === 'en' ? '*' : t('studio.arabicTranslation', { default: '(Arabic translation)' })}</label>{' '}
+           <label className={LABEL}>{t('studio.live.titleLabel', { default: 'Title' })} {locale === 'en' ? '*' : t('studio.arabicTranslation', { default: '(Arabic translation)' })}</label>{' '}
           <input
             value={title}
             onChange={(e) => {

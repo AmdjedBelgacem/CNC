@@ -479,7 +479,7 @@ export default function AdminUsersPage() {
                               push({ focus: u.id });
                             }}
                             title={tAdmin('learnerAccess.openProfile', { default: 'Open learner profile' })}
-                            className="inline-flex translate-x-1 items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-muted-foreground opacity-0 transition-[opacity,transform,background-color,border-color,color] duration-200 group-hover:translate-x-0 group-hover:opacity-100 hover:border-border/80 hover:bg-card hover:text-foreground hover:shadow-xs focus-visible:translate-x-0 focus-visible:opacity-100 rtl:-translate-x-1"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-xs transition-[background-color,border-color,color] duration-200 group-hover:border-border-strong group-hover:text-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <Eye className="size-3.5" />
                             {tAdmin('learnerAccess.view', { default: 'View' })}
