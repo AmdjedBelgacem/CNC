@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress, ProgressRing } from '@/components/ui/progress';
-import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { AnimatedNumber, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -28,21 +28,21 @@ function StatCard({
   tone?: string;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
+    <Card className="h-full rounded-xl border-border/70 shadow-xs">
+      <CardContent className="flex flex-col gap-4 p-5">
         <span
           className={cn(
-            'flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground',
+            'flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground',
             tone,
           )}
         >
-          <Icon className="size-5" />
+          <Icon className="size-4" />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {label}
+          <p className="font-display text-3xl font-medium leading-none tracking-[-0.02em] text-foreground">
+            {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
           </p>
-          <p className="text-xl font-semibold tabular-nums text-foreground">{value}</p>
+          <p className="mt-2 truncate text-xs font-medium text-muted-foreground">{label}</p>
         </div>
       </CardContent>
     </Card>
@@ -100,24 +100,24 @@ export default function LearningPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+    <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
+      <header className="mb-10 border-b border-border/70 pb-8">
+        <h1 className="font-display text-4xl font-medium tracking-[-0.022em] text-foreground sm:text-5xl">
           {t('title')}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
+        <p className="mt-3 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground">{t('subtitle')}</p>
       </header>
 
       {isLoading ? (
         <>
           <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[76px] rounded-xl" />
+              <Skeleton key={i} className="h-[118px] rounded-xl" />
             ))}
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-52 rounded-xl" />
+              <Skeleton key={i} className="h-72 rounded-2xl" />
             ))}
           </div>
         </>
@@ -144,7 +144,7 @@ export default function LearningPage() {
               course grid — so the page resolves top-to-bottom in reading order
               rather than all at once. */}
           <Stagger
-            className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4"
+            className="mb-10 grid grid-cols-2 gap-3 lg:grid-cols-4"
             gap={0.05}
             maxDelay={0.24}
           >
@@ -167,22 +167,22 @@ export default function LearningPage() {
                 icon={Trophy}
                 label={t('certificates')}
                 value={stats.completed}
-                tone="bg-warning/10 text-warning"
+                tone="bg-primary/10 text-primary"
               />
             </StaggerItem>
           </Stagger>
 
           {continueWith && (
-            <Card className="card-hover mb-8 overflow-hidden border-primary/25 bg-card">
-              <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Reveal className="mb-12">
+            <Card className="card-hover relative overflow-hidden rounded-2xl border-border/70 bg-card shadow-sm hover:shadow-lg">
+              <div className="ambient-wash pointer-events-none absolute inset-0" aria-hidden />
+              <CardContent className="relative flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-7">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
                   <PlayCircle className="size-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                    {t('continue')}
-                  </p>
-                  <h2 className="truncate text-lg font-semibold text-foreground">
+                  <p className="eyebrow">{t('continue')}</p>
+                  <h2 className="mt-1.5 truncate font-display text-2xl font-medium tracking-[-0.015em] text-foreground">
                     {continueWith.course?.title ?? 'Course'}
                   </h2>
                   <div className="mt-2 flex items-center gap-3">
@@ -196,7 +196,7 @@ export default function LearningPage() {
                     </span>
                   </div>
                 </div>
-                <Button asChild className="shrink-0">
+                <Button asChild className="shrink-0 rounded-full px-6">
                   <Link href={nextLessonHref(continueWith)}>
                     <PlayCircle />
                     {t('continue')}
@@ -204,30 +204,31 @@ export default function LearningPage() {
                 </Button>
               </CardContent>
             </Card>
+            </Reveal>
           )}
 
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {tc('all')} ({stats.total})
+          <h2 className="mb-5 flex items-baseline gap-2 font-display text-2xl font-medium tracking-[-0.015em] text-foreground">
+            {tc('all')} <span className="font-sans text-sm font-normal tabular-nums text-muted-foreground">({stats.total})</span>
           </h2>
-          <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" gap={0.04} maxDelay={0.3}>
+          <Stagger className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" gap={0.04} maxDelay={0.3}>
             {enrollments.map((enrollment, i) => {
               const course = enrollment.course;
               const pct = enrollment.progress ?? 0;
               const done = pct >= 100 || enrollment.completed;
               return (
                 <StaggerItem as="div" key={enrollment.id} index={i}>
-                  <Card className="card-hover group h-full overflow-hidden">
+                  <Card className="card-hover group h-full overflow-hidden rounded-2xl border-border/70 shadow-xs transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-lg">
                     <Link href={`/courses/${course?.slug ?? ''}`} className="block">
-                      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                      <div className="relative m-2 mb-0 aspect-video overflow-hidden rounded-xl bg-muted">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={getImageSrc(course?.thumbnailUrl, 'course')}
                           alt={course?.title ?? ''}
-                          className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                           loading="lazy"
                         />
                         {done && (
-                          <span className="absolute end-2 top-2 inline-flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-2xs font-bold text-success-foreground">
+                          <span className="absolute end-2 top-2 inline-flex items-center gap-1 rounded-full bg-card/90 px-2.5 py-1 text-2xs font-medium text-success shadow-sm backdrop-blur">
                             <Award className="size-3.5" />
                             {t('completedCourses')}
                           </span>
@@ -235,12 +236,12 @@ export default function LearningPage() {
                       </div>
                     </Link>
 
-                    <CardContent className="p-4">
+                    <CardContent className="p-5">
                       <div className="flex items-start gap-3">
                         <div className="min-w-0 flex-1">
                           <Link
                             href={`/courses/${course?.slug ?? ''}`}
-                            className="line-clamp-2 text-sm font-semibold text-foreground hover:text-primary"
+                            className="line-clamp-2 font-display text-lg font-medium leading-snug text-foreground transition-colors hover:text-primary"
                           >
                             {course?.title ?? 'Course'}
                           </Link>
@@ -257,7 +258,7 @@ export default function LearningPage() {
                         <Progress value={pct} label={`${course?.title ?? ''} progress`} />
                       </div>
 
-                      <Button asChild variant="outline" size="sm" className="mt-3 w-full">
+                      <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-full">
                         <Link href={nextLessonHref(enrollment)}>
                           <PlayCircle />
                           {done ? tc('start') : t('continue')}

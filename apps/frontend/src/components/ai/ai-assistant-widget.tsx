@@ -2,17 +2,17 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { usePathname } from 'next/navigation';
+import { AnimatePresence, m } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
-  Bot,
+  ArrowUp,
   Check,
   Loader2,
   Maximize2,
   MessageCircle,
   Plus,
   RotateCcw,
-  Send,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -41,7 +41,14 @@ import {
 } from '@/lib/overlay-position';
 import { useAiAssistantContext } from './ai-assistant-context';
 import { ArabicDialectMenu, useArabicDialectPreference } from './arabic-dialect-menu';
-import { AiReferenceCard, AiTranscript, type AiBubble } from './ai-chat-parts';
+import {
+  AI_COMPOSER_CLASS,
+  AI_COMPOSER_TEXTAREA_CLASS,
+  AiReferenceCard,
+  AiTranscript,
+  type AiBubble,
+} from './ai-chat-parts';
+import { spring, transition } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
@@ -403,16 +410,26 @@ export function PublicAiAssistant() {
           ref={triggerRef}
           type="button"
           size="icon"
-          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] end-4 z-40 size-12 rounded-full shadow-lg sm:bottom-6 sm:end-6"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] end-4 z-40 size-12 overflow-hidden rounded-full shadow-lg ring-4 ring-background/70 transition-[box-shadow,transform] hover:shadow-xl sm:bottom-6 sm:end-6"
           aria-label={t('open')}
         >
-          <MessageCircle className="size-5" />
+          <AnimatePresence initial={false} mode="popLayout">
+            <m.span
+              key={isOpen ? 'close' : 'open'}
+              className="flex"
+              initial={{ opacity: 0, rotate: isOpen ? -90 : 90, scale: 0.6 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1, transition: spring.smooth }}
+              exit={{ opacity: 0, rotate: isOpen ? 90 : -90, scale: 0.6, transition: transition.leave }}
+            >
+              {isOpen ? <X className="size-5" /> : <MessageCircle className="size-5" />}
+            </m.span>
+          </AnimatePresence>
         </Button>
       </DialogTrigger>
       <DialogContent
         size="sm"
         hideClose
-        overlayClassName="!bg-black/25 !backdrop-blur-none"
+        overlayClassName="!bg-overlay/15 !backdrop-blur-none"
         // `translate: 'none'` is always applied: `.dialog-pop` centres dialogs with the
         // CSS `translate` property, which utility overrides cannot dislodge, and both
         // branches here place the panel in absolute coordinates. See the note in
@@ -430,15 +447,15 @@ export function PublicAiAssistant() {
             translate: 'none',
           } as CSSProperties
         }
-        className="!left-[var(--panel-left)] !top-[var(--panel-top)] !h-[var(--panel-height)] !w-[var(--panel-width)] !max-h-none !max-w-none"
+        className="origin-bottom-right !left-[var(--panel-left)] !top-[var(--panel-top)] !h-[var(--panel-height)] !w-[var(--panel-width)] !max-h-none !max-w-none rtl:origin-bottom-left"
       >
-        <DialogHeader className="flex-row items-center justify-between gap-3 px-4 py-3 pe-4 sm:px-5 sm:py-4 sm:pe-5">
+        <DialogHeader className="flex-row items-center justify-between gap-3 border-b border-border/60 px-4 py-3 pe-3 sm:px-5 sm:py-3.5 sm:pe-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Sparkles className="size-4" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="truncate text-base">{t('title')}</DialogTitle>
+              <DialogTitle className="truncate text-lg sm:text-lg">{t('title')}</DialogTitle>
               <DialogDescription className="truncate text-xs">{t('description')}</DialogDescription>
             </div>
           </div>
@@ -479,7 +496,7 @@ export function PublicAiAssistant() {
         </DialogHeader>
         <DialogBody className="flex min-h-0 flex-1 flex-col gap-4 p-0">
           <div
-            className="max-h-[min(52dvh,28rem)] min-h-56 flex-1 space-y-4 overflow-y-auto px-5 py-4"
+            className="max-h-[min(52dvh,28rem)] min-h-56 flex-1 space-y-4 overflow-y-auto bg-background/60 px-5 py-5"
             role="log"
             aria-live="polite"
           >
@@ -496,27 +513,46 @@ export function PublicAiAssistant() {
               isPending={chat.isPending}
               onRetry={() => void retry()}
               emptyState={
-                <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-                  <div className="mb-2 flex items-center gap-2 font-semibold text-foreground">
-                    <Bot className="size-4" />
+                <m.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0, transition: transition.reveal }}
+                  className="flex flex-col items-center px-2 py-6 text-center"
+                >
+                  <span className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden>
+                    <Sparkles className="size-4.5" />
+                  </span>
+                  <p className="mt-4 text-balance font-display text-2xl font-medium leading-tight tracking-[-0.02em] text-foreground">
                     {t('welcomeTitle')}
-                  </div>
-                  {sourceRef ? t('welcomeGrounded') : t('welcome')}
-                </div>
+                  </p>
+                  <p className="mt-2 max-w-xs text-pretty text-sm leading-relaxed text-muted-foreground">
+                    {sourceRef ? t('welcomeGrounded') : t('welcome')}
+                  </p>
+                </m.div>
               }
             />
             <div ref={messageEndRef} />
           </div>
+          <AnimatePresence initial={false}>
           {lessonContext && (
-            <div className="mx-5 flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+            <m.div
+              key="context"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0, transition: transition.enter }}
+              exit={{ opacity: 0, transition: transition.leave }}
+              className="mx-4 flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs text-primary"
+            >
               <Check className="size-3.5 shrink-0" />
               {t('contextAttached')}
-            </div>
+            </m.div>
           )}
           {error && (
-            <div
+            <m.div
+              key="error"
               role="alert"
-              className="mx-5 flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0, transition: transition.enter }}
+              exit={{ opacity: 0, transition: transition.leave }}
+              className="mx-4 flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
             >
               <X className="mt-0.5 size-3.5 shrink-0" />
               <span className="min-w-0 flex-1 break-words">{error || t('error')}</span>
@@ -529,10 +565,11 @@ export function PublicAiAssistant() {
                   {t('retry')}
                 </button>
               )}
-            </div>
+            </m.div>
           )}
+          </AnimatePresence>
           <form
-            className="space-y-2 border-t border-border p-4"
+            className={`mx-3 mb-3 ${AI_COMPOSER_CLASS}`}
             onSubmit={(event) => {
               event.preventDefault();
               void send();
@@ -553,8 +590,9 @@ export function PublicAiAssistant() {
               rows={2}
               maxLength={4000}
               aria-label={t('inputLabel')}
+              className={AI_COMPOSER_TEXTAREA_CLASS}
             />
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 px-2 pb-2">
               <div className="flex min-w-0 items-center gap-1">
                 <ArabicDialectMenu value={arabicDialect} onChange={setArabicDialect} />
                 {isAuthenticated ? (
@@ -570,16 +608,17 @@ export function PublicAiAssistant() {
                     </span>
                   </button>
                 ) : (
-                  <span className="truncate text-xs text-muted-foreground">{t('publicNote')}</span>
+                  <span className="truncate ps-1 text-xs text-muted-foreground">{t('publicNote')}</span>
                 )}
               </div>
               <Button
                 type="submit"
                 size="sm"
                 disabled={!input.trim() || chat.isPending || chatDisabled}
+                className="rounded-xl"
               >
-                {chat.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-                {t('send')}
+                {chat.isPending ? <Loader2 className="animate-spin" /> : <ArrowUp />}
+                <span className="sr-only sm:not-sr-only">{t('send')}</span>
               </Button>
             </div>
           </form>

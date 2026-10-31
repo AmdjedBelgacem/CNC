@@ -7,7 +7,7 @@
  *
  * The composition mirrors the real layout so nothing reflows on arrival.
  */
-import { FormPageSkeleton } from '@/components/skeletons/route-skeletons';
+import { SettingsSkeleton } from '@/components/skeletons/route-skeletons';
 export default function Loading() {
-  return <FormPageSkeleton fields={6} />;
+  return <SettingsSkeleton fields={6} embedded />;
 }

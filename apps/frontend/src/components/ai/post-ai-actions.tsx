@@ -66,16 +66,16 @@ export function PostAiActions({ post }: { post: FeedPost }) {
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <MoreHorizontal className="size-3.5" />}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuItem onSelect={() => launch('fact_check')}>
-          <FileSearch className="size-4" />
+          <FileSearch className="size-4 text-primary" />
           <span className="flex flex-col">
             <span className="font-medium">{t('factCheck')}</span>
             <span className="text-2xs text-muted-foreground">{t('factCheckHint')}</span>
           </span>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => launch('ask_post')}>
-          <MessageSquareQuote className="size-4" />
+          <MessageSquareQuote className="size-4 text-primary" />
           <span className="flex flex-col">
             <span className="font-medium">{t('askAboutPost')}</span>
             <span className="text-2xs text-muted-foreground">{t('askAboutPostHint')}</span>

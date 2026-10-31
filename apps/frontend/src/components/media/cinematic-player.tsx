@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import type { ContentLocale } from '@titan/shared';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import { formatDuration } from '@/lib/api/normalize';
 
 export interface CinematicVideoPlayerProps {
@@ -251,8 +253,8 @@ export const CinematicVideoPlayer = forwardRef<HTMLVideoElement, CinematicVideoP
         onKeyDown={handleKeyDown}
         onMouseMove={revealControls}
         className={cn(
-          'group relative isolate w-full overflow-hidden bg-black text-white shadow-2xl shadow-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-          isFullscreen ? 'aspect-auto rounded-none' : variant === 'trailer' ? 'aspect-video rounded-3xl' : 'aspect-video rounded-2xl',
+          'group relative isolate w-full overflow-hidden bg-black text-white shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          isFullscreen ? 'aspect-auto rounded-none' : variant === 'trailer' ? 'aspect-video rounded-2xl' : 'aspect-video rounded-2xl',
           className,
         )}
         aria-label={title ?? t('play')}
@@ -323,21 +325,32 @@ export const CinematicVideoPlayer = forwardRef<HTMLVideoElement, CinematicVideoP
           </div>
         ) : null}
 
-        {!isPlaying && !hasError ? (
-          <button
-            type="button"
-            onClick={togglePlay}
-            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-gradient-to-t from-black/70 via-black/10 to-black/10 transition hover:from-black/80"
-            aria-label={t('play')}
-          >
-            <span className="flex size-16 items-center justify-center rounded-full border border-white/30 bg-white/15 text-white shadow-xl backdrop-blur-md transition duration-200 group-hover:scale-105 group-hover:bg-white/25 sm:size-20">
-              <Play className="ms-1 size-7 fill-current sm:size-8" />
-            </span>
-            <span className="rounded-full border border-white/20 bg-black/25 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white/85 backdrop-blur-md">
-              {t('play')}
-            </span>
-          </button>
-        ) : null}
+        <AnimatePresence>
+          {!isPlaying && !hasError ? (
+            <m.button
+              key="play-overlay"
+              type="button"
+              onClick={togglePlay}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { duration: 0.25 } }}
+              exit={{ opacity: 0, transition: { duration: 0.18 } }}
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-gradient-to-t from-black/60 via-black/10 to-black/5 transition-colors hover:from-black/70"
+              aria-label={t('play')}
+            >
+              <m.span
+                initial={{ scale: 0.85 }}
+                animate={{ scale: 1, transition: spring.smooth }}
+                exit={{ scale: 1.15, transition: { duration: 0.18 } }}
+                className="flex size-16 items-center justify-center rounded-full bg-white/90 text-neutral-900 shadow-xl backdrop-blur-md transition-transform duration-200 group-hover:scale-105 sm:size-20"
+              >
+                <Play className="ms-1 size-7 fill-current sm:size-8" />
+              </m.span>
+              <span className="rounded-full bg-black/30 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-md">
+                {t('play')}
+              </span>
+            </m.button>
+          ) : null}
+        </AnimatePresence>
 
         {isBuffering && isPlaying ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/20">
@@ -355,7 +368,7 @@ export const CinematicVideoPlayer = forwardRef<HTMLVideoElement, CinematicVideoP
             <button
               type="button"
               onClick={retry}
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               <RotateCcw className="size-4" />
               {t('retryVideo')}
@@ -370,8 +383,8 @@ export const CinematicVideoPlayer = forwardRef<HTMLVideoElement, CinematicVideoP
           )}
         >
           <div className="pointer-events-auto">
-            <div className="relative mb-3 h-1.5 rounded-full bg-white/25">
-              <div className="absolute inset-y-0 start-0 rounded-full bg-primary" style={{ width: `${progress}%` }} />
+            <div className="relative mb-3 h-1 rounded-full bg-white/25 transition-[height] duration-150 hover:h-1.5">
+              <div className="absolute inset-y-0 start-0 rounded-full bg-primary transition-[width] duration-200 ease-linear" style={{ width: `${progress}%` }} />
               <input
                 type="range"
                 min={0}
@@ -419,8 +432,14 @@ export const CinematicVideoPlayer = forwardRef<HTMLVideoElement, CinematicVideoP
                   >
                     {playbackRate}x
                   </button>
+                  <AnimatePresence>
                   {showSpeedMenu ? (
-                    <div className="absolute bottom-10 end-0 min-w-24 overflow-hidden rounded-xl border border-white/15 bg-black/85 p-1 shadow-xl backdrop-blur-md">
+                    <m.div
+                      initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+                      exit={{ opacity: 0, y: 4, scale: 0.98, transition: { duration: 0.12 } }}
+                      className="absolute bottom-10 end-0 min-w-24 origin-bottom overflow-hidden rounded-xl border border-white/15 bg-black/85 p-1 shadow-xl backdrop-blur-md"
+                    >
                       {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
                         <button
                           key={rate}
@@ -434,8 +453,9 @@ export const CinematicVideoPlayer = forwardRef<HTMLVideoElement, CinematicVideoP
                           {rate}x
                         </button>
                       ))}
-                    </div>
+                    </m.div>
                   ) : null}
+                  </AnimatePresence>
                 </div>
                 <button type="button" onClick={toggleFullscreen} className={controlButton} aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}>
                   {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
@@ -446,7 +466,7 @@ export const CinematicVideoPlayer = forwardRef<HTMLVideoElement, CinematicVideoP
         </div>
 
         {variant === 'trailer' ? (
-          <div className="pointer-events-none absolute end-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75 backdrop-blur-md">
+          <div className="pointer-events-none absolute end-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-md">
             <Expand className="size-3" />
             {t('cinematic')}
           </div>

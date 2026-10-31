@@ -60,9 +60,9 @@ function BodyCopy({
 /** Two ghost buttons, right-aligned, sized like the real form actions. */
 function FormActions() {
   return (
-    <div className="flex justify-end gap-3 border-t border-border pt-5">
-      <Skeleton className="h-9 w-24 rounded-md" />
-      <Skeleton className="h-9 w-24 rounded-md" />
+    <div className="flex justify-end gap-3 border-t border-border/60 pt-5">
+      <Skeleton className="h-9 w-24 rounded-full" />
+      <Skeleton className="h-9 w-24 rounded-full" />
     </div>
   );
 }
@@ -81,7 +81,7 @@ function Field({ help = false, textarea = false }: { help?: boolean; textarea?: 
 /** Heading + body + actions, the shape of most settings and editor screens. */
 function FormPanel({ fields = 5 }: { fields?: number }) {
   return (
-    <div className="space-y-6 rounded-xl border border-border bg-card p-6">
+    <div className="space-y-6 rounded-xl border border-border/70 bg-card p-6 shadow-xs">
       {Array.from({ length: fields }).map((_, i) => (
         <Field key={i} help={i % 3 === 0} textarea={i % 4 === 3} />
       ))}
@@ -93,7 +93,7 @@ function FormPanel({ fields = 5 }: { fields?: number }) {
 /** An order-summary sidebar: line items, a total, then a primary button. */
 function SummaryAside({ action = true }: { action?: boolean }) {
   return (
-    <aside className="space-y-4 rounded-xl border border-border bg-card p-6">
+    <aside className="space-y-4 rounded-xl border border-border/70 bg-card p-6 shadow-xs">
       <Skeleton className="h-4 w-28" />
       <div className="space-y-3">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -325,8 +325,29 @@ export function VerifyingSkeleton() {
  * Account / settings
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-export function SettingsSkeleton({ fields = 5 }: { fields?: number }) {
+export function SettingsSkeleton({
+  fields = 5,
+  embedded = false,
+}: {
+  fields?: number;
+  /** Rendered inside the settings layout, which already draws the nav rail. */
+  embedded?: boolean;
+}) {
   const tc = useTranslations('common');
+  if (embedded) {
+    return (
+      <div role="status" aria-label={tc('loading')} className="space-y-6">
+        <div className="flex items-start gap-4">
+          <SkeletonCircle className="size-10 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-3.5 w-72 max-w-full" />
+          </div>
+        </div>
+        <FormPanel fields={fields} />
+      </div>
+    );
+  }
   return (
     <LoadingShell label={tc('loading')}>
       <SkeletonSplit
@@ -392,19 +413,19 @@ export function CheckoutSkeleton() {
         <SkeletonHeading lines={1} titleWidth="30%" />
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="space-y-6">
-            <div className="space-y-4 rounded-xl border border-border bg-card p-6">
+            <div className="space-y-4 rounded-xl border border-border/70 bg-card shadow-xs p-6">
               <Skeleton className="h-4 w-40" />
               <div className="space-y-4">
                 <Field />
                 <Field />
               </div>
             </div>
-            <div className="space-y-4 rounded-xl border border-border bg-card p-6">
+            <div className="space-y-4 rounded-xl border border-border/70 bg-card shadow-xs p-6">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-24 w-full rounded-md" />
             </div>
           </div>
-          <aside className="space-y-4 rounded-xl border border-border bg-card p-6">
+          <aside className="space-y-4 rounded-xl border border-border/70 bg-card p-6 shadow-xs">
             <Skeleton className="h-4 w-28" />
             <SkeletonList count={2} avatar lines={1} trailing={false} />
             <Skeleton className="h-11 w-full rounded-md" />
@@ -425,7 +446,7 @@ export function FeedSkeleton() {
     <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-6xl">
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
-          <div className="flex gap-3 rounded-xl border border-border bg-card p-5">
+          <div className="flex gap-3 rounded-xl border border-border/70 bg-card shadow-xs p-5">
             <SkeletonCircle className="size-10 shrink-0" />
             <Skeleton className="h-10 flex-1 rounded-md" />
           </div>
@@ -448,7 +469,7 @@ export function NotificationListSkeleton() {
     <LoadingShell label={tc('loading')}>
       <div className="mx-auto max-w-3xl space-y-8">
         <SkeletonHeading lines={1} titleWidth="30%" />
-        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="flex items-start gap-4 p-4">
               <SkeletonCircle className="size-9 shrink-0" />
@@ -485,7 +506,7 @@ export function ProfileSkeleton() {
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="space-y-3 rounded-xl border border-border bg-card p-5">
+              <div key={i} className="space-y-3 rounded-xl border border-border/70 bg-card shadow-xs p-5">
                 <div className="flex items-center gap-3">
                   <SkeletonCircle className="size-9" />
                   <div className="flex-1 space-y-1.5">
@@ -547,7 +568,7 @@ export function CoursesSkeleton() {
     <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-7xl">
       <div className="space-y-8">
         <SkeletonHeading titleWidth="38%" />
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCourseCard key={i} />
           ))}
@@ -605,7 +626,7 @@ export function SearchSkeleton() {
           <Skeleton className="h-3 w-40" />
           <Skeleton className="h-8 w-28 rounded-md" />
         </div>
-        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 p-4">
               <Skeleton className="size-10 shrink-0 rounded-lg" />
@@ -648,7 +669,7 @@ export function OfflineSkeleton() {
   const tc = useTranslations('common');
   return (
     <LoadingShell label={tc('loading')} containerClassName="flex min-h-[64vh] items-center justify-center py-12">
-      <div className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-8 text-center">
+      <div className="w-full max-w-md space-y-5 rounded-2xl border border-border/70 bg-card shadow-xs p-8 text-center">
         <SkeletonCircle className="size-14" />
         <Skeleton className="mx-auto h-5 w-52" />
         <div className="mx-auto w-full max-w-xs">
@@ -672,7 +693,7 @@ export function AccountOverviewSkeleton() {
         <SkeletonHeading lines={1} titleWidth="32%" />
         <div className="grid gap-4 sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+            <div key={i} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card shadow-xs p-4">
               <SkeletonCircle className="size-10" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-3 w-20" />
@@ -692,19 +713,31 @@ export function LessonSkeleton() {
   const tc = useTranslations('common');
   return (
     <LoadingShell label={tc('loading')} containerClassName="py-6">
-      <div className="space-y-6">
-        <Skeleton className="aspect-video w-full rounded-xl" />
-        <div className="mx-auto max-w-3xl space-y-4">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-6 w-3/4" />
-          <Stagger gap={0.05}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <StaggerItem key={i}>
-                <BodyCopy lines={3} />
-              </StaggerItem>
-            ))}
-          </Stagger>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14">
+        <div className="space-y-8">
+          <Skeleton className="aspect-video w-full rounded-2xl" />
+          <div className="mx-auto max-w-3xl space-y-4">
+            <Skeleton className="h-3 w-24 rounded-full" />
+            <Skeleton className="h-9 w-3/4" />
+            <Stagger gap={0.05}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <StaggerItem key={i} className="pt-3">
+                  <BodyCopy lines={3} />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </div>
         </div>
+        <aside className="hidden space-y-4 rounded-2xl border border-border/70 bg-card p-5 shadow-xs lg:block">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-1 w-full rounded-full" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <SkeletonCircle className="size-7 shrink-0" />
+              <Skeleton className="h-3 flex-1" />
+            </div>
+          ))}
+        </aside>
       </div>
     </LoadingShell>
   );
@@ -727,7 +760,7 @@ export function CmsBlockPageSkeleton() {
   const tc = useTranslations('common');
   return (
     <LoadingShell label={tc('loading')} containerClassName="py-0">
-      <div className="border-b border-border bg-muted/30">
+      <div className="border-b border-border/70 bg-muted/30">
         <div className="mx-auto max-w-container-max px-margin-mobile py-20 md:px-margin-desktop">
           <div className="mx-auto max-w-3xl space-y-4 text-center">
             <Skeleton className="h-3 w-24" />
@@ -788,11 +821,15 @@ export function ChatSkeleton() {
     // page gutters here would inset it inside a second set of gutters.
     <LoadingShell label={tc('loading')} containerClassName="px-0 py-0">
       <div className="flex h-[calc(100dvh-4rem)] w-full">
-        <aside className="hidden w-72 shrink-0 flex-col gap-4 border-e border-border p-4 lg:flex">
-          <Skeleton className="h-9 w-full rounded-md" />
-          <div className="flex-1 space-y-2">
+        <aside className="hidden w-72 shrink-0 flex-col gap-4 border-e border-border/70 bg-muted/30 p-4 lg:flex xl:w-80">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-24 rounded-full" />
+          </div>
+          <Skeleton className="h-9 w-full rounded-full" />
+          <div className="flex-1 space-y-3 pt-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="space-y-1.5">
+              <div key={i} className="space-y-1.5 px-3">
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-2.5 w-1/2" />
               </div>
@@ -800,20 +837,18 @@ export function ChatSkeleton() {
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Alternating sides, because an assistant thread does. */}
-          <div className="flex-1 space-y-6 overflow-hidden p-6">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className={cn('flex gap-3', i % 2 === 1 && 'flex-row-reverse')}>
-                <SkeletonCircle className="size-8 shrink-0" />
-                <div className="max-w-[70%] space-y-2">
-                  <Skeleton className="h-4 w-full rounded-lg" />
-                  <Skeleton className="h-4 w-5/6 rounded-lg" />
-                </div>
-              </div>
-            ))}
+          <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-4 px-6">
+            <SkeletonCircle className="size-12" />
+            <Skeleton className="h-9 w-2/3 max-w-md" />
+            <Skeleton className="h-4 w-1/2 max-w-sm" />
+            <div className="mt-6 grid w-full max-w-2xl gap-2.5 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-xl" />
+              ))}
+            </div>
           </div>
-          <div className="border-t border-border p-4">
-            <Skeleton className="h-12 w-full rounded-lg" />
+          <div className="px-4 pb-4 pt-2 sm:px-6">
+            <Skeleton className="mx-auto h-[7.5rem] w-full max-w-3xl rounded-2xl" />
           </div>
         </div>
       </div>
@@ -844,7 +879,7 @@ export function TagFeedSkeleton() {
       <div className="space-y-6">
         <Skeleton className="h-5 w-40" />
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-3 rounded-xl border border-border bg-card p-5">
+          <div key={i} className="space-y-3 rounded-xl border border-border/70 bg-card shadow-xs p-5">
             <div className="flex items-center gap-3">
               <SkeletonCircle className="size-9" />
               <div className="flex-1 space-y-1.5">
@@ -913,7 +948,7 @@ export function AdminSkeleton() {
         </div>
         <SkeletonStats count={4} />
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-4 rounded-xl border border-border bg-card p-5 lg:col-span-2">
+          <div className="space-y-4 rounded-xl border border-border/70 bg-card shadow-xs p-5 lg:col-span-2">
             <Skeleton className="h-3.5 w-32" />
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3">

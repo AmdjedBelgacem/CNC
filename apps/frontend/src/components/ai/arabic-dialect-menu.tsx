@@ -75,7 +75,7 @@ export function ArabicDialectMenu({
           type="button"
           variant="ghost"
           size="xs"
-          className="gap-1.5 text-muted-foreground hover:text-foreground"
+          className="gap-1.5 rounded-full text-muted-foreground hover:text-foreground"
           aria-label={t('dialect.title')}
           title={t('dialect.title')}
         >
