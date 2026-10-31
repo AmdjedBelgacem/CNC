@@ -12,7 +12,7 @@ export default function ProfileNotFound() {
 
   return (
     <div className="px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-container-max py-20 md:py-28">
-      <div className="rounded-xl border border-border bg-card shadow-xs">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-border/70 bg-card shadow-xs">
         <EmptyState
           icon={UserX}
           title={t('notFoundTitle')}

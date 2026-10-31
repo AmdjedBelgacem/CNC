@@ -24,6 +24,9 @@ import { formatDate, initialsOf } from '@/lib/format';
 import { getImageSrc } from '@/lib/images';
 import type { Profile } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, AnimatedNumber, m } from '@/components/ui/motion';
+import { RollingNumber } from '@/components/feed/feed-motion';
+import { spring } from '@/lib/motion';
 
 /** Shared stat tile used by the hero strip and the at-a-glance rail. */
 export function ProfileStat({
@@ -44,13 +47,13 @@ export function ProfileStat({
     <Wrapper
       {...(onClick ? { type: 'button' as const, onClick } : {})}
       className={cn(
-        'flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-start shadow-xs transition-colors',
-        onClick && 'hover:border-border-strong motion-reduce:transition-none',
+        'flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3.5 text-start shadow-xs transition-[border-color,box-shadow] duration-300',
+        onClick && 'hover:border-border hover:shadow-md motion-reduce:transition-none',
       )}
     >
       <span
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-lg',
+          'flex size-9 shrink-0 items-center justify-center rounded-full',
           tone === 'accent'
             ? 'bg-accent/10 text-accent'
             : tone === 'muted'
@@ -61,10 +64,10 @@ export function ProfileStat({
         <Icon className="size-4" />
       </span>
       <span className="min-w-0">
-        <span className="block font-display text-lg font-semibold leading-none tracking-tight text-foreground tabular-nums">
-          {value}
+        <span className="block font-display text-xl font-medium leading-none tracking-[-0.015em] text-foreground tabular-nums">
+          {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
         </span>
-        <span className="mt-1 block truncate font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
+        <span className="mt-1.5 block truncate text-xs text-muted-foreground">
           {label}
         </span>
       </span>
@@ -121,14 +124,12 @@ export function ProfileHero({
   };
 
   return (
-    <section className="relative isolate overflow-hidden border-b border-border bg-foreground text-background">
-      <div className="blueprint-grid-invert absolute inset-0 -z-20" aria-hidden />
-      <div className="absolute -end-32 -top-32 -z-10 size-[28rem] rounded-full bg-primary/20 blur-3xl" aria-hidden />
-      <div className="absolute -bottom-48 start-1/3 -z-10 size-[24rem] rounded-full bg-accent/10 blur-3xl" aria-hidden />
+    <section className="relative isolate overflow-hidden border-b border-border/70 bg-background">
+      <div className="ambient-wash absolute inset-0 -z-10" aria-hidden />
 
-      <div className="px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-container-max">
+      <div className="px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-container-max pt-4 md:pt-6">
         {/* Cover */}
-        <div className="relative h-32 overflow-hidden sm:h-40 md:h-48">
+        <div className="relative h-36 overflow-hidden rounded-2xl border border-border/60 bg-muted sm:h-44 md:h-56">
           {profile.coverImageUrl ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -137,35 +138,38 @@ export function ProfileHero({
                 alt=""
                 className="h-full w-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/55 to-foreground/25" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
             </>
           ) : (
             <>
-              <div className="absolute inset-0 bg-gradient-to-br from-secondary via-foreground to-foreground" />
-              <div className="blueprint-grid-invert absolute inset-0" aria-hidden />
-              <div
-                className="absolute inset-0 bg-gradient-to-tr from-transparent via-primary/10 to-transparent"
-                aria-hidden
-              />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-muted to-accent/15" />
+              <div className="blueprint-grid absolute inset-0 opacity-60" aria-hidden />
+              <div className="absolute -end-16 -top-24 size-72 rounded-full bg-primary/15 blur-3xl" aria-hidden />
+              <div className="absolute -bottom-24 start-1/4 size-64 rounded-full bg-accent/15 blur-3xl" aria-hidden />
             </>
           )}
-          <div className="pointer-events-none absolute -inset-2 rounded-3xl border border-primary/40" aria-hidden />
         </div>
 
-        <div className="pb-10 md:pb-14">
-          <div className="-mt-14 flex flex-col gap-6 md:-mt-16 md:flex-row md:items-end md:justify-between">
-            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
-              <Avatar className="size-28 shrink-0 rounded-2xl border-4 border-foreground shadow-lg sm:size-32 md:size-36">
-                <AvatarImage src={profile.avatarUrl || undefined} alt={displayName} />
-                {/* The hero is dark, so the fallback needs a light well to read against it. */}
-                <AvatarFallback className="rounded-2xl bg-background text-2xl text-foreground">
-                  {initialsOf(profile.name, profile.username)}
-                </AvatarFallback>
-              </Avatar>
+        <div className="pb-10 md:pb-12">
+          <div className="-mt-12 flex flex-col gap-6 px-1 md:-mt-14 md:flex-row md:items-end md:justify-between md:px-4">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:gap-6">
+              <m.div
+                initial={false}
+                whileHover={{ scale: 1.03, rotate: -1 }}
+                transition={spring.smooth}
+                className="shrink-0 self-start rounded-full"
+              >
+                <Avatar className="size-28 rounded-full shadow-lg ring-4 ring-background sm:size-32 md:size-36">
+                  <AvatarImage src={profile.avatarUrl || undefined} alt={displayName} />
+                  <AvatarFallback className="rounded-full bg-primary/10 font-display text-3xl font-medium text-primary">
+                    {initialsOf(profile.name, profile.username)}
+                  </AvatarFallback>
+                </Avatar>
+              </m.div>
 
               <div className="min-w-0 pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-balance font-display text-3xl font-medium leading-tight tracking-[-0.022em] text-foreground sm:text-4xl lg:text-5xl">
                     {displayName}
                   </h1>
                   {profile.isVerified && (
@@ -178,19 +182,31 @@ export function ProfileHero({
                   {profile.isPrivate && <Badge variant="warning">{t('privateProfile')}</Badge>}
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-2xs uppercase tracking-[0.14em] text-background/60">
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                   {profile.username && (
                     <button
                       type="button"
                       onClick={() => void copyHandle()}
-                      className="group inline-flex items-center gap-1.5 transition-colors hover:text-primary"
+                      className="group inline-flex items-center gap-1.5 rounded-md transition-colors hover:text-foreground"
                     >
                       @{profile.username}
-                      {copied ? (
-                        <Check className="size-3.5 text-success" />
-                      ) : (
-                        <Copy className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
-                      )}
+                      <AnimatePresence mode="wait" initial={false}>
+                        {copied ? (
+                          <m.span
+                            key="copied"
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1, transition: spring.snappy }}
+                            exit={{ scale: 0.5, opacity: 0 }}
+                            className="inline-flex"
+                          >
+                            <Check className="size-3.5 text-success" />
+                          </m.span>
+                        ) : (
+                          <m.span key="copy" exit={{ opacity: 0 }} className="inline-flex">
+                            <Copy className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                          </m.span>
+                        )}
+                      </AnimatePresence>
                     </button>
                   )}
                   {profile.location && (
@@ -206,7 +222,7 @@ export function ProfileHero({
                 </div>
 
                 {profile.headline && (
-                  <p className="mt-3 max-w-2xl text-base leading-relaxed text-background/80 sm:text-lg">
+                  <p className="mt-3 max-w-2xl text-pretty text-base leading-relaxed text-foreground/80 sm:text-lg">
                     {profile.headline}
                   </p>
                 )}
@@ -215,7 +231,7 @@ export function ProfileHero({
 
             <div className="flex flex-wrap items-center gap-2 pb-1">
               {profile.isSelf ? (
-                <Button variant="secondary" asChild>
+                <Button variant="outline" asChild>
                   <Link href="/settings/profile">
                     <Pencil className="size-4" />
                     {t('editProfile')}
@@ -234,11 +250,10 @@ export function ProfileHero({
                 )
               )}
               <Button
-                variant="secondary"
+                variant="outline"
                 size="icon"
                 onClick={() => void share()}
                 aria-label={t('share')}
-                className="border border-background/25 bg-background/10 text-background hover:bg-background/20"
               >
                 <Share2 className="size-4" />
               </Button>
@@ -247,30 +262,31 @@ export function ProfileHero({
 
           {/* Connections strip */}
           {!profile.isPrivate && (
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-y border-background/15 py-4 font-mono text-2xs uppercase tracking-[0.12em] text-background/60">
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border/70 px-1 pt-5 text-sm text-muted-foreground md:px-4">
               <button
                 type="button"
                 onClick={() => onOpenConnections?.('followers')}
-                className="transition-colors hover:text-primary"
+                className="inline-flex items-baseline gap-1.5 rounded-md transition-colors hover:text-foreground"
               >
-                <span className="font-semibold text-background tabular-nums">
-                  {followerCount}
-                </span>{' '}
+                <RollingNumber
+                  value={followerCount}
+                  className="font-display text-lg font-medium text-foreground"
+                />{' '}
                 {t('followers')}
               </button>
               <button
                 type="button"
                 onClick={() => onOpenConnections?.('following')}
-                className="transition-colors hover:text-primary"
+                className="inline-flex items-baseline gap-1.5 rounded-md transition-colors hover:text-foreground"
               >
-                <span className="font-semibold text-background tabular-nums">
+                <span className="font-display text-lg font-medium text-foreground tabular-nums">
                   {profile.stats.following}
                 </span>{' '}
                 {t('following')}
               </button>
               <span className="inline-flex items-center gap-1.5">
                 <Award className="size-3.5" />
-                <span className="font-semibold text-background tabular-nums">
+                <span className="font-display text-lg font-medium text-foreground tabular-nums">
                   {profile.learning.certificates}
                 </span>{' '}
                 {t('certificates')}
@@ -286,7 +302,7 @@ export function ProfileHero({
                   href={profile.links.website}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="inline-flex items-center gap-1.5 transition-colors hover:text-primary"
+                  className="inline-flex items-center gap-1.5 text-primary transition-colors hover:underline"
                 >
                   <Globe className="size-3.5" />
                   {t('website')}
@@ -326,17 +342,17 @@ export function ProfileGlance({ profile }: { profile: Profile }) {
   ];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
-      <h2 className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-foreground">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+      <h2 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
         {t('atAGlance')}
       </h2>
-      <dl className="mt-4 space-y-3">
+      <dl className="mt-4 divide-y divide-border/60">
         {facts.map((fact) => (
-          <div key={fact.label} className="flex items-start justify-between gap-3">
+          <div key={fact.label} className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
             <dt className="text-sm text-muted-foreground">{fact.label}</dt>
             {/* `bdi` isolates the value: a date like 2026/09/21 is otherwise
                 split by the bidi algorithm in the Arabic layout. */}
-            <dd className="text-end font-mono text-xs text-foreground">
+            <dd className="text-end text-sm tabular-nums text-foreground">
               <bdi>{fact.value}</bdi>
             </dd>
           </div>
@@ -344,8 +360,8 @@ export function ProfileGlance({ profile }: { profile: Profile }) {
       </dl>
 
       {profile.skills.length > 0 && (
-        <div className="mt-5 border-t border-border pt-4">
-          <p className="font-mono text-2xs uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="mt-5 border-t border-border/60 pt-4">
+          <p className="text-xs font-medium text-muted-foreground">
             {t('skills')}
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -359,7 +375,7 @@ export function ProfileGlance({ profile }: { profile: Profile }) {
       )}
 
       {(profile.links.github || profile.links.linkedin) && (
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-border/60 pt-4">
           {profile.links.github && (
             <Button variant="outline" size="sm" asChild>
               <a href={profile.links.github} target="_blank" rel="noreferrer noopener">

@@ -43,7 +43,7 @@ export default function MapView({ locations }: { locations: MapLocation[] }) {
     <MapContainer
       center={center}
       zoom={4}
-      className="h-80 w-full rounded-xl z-0"
+      className="z-0 h-80 w-full"
       scrollWheelZoom={false}
       aria-label="Study groups map"
     >

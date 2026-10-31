@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CreateGroupInput, StudyGroup } from '@/lib/groups-api';
+import { Reveal } from '@/components/ui/motion';
+import { FadeSlot } from '@/components/feed/feed-motion';
 
 interface FormState {
   name: string;
@@ -230,8 +232,8 @@ export function GroupForm({
           <Input id="group-cover" name="coverUrl" value={form.coverUrl} onChange={set('coverUrl')} maxLength={500} inputMode="url" />
         </div>
 
-        <fieldset className="space-y-2 rounded-lg border p-4 md:col-span-2">
-          <legend className="px-1 text-sm font-medium">{t('coordsLegend')}</legend>
+        <fieldset className="space-y-2 rounded-xl border border-border/70 bg-muted/30 p-4 md:col-span-2">
+          <legend className="px-1 text-sm font-medium text-foreground">{t('coordsLegend')}</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="group-lat">{t('latLabel')}</Label>
@@ -246,13 +248,13 @@ export function GroupForm({
         </fieldset>
       </div>
 
-      {shownError && (
-        <p id="group-form-error" role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      <FadeSlot show={!!shownError}>
+        <p id="group-form-error" role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
           {shownError}
         </p>
-      )}
+      </FadeSlot>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 border-t border-border/60 pt-6">
         <Button type="submit" disabled={submitting}>
           {submitting && <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />}
           {submitLabel}
@@ -270,9 +272,11 @@ export function GroupForm({
 /** Presentational wrapper so the create and edit pages share heading/spacing. */
 export function GroupFormShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">{title}</h1>
-      <div className="rounded-xl border bg-card p-6">{children}</div>
+    <div className="mx-auto max-w-3xl px-4 py-10 md:py-14">
+      <h1 className="mb-8 text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-4xl">
+        {title}
+      </h1>
+      <Reveal className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs sm:p-8">{children}</Reveal>
     </div>
   );
 }

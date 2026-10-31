@@ -1,7 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { Crossfade, HoverLift, Stagger, StaggerItem } from '@/components/ui/motion';
+import { Switch } from '@/components/ui/switch';
+import { ActivePill } from '@/components/feed/feed-motion';
+import { cn } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,9 +69,9 @@ export function EventsDirectory() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <section id="events-browse" className="container mx-auto px-4 py-16">
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="flex gap-2 flex-wrap">
+    <section id="events-browse" className="container mx-auto px-4 py-16 md:py-24">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap gap-1.5">
           {eventTypes.map((et) => (
             <button
               key={et}
@@ -77,26 +80,37 @@ export function EventsDirectory() {
                 setType(et);
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium capitalize transition-colors ${type === et ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-secondary/80'}`}
+              aria-pressed={type === et}
+              className={cn(
+                'relative rounded-full border px-3.5 py-1.5 text-sm font-medium capitalize transition-colors',
+                type === et
+                  ? 'border-transparent text-primary'
+                  : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
+              )}
             >
-              {et}
+              {type === et && (
+                <ActivePill layoutId="events-directory-pill" className="bg-primary/10 shadow-none ring-primary/25" />
+              )}
+              <span className="relative">{et}</span>
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-sm ms-auto">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2.5 sm:ms-auto">
+          <Switch
+            id="events-directory-upcoming"
             checked={upcoming}
-            onChange={(e) => {
-              setUpcoming(e.target.checked);
+            onCheckedChange={(checked) => {
+              setUpcoming(checked);
               setPage(1);
             }}
-            className="rounded"
           />
-          Upcoming only
-        </label>
+          <label htmlFor="events-directory-upcoming" className="cursor-pointer text-sm text-muted-foreground">
+            Upcoming only
+          </label>
+        </div>
       </div>
 
+      <Crossfade value={`${type}-${upcoming}-${page}-${loading ? 'l' : error ? 'e' : events.length === 0 ? '0' : 'list'}`} axis="none">
       {loading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -121,22 +135,23 @@ export function EventsDirectory() {
             const loc = event.location as { venue?: string; city?: string; state?: string } | null;
             return (
               <StaggerItem as="div" key={event.id} index={i}>
+                <HoverLift className="h-full" lift={3}>
                 <Link href={`/events/${event.slug}`} className="block h-full">
-                  <Card className="group overflow-hidden hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all h-full flex flex-col">
-                    <div className="aspect-video bg-muted blueprint-grid relative overflow-hidden">
+                  <Card className="group flex h-full flex-col overflow-hidden rounded-xl border-border/70 shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-border hover:shadow-lg">
+                    <div className="relative aspect-video overflow-hidden border-b border-border/60 bg-muted">
                       <img
                         src={getImageSrc(event.thumbnailUrl, 'event')}
                         alt={event.title}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                        className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                       />
-                      <div className="absolute top-3 start-3 flex gap-1">
-                        <Badge className="capitalize">{event.eventType}</Badge>
-                        {event.isVirtual && <Badge variant="secondary">Virtual</Badge>}
+                      <div className="absolute start-3 top-3 flex gap-1">
+                        <Badge variant="outline" className="bg-card/90 capitalize backdrop-blur">{event.eventType}</Badge>
+                        {event.isVirtual && <Badge variant="soft-muted">Virtual</Badge>}
                         {isFull && <Badge variant="destructive">Full</Badge>}
                       </div>
                     </div>
                     <CardHeader className="flex-1">
-                      <CardTitle className="text-lg">{event.title}</CardTitle>
+                      <CardTitle className="font-display text-lg font-medium leading-snug tracking-[-0.01em] transition-colors group-hover:text-primary">{event.title}</CardTitle>
                       <div className="space-y-1.5 mt-2">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="size-4 shrink-0" />
@@ -164,24 +179,26 @@ export function EventsDirectory() {
                           </div>
                         )}
                         {event.price && event.price > 0 && (
-                          <p className="font-semibold text-primary">
+                          <p className="font-display text-lg font-medium tabular-nums text-foreground">
                             ${(event.price / 100).toFixed(2)}
                           </p>
                         )}
                       </div>
                     </CardHeader>
                     <CardFooter>
-                      <Button className="w-full" variant={isFull ? 'secondary' : 'default'} asChild>
+                      <Button className="w-full" variant={isFull ? 'subtle' : 'outline'} asChild>
                         <span>{isFull ? 'Full' : 'Register'}</span>
                       </Button>
                     </CardFooter>
                   </Card>
                 </Link>
+                </HoverLift>
               </StaggerItem>
             );
           })}
         </Stagger>
       )}
+      </Crossfade>
 
       {!loading && totalPages > 1 && (
         <div className="mt-8 flex items-center justify-center gap-3">

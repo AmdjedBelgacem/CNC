@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, MessageCircle, Heart } from 'lucide-react';
+import { HoverLift, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 interface FeedPost {
   id: string;
   content: string;
@@ -27,16 +28,16 @@ export function CommunityFeedPreview() {
   }, []);
   if (!loading && posts.length === 0) return null;
   return (
-    <section className="border-t py-24">
+    <section className="border-t border-border/70 py-20 md:py-28">
       {' '}
       <div className="container mx-auto px-4">
         {' '}
-        <div className="flex items-center justify-between mb-12">
+        <Reveal className="mb-12 flex flex-wrap items-end justify-between gap-4">
           {' '}
           <div>
             {' '}
-            <h2 className="text-3xl font-bold">{t('previewTitle')}</h2>{' '}
-            <p className="text-muted-foreground mt-1">{t('previewHint')}</p>{' '}
+            <h2 className="text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground md:text-4xl">{t('previewTitle')}</h2>{' '}
+            <p className="mt-2 max-w-prose text-muted-foreground">{t('previewHint')}</p>{' '}
           </div>{' '}
           <Button variant="ghost" asChild>
             {' '}
@@ -44,12 +45,12 @@ export function CommunityFeedPreview() {
               {t('viewFeed')} <ArrowRight className="flip-rtl ms-2 size-4" />
             </Link>{' '}
           </Button>{' '}
-        </div>{' '}
-        <div className="grid gap-6 md:grid-cols-3">
+        </Reveal>{' '}
+        <Stagger inViewOnly className="grid gap-6 md:grid-cols-3">
           {' '}
           {loading
             ? [1, 2, 3].map((i) => (
-                <div key={i} className="rounded-xl border bg-card p-5 space-y-3">
+                <div key={i} className="space-y-3 rounded-2xl border border-border/70 bg-card p-6 shadow-xs">
                   {' '}
                   <div className="flex items-center gap-3">
                     {' '}
@@ -63,16 +64,17 @@ export function CommunityFeedPreview() {
                   </div>{' '}
                 </div>
               ))
-            : posts.map((post) => (
+            : posts.map((post, i) => (
+                <StaggerItem key={post.id} index={i}>
+                <HoverLift className="h-full">
                 <Link
-                  key={post.id}
                   href="/feed"
-                  className="rounded-xl border bg-card p-5 space-y-3 hover:border-primary/50 transition-colors group"
+                  className="group block h-full space-y-3 rounded-2xl border border-border/70 bg-card p-6 shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-border hover:shadow-lg"
                 >
                   {' '}
                   <div className="flex items-center gap-3">
                     {' '}
-                    <div className="size-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                    <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
                       {' '}
                       {(post.user.name || '?')[0]}{' '}
                     </div>{' '}
@@ -86,7 +88,7 @@ export function CommunityFeedPreview() {
                       </p>{' '}
                     </div>{' '}
                   </div>{' '}
-                  <p className="text-sm text-muted-foreground line-clamp-3">{post.content}</p>{' '}
+                  <p className="line-clamp-3 text-[15px] leading-relaxed text-foreground/85">{post.content}</p>{' '}
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     {' '}
                     <span className="flex items-center gap-1">
@@ -97,8 +99,10 @@ export function CommunityFeedPreview() {
                     </span>{' '}
                   </div>{' '}
                 </Link>
+                </HoverLift>
+                </StaggerItem>
               ))}{' '}
-        </div>{' '}
+        </Stagger>{' '}
       </div>{' '}
     </section>
   );

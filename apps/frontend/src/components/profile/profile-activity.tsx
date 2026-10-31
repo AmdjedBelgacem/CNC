@@ -24,6 +24,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { initialsOf } from '@/lib/format';
 import Link from 'next/link';
 import type { Profile } from '@/lib/api/types';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 
 /** The member's public posts, with working like/comment affordances. */
 export function ProfileActivity({ profile }: { profile: Profile }) {
@@ -38,7 +39,7 @@ export function ProfileActivity({ profile }: { profile: Profile }) {
     return (
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full rounded-lg" />
+          <Skeleton key={i} className="h-32 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -49,7 +50,7 @@ export function ProfileActivity({ profile }: { profile: Profile }) {
       <ErrorState
         title={t('loadFailed')}
         onRetry={() => void refetch()}
-        className="rounded-lg border border-border bg-card"
+        className="rounded-xl border border-border/70 bg-card"
       />
     );
   }
@@ -58,30 +59,31 @@ export function ProfileActivity({ profile }: { profile: Profile }) {
 
   if (posts.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-card/60 px-6 py-16 text-center">
-        <p className="font-display text-lg font-semibold text-foreground">{t('noPosts')}</p>
+      <div className="rounded-xl border border-dashed border-border bg-card/60 px-6 py-16 text-center">
+        <p className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">{t('noPosts')}</p>
         <p className="mt-1 text-sm text-muted-foreground">{t('noPostsHint')}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {posts.map((post) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          currentUserId={currentUserId}
-          onVote={(postId, value) => votePost.mutate({ postId, value })}
-          focusCommentId={openPost}
-        />
+    <Stagger className="space-y-4" gap={0.04} maxDelay={0.32}>
+      {posts.map((post, i) => (
+        <StaggerItem key={post.id} index={i}>
+          <PostCard
+            post={post}
+            currentUserId={currentUserId}
+            onVote={(postId, value) => votePost.mutate({ postId, value })}
+            focusCommentId={openPost}
+          />
+        </StaggerItem>
       ))}
       {(data?.total ?? 0) > posts.length && (
-        <p className="pt-2 text-center font-mono text-2xs uppercase tracking-[0.12em] text-muted-foreground">
+        <p className="pt-2 text-center text-xs text-muted-foreground">
           {t('showingLatest', { count: posts.length, total: data?.total ?? 0 })}
         </p>
       )}
-    </div>
+    </Stagger>
   );
 }
 
@@ -110,7 +112,7 @@ export function ProfileConnectionsDialog({
           <DialogTitle>
             {kind === 'following' ? t('following') : t('followers')}
             {total ? (
-              <span className="ms-2 font-mono text-2xs text-muted-foreground">{total}</span>
+              <span className="ms-2 align-middle text-sm font-normal tabular-nums text-muted-foreground">{total}</span>
             ) : null}
           </DialogTitle>
           <DialogDescription>{t('connectionsDescription')}</DialogDescription>
@@ -119,7 +121,7 @@ export function ProfileConnectionsDialog({
           {isLoading && (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
               ))}
             </div>
           )}
@@ -132,12 +134,12 @@ export function ProfileConnectionsDialog({
             />
           )}
           {!isLoading && !isError && connections.length > 0 && (
-            <ul className="space-y-1">
-              {connections.map((person) => {
+            <Stagger as="ul" className="space-y-1">
+              {connections.map((person, i) => {
                 const isSelf = person.id === currentUserId;
                 return (
-                  <li key={person.id}>
-                    <div className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted">
+                  <StaggerItem as="li" key={person.id} index={i}>
+                    <div className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-muted/70">
                       <Link
                         href={person.username ? `/u/${person.username}` : `/profile/${person.id}`}
                         className="flex min-w-0 flex-1 items-center gap-3"
@@ -173,10 +175,10 @@ export function ProfileConnectionsDialog({
                         />
                       )}
                     </div>
-                  </li>
+                  </StaggerItem>
                 );
               })}
-            </ul>
+            </Stagger>
           )}
         </DialogBody>
       </DialogContent>
@@ -195,26 +197,28 @@ export function ProfileSuggestions({ viewerId }: { viewerId: string | undefined 
   if (!viewerId || (!isLoading && suggestions.length === 0)) return null;
 
   return (
-    <section className="mt-12 border-t border-border pt-8">
-      <p className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-primary">
-        {t('peopleToFollow')}
-      </p>
-      <h2 className="mt-2 font-display text-xl font-semibold tracking-tight text-foreground">
-        {t('peopleToFollowHint')}
-      </h2>
+    <section className="mt-14 border-t border-border/70 pt-10">
+      <Reveal>
+        <p className="eyebrow">{t('peopleToFollow')}</p>
+        <h2 className="mt-3 text-balance font-display text-2xl font-medium tracking-[-0.018em] text-foreground">
+          {t('peopleToFollowHint')}
+        </h2>
+      </Reveal>
 
       {isLoading ? (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
           ))}
         </div>
       ) : (
-        <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {suggestions.map((person) => (
-            <li
+        <Stagger as="ul" inViewOnly className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {suggestions.map((person, i) => (
+            <StaggerItem
+              as="li"
               key={person.id}
-              className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 shadow-xs"
+              index={i}
+              className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3.5 shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-border hover:shadow-md"
             >
               <Link
                 href={person.username ? `/u/${person.username}` : `/profile/${person.id}`}
@@ -232,7 +236,7 @@ export function ProfileSuggestions({ viewerId }: { viewerId: string | undefined 
                     {person.headline || t('followersCount', { count: person.followerCount })}
                   </span>
                   {person.mutualCount > 0 && (
-                    <span className="mt-0.5 block font-mono text-2xs uppercase tracking-[0.1em] text-primary">
+                    <span className="mt-0.5 block text-xs font-medium text-primary">
                       {t('inCommon', { count: person.mutualCount })}
                     </span>
                   )}
@@ -246,9 +250,9 @@ export function ProfileSuggestions({ viewerId }: { viewerId: string | undefined 
                 variant={person.isFollowing ? 'ghost' : 'outline'}
                 showLabel={false}
               />
-            </li>
+            </StaggerItem>
           ))}
-        </ul>
+        </Stagger>
       )}
     </section>
   );
@@ -258,7 +262,7 @@ export function ProfileSuggestions({ viewerId }: { viewerId: string | undefined 
 export function ProfileTabMeta({ profile }: { profile: Profile }) {
   const t = useTranslations('profile');
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-2xs uppercase tracking-[0.12em] text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
       <span>
         <span className="font-semibold text-foreground tabular-nums">{profile.stats.posts}</span>{' '}
         {t('statPosts')}

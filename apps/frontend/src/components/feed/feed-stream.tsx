@@ -13,7 +13,11 @@ import {
   useVotePost,
 } from '@/hooks/use-feed';
 import { PostCard } from '@/components/feed/post-card';
-import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { AnimatePresence, Crossfade, Stagger, StaggerItem, m } from '@/components/ui/motion';
+import { ActivePill } from '@/components/feed/feed-motion';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { initialsOf } from '@/lib/format';
+import { spring, transition } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -84,79 +88,76 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
     }
   };
 
+  const scopeTabs = [
+    { value: 'discover' as const, label: t('discover'), Icon: Compass },
+    { value: 'following' as const, label: t('myFeed'), Icon: Users },
+  ];
+  const sortTabs = [
+    { value: 'hot' as const, label: t('sort.hot'), Icon: Flame },
+    { value: 'new' as const, label: t('sort.new'), Icon: Radio },
+    { value: 'top' as const, label: t('sort.top'), Icon: TrendingUp },
+  ];
+
   return (
     <section
       id="feed-stream"
       className={cn(
-        'overflow-hidden rounded-lg border border-border bg-card shadow-xs',
+        'overflow-hidden rounded-2xl border border-border/70 bg-surface-sunken/40 shadow-xs',
         embedded && 'w-full',
       )}
     >
-      {/* Wire header */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-sunken/50 px-4 py-3.5 md:px-5">
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex items-center gap-1.5 rounded-sm bg-primary px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-primary-foreground">
-            <Radio className="size-3" />
+      {/* Header */}
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border/60 bg-card px-4 pb-4 pt-5 md:px-6">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <span className="relative flex size-2" aria-hidden>
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/50" />
+              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+            </span>
             {tu('live')}
-          </span>
-          <div className="hidden sm:block">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              {tu('communityWire')}
-            </p>
-            <p className="font-display text-sm font-semibold tracking-tight text-foreground">
+            <span className="hidden text-muted-foreground/60 sm:inline">·</span>
+            <span className="hidden sm:inline">{tu('communityWire')}</span>
+          </p>
+          <Crossfade value={scope} axis="y" className="mt-1">
+            <h2 className="font-display text-2xl font-medium tracking-[-0.018em] text-foreground">
               {scope === 'discover' ? t('discover') : t('myFeed')}
-            </p>
-          </div>
+            </h2>
+          </Crossfade>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <div
-            className="flex items-center rounded-md border border-border bg-surface-sunken/60 p-0.5"
+            className="flex items-center rounded-full border border-border/70 bg-muted/60 p-0.5"
             role="tablist"
             aria-label={t('title')}
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={scope === 'discover'}
-              onClick={() => setScope('discover')}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors',
-                scope === 'discover'
-                  ? 'bg-card text-primary shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Compass className="size-3.5" />
-              {t('discover')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={scope === 'following'}
-              onClick={() => setScope('following')}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors',
-                scope === 'following'
-                  ? 'bg-card text-primary shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Users className="size-3.5" />
-              {t('myFeed')}
-            </button>
+            {scopeTabs.map(({ value, label, Icon }) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={scope === value}
+                onClick={() => setScope(value)}
+                className={cn(
+                  'relative inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  scope === value ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {scope === value && <ActivePill layoutId="feed-scope-pill" />}
+                <span className="relative inline-flex items-center gap-1.5">
+                  <Icon className={cn('size-3.5', scope === value && 'text-primary')} />
+                  {label}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div
-            className="flex items-center rounded-md border border-border bg-surface-sunken/60 p-0.5"
+            className="flex items-center rounded-full border border-border/70 bg-muted/60 p-0.5"
             role="tablist"
             aria-label={t('sortBy')}
           >
-            {([
-              { value: 'hot' as const, label: t('sort.hot'), Icon: Flame },
-              { value: 'new' as const, label: t('sort.new'), Icon: Radio },
-              { value: 'top' as const, label: t('sort.top'), Icon: TrendingUp },
-            ]).map(({ value, label, Icon }) => (
+            {sortTabs.map(({ value, label, Icon }) => (
               <button
                 key={value}
                 type="button"
@@ -164,29 +165,25 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
                 aria-selected={sort === value}
                 onClick={() => setSort(value)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors',
-                  sort === value ? 'bg-card text-primary shadow-xs' : 'text-muted-foreground hover:text-foreground',
+                  'relative inline-flex items-center rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors',
+                  sort === value ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <Icon className="size-3.5" />
-                <span className="hidden sm:inline">{label}</span>
+                {sort === value && <ActivePill layoutId="feed-sort-pill" />}
+                <span className="relative inline-flex items-center gap-1.5">
+                  <Icon className={cn('size-3.5', sort === value && 'text-primary')} />
+                  <span className="hidden sm:inline">{label}</span>
+                </span>
               </button>
             ))}
           </div>
-
-          {isAuthenticated && (
-            <Button size="sm" onClick={() => setComposerOpen(true)} className="h-8 px-3">
-              <PenLine className="size-3.5" />
-              {t('createPost')}
-            </Button>
-          )}
         </div>
       </header>
 
       {/* Tag filter, built from the tenant's real tag index. */}
       {allTags.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-2 md:px-5">
-          <span className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-border/60 bg-card px-4 py-2.5 md:px-6">
+          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
             <Tag className="size-3" />
             {t('tags')}
           </span>
@@ -195,10 +192,10 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
             onClick={() => setTag(undefined)}
             aria-pressed={!activeTag}
             className={cn(
-              'shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.08em] transition-colors',
+              'shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
               !activeTag
-                ? 'border-primary/40 bg-primary/10 text-primary'
-                : 'border-border bg-muted text-muted-foreground hover:text-foreground',
+                ? 'border-primary/30 bg-primary/10 text-primary'
+                : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
             )}
           >
             {t('allTags')}
@@ -210,95 +207,111 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
               onClick={() => setTag(activeTag === tag.slug ? undefined : tag.slug)}
               aria-pressed={activeTag === tag.slug}
               className={cn(
-                'shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.08em] transition-colors',
+                'shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
                 activeTag === tag.slug
-                  ? 'border-primary/40 bg-primary/10 text-primary'
-                  : 'border-border bg-muted text-muted-foreground hover:text-foreground',
+                  ? 'border-primary/30 bg-primary/10 text-primary'
+                  : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
               )}
             >
               {tag.label}
               {typeof tag.usageCount === 'number' && (
-                <span className="ms-1 text-muted-foreground/70">{tag.usageCount}</span>
+                <span className="ms-1 tabular-nums text-muted-foreground/70">{tag.usageCount}</span>
               )}
             </button>
           ))}
-          {activeTag && (
-            <button
-              type="button"
-              onClick={() => setTag(undefined)}
-              className="ms-auto inline-flex shrink-0 items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-primary hover:underline"
-            >
-              <X className="size-3" />
-              {t('clearTag')}
-            </button>
-          )}
+          <AnimatePresence initial={false}>
+            {activeTag && (
+              <m.button
+                key="clear-tag"
+                type="button"
+                onClick={() => setTag(undefined)}
+                initial={{ opacity: 0, x: 6 }}
+                animate={{ opacity: 1, x: 0, transition: transition.enter }}
+                exit={{ opacity: 0, x: 6, transition: transition.leave }}
+                className="ms-auto inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                <X className="size-3" />
+                {t('clearTag')}
+              </m.button>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
-      {/* Result meta */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-sunken/30 px-4 py-2.5 md:px-5">
-        <p className="font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-          {t('subtitle')}
-        </p>
-        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          {!isLoading && !isError ? tu('onWireCount', { count: posts.length }) : ' '}
-        </p>
-      </div>
+      <div className="space-y-4 p-4 md:p-6">
+        {/* Composer card — a calm prompt that opens the full composer. */}
+        {isAuthenticated && (
+          <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-xs sm:p-4">
+            <Avatar className="size-9 shrink-0 ring-1 ring-border/60">
+              {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user?.name ?? ''} />}
+              <AvatarFallback className="text-2xs">{initialsOf(user?.name, user?.username)}</AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => setComposerOpen(true)}
+              className="min-w-0 flex-1 truncate rounded-full border border-border/70 bg-muted/40 px-4 py-2 text-start text-sm text-muted-foreground transition-colors hover:border-border-strong hover:bg-muted/70"
+            >
+              {t('createPostPlaceholder')}
+            </button>
+            <Button size="sm" onClick={() => setComposerOpen(true)} className="shrink-0">
+              <PenLine className="size-3.5" />
+              <span className="hidden sm:inline">{t('createPost')}</span>
+            </Button>
+          </div>
+        )}
 
-      {/* Posts */}
-      <div className="p-4 md:p-5">
-        {isLoading ? (
-          <LoadingState rows={3} />
-        ) : isError ? (
-          <ErrorState
-            title={t('loadFailed')}
-            description={(error as Error)?.message}
-            onRetry={() => void refetch()}
-          />
-        ) : posts.length === 0 ? (
-          <EmptyState
-            icon={Compass}
-            title={t('empty')}
-            description={scope === 'following' ? t('emptyHint') : t('emptyHint')}
-            action={
-              isAuthenticated ? (
-                <Button variant="outline" size="sm" onClick={() => setComposerOpen(true)}>
-                  <PenLine />
-                  {t('createPost')}
-                </Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <div className="relative space-y-4">
-            {/* Wire rail */}
-            <span
-              aria-hidden
-              className="absolute inset-y-2 -start-4 w-px bg-border md:-start-5"
+        {/* Result meta */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
+          <p className="text-xs tabular-nums text-muted-foreground">
+            {!isLoading && !isError ? tu('onWireCount', { count: posts.length }) : ' '}
+          </p>
+        </div>
+
+        {/* Posts */}
+        <Crossfade value={`${scope}-${sort}-${activeTag ?? ''}-${isLoading ? 'l' : isError ? 'e' : posts.length === 0 ? '0' : 'p'}`} axis="none">
+          {isLoading ? (
+            <LoadingState rows={3} />
+          ) : isError ? (
+            <ErrorState
+              title={t('loadFailed')}
+              description={(error as Error)?.message}
+              onRetry={() => void refetch()}
             />
-            // Posts cascade in, but only the first screenful: `Stagger`'s
-            // maxDelay cap means item 30 doesn't wait 30× the step, so a long
-            // wire doesn't take seconds to finish appearing.
-            <Stagger className="relative space-y-4" gap={0.04} maxDelay={0.32}>
-              {posts.map((post, i) => (
-                <StaggerItem key={post.id} index={i}>
-                  <div className="relative">
-                    <span
-                      aria-hidden
-                      className="absolute -start-4 top-8 size-1.5 -translate-x-1/2 rounded-full bg-primary md:-start-5"
-                    />
+          ) : posts.length === 0 ? (
+            <EmptyState
+              icon={Compass}
+              title={t('empty')}
+              description={scope === 'following' ? t('emptyHint') : t('emptyHint')}
+              action={
+                isAuthenticated ? (
+                  <Button variant="outline" size="sm" onClick={() => setComposerOpen(true)}>
+                    <PenLine />
+                    {t('createPost')}
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            /* Posts cascade in, but only the first screenful: `Stagger`'s
+               maxDelay cap means item 30 doesn't wait 30x the step. New posts
+               slide in at the top and the rest glide down via `layout`. */
+            <Stagger className="space-y-4" gap={0.04} maxDelay={0.32}>
+              <AnimatePresence>
+                {posts.map((post, i) => (
+                  <StaggerItem key={post.id} index={i} layout="position" transition={spring.layout}>
                     <PostCard
                       post={post}
                       currentUserId={user?.id}
                       onVote={onVote}
                       onDelete={isAuthenticated ? onDelete : undefined}
                     />
-                  </div>
-                </StaggerItem>
-              ))}
+                  </StaggerItem>
+                ))}
+              </AnimatePresence>
             </Stagger>
-          </div>
-        )}
+          )}
+        </Crossfade>
       </div>
 
       {/* Create post — a modal, not a side sheet. */}
@@ -312,16 +325,20 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
               {draftTags.length > 0 && (
                 <ul className="flex flex-wrap gap-1.5">
                   {draftTags.map((tag) => (
-                    <li key={tag}>
+                    <m.li
+                      key={tag}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1, transition: spring.snappy }}
+                    >
                       <button
                         type="button"
                         onClick={() => setDraftTags((current) => current.filter((entry) => entry !== tag))}
-                        className="inline-flex items-center gap-1 rounded-sm border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-primary"
+                        className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
                       >
                         {tag}
                         <X className="size-2.5" />
                       </button>
-                    </li>
+                    </m.li>
                   ))}
                 </ul>
               )}
@@ -340,7 +357,7 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
                 placeholder={t('addTagPlaceholder')}
                 aria-label={t('addTagPlaceholder')}
                 list="feed-tag-suggestions"
-                className="h-8 font-mono text-xs"
+                className="h-9 text-sm"
               />
               <datalist id="feed-tag-suggestions">
                 {allTags.slice(0, 40).map((tag) => (

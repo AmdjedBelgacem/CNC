@@ -6,6 +6,8 @@ import { Button, type ButtonProps } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
+import { m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 
 type FollowState = { following: boolean; pending?: boolean };
 
@@ -113,7 +115,15 @@ export function FollowButton({
         void toggle(targetId, following);
       }}
     >
-      {following ? <UserCheck className="size-4" /> : <UserPlus className="size-4" />}
+      {/* Keyed on state so the icon gives a small spring pop when it flips. */}
+      <m.span
+        key={following ? 'on' : 'off'}
+        className="inline-flex"
+        initial={{ scale: 0.6, rotate: following ? -12 : 0 }}
+        animate={{ scale: 1, rotate: 0, transition: spring.snappy }}
+      >
+        {following ? <UserCheck className="size-4" /> : <UserPlus className="size-4" />}
+      </m.span>
       {showLabel && <span>{following ? t('following') : t('follow')}</span>}
     </Button>
   );

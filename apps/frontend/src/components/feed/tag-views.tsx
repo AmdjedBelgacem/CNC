@@ -10,7 +10,8 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { useFeedTags, useTagPage, useVotePost, type FeedSort } from '@/hooks/use-feed';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
-import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { AnimatePresence, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { ActivePill } from '@/components/feed/feed-motion';
 
 // Literal label keys rather than `t(`sort.${option}`)`: a template key is
 // assembled at runtime, so a typo or a stale bundle is invisible in review.
@@ -31,22 +32,28 @@ export function TagView({ slug }: { slug: string }) {
   const posts = data?.feed?.data ?? [];
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-8">
-      <header className="space-y-2">
-        <p className="flex items-center gap-1.5 font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          <Hash className="size-3" />
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-10 md:py-14">
+      <Reveal as="header" className="space-y-3">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <span className="grid size-5 place-items-center rounded-full bg-primary/10 text-primary">
+            <Hash className="size-3" />
+          </span>
           {t('tag')}
         </p>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
-          {isPending ? <Loader2 className="size-5 animate-spin" /> : (data?.label ?? slug)}
+        <h1 className="text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-4xl">
+          {isPending ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : (data?.label ?? slug)}
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
           {data ? t('postCount', { count: data.usageCount ?? 0 }) : ''}
           {data?.description ? ` · ${data.description}` : ''}
         </p>
-      </header>
+      </Reveal>
 
-      <div className="flex items-center gap-1" role="tablist" aria-label={t('sortBy')}>
+      <div
+        className="inline-flex items-center rounded-full border border-border/70 bg-muted/60 p-0.5"
+        role="tablist"
+        aria-label={t('sortBy')}
+      >
         {SORTS.map(({ value, labelKey }) => (
           <button
             key={value}
@@ -55,18 +62,20 @@ export function TagView({ slug }: { slug: string }) {
             aria-selected={sort === value}
             onClick={() => setSort(value)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] transition-colors',
-              sort === value
-                ? 'border-primary/40 bg-primary/10 text-primary'
-                : 'border-border text-muted-foreground hover:text-foreground',
+              'relative inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+              sort === value ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {value === 'top' && <TrendingUp className="size-3" />}
-            {t(labelKey)}
+            {sort === value && <ActivePill layoutId="tag-sort-pill" />}
+            <span className="relative inline-flex items-center gap-1.5">
+              {value === 'top' && <TrendingUp className="size-3" />}
+              {t(labelKey)}
+            </span>
           </button>
         ))}
       </div>
 
+      <Crossfade value={`${sort}-${isPending ? 'l' : isError ? 'e' : posts.length === 0 ? '0' : 'p'}`} axis="none">
       {isPending ? (
         <LoadingState rows={3} />
       ) : isError ? (
@@ -74,19 +83,23 @@ export function TagView({ slug }: { slug: string }) {
       ) : posts.length === 0 ? (
         <EmptyState icon={Hash} title={t('emptyTitle')} description={t('emptyHint')} />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              currentUserId={user?.id}
-              onVote={(postId, value) => votePost.mutate({ postId, value })}
-            />
-          ))}
-        </div>
+        <Stagger className="space-y-4" gap={0.04} maxDelay={0.32}>
+          <AnimatePresence>
+            {posts.map((post, i) => (
+              <StaggerItem key={post.id} index={i} layout="position">
+                <PostCard
+                  post={post}
+                  currentUserId={user?.id}
+                  onVote={(postId, value) => votePost.mutate({ postId, value })}
+                />
+              </StaggerItem>
+            ))}
+          </AnimatePresence>
+        </Stagger>
       )}
+      </Crossfade>
 
-      <Link href="/tags" className="inline-block text-xs font-medium text-primary hover:underline">
+      <Link href="/tags" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
         {t('backToTags')}
       </Link>
     </div>
@@ -108,17 +121,13 @@ export function TagIndex() {
   }, [tags, search]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5 px-4 py-8">
-      <header className="space-y-2">
-        <p className="flex items-center gap-1.5 font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          <Hash className="size-3" />
-          {t('title')}
-        </p>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-10 md:py-14">
+      <Reveal as="header" className="space-y-3">
+        <h1 className="text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-4xl">
           {t('title')}
         </h1>
-        <p className="text-sm text-muted-foreground">{t('description', { count: tags.length })}</p>
-      </header>
+        <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">{t('description', { count: tags.length })}</p>
+      </Reveal>
 
       <div className="relative max-w-sm">
         <Search
@@ -143,30 +152,37 @@ export function TagIndex() {
       ) : (
         <Stagger
           as="ul"
-          className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
           gap={0.025}
           maxDelay={0.3}
         >
+          <AnimatePresence>
           {filtered.map((tag, i) => (
-            <StaggerItem as="li" key={tag.slug} index={i}>
+            <StaggerItem as="li" key={tag.slug} index={i} layout="position">
               <Link
                 href={`/tags/${tag.slug}`}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                className="group flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-border hover:shadow-md"
               >
-                <span className="min-w-0">
-                  <span className="block truncate font-mono text-sm font-medium text-foreground">
-                    {tag.label}
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                    <Hash className="size-3.5" />
                   </span>
-                  <span className="block truncate font-mono text-2xs text-muted-foreground">
-                    /{tag.slug}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {tag.label}
+                    </span>
+                    <span className="block truncate font-mono text-2xs text-muted-foreground">
+                      /{tag.slug}
+                    </span>
                   </span>
                 </span>
-                <span className="shrink-0 rounded-full border border-border bg-muted px-1.5 py-0.5 font-mono text-2xs tabular-nums text-muted-foreground">
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
                   {tag.usageCount ?? 0}
                 </span>
               </Link>
             </StaggerItem>
           ))}
+          </AnimatePresence>
         </Stagger>
       )}
     </div>
