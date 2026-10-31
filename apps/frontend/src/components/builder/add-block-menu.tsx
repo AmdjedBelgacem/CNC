@@ -52,7 +52,9 @@ import {
   type BlockDefinition,
   type PageLayout,
 } from '@titan/shared';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring, transition } from '@/lib/motion';
 const ROOT_ZONE = 'root:default-zone';
 /**
  * Page chrome that the public shell already renders.
@@ -299,39 +301,46 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
       setOpen(false);
     }
   };
+  // Wide enough for a two-column tile grid, never wider than the window.
+  const panelWidth =
+    typeof window === 'undefined' ? 320 : Math.max(320, Math.min(560, window.innerWidth - 16));
+  const twoColumn = panelWidth >= 480;
   return (
     <div ref={triggerRef} className={cn(asCard && 'w-full')}>
-      {' '}
       {asCard ? (
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 text-xs font-medium transition hover:bg-muted active:scale-95"
+          className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-border-strong bg-surface-sunken/50 p-3 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground active:scale-[0.97]"
         >
-          {' '}
-          <Plus className="size-5" /> {t('addBlock')}{' '}
+          <Plus className="size-5" /> {t('addBlock')}
         </button>
       ) : (
-        <Button size="sm" className="h-8 gap-1.5 px-3" onClick={() => setOpen((v) => !v)}>
-          {' '}
-          <Plus className="size-3.5" /> {t('addBlock')}{' '}
+        <Button size="sm" className="h-8 gap-1.5 rounded-lg px-3" onClick={() => setOpen((v) => !v)}>
+          <m.span
+            aria-hidden="true"
+            className="inline-flex"
+            animate={{ rotate: open ? 45 : 0 }}
+            transition={spring.snappy}
+          >
+            <Plus className="size-3.5" />
+          </m.span>{' '}
+          {t('addBlock')}
         </Button>
-      )}{' '}
+      )}
       <AnchorPanel
         anchorRef={triggerRef}
         open={open}
         onDismiss={() => setOpen(false)}
-        minWidth={320}
+        minWidth={panelWidth}
       >
         <div className="flex min-h-0 flex-col" onKeyDown={onKeyDown}>
           <div className="sr-only" role="heading" aria-level={2}>
             {t('insertHeading')}
-          </div>{' '}
-          <div className="border-b border-border p-1.5">
-            {' '}
+          </div>
+          <div className="p-2 pb-1.5">
             <div className="relative">
-              {' '}
-              <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />{' '}
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 ref={inputRef}
                 type="text"
@@ -344,12 +353,12 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t('searchBlocksPlaceholder')}
-                className="h-8 w-full rounded-lg border border-border bg-background ps-8 pe-2 text-xs text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />{' '}
-            </div>{' '}
-          </div>{' '}
+                className="h-10 w-full rounded-xl border border-border/70 bg-surface-sunken/60 ps-9 pe-3 text-13 text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary/40 focus:bg-background focus:ring-4 focus:ring-primary/10"
+              />
+            </div>
+          </div>
           <div
-            className="flex flex-wrap gap-1 border-b border-border px-1.5 py-1.5"
+            className="flex flex-wrap gap-1 px-2 pb-2"
             role="tablist"
             aria-label={t('allCategories')}
           >
@@ -363,39 +372,57 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
                   aria-selected={selected}
                   onClick={() => setCategory(tab.key)}
                   className={cn(
-                    'rounded-md px-2 py-1 text-2xs font-medium transition',
-                    selected
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    'relative isolate rounded-full px-2.5 py-1 text-2xs font-medium transition-colors',
+                    selected ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
+                  {selected && (
+                    <m.span
+                      layoutId="builder-add-block-tab"
+                      aria-hidden="true"
+                      className="absolute inset-0 -z-10 rounded-full bg-primary/10"
+                      transition={spring.snappy}
+                    />
+                  )}
                   {tab.key === 'all' ? t('allCategories') : categoryLabel(tab.key)}
-                  <span className="ms-1 font-mono opacity-60">{tab.count}</span>
+                  <span className="ms-1 tabular-nums opacity-60">{tab.count}</span>
                 </button>
               );
             })}
           </div>
-          <div className="px-2.5 py-1 text-2xs text-muted-foreground/70" aria-live="polite">
+          <div
+            className="border-t border-border/70 px-3 pb-0.5 pt-2 text-2xs text-muted-foreground/80"
+            aria-live="polite"
+          >
             {t('resultsCount', { count: rows.length, total: allRows.length })}
           </div>
-          <div
+          <m.div
+            layoutScroll
             id="add-block-listbox"
             role="listbox"
             aria-label={t('insertHeading')}
-            className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1.5"
+            className={cn(
+              'scrollbar-thin min-h-0 flex-1 overflow-y-auto p-2',
+              twoColumn && rows.length > 0 && 'grid grid-cols-2 content-start gap-1',
+            )}
           >
-            {' '}
             {rows.length === 0 ? (
-              <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+              <m.p
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0, transition: transition.enter }}
+                className="px-2 py-8 text-center text-xs text-muted-foreground"
+              >
                 {query
                   ? t('noBlocksMatch', { query })
                   : t('resultsCount', { count: 0, total: allRows.length })}
-              </p>
+              </m.p>
             ) : (
-              rows.map((row, i) => {
+              <AnimatePresence mode="popLayout">
+              {rows.map((row, i) => {
                 const Icon = BLOCK_ICONS[row.type] ?? Puzzle;
+                const active = i === highlight;
                 return (
-                  <button
+                  <m.button
                     key={row.type}
                     id={activeId(row.type)}
                     type="button"
@@ -403,47 +430,71 @@ export function AddBlockMenu({ asCard = false }: { asCard?: boolean }) {
                     aria-selected={i === highlight}
                     onMouseEnter={() => setHighlight(i)}
                     onClick={() => insert(row.type)}
+                    layout="position"
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      transition: { ...spring.smooth, delay: Math.min(i, 12) * 0.018 },
+                    }}
+                    exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.1 } }}
+                    transition={spring.layout}
                     className={cn(
-                      'flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition',
-                      i === highlight
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-foreground hover:bg-muted',
+                      'relative isolate flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs font-medium transition-colors',
+                      active ? 'text-foreground' : 'text-foreground/90',
                     )}
                   >
-                    {' '}
-                    <Icon
-                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />{' '}
+                    {active && (
+                      <m.span
+                        layoutId="builder-add-block-highlight"
+                        aria-hidden="true"
+                        className="absolute inset-0 -z-10 rounded-xl bg-muted ring-1 ring-inset ring-border/70"
+                        transition={spring.snappy}
+                      />
+                    )}
+                    <span
+                      className={cn(
+                        'flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
+                        active
+                          ? 'border-primary/25 bg-primary/10 text-primary'
+                          : 'border-border/70 bg-card text-muted-foreground',
+                      )}
+                    >
+                      <Icon className="size-4" aria-hidden="true" />
+                    </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate">{row.label}</span>
+                      <span className="flex items-baseline gap-2">
+                        <span className="block min-w-0 flex-1 truncate">{row.label}</span>
+                        {!twoColumn && (
+                          <span className="shrink-0 text-2xs font-normal text-muted-foreground/70">
+                            {categoryLabel(row.category)}
+                          </span>
+                        )}
+                      </span>
                       {row.description ? (
-                        <span className="mt-0.5 block text-2xs font-normal leading-snug text-muted-foreground">
+                        <span className="mt-0.5 line-clamp-2 block text-2xs font-normal leading-snug text-muted-foreground">
                           {row.description}
                         </span>
                       ) : null}
-                    </span>{' '}
-                    <span className="mt-0.5 shrink-0 font-mono text-2xs uppercase text-muted-foreground/60">
-                      {categoryLabel(row.category)}
-                    </span>{' '}
-                  </button>
+                    </span>
+                  </m.button>
                 );
-              })
-            )}{' '}
-          </div>{' '}
-          <div className="border-t border-border px-2 py-1.5">
-            {' '}
-            <p className="text-2xs text-muted-foreground/70">
-              {' '}
+              })}
+              </AnimatePresence>
+            )}
+          </m.div>
+          <div className="border-t border-border/70 bg-surface-sunken/40 px-3 py-2">
+            <p className="text-2xs text-muted-foreground/80">
               {t('insertHint')}{' '}
-              <kbd className="rounded border border-border bg-muted px-1 font-mono">↑↓</kbd>{' '}
+              <kbd className="rounded-md border border-border/80 bg-card px-1 font-mono">↑↓</kbd>{' '}
               {t('navigateHint')}{' '}
-              <kbd className="rounded border border-border bg-muted px-1 font-mono">↵</kbd>{' '}
-              {t('insertVerb')}{' '}
-            </p>{' '}
-          </div>{' '}
+              <kbd className="rounded-md border border-border/80 bg-card px-1 font-mono">↵</kbd>{' '}
+              {t('insertVerb')}
+            </p>
+          </div>
         </div>
-      </AnchorPanel>{' '}
+      </AnchorPanel>
     </div>
   );
 }

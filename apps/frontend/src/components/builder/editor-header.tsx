@@ -47,7 +47,15 @@ import {
   Tablet,
   Undo2,
 } from 'lucide-react';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/motion';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useMediaQuery, IS_DESKTOP_QUERY } from '@/lib/use-media-query';
 import { Button } from '@/components/ui/button';
 import { builderActions } from './builder-actions';
@@ -67,7 +75,7 @@ export const VIEWPORTS = [
 /* -------------------------------------------------------------------------- */
 
 function Divider() {
-  return <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-border" />;
+  return <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border/80" />;
 }
 
 /** A labelled group of tools. The label is the affordance, not decoration. */
@@ -126,10 +134,10 @@ function IconButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex size-8 shrink-0 items-center justify-center rounded-md transition',
+        'flex size-8 shrink-0 items-center justify-center rounded-lg transition-[background-color,color,transform] duration-150 active:scale-[0.94]',
         active
           ? 'bg-primary/10 text-primary'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
         disabled &&
           'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
         className,
@@ -159,8 +167,8 @@ function MenuItem({
       role="menuitem"
       onClick={onSelect}
       className={cn(
-        'flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-start transition',
-        danger ? 'hover:bg-destructive/10' : 'hover:bg-muted',
+        'flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-start transition-colors',
+        danger ? 'hover:bg-destructive/10' : 'hover:bg-muted/70',
       )}
     >
       <Icon
@@ -205,7 +213,7 @@ function ViewportSwitcher({
 }) {
   const tb = useTranslations('builder');
   return (
-    <div className="flex shrink-0 items-center rounded-md border border-border bg-background p-0.5">
+    <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-border/70 bg-surface-sunken/70 p-0.5">
       {VIEWPORTS.map((viewport) => {
         const active = currentWidth === viewport.width;
         const label = tb(`canvas.${viewport.labelKey}`, { default: viewport.label });
@@ -217,13 +225,19 @@ function ViewportSwitcher({
             aria-pressed={active}
             title={tb('canvas.viewportTitle', { label, width: viewport.width })}
             className={cn(
-              'flex size-7 items-center justify-center rounded-[4px] transition',
-              active
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              'relative flex size-7 items-center justify-center rounded-md transition-colors active:scale-[0.94]',
+              active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <viewport.icon className="size-3.5" aria-hidden="true" />
+            {active && (
+              <m.span
+                layoutId="builder-viewport-pill"
+                aria-hidden="true"
+                className="absolute inset-0 rounded-md bg-card shadow-xs ring-1 ring-border/70"
+                transition={spring.snappy}
+              />
+            )}
+            <viewport.icon className="relative size-3.5" aria-hidden="true" />
           </button>
         );
       })}
@@ -236,7 +250,7 @@ function ViewportSwitcher({
 /* -------------------------------------------------------------------------- */
 
 /** The shortcut sheet, referenced from the overflow menu. */
-export function ShortcutSheet({ onClose }: { onClose: () => void }) {
+export function ShortcutSheet({ onClose, open = true }: { onClose: () => void; open?: boolean }) {
   const tb = useTranslations('builder');
   const rows: Array<[string, string]> = [
     ['⌘S', tb('shortcut.save')],
@@ -246,39 +260,35 @@ export function ShortcutSheet({ onClose }: { onClose: () => void }) {
     ['⌘K', tb('shortcut.search', { default: tb('shortcut.layers') })],
   ];
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label={tb('shortcut.close')}
-        onClick={onClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={tb('more.shortcuts')}
-        className="relative w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
-      >
-        <header className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="text-13 font-semibold text-foreground">{tb('more.shortcuts')}</h2>
-          <IconButton title={tb('shortcut.close')} onClick={onClose}>
-            <span aria-hidden="true">✕</span>
-          </IconButton>
-        </header>
-        <dl className="divide-y divide-border">
-          {rows.map(([keys, label]) => (
-            <div key={keys} className="flex items-center justify-between gap-4 px-4 py-2.5">
-              <dt className="text-2xs text-muted-foreground">{label}</dt>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <DialogContent size="sm" aria-label={tb('more.shortcuts')}>
+        <DialogHeader>
+          <DialogTitle>{tb('more.shortcuts')}</DialogTitle>
+        </DialogHeader>
+        <dl className="divide-y divide-border/60 border-t border-border/70 pb-2">
+          {rows.map(([keys, label], index) => (
+            <m.div
+              key={keys}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0, transition: { ...spring.smooth, delay: 0.06 + index * 0.035 } }}
+              className="flex items-center justify-between gap-4 px-5 py-2.5 sm:px-7"
+            >
+              <dt className="text-13 text-muted-foreground">{label}</dt>
               <dd>
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-2xs font-medium text-foreground">
+                <kbd className="rounded-md border border-border/80 bg-surface-sunken px-1.5 py-0.5 font-mono text-2xs font-medium text-foreground shadow-xs">
                   {keys}
                 </kbd>
               </dd>
-            </div>
+            </m.div>
           ))}
         </dl>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -328,14 +338,14 @@ export function BuilderHeader() {
   const saveLabel = tb('shortcut.save');
 
   return (
-    <header className="shrink-0 border-b border-border bg-card">
+    <header className="shrink-0 bg-surface-sunken px-2 pt-1.5">
       {/* Tier one — what am I editing, and is it live. */}
-      <div className="flex h-12 items-center gap-1.5 px-2 sm:px-3">
+      <div className="flex h-12 items-center gap-1.5 px-1 sm:px-1.5">
         <Link
           href="/"
           title={tb('editor.exitBuilderTitle', { default: tb('more.exit') })}
           aria-label={tb('more.exit')}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-card hover:text-foreground hover:shadow-xs active:scale-[0.94]"
         >
           <ArrowLeft className="flip-rtl size-4" aria-hidden="true" />
         </Link>
@@ -346,10 +356,14 @@ export function BuilderHeader() {
 
         <div className="ms-auto flex shrink-0 items-center gap-1.5">
           {isDesktop && dirty && (
-            <span className="hidden items-center gap-1.5 text-2xs text-warning lg:flex">
+            <m.span
+              initial={{ opacity: 0, x: 6 }}
+              animate={{ opacity: 1, x: 0, transition: spring.smooth }}
+              className="hidden items-center gap-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-2xs font-medium text-warning lg:flex"
+            >
               <CircleAlert className="size-3" aria-hidden="true" />
               {tb('editor.unsavedChanges', { default: tb('page.editing') })}
-            </span>
+            </m.span>
           )}
           <Button
             size="sm"
@@ -383,7 +397,7 @@ export function BuilderHeader() {
       </div>
 
       {/* Tier two — the toolbox. Always mounted, never behind a breakpoint. */}
-      <div className="scrollbar-thin flex h-11 items-center gap-1.5 overflow-x-auto border-t border-border px-2 sm:px-3">
+      <div className="scrollbar-thin flex h-11 items-center gap-1.5 overflow-x-auto rounded-xl border border-border/70 bg-card px-1.5 shadow-xs sm:px-2">
         <Group label={tb('group.tools')}>
           <IconButton
             title={`${tb('shortcut.undo')} (⌘Z)`}
@@ -465,7 +479,7 @@ export function BuilderHeader() {
         </div>
       </div>
 
-      {shortcutsOpen && <ShortcutSheet onClose={() => setShortcutsOpen(false)} />}
+      <ShortcutSheet open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </header>
   );
 }
@@ -511,7 +525,7 @@ function OverflowMenu({ onOpenShortcuts }: { onOpenShortcuts: () => void }) {
               setResetOpen(true);
             }}
           />
-          <div className="my-1 h-px bg-border" />
+          <div className="mx-1 my-1 h-px bg-border/70" />
           <MenuItem
             icon={Keyboard}
             label={tb('more.shortcuts')}
@@ -520,7 +534,7 @@ function OverflowMenu({ onOpenShortcuts }: { onOpenShortcuts: () => void }) {
               onOpenShortcuts();
             }}
           />
-          <div className="my-1 h-px bg-border" />
+          <div className="mx-1 my-1 h-px bg-border/70" />
           <MenuItem
             icon={ArrowLeft}
             label={tb('more.exit')}

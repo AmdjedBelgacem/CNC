@@ -39,6 +39,7 @@ import {
   Toolbar,
   type Tone,
 } from '@/components/admin/admin-ui';
+import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { ProductRowMenu, type ProductAction } from './product-row-menu';
 import { categoryStyle } from '@/components/admin/product-category';
 
@@ -178,8 +179,8 @@ function ProductCard({
         }
       }}
       className={cn(
-        'card-hover group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs',
-        'hover:border-border-strong',
+        'card-hover group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-[box-shadow,border-color,transform] duration-300',
+        'hover:border-border-strong hover:shadow-lg',
         'focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10',
         st === 'archived' && 'opacity-80',
       )}
@@ -187,7 +188,7 @@ function ProductCard({
       <div className="flex gap-4 p-4">
         {/* Category tile, or the real product image when one is uploaded. */}
         <div
-          className="relative flex size-24 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-border sm:size-28"
+          className="relative flex size-24 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-border/70 sm:size-28"
           style={{
             backgroundImage: `linear-gradient(140deg, hsl(${style.hue} 58% 40%) 0%, hsl(${(style.hue + 38) % 360} 52% 24%) 100%)`,
           }}
@@ -197,13 +198,13 @@ function ProductCard({
             <img
               src={product.thumbnailUrl}
               alt=""
-              className="absolute inset-0 size-full object-cover"
+              className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
             />
           ) : (
             <CategoryIcon className="size-7 text-white/80" />
           )}
           {discounted && (
-            <span className="absolute bottom-1 end-1 inline-flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-2xs font-bold text-white backdrop-blur-sm">
+            <span className="absolute bottom-1 end-1 inline-flex items-center gap-0.5 rounded-full bg-foreground/75 px-1.5 py-0.5 text-2xs font-medium text-background backdrop-blur-sm">
               <TrendingDown className="size-2.5" />
               {discountPct}%
             </span>
@@ -214,7 +215,7 @@ function ProductCard({
           <div className="flex items-start justify-between gap-2">
             {/* Price leads: in a catalogue this is the number being scanned for. */}
             <div className="min-w-0">
-              <p className="font-display text-lg font-bold leading-none tracking-tight tabular-nums text-foreground">
+              <p className="font-display text-xl font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground">
                 {quoteOnly
                   ? t('priceOnRequest', { default: 'Price on request' })
                   : formatMoney(product.price, product.currency)}
@@ -230,7 +231,7 @@ function ProductCard({
             </div>
           </div>
 
-          <span className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-foreground transition group-hover:text-primary">
+          <span className="mt-2 line-clamp-2 text-sm font-medium leading-snug text-foreground transition-colors group-hover:text-primary">
             {product.title}
           </span>
           {product.tagline && (
@@ -294,11 +295,11 @@ function ProductCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 border-t border-border bg-muted/20 px-4 py-2.5">
+      <div className="mt-auto flex items-center gap-2 border-t border-border/70 bg-surface-sunken/40 px-4 py-2.5">
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.98]"
+          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted active:scale-[0.98]"
         >
           <Pencil className="size-3.5 text-muted-foreground" />
           {t('manage', { default: 'Manage' })}
@@ -320,7 +321,7 @@ function ProductCard({
 
 function ProductCardSkeleton() {
   return (
-    <div className="flex gap-4 rounded-2xl border border-border bg-card p-4 shadow-xs">
+    <div className="flex gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
       <Skeleton className="size-24 shrink-0 rounded-xl sm:size-28" />
       <div className="flex-1 space-y-3">
         <Skeleton className="h-5 w-24" />
@@ -545,8 +546,8 @@ export default function AdminProductsPage() {
           <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry', { default: 'Retry' })} />
         )}
 
-        <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-          <dl className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
+        <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+          <dl className="grid grid-cols-2 divide-x divide-border/70 rtl:divide-x-reverse sm:grid-cols-4">
             {[
               {
                 key: 'total',
@@ -577,17 +578,15 @@ export default function AdminProductsPage() {
                 tone: 'text-foreground' as const,
               },
             ].map((s) => (
-              <div key={s.key} className="flex items-center gap-3 px-5 py-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-muted-foreground">
+              <div key={s.key} className="flex items-center gap-3.5 px-5 py-5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-surface-sunken text-muted-foreground">
                   <s.icon className="size-4" />
                 </span>
-                <div className="min-w-0">
-                  <dd className={cn('font-display text-xl font-bold leading-none tabular-nums', s.tone)}>
-                    {s.value}
+                <div className="flex min-w-0 flex-col-reverse">
+                  <dd className={cn('mt-1 font-display text-2xl font-medium leading-none tracking-[-0.02em] tabular-nums', s.tone)}>
+                    {typeof s.value === 'number' ? <AnimatedNumber value={s.value} animateOnChange /> : s.value}
                   </dd>
-                  <dt className="mt-1 truncate text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {s.label}
-                  </dt>
+                  <dt className="truncate text-xs font-medium text-muted-foreground">{s.label}</dt>
                 </div>
               </div>
             ))}
@@ -682,7 +681,7 @@ export default function AdminProductsPage() {
                   setQInput('');
                   router.replace('/admin/products');
                 }}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/70 bg-card px-3.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted active:scale-[0.98]"
               >
                 <span aria-hidden="true">×</span>
                 {tCommon('clear', { default: 'Clear' })}
@@ -707,7 +706,7 @@ export default function AdminProductsPage() {
             ))}
           </div>
         ) : !rows || rows.length === 0 ? (
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
             <EmptyState
               icon={hasFilters ? Package : Package}
               tone={hasFilters ? 'amber' : 'blue'}
@@ -732,7 +731,7 @@ export default function AdminProductsPage() {
                       setQInput('');
                       router.replace('/admin/products');
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-xs transition hover:bg-muted"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:bg-muted active:scale-[0.98]"
                   >
                     {t('clearFilters', { default: 'Clear filters' })}
                   </button>
@@ -740,7 +739,7 @@ export default function AdminProductsPage() {
                   <button
                     type="button"
                     onClick={() => router.push('/admin/products/new')}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
                   >
                     <Plus className="size-4" />
                     {t('newProduct', { default: 'New product' })}
@@ -750,37 +749,38 @@ export default function AdminProductsPage() {
             />
           </div>
         ) : view === 'grid' ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {rows.map((p) => (
+          <Stagger key={`grid-${page}-${status}-${q}`} className="grid gap-4 lg:grid-cols-2">
+            {rows.map((p, i) => (
+              <StaggerItem key={p.id} index={i}>
               <ProductCard
-                key={p.id}
                 product={p}
                 onOpen={() => router.push(`/admin/products/${p.slug}/edit`)}
                 onAction={(slug, action) => void act(slug, action)}
                 labels={menuLabels}
                 tCommon={tCommon}
               />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+          <Crossfade value="table" axis="none" className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-start">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th scope="col" className="px-6 py-3.5 text-start font-semibold">
+                  <tr className="border-b border-border/70 bg-surface-sunken/60 text-xs font-medium text-muted-foreground">
+                    <th scope="col" className="px-6 py-3 text-start font-medium">
                       {t('colProduct', { default: 'Product' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3 text-start font-medium">
                       {t('colStatus', { default: 'Status' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-end font-semibold">
+                    <th scope="col" className="px-4 py-3 text-end font-medium">
                       {t('colPrice', { default: 'Price' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-end font-semibold">
+                    <th scope="col" className="px-4 py-3 text-end font-medium">
                       {t('colStock', { default: 'Stock' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3 text-start font-medium">
                       {t('colLinks', { default: 'Links' })}
                     </th>
                     <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-semibold">
@@ -788,7 +788,7 @@ export default function AdminProductsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-13">
+                <tbody className="divide-y divide-border/60 text-13">
                   {rows.map((p) => {
                     const st = statusOf(p);
                     const style = categoryStyle(p.category);
@@ -806,12 +806,12 @@ export default function AdminProductsPage() {
                             router.push(`/admin/products/${p.slug}/edit`);
                           }
                         }}
-                        className="group cursor-pointer transition-colors duration-150 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                        className="group cursor-pointer transition-colors duration-200 hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
                       >
                         <td className="px-6 py-3.5">
                           <div className="flex min-w-0 items-center gap-3">
                             <span
-                              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border"
+                              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70"
                               style={{
                                 backgroundImage: `linear-gradient(140deg, hsl(${style.hue} 55% 42%) 0%, hsl(${(style.hue + 38) % 360} 50% 26%) 100%)`,
                               }}
@@ -824,7 +824,7 @@ export default function AdminProductsPage() {
                               )}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-foreground transition group-hover:text-primary">
+                              <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
                                 {p.title}
                               </p>
                               <p className="truncate font-mono text-2xs text-muted-foreground">/{p.slug}</p>
@@ -884,23 +884,23 @@ export default function AdminProductsPage() {
                         <td className="px-4 py-3.5">
                           <div className="flex flex-wrap gap-1">
                             {p.category && (
-                              <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-1.5 py-0.5 text-2xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-2xs text-muted-foreground">
                                 <CategoryIcon className="size-2.5" />
                                 {p.category}
                               </span>
                             )}
                             {p.productType && (
-                              <span className="inline-flex max-w-36 items-center truncate rounded-md border border-info/20 bg-info/5 px-1.5 py-0.5 text-2xs text-info">
+                              <span className="inline-flex max-w-36 items-center truncate rounded-full border border-info/20 bg-info/5 px-2 py-0.5 text-2xs text-info">
                                 {p.productType}
                               </span>
                             )}
                             {p.academy && (
-                              <span className="inline-flex max-w-36 items-center truncate rounded-md border border-primary/20 bg-primary/5 px-1.5 py-0.5 text-2xs text-primary">
+                              <span className="inline-flex max-w-36 items-center truncate rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-2xs text-primary">
                                 {p.academy.title}
                               </span>
                             )}
                             {p.course && (
-                              <span className="inline-flex max-w-36 items-center truncate rounded-md border border-accent/20 bg-accent/5 px-1.5 py-0.5 text-2xs text-accent">
+                              <span className="inline-flex max-w-36 items-center truncate rounded-full border border-accent/20 bg-accent/5 px-2 py-0.5 text-2xs text-accent">
                                 {p.course.title}
                               </span>
                             )}
@@ -916,7 +916,7 @@ export default function AdminProductsPage() {
                             <button
                               type="button"
                               onClick={() => router.push(`/admin/products/${p.slug}/edit`)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98]"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted active:scale-[0.98]"
                             >
                               <Pencil className="size-3.5" />
                               {t('manage', { default: 'Manage' })}
@@ -929,11 +929,11 @@ export default function AdminProductsPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Crossfade>
         )}
 
         {!loading && rows && rows.length > 0 && (
-          <div className="rounded-xl border border-border bg-card px-5 py-3 shadow-xs">
+          <div className="rounded-2xl border border-border/70 bg-card px-5 py-3 shadow-xs">
             <Pagination
               page={page}
               totalPages={totalPages}

@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, m } from 'framer-motion';
+import { ease, spring } from '@/lib/motion';
 
 /**
  * A popover that escapes its ancestor's clipping and stacking contexts.
@@ -44,6 +46,7 @@ export function AnchorPanel({
     left: number;
     width: number;
     maxHeight: number;
+    flip: boolean;
   } | null>(null);
 
   const place = () => {
@@ -79,7 +82,7 @@ export function AnchorPanel({
     );
     const top = flip ? rect.top - gap - maxHeight : rect.bottom + gap;
 
-    setStyle({ top, left, width, maxHeight });
+    setStyle({ top, left, width, maxHeight, flip });
   };
 
   // Position before paint so the panel never flashes at the wrong place.
@@ -122,13 +125,23 @@ export function AnchorPanel({
     };
   }, [open, onDismiss, anchorRef]);
 
-  if (!open || typeof document === 'undefined') return null;
+  if (typeof document === 'undefined') return null;
+
+  // Grows out of the trigger: from its top edge normally, from its bottom edge when flipped.
+  const fromY = style?.flip ? 6 : -6;
 
   return createPortal(
-    <div
+    <AnimatePresence>
+      {open && (
+    <m.div
+      key="anchor-panel"
       ref={panelRef}
       role="presentation"
+      initial={{ opacity: 0, y: fromY, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+      exit={{ opacity: 0, y: fromY / 2, scale: 0.985, transition: { duration: 0.12, ease: ease.exit } }}
       style={{
+        transformOrigin: style?.flip ? 'bottom center' : 'top center',
         position: 'fixed',
         top: style?.top ?? -9999,
         left: style?.left ?? -9999,
@@ -137,10 +150,12 @@ export function AnchorPanel({
         // Above the layers sidebar (z-40) and any editor chrome, below modal dialogs (z-[60]).
         zIndex: 55,
       }}
-      className="flex flex-col overflow-hidden rounded-xl border border-border bg-popover shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
+      className="flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-popover text-popover-foreground shadow-xl ring-1 ring-black/[0.02] dark:ring-white/[0.04]"
     >
       {children}
-    </div>,
+    </m.div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 }

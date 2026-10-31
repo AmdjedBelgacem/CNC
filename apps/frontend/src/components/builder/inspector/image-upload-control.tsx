@@ -50,13 +50,13 @@ export function ImageUploadControl({
   return (
     <div className="space-y-2">
       {value ? (
-        <div className="overflow-hidden rounded-md border border-border bg-muted/40">
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-surface-sunken animate-fade-in">
           <img src={value} alt="preview" className="h-28 w-full object-cover" />
         </div>
       ) : null}
       <div className="flex gap-2">
         <label
-          className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-primary/30 bg-primary/5 text-sm font-medium text-primary transition hover:bg-primary/10 ${
+          className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 active:scale-[0.98] text-sm font-medium text-primary transition hover:bg-primary/10 ${
             uploading ? 'pointer-events-none opacity-50' : ''
           }`}
         >
@@ -75,7 +75,7 @@ export function ImageUploadControl({
             type="button"
             disabled={uploading}
             onClick={() => onChange('')}
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-destructive/30 text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive/25 active:scale-95 text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
             title="Remove image"
           >
             <Trash2 className="size-4" />
@@ -85,7 +85,7 @@ export function ImageUploadControl({
       {uploading ? (
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full bg-primary transition-all"
+            className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>

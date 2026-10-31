@@ -6,6 +6,9 @@ import { Loader2, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import { AnimatePresence, m } from 'framer-motion';
+import { Reveal } from '@/components/ui/motion';
+import { spring, transition } from '@/lib/motion';
 import {
   AdminCommandBar,
   BarButton,
@@ -53,7 +56,7 @@ function UploadPick({
   const t = useTranslations('admin.academiesNew.upload');
   return (
     <div className="space-y-2">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div
         onClick={() => ref.current?.click()}
         onDragOver={(e) => {
@@ -68,12 +71,12 @@ function UploadPick({
           if (f) onPick(f);
         }}
         className={cn(
-          'relative flex cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-dashed px-4 py-4 text-center text-xs transition',
+          'relative flex cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-dashed px-4 py-5 text-center text-xs transition-[background-color,border-color,transform] duration-300',
           drag
-            ? 'border-primary bg-primary/5'
+            ? 'scale-[1.01] border-primary/60 bg-primary/5'
             : pending
-              ? 'border-success/40 bg-success/40 '
-              : 'border-border bg-muted/50 hover:bg-muted',
+              ? 'border-success/40 bg-success/5'
+              : 'border-border bg-surface-sunken/60 hover:border-border-strong hover:bg-muted/60',
         )}
       >
         {pending ? (
@@ -86,7 +89,7 @@ function UploadPick({
         {drag ? <div className="absolute inset-0 bg-primary/10" /> : null}
         <div className="relative z-10 flex flex-col items-center gap-1.5">
           {pending ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-2xs font-bold text-success-foreground shadow">
+            <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-2xs font-medium text-success">
               <ImageIcon className="size-3.5" /> {t('selected')}
             </span>
           ) : (
@@ -96,7 +99,7 @@ function UploadPick({
             <img
               src={pending.preview}
               alt=""
-              className="mt-1 h-20 w-20 rounded-lg border-2 border-white bg-card object-cover shadow-md"
+              className="mt-1 h-20 w-20 rounded-lg border-2 border-card bg-card object-cover shadow-md"
             />
           ) : null}
           <p className="font-sans font-medium text-foreground">
@@ -117,8 +120,15 @@ function UploadPick({
           e.target.value = '';
         }}
       />
+      <AnimatePresence initial={false} mode="popLayout">
       {pending ? (
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/50 p-2.5">
+        <m.div
+          key="pending"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+          exit={{ opacity: 0, y: -4, transition: transition.leave }}
+          className="flex items-center gap-3 rounded-xl border border-border/70 bg-surface-sunken/60 p-2.5"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={pending.preview}
@@ -134,14 +144,23 @@ function UploadPick({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <X className="size-4" />
           </button>
-        </div>
+        </m.div>
       ) : (
-        <p className="text-xs text-muted-foreground">{t('noFileSelected')}</p>
+        <m.p
+          key="empty"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: transition.crossfade }}
+          exit={{ opacity: 0, transition: transition.leave }}
+          className="text-xs text-muted-foreground"
+        >
+          {t('noFileSelected')}
+        </m.p>
       )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -258,7 +277,7 @@ export default function NewAcademyPage() {
           title={tAcademiesPage('newAcademy')}
           description={t('description')}
           badge={
-            <span className="flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground md:self-auto">
+            <span className="flex items-center gap-2 self-start rounded-full border border-border/70 bg-surface-sunken px-3 py-1.5 text-xs font-medium text-muted-foreground md:self-auto">
               <ImageIcon className="size-4" />
               {t('uploadOnlyMedia')}
             </span>
@@ -266,21 +285,21 @@ export default function NewAcademyPage() {
         />
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="space-y-4 rounded-lg border border-border bg-card p-5 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Reveal as="section" className="space-y-4 rounded-2xl border border-border/70 bg-card p-6 shadow-xs">
+            <h2 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
               {tEditor('basics')}
             </h2>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">{t('titleLabel')}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('titleLabel')}</span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t('titlePlaceholder')}
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                className="h-9 w-full rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {tEditor('slug')}
               </span>
               <input
@@ -293,30 +312,30 @@ export default function NewAcademyPage() {
               </span>
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {tEditor('subtitle')}
               </span>
               <input
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                className="h-9 w-full rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {tEditor('description')}
               </span>
               <textarea
                 rows={5}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                className="w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
               />
             </label>
-          </section>
+          </Reveal>
 
-          <section className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <Reveal as="section" delay={0.06} className="space-y-5 rounded-2xl border border-border/70 bg-card p-6 shadow-xs">
+            <h2 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
               {t('brandingSeo')}
             </h2>
             <UploadPick
@@ -334,7 +353,7 @@ export default function NewAcademyPage() {
               onClear={() => setLogo(null)}
             />
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t('accentColor')}
               </span>
               <div className="flex gap-2">
@@ -347,31 +366,31 @@ export default function NewAcademyPage() {
                 <input
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="h-9 flex-1 rounded-xl border border-border bg-background px-3 font-mono text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                  className="h-9 flex-1 rounded-xl border border-border/80 bg-background px-3 font-mono text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
                 />
               </div>
             </label>
-            <div className="h-px bg-border" />
+            <div className="h-px bg-border/70" />
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {tEditor('seoTitle')}
               </span>
               <input
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
                 placeholder={t('seoTitlePlaceholder')}
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                className="h-9 w-full rounded-xl border border-border/80 bg-background px-3 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {tEditor('seoDescription')}
               </span>
               <textarea
                 rows={3}
                 value={seoDescription}
                 onChange={(e) => setSeoDescription(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                className="w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
               />
             </label>
             <UploadPick
@@ -381,14 +400,14 @@ export default function NewAcademyPage() {
               onPick={(f) => void makePreview(f, setSeoImg)}
               onClear={() => setSeoImg(null)}
             />
-          </section>
+          </Reveal>
         </div>
 
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={() => router.push('/admin/academies')}
-            className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-medium text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground active:scale-[0.98]"
           >
             {tCommon('cancel')}
           </button>
@@ -397,7 +416,7 @@ export default function NewAcademyPage() {
             onClick={() => void submit()}
             disabled={busy || !title.trim()}
             className={cn(
-              'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50',
+              'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium text-primary-foreground shadow-xs transition active:scale-[0.98] disabled:opacity-50',
               busy || !title.trim()
                 ? 'bg-muted-foreground/40'
                 : 'bg-primary shadow-xs hover:bg-primary/90',

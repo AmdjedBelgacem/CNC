@@ -410,13 +410,13 @@ export default function ProductEditorPage() {
   if (error || !product) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-base text-foreground">
+        <p className="text-balance font-display text-xl font-medium tracking-[-0.015em] text-foreground">
           {error || t('notFound', { default: 'Product not found' })}
         </p>
         <button
           type="button"
           onClick={() => router.push('/admin/products')}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary"
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
         >
           {t('backToProducts', { default: 'Back to products' })}
         </button>
@@ -517,10 +517,10 @@ export default function ProductEditorPage() {
             nothing in the admin could set it, so this is where a bilingual product actually gets
             made. Translation is offered as a starting point and stays editable by hand.
           */}
-          <div className="rounded-2xl border border-border bg-card p-4" dir="rtl">
+          <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-6" dir="rtl">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-foreground">
+                <p className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
                   {t('arabicCopy', { default: 'Arabic copy' })}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -572,8 +572,8 @@ export default function ProductEditorPage() {
             </div>
           </div>
 
-          <section className="rounded-2xl border border-border bg-background p-4 sm:p-6">
-            <h2 className="text-sm font-semibold text-foreground">
+          <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-6">
+            <h2 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
               {t('galleryTitle', { default: 'Gallery' })}
             </h2>
             <p className="mt-1 mb-4 text-xs leading-relaxed text-muted-foreground">

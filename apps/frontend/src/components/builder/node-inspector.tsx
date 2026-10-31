@@ -5,11 +5,12 @@ import type { Content, Data } from '@measured/puck';
 import { getBlockDefinition, isNodeArray, slotNamesFor } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
 import {
   Braces,
   Check,
   ChevronDown,
-  ChevronRight,
   Copy,
   TriangleAlert,
 } from 'lucide-react'; /** * JSON Inspector — a coder-grade view of the selected node. * * Shows the node's raw props as JSON, validates them against the block's * zod schema (linter-style), and applies the result back into the live tree. */
@@ -73,33 +74,50 @@ export function JsonInspectorSection() {
     }
   };
   return (
-    <div className="border-t border-border">
-      {' '}
+    <div className="border-t border-border/60">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-2xs font-bold uppercase tracking-wide text-muted-foreground transition hover:bg-muted"
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
       >
-        {' '}
-        {open ? (
+        <m.span
+          className="inline-flex"
+          initial={false}
+          animate={{ rotate: open ? 0 : -90 }}
+          transition={spring.snappy}
+        >
           <ChevronDown className="size-3.5" />
-        ) : (
-          <ChevronRight className="flip-rtl size-3.5" />
-        )}{' '}
-        <Braces className="size-3.5" /> JSON{' '}
+        </m.span>
+        <Braces className="size-3.5" /> JSON
+        <AnimatePresence>
         {applied && (
-          <span className="ms-auto flex items-center gap-1 font-semibold normal-case text-green-600">
-            {' '}
-            <Check className="size-3.5" /> {t('applied')}{' '}
-          </span>
-        )}{' '}
-      </button>{' '}
+          <m.span
+            key="applied"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1, transition: spring.snappy }}
+            exit={{ opacity: 0, transition: transition.leave }}
+            className="ms-auto flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-2xs font-medium text-success"
+          >
+            <Check className="size-3.5" /> {t('applied')}
+          </m.span>
+        )}
+        </AnimatePresence>
+      </button>
+      <AnimatePresence initial={false}>
       {open && (
-        <div className="border-t border-border p-3">
+        <m.div
+          key="json"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1, transition: spring.gentle }}
+          exit={{ height: 0, opacity: 0, transition: transition.leave }}
+          className="overflow-hidden"
+        >
+        <div className="border-t border-border/60 p-3.5">
           {' '}
           <div className="mb-2 flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
             {' '}
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono font-bold text-primary">
+            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono font-medium text-primary">
               {selected.type}
             </span>{' '}
             {zoneNames.length > 0 && (
@@ -110,7 +128,7 @@ export function JsonInspectorSection() {
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="ms-auto flex items-center gap-1 rounded-md border border-border px-2 py-1 font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              className="ms-auto flex items-center gap-1 rounded-lg border border-border/70 bg-card px-2 py-1 font-medium text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground active:scale-95"
               title={t('copyNodeJsonHint')}
             >
               {' '}
@@ -124,7 +142,7 @@ export function JsonInspectorSection() {
               setJson(e.target.value);
             }}
             spellCheck={false}
-            className="h-56 w-full resize-y rounded-md border border-border bg-background p-2 font-mono text-2xs leading-relaxed text-foreground outline-none focus:border-primary"
+            className="h-56 w-full resize-y rounded-xl border border-border/80 bg-surface-sunken/50 p-2.5 font-mono text-2xs leading-relaxed text-foreground outline-none transition focus:border-primary/50 focus:bg-background focus:ring-4 focus:ring-primary/10"
           />{' '}
           {issues && (
             <ul className="mt-2 space-y-0.5">
@@ -147,13 +165,15 @@ export function JsonInspectorSection() {
           <button
             type="button"
             onClick={handleApply}
-            className="mt-2 w-full rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:opacity-90"
+            className="mt-2.5 w-full rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
           >
             {' '}
             {t('applyProps')}{' '}
           </button>{' '}
         </div>
-      )}{' '}
+        </m.div>
+      )}
+      </AnimatePresence>
     </div>
   );
 } /** Replaces the props of the node with the given id across content + inline slots. */

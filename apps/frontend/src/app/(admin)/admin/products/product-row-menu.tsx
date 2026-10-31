@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { Archive, ArchiveRestore, Globe, GlobeLock, Trash2 } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
 
 /* Shared by the product card and the table row so both views expose the same
  * actions and keyboard behaviour. */
@@ -76,7 +78,7 @@ export function ProductRowMenu({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="rounded-lg border border-border bg-background p-1.5 text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="rounded-lg border border-border/70 bg-card p-1.5 text-muted-foreground shadow-xs transition hover:border-border-strong hover:bg-muted hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         <svg viewBox="0 0 16 16" className="size-4" fill="currentColor" aria-hidden="true">
           <circle cx="3" cy="8" r="1.5" />
@@ -84,10 +86,14 @@ export function ProductRowMenu({
           <circle cx="13" cy="8" r="1.5" />
         </svg>
       </button>
+      <AnimatePresence>
       {open && (
-        <div
+        <m.div
           role="menu"
-          className="absolute end-0 z-30 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-md"
+          initial={{ opacity: 0, scale: 0.96, y: -4 }}
+          animate={{ opacity: 1, scale: 1, y: 0, transition: spring.snappy }}
+          exit={{ opacity: 0, scale: 0.98, y: -2, transition: { duration: 0.12, ease: ease.exit } }}
+          className="absolute end-0 z-30 mt-1.5 w-48 origin-top-right overflow-hidden rounded-xl border border-border/70 bg-popover p-1 text-popover-foreground shadow-lg rtl:origin-top-left"
         >
           {items.map(({ key, label, icon: Icon, danger }) => (
             <button
@@ -100,7 +106,7 @@ export function ProductRowMenu({
                 onAction(product.slug, key);
               }}
               className={cn(
-                'flex w-full items-center gap-2 px-3 py-2 text-start text-sm transition',
+                'flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start text-sm transition-colors',
                 danger ? 'text-destructive hover:bg-destructive/10' : 'text-foreground hover:bg-muted',
               )}
             >
@@ -108,8 +114,9 @@ export function ProductRowMenu({
               {label}
             </button>
           ))}
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

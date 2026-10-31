@@ -30,6 +30,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
+import {
   AdminCommandBar,
   BarButton,
   BarPrimaryButton,
@@ -391,17 +401,17 @@ export default function AcademyEditorPage() {
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
         <Skeleton className="h-8 w-64 rounded-lg" />
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+          <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs">
             <FormSkeleton fields={4} />
           </div>
           <div className="space-y-5">
-            <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs">
               <FormSkeleton fields={1} />
             </div>
-            <Skeleton className="h-56 rounded-xl border border-border" />
+            <Skeleton className="h-56 rounded-2xl border border-border/70" />
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+        <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs">
           <FormSkeleton fields={3} />
         </div>
       </div>
@@ -410,11 +420,11 @@ export default function AcademyEditorPage() {
   if (error || !academy) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <p className="text-base text-foreground">{error || tEditor('notFound')}</p>
+        <p className="text-balance font-display text-xl font-medium tracking-[-0.015em] text-foreground">{error || tEditor('notFound')}</p>
         <button
           type="button"
           onClick={() => router.push('/admin/academies')}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
         >
           {tEditor('backToAcademies')}
         </button>
@@ -506,12 +516,17 @@ export default function AcademyEditorPage() {
         {error && <ErrorBanner message={error} onRetry={() => void load()} retryLabel={tCommon('retry')} />}
 
         {/* Publishing is blocked or warned by the server; say which, and why. */}
+        <AnimatePresence initial={false}>
         {publishReasons.length > 0 && (
-          <div
+          <m.div
+            key="reasons"
             role="alert"
-            className="rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-3"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+            exit={{ opacity: 0, y: -4, transition: transition.leave }}
+            className="rounded-2xl border border-destructive/20 bg-destructive/8 px-5 py-3.5"
           >
-            <p className="flex items-center gap-2 text-13 font-semibold text-destructive">
+            <p className="flex items-center gap-2 text-13 font-medium text-destructive">
               <AlertCircle className="size-4" />
               {t('cannotPublish', { default: 'This academy cannot be published yet' })}
             </p>
@@ -520,11 +535,17 @@ export default function AcademyEditorPage() {
                 <li key={r}>{r}</li>
               ))}
             </ul>
-          </div>
+          </m.div>
         )}
         {publishReasons.length === 0 && publishWarnings.length > 0 && (
-          <div className="rounded-xl border border-warning/30 bg-warning/8 px-4 py-3">
-            <p className="flex items-center gap-2 text-13 font-semibold text-warning">
+          <m.div
+            key="warnings"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+            exit={{ opacity: 0, y: -4, transition: transition.leave }}
+            className="rounded-2xl border border-warning/25 bg-warning/8 px-5 py-3.5"
+          >
+            <p className="flex items-center gap-2 text-13 font-medium text-warning">
               <AlertTriangle className="size-4" />
               {t('publishedWithWarnings', { default: 'Published with warnings' })}
             </p>
@@ -533,8 +554,9 @@ export default function AcademyEditorPage() {
                 <li key={w}>{w}</li>
               ))}
             </ul>
-          </div>
+          </m.div>
         )}
+        </AnimatePresence>
 
         {/* Basics and the live preview sit together, so a title or accent change
             is visible while it is being typed. */}
@@ -778,7 +800,7 @@ export default function AcademyEditorPage() {
                 <button
                   type="button"
                   onClick={() => { setPickerSelected([]); setPickerOpen(true); }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
                 >
                   <Plus className="size-4" />
                   {t('assignFirst', { default: 'Assign the first course' })}
@@ -786,13 +808,18 @@ export default function AcademyEditorPage() {
               }
             />
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="divide-y divide-border/60">
+              <AnimatePresence initial={false}>
               {academy.courses.map((c) => (
-                <li
+                <m.li
                   key={c.id}
-                  className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-muted/40"
+                  layout
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+                  exit={{ opacity: 0, x: -8, transition: transition.leave }}
+                  className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-muted/40"
                 >
-                  <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
+                  <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-surface-sunken">
                     {c.thumbnailUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={c.thumbnailUrl} alt="" className="size-full object-cover" />
@@ -802,7 +829,7 @@ export default function AcademyEditorPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p dir="auto" className="truncate text-13 font-semibold text-foreground">
+                      <p dir="auto" className="truncate text-13 font-medium text-foreground">
                       {c.title}
                     </p>
                       <StatusPill
@@ -845,7 +872,7 @@ export default function AcademyEditorPage() {
                   <div className="flex shrink-0 items-center gap-1.5">
                     <a
                       href={`/admin/courses/${c.slug}/edit`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted"
                     >
                       <ExternalLink className="size-3.5" />
                       {t('openStudio', { default: 'Open Studio' })}
@@ -855,45 +882,32 @@ export default function AcademyEditorPage() {
                       onClick={() => void removeCourse(c.slug)}
                       aria-label={t('removeCourse', { title: c.title, default: 'Remove {title} from this academy' })}
                       title={t('removeCourse', { title: c.title, default: 'Remove {title} from this academy' })}
-                      className="flex size-8 items-center justify-center rounded-lg border border-border text-destructive transition hover:bg-destructive/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                      className="flex size-8 items-center justify-center rounded-lg border border-border/70 text-destructive transition hover:border-destructive/30 hover:bg-destructive/8 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
                     >
                       <X className="size-4" />
                     </button>
                   </div>
-                </li>
+                </m.li>
               ))}
+              </AnimatePresence>
             </ul>
           )}
         </FormSection>
       </div>
 
       {/* Course picker */}
-      {pickerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent
+          size="md"
           aria-label={t('pickerTitle', { title: academy.title, default: 'Assign courses to {title}' })}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPickerOpen(false);
-          }}
         >
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-            <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-              <h3 className="text-sm font-bold text-foreground">
+            <DialogHeader>
+              <DialogTitle>
                 {t('pickerTitle', { title: academy.title, default: 'Assign courses to {title}' })}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(false)}
-                aria-label={tCommon('close', { default: 'Close' })}
-                className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="border-b border-border px-5 py-3">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2 transition focus-within:border-primary/60 focus-within:bg-background focus-within:ring-4 focus-within:ring-primary/10">
+              </DialogTitle>
+            </DialogHeader>
+            <div className="shrink-0 px-5 pb-3 sm:px-7">
+              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-sunken/60 px-3 py-2 transition focus-within:border-primary/50 focus-within:bg-background focus-within:ring-4 focus-within:ring-primary/10">
                 <Search className="size-4 shrink-0 text-muted-foreground" />
                 <input
                   autoFocus
@@ -904,7 +918,7 @@ export default function AcademyEditorPage() {
                 />
               </div>
             </div>
-            <div className="max-h-80 overflow-y-auto">
+            <DialogBody className="max-h-80 border-t border-border/70 p-0 sm:p-0">
               {courseOptions === null ? (
                 <div className="px-5 py-8 text-center text-sm text-muted-foreground">
                   {t('pickerLoading', { default: 'Loading courses…' })}
@@ -920,8 +934,9 @@ export default function AcademyEditorPage() {
                     <label
                       key={c.id}
                       className={cn(
-                        'flex cursor-pointer items-center gap-3 border-b border-border px-5 py-3 transition last:border-0',
-                        already ? 'opacity-50' : 'hover:bg-muted/50',
+                        'flex cursor-pointer items-center gap-3 border-b border-border/60 px-5 py-3 transition-colors last:border-0 sm:px-7',
+                        already ? 'opacity-50' : 'hover:bg-muted/40',
+                        pickerSelected.includes(c.slug) && !already && 'bg-primary/5',
                       )}
                     >
                       <input
@@ -954,12 +969,12 @@ export default function AcademyEditorPage() {
                   );
                 })
               )}
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-5 py-3">
+            </DialogBody>
+            <DialogFooter>
               <button
                 type="button"
                 onClick={() => setPickerOpen(false)}
-                className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                className="rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-medium text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98]"
               >
                 {tCommon('cancel')}
               </button>
@@ -970,14 +985,13 @@ export default function AcademyEditorPage() {
                   else setPickerOpen(false);
                 }}
                 disabled={assigning || pickerSelected.length === 0}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary disabled:opacity-50"
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
               >
                 {assigning ? t('assigning', { default: 'Assigning…' }) : t('assign', { default: 'Assign' })}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1012,18 +1026,24 @@ function AcademyPreview({
 }) {
   const t = useTranslations('admin.academiesPage.editor');
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-      <header className="flex items-center gap-2 border-b border-border bg-muted/30 px-5 py-3.5">
+    <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+      <header className="flex items-center gap-2 border-b border-border/70 px-5 py-3.5">
         <Palette className="size-4 shrink-0 text-primary" />
-        <h2 className="text-13 font-semibold text-foreground">
+        <h2 className="font-display text-base font-medium tracking-[-0.015em] text-foreground">
           {t('preview', { default: 'Live preview' })}
         </h2>
-        <span className="ms-auto font-mono text-2xs uppercase tracking-wide text-muted-foreground">
+        <span className="ms-auto inline-flex items-center gap-1.5 font-mono text-2xs text-muted-foreground">
+          <m.span
+            aria-hidden
+            className="size-2.5 rounded-full"
+            animate={{ backgroundColor: accent }}
+            transition={transition.crossfade}
+          />
           {accent}
         </span>
       </header>
       <div className="p-5">
-        <div className="relative overflow-hidden rounded-xl border border-border">
+        <div className="relative overflow-hidden rounded-xl border border-border/70">
           {/* Hero image when uploaded, otherwise an accent wash so the colour
               choice is still legible. */}
           {heroImageUrl ? (
@@ -1031,7 +1051,7 @@ function AcademyPreview({
             <img src={heroImageUrl} alt="" className="h-36 w-full object-cover" />
           ) : (
             <div
-              className="h-36 w-full"
+              className="h-36 w-full transition-[background] duration-500"
               style={{
                 background: `linear-gradient(135deg, ${accent} 0%, ${accent}b3 55%, ${accent}40 100%)`,
               }}
@@ -1055,7 +1075,7 @@ function AcademyPreview({
               </span>
             )}
             <div className="min-w-0">
-              <p dir="auto" className="truncate text-sm font-bold text-white">
+              <p dir="auto" className="truncate font-display text-base font-medium tracking-[-0.01em] text-white">
                 {title}
               </p>
               {subtitle && (
@@ -1186,7 +1206,7 @@ function AcademyImageField({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold text-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground">{label}</span>
       <div
         onClick={() => {
           if (!busy) inputRef.current?.click();
@@ -1212,10 +1232,10 @@ function AcademyImageField({
           }
         }}
         className={cn(
-          'group relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border-strong bg-muted/30 px-3 py-4 text-center transition',
-          'hover:border-primary/50 hover:bg-primary/5',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-          drag && 'border-primary bg-primary/10',
+          'group relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border-strong bg-surface-sunken/50 px-3 py-4 text-center transition-[background-color,border-color] duration-300',
+          'hover:border-primary/40 hover:bg-primary/5',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          drag && 'border-primary/60 bg-primary/10',
           busy && 'pointer-events-none opacity-60',
         )}
       >
@@ -1240,7 +1260,7 @@ function AcademyImageField({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-5">
-            <span className="flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition group-hover:border-primary/40 group-hover:text-primary">
+            <span className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-xs transition group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:text-primary">
               <Upload className="size-4" />
             </span>
             <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">
@@ -1268,7 +1288,7 @@ function AcademyImageField({
             disabled={busy}
             aria-label={t('removeLabel', { label, default: 'Remove {label}' })}
             title={t('removeLabel', { label, default: 'Remove {label}' })}
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/8 hover:text-destructive disabled:opacity-50"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/8 hover:text-destructive disabled:opacity-50"
           >
             {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
           </button>

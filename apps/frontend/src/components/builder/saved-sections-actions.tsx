@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { useTranslations } from 'next-intl';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring, transition } from '@/lib/motion';
 import { Boxes, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import {
@@ -164,7 +166,7 @@ export function SavedSectionsActions() {
                 })
           }
           className={cn(
-            'flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition',
+            'flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition active:scale-[0.97]',
             canSave
               ? 'bg-primary/10 text-primary hover:bg-primary/20'
               : 'text-muted-foreground opacity-60 hover:bg-muted hover:text-foreground',
@@ -178,7 +180,7 @@ export function SavedSectionsActions() {
           title={tb('savedSections.insertTooltip', {
             default: 'Insert a previously saved section',
           })}
-          className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-[0.97]"
         >
           <Boxes className="size-3.5" />{' '}
           {saved.length > 0
@@ -191,7 +193,7 @@ export function SavedSectionsActions() {
       </div>
       <AnchorPanel anchorRef={rootRef} open={open} onDismiss={() => setOpen(false)} minWidth={320}>
         <div className="scrollbar-thin min-h-0 overflow-y-auto p-2">
-          <p className="px-2 pb-1.5 text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="px-2 pb-2 text-2xs leading-relaxed text-muted-foreground">
             {tb('savedSections.listHint', {
               default:
                 'Reusable sections — inserted after the selected block, or at the end of the page',
@@ -202,8 +204,15 @@ export function SavedSectionsActions() {
               {tb('savedSections.loading', { default: 'Loading…' })}
             </p>
           ) : saved.length === 0 ? (
-            <div className="px-2 py-4 text-center">
-              <p className="text-sm text-muted-foreground">
+            <m.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0, transition: transition.enter }}
+              className="px-2 py-6 text-center"
+            >
+              <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-xl border border-border/70 bg-surface-sunken text-muted-foreground">
+                <Boxes className="size-4" aria-hidden="true" />
+              </span>
+              <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">
                 {tb('savedSections.empty', { default: 'Nothing saved yet.' })}
               </p>
               <p className="mt-1 text-xs text-muted-foreground/70">
@@ -211,13 +220,22 @@ export function SavedSectionsActions() {
                   default: 'Select a Section container on the canvas, then press “Save”.',
                 })}
               </p>
-            </div>
+            </m.div>
           ) : (
             <ul className="scrollbar-thin max-h-72 space-y-0.5 overflow-auto">
-              {saved.map((s) => (
-                <li
+              <AnimatePresence initial={false}>
+              {saved.map((s, index) => (
+                <m.li
                   key={s.id}
-                  className="flex items-center gap-1 rounded-lg px-2 py-1.5 transition hover:bg-muted"
+                  layout="position"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    transition: { ...spring.smooth, delay: Math.min(index, 10) * 0.025 },
+                  }}
+                  exit={{ opacity: 0, x: -6, transition: transition.leave }}
+                  className="group flex items-center gap-1 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/70"
                 >
                   <span
                     className="flex-1 truncate text-13 font-medium text-foreground"
@@ -231,7 +249,7 @@ export function SavedSectionsActions() {
                     title={tb('savedSections.insertAfter', {
                       default: 'Insert after the selected block (or at the end of the page)',
                     })}
-                    className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-2xs font-bold text-primary-foreground transition hover:opacity-90"
+                    className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-2xs font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-95"
                   >
                     <Plus className="size-3.5" />{' '}
                     {tb('savedSections.insert', { default: 'Insert' })}{' '}
@@ -264,12 +282,13 @@ export function SavedSectionsActions() {
                     title={tb('savedSections.deleteTooltip', {
                       default: 'Delete this saved section',
                     })}
-                    className="rounded-md p-1 text-muted-foreground transition hover:bg-destructive/10 hover:text-red-500"
+                    className="rounded-md p-1 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
-                </li>
+                </m.li>
               ))}
+              </AnimatePresence>
             </ul>
           )}
         </div>

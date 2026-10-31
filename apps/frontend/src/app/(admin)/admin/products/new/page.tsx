@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
 import { api } from '@/lib/api-client';
 import {
   AdminCommandBar,
@@ -183,21 +185,27 @@ export default function NewProductPage() {
             { label: t('readinessPrice'), ok: value.priceCents.trim() !== '' && Number(value.priceCents) > 0 },
           ]}
         />
+        <AnimatePresence initial={false}>
         {error && (
-          <div
+          <m.div
+            key="error"
             role="alert"
-            className="rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-3 text-13 font-medium text-destructive"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+            exit={{ opacity: 0, y: -4, transition: transition.leave }}
+            className="rounded-2xl border border-destructive/20 bg-destructive/8 px-5 py-3.5 text-13 font-medium text-destructive"
           >
             {error}
-          </div>
+          </m.div>
         )}
+        </AnimatePresence>
         {/* Two columns, matching the academies create screen. Seven stacked full-width
             sections turned this into an endless scroll on a laptop. */}
         <ProductFormSections value={value} set={set} columns={2} />
-        <div className="rounded-2xl border border-border bg-card p-4" dir="rtl">
+        <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-6" dir="rtl">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
                 {t('arabicCopy', { default: 'Arabic copy' })}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -256,7 +264,7 @@ export default function NewProductPage() {
           <button
             type="button"
             onClick={() => router.push('/admin/products')}
-            className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-medium text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground active:scale-[0.98]"
           >
             {t('cancel', { default: 'Cancel' })}
           </button>
@@ -265,7 +273,7 @@ export default function NewProductPage() {
             onClick={() => void submit()}
             disabled={busy || !valid}
             className={cn(
-              'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50',
+              'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium text-primary-foreground shadow-xs transition active:scale-[0.98] disabled:opacity-50',
               busy || !valid ? 'bg-muted-foreground/40' : 'bg-primary shadow-xs hover:bg-primary/90',
             )}
           >

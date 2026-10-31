@@ -50,16 +50,16 @@ export function BlockTranslationFields({ selected }: Props) {
   };
 
   return (
-    <div className="space-y-3 border-b border-border px-3 py-3">
+    <div className="space-y-3 border-b border-border/60 px-3.5 py-3">
       <div className="flex items-center justify-between">
-        <span className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span className="font-display text-sm font-medium tracking-[-0.01em] text-foreground">
           Arabic version
         </span>
         <button
           type="button"
           onClick={() => void onAi()}
           disabled={ctx.translating}
-          className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary transition hover:bg-primary/10 active:scale-95 disabled:opacity-50"
         >
           <Sparkles className="size-3.5" />
           AI translate
@@ -75,7 +75,7 @@ export function BlockTranslationFields({ selected }: Props) {
               placeholder={field.value}
               dir="rtl"
               rows={2}
-              className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+              className="w-full resize-y rounded-lg border border-border/80 bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
           </FieldRow>
         );

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ImageIcon, Link2, Package, Search, Store, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
 import { DEFAULT_CURRENCY, isCurrencyCode, type CurrencyCode, type InteractiveHotspot } from '@titan/shared';
 import {
   Field,
@@ -313,7 +315,7 @@ export function ImageUploadField({
 
   return (
     <div className="space-y-2">
-      <span className="block text-xs font-semibold text-foreground">{label}</span>
+      <span className="block text-xs font-medium text-foreground">{label}</span>
       <div
         role="button"
         tabIndex={0}
@@ -336,12 +338,12 @@ export function ImageUploadField({
           if (file) read(file);
         }}
         className={cn(
-          'flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed px-4 py-6 text-center transition',
+          'group flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed px-4 py-6 text-center transition-[background-color,border-color,transform] duration-300',
           drag
-            ? 'border-primary bg-primary/8'
+            ? 'scale-[1.01] border-primary/60 bg-primary/8'
             : previewUrl
-              ? 'border-border bg-muted/40'
-              : 'border-border bg-muted/30 hover:border-border-strong hover:bg-muted/60',
+              ? 'border-border bg-surface-sunken/50'
+              : 'border-border bg-surface-sunken/50 hover:border-border-strong hover:bg-muted/60',
         )}
       >
         {previewUrl ? (
@@ -349,10 +351,10 @@ export function ImageUploadField({
           <img src={previewUrl} alt="" className="max-h-40 w-full rounded-lg object-contain" />
         ) : (
           <span className="flex flex-col items-center gap-2 text-muted-foreground">
-            <span className="flex size-10 items-center justify-center rounded-xl border border-border bg-card">
+            <span className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-card shadow-xs transition-transform duration-300 group-hover:-translate-y-0.5">
               <Upload className="size-4" />
             </span>
-            <span className="text-xs font-semibold text-foreground">
+            <span className="text-xs font-medium text-foreground">
               {drag
                 ? t('dropHere', { default: 'Drop to add' })
                 : t('dropOrClick', { default: 'Drag & drop or click to upload' })}
@@ -376,7 +378,7 @@ export function ImageUploadField({
         <button
           type="button"
           onClick={onClear}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/8"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 px-2.5 py-1.5 text-xs font-medium text-destructive transition hover:border-destructive/30 hover:bg-destructive/8 active:scale-[0.98]"
         >
           <X className="size-3.5" />
           {t('removeImage', { default: 'Remove image' })}
@@ -516,7 +518,7 @@ export function ProductFormSections({
         </FieldGrid>
 
         {value.pricingMode === 'request' ? (
-          <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+          <p className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
             {t('pricingRequestExplain', {
               default:
                 'No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.',
@@ -733,7 +735,7 @@ function TextInputMono({
     <input
       {...props}
       className={cn(
-        'w-full rounded-xl border border-border bg-muted px-3 py-2 font-mono text-sm text-muted-foreground outline-none transition',
+        'w-full rounded-xl border border-border/80 bg-surface-sunken px-3 py-2 font-mono text-sm text-muted-foreground outline-none transition',
         'hover:border-border-strong focus:border-primary/60 focus:ring-4 focus:ring-primary/10',
         _invalid && 'border-destructive',
         className,
@@ -765,7 +767,7 @@ export function ProductHotspotsEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-foreground">
+        <p className="text-xs font-medium text-foreground">
           {t('hotspotPlace')}
         </p>
         <button
@@ -780,18 +782,23 @@ export function ProductHotspotsEditor({
             setPlacing((v) => !v);
           }}
           className={cn(
-            'rounded-lg border px-3 py-1.5 text-xs font-semibold',
-            placing ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground',
+            'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors active:scale-[0.98]',
+            placing ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border/70 bg-card text-foreground shadow-xs hover:bg-muted',
           )}
         >
           {placing ? t('cancel') : t('placeHotspot')}
         </button>
       </div>
       {imageUrl ? (
-        <div className="relative inline-block max-w-full overflow-hidden rounded-xl border border-border bg-muted align-top">
+        <div className="relative inline-block max-w-full overflow-hidden rounded-xl border border-border/70 bg-surface-sunken align-top">
           <img src={imageUrl} alt="Product" className="block max-h-96 max-w-full object-contain" />
+          <AnimatePresence>
           {placing && (
-            <button
+            <m.button
+              key="placing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: transition.crossfade }}
+              exit={{ opacity: 0, transition: transition.leave }}
               type="button"
               aria-label={t('clickToPlaceHotspot')}
               onClick={(event) => {
@@ -803,16 +810,24 @@ export function ProductHotspotsEditor({
               className="absolute inset-0 cursor-crosshair bg-primary/10"
             />
           )}
+          </AnimatePresence>
           {pinpoints.map((p, index) => (
-            <button
+            <span
               key={p.id}
-              type="button"
-              className="absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-primary/90 text-xs font-bold text-primary-foreground shadow-lg transition hover:scale-110"
+              className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
               style={{ left: `${p.x}%`, top: `${p.y}%` }}
-              aria-label={t('hotspotNumber', { number: index + 1 })}
             >
-              {index + 1}
-            </button>
+              <m.button
+                type="button"
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1, transition: spring.snappy }}
+                whileHover={{ scale: 1.1 }}
+                className="flex size-7 items-center justify-center rounded-full border-2 border-card bg-primary/90 text-xs font-medium text-primary-foreground shadow-lg"
+                aria-label={t('hotspotNumber', { number: index + 1 })}
+              >
+                {index + 1}
+              </m.button>
+            </span>
           ))}
         </div>
       ) : (
@@ -821,16 +836,24 @@ export function ProductHotspotsEditor({
         </p>
       )}
       <div className="space-y-3">
+        <AnimatePresence initial={false}>
         {pinpoints.map((p, index) => (
-          <div key={p.id} className="space-y-2 rounded-xl border border-border bg-card p-3">
+          <m.div
+            key={p.id}
+            layout
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+            exit={{ opacity: 0, scale: 0.98, transition: transition.leave }}
+            className="space-y-2 rounded-xl border border-border/70 bg-card p-3 shadow-xs"
+          >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-foreground">
+              <p className="text-xs font-medium text-foreground">
                 Point {index + 1} · {Math.round(p.x)}%, {Math.round(p.y)}%
               </p>
               <button
                 type="button"
                 onClick={() => onChange(pinpoints.filter((x) => x.id !== p.id))}
-                className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-destructive transition hover:bg-destructive/8"
+                className="rounded-lg border border-border/70 px-2 py-1 text-xs font-medium text-destructive transition hover:border-destructive/30 hover:bg-destructive/8"
               >
                 Remove
               </button>
@@ -839,23 +862,24 @@ export function ProductHotspotsEditor({
               value={p.label}
               placeholder={t('hotspotLabel')}
               onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, label: e.target.value } : x)))}
-              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+              className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
             <input
               value={p.tooltip ?? ''}
               placeholder={t('hotspotTooltip')}
               onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, tooltip: e.target.value || null } : x)))}
-              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+              className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
             <textarea
               value={p.detail ?? ''}
               placeholder={t('hotspotDetail')}
               rows={2}
               onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, detail: e.target.value || null } : x)))}
-              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+              className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
-          </div>
+          </m.div>
         ))}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -896,7 +920,7 @@ export function ProductDocumentsField({
         type="button"
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
-        className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:border-primary/50"
+        className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface-sunken/50 px-4 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98]"
       >
         {uploading ? t('uploading', { default: 'Uploading…' }) : t('attachPdf', { default: '+ Attach PDF' })}
       </button>
@@ -912,31 +936,40 @@ export function ProductDocumentsField({
         }}
       />
       <div className="space-y-2">
+        <AnimatePresence initial={false}>
         {documents.map((doc, index) => (
-          <div key={`${doc.url}-${index}`} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
+          <m.div
+            key={`${doc.url}-${index}`}
+            layout
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+            exit={{ opacity: 0, transition: transition.leave }}
+            className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-xs"
+          >
             <input
               value={doc.title}
               onChange={(e) => onChange(documents.map((d, i) => (i === index ? { ...d, title: e.target.value } : d)))}
               placeholder={t('documentTitle', { default: 'Document title' })}
-              className="min-w-0 flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none transition focus:border-primary/60"
+              className="min-w-0 flex-1 rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
             <a
               href={doc.url}
               target="_blank"
               rel="noreferrer"
-              className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/8"
+              className="shrink-0 rounded-lg border border-border/70 px-3 py-2 text-xs font-medium text-primary transition hover:bg-primary/8"
             >
               {t('viewDocument', { default: 'View' })}
             </a>
             <button
               type="button"
               onClick={() => onChange(documents.filter((_, i) => i !== index))}
-              className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/8"
+              className="shrink-0 rounded-lg border border-border/70 px-3 py-2 text-xs font-medium text-destructive transition hover:border-destructive/30 hover:bg-destructive/8"
             >
               {t('removeDocument', { default: 'Remove' })}
             </button>
-          </div>
+          </m.div>
         ))}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -953,9 +986,9 @@ export function PublishReadiness({
   const done = missing.length === 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-xs">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold text-foreground">{t('publishReadiness')}</p>
+        <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">{t('publishReadiness')}</p>
         <span className={cn(
           'inline-flex items-center gap-2 font-mono text-xs tabular-nums',
           done ? 'text-success' : 'text-muted-foreground',
@@ -964,11 +997,14 @@ export function PublishReadiness({
               outstanding rather than a bar that only says "somewhere short". */}
           <span className="inline-flex items-center gap-[3px]" aria-hidden>
             {checks.map((check, index) => (
-              <span
+              <m.span
                 key={index}
+                initial={false}
+                animate={{ scaleY: check.ok ? 1 : 0.7 }}
+                transition={spring.snappy}
                 className={cn(
-                  'block h-1.5 w-2 rounded-[2px]',
-                  check.ok ? 'bg-success' : 'bg-warning/70',
+                  'block h-1.5 w-2.5 rounded-full transition-colors duration-300',
+                  check.ok ? 'bg-success' : 'bg-warning/60',
                 )}
               />
             ))}
@@ -976,11 +1012,19 @@ export function PublishReadiness({
           {ready}/{checks.length}
         </span>
       </div>
-      <p className={cn('mt-2 text-xs', done ? 'text-success' : 'text-muted-foreground')}>
-        {done
-          ? t('readinessReady')
-          : t('readinessMissing', { items: missing.join(' · ') })}
-      </p>
+      <AnimatePresence mode="wait" initial={false}>
+        <m.p
+          key={done ? 'done' : missing.join('|')}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0, transition: transition.enter }}
+          exit={{ opacity: 0, transition: transition.leave }}
+          className={cn('mt-2 text-xs', done ? 'text-success' : 'text-muted-foreground')}
+        >
+          {done
+            ? t('readinessReady')
+            : t('readinessMissing', { items: missing.join(' · ') })}
+        </m.p>
+      </AnimatePresence>
     </div>
   );
 }

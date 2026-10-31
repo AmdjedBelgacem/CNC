@@ -1,5 +1,7 @@
 'use client';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
+import { AnimatePresence, m } from 'framer-motion';
+import { ease, spring } from '@/lib/motion';
 import { useTranslations } from 'next-intl';
 import { ChevronDown, Palette, RotateCcw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,7 +17,7 @@ const PALETTE: Array<FieldOption & { value: string }> = [
   { label: 'White', labelKey: 'white', value: '#ffffff' },
 ];
 const inputClass =
-  'h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50'; // ------------------------------------------------------------------ FieldRow
+  'h-9 w-full rounded-lg border border-border/80 bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 hover:border-border-strong focus:border-primary/50 focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50'; // ------------------------------------------------------------------ FieldRow
 interface FieldRowProps {
   label: string;
   /** `builder.fieldLabels.<key>`; `label` stays the fallback. */
@@ -59,11 +61,11 @@ export function FieldRow({
   const shownLabel = text.label(labelKey, label);
   const shownHint = text.hint(hintKey, hint);
   return (
-    <div className="group/row px-3 py-2">
+    <div className="group/row px-3.5 py-2">
       {' '}
       <div className="mb-1.5 flex h-4 items-center justify-between gap-2">
         {' '}
-        <label className="truncate text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="truncate text-xs font-medium text-muted-foreground">
           {' '}
           {shownLabel}{' '}
         </label>{' '}
@@ -206,8 +208,10 @@ export function SegmentedControl({
   options: FieldOption[];
 }) {
   const text = useInspectorText();
+  // Several segmented controls are on screen at once, so each pill needs its own layout id.
+  const pillId = useId();
   return (
-    <div className="flex rounded-md border border-border bg-background p-0.5" role="group">
+    <div className="flex gap-0.5 rounded-lg border border-border/70 bg-surface-sunken/70 p-0.5" role="group">
       {' '}
       {options.map((o) => {
         const active = o.value === value;
@@ -218,14 +222,19 @@ export function SegmentedControl({
             aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              'flex-1 rounded-[5px] px-2 py-1.5 text-2xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-              active
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              'relative flex-1 rounded-md px-2 py-1.5 text-2xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {' '}
-            {text.label(o.labelKey, o.label)}{' '}
+            {active && (
+              <m.span
+                layoutId={`segmented-${pillId}`}
+                aria-hidden="true"
+                className="absolute inset-0 rounded-md bg-card shadow-xs ring-1 ring-border/70"
+                transition={spring.snappy}
+              />
+            )}
+            <span className="relative">{text.label(o.labelKey, o.label)}</span>
           </button>
         );
       })}{' '}
@@ -251,13 +260,12 @@ export function ToggleControl({
         on ? 'bg-primary' : 'bg-muted-foreground/25 hover:bg-muted-foreground/35',
       )}
     >
-      {' '}
-      <span
-        className={cn(
-          'inline-block size-4 transform rounded-full bg-card shadow transition-transform duration-200',
-          on ? 'translate-x-[18px]' : 'translate-x-0.5',
-        )}
-      />{' '}
+      <m.span
+        className="inline-block size-4 rounded-full bg-card shadow-sm"
+        initial={false}
+        animate={{ x: on ? 18 : 2 }}
+        transition={spring.snappy}
+      />
     </button>
   );
 } // ------------------------------------------------------------------ slider
@@ -292,7 +300,7 @@ export function SliderControl({
         onPointerUp={onPointerUp}
         className="inspector-slider h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       />{' '}
-      <span className="w-14 shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-center font-mono text-2xs tabular-nums text-foreground">
+      <span className="w-14 shrink-0 rounded-md border border-border/70 bg-surface-sunken/60 px-1.5 py-0.5 text-center font-mono text-2xs tabular-nums text-foreground">
         {' '}
         {v} {suffix}{' '}
       </span>{' '}
@@ -331,7 +339,7 @@ export function ColorControl({
         ))}{' '}
       </div>{' '}
       <label
-        className="relative flex h-9 shrink-0 cursor-pointer items-center rounded-md border border-border bg-background px-2 transition hover:border-primary"
+        className="relative flex h-9 shrink-0 cursor-pointer items-center rounded-lg border border-border/80 bg-background px-2 transition hover:border-primary/50"
         title={tu('openColorPicker')}
       >
         {' '}
@@ -384,8 +392,15 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
           )}
         />{' '}
       </button>{' '}
+      <AnimatePresence>
       {open && (
-        <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-md border border-border bg-card p-2 shadow-sm">
+        <m.div
+          key="icon-picker"
+          initial={{ opacity: 0, y: -4, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+          exit={{ opacity: 0, y: -2, transition: { duration: 0.12, ease: ease.exit } }}
+          className="absolute inset-x-0 top-full z-20 mt-1.5 origin-top rounded-xl border border-border/70 bg-popover p-2 shadow-lg"
+        >
           {' '}
           <div className="relative mb-1.5">
             {' '}
@@ -411,7 +426,7 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
                   setQuery('');
                 }}
                 className={cn(
-                  'flex h-8 items-center justify-center rounded transition',
+                  'flex h-8 items-center justify-center rounded-md transition active:scale-90',
                   value === k
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -427,8 +442,9 @@ export function IconControl({ value, onChange }: { value: string; onChange: (v: 
               </p>
             )}{' '}
           </div>{' '}
-        </div>
-      )}{' '}
+        </m.div>
+      )}
+      </AnimatePresence>
     </div>
   );
 }
