@@ -14,7 +14,10 @@ import {
   FileText,
   Image as ImageIcon,
 } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { Modal, ModalHeader } from '@/components/ui/modal';
+import { Switch } from '@/components/ui/switch';
+import { spring } from '@/lib/motion';
 import { INPUT, LABEL } from './glass';
 import { toast } from '@/components/ui/toast';
 import type { Attachment, Lesson, LessonVideoMeta, Section } from './types';
@@ -38,7 +41,7 @@ function FileGlyph({ type }: { type: string }) {
   if (type.startsWith('audio'))
     return <Music className="size-4 text-info" />;
   if (type.startsWith('image'))
-    return <ImageIcon className="size-4 text-success dark:text-success" />;
+    return <ImageIcon className="size-4 text-success" />;
   if (type === 'application/pdf')
     return <FileText className="size-4 text-destructive" />;
   return <Paperclip className="size-4 text-muted-foreground" />;
@@ -151,7 +154,8 @@ export function LessonDrawer({
       cancelled = true;
     };
   }, [open, lesson?.id, locale]);
-  if (!open || !lesson) return null;
+  // Same root element in both branches so AnimatePresence survives the close and plays the exit.
+  if (!open || !lesson) return <AnimatePresence />;
   const uploadingCount = Object.values(uploading).filter(Boolean).length;
   const patchAttachment = (id: string, patch: Partial<Attachment>) =>
     setAttachments((a) => a.map((x) => (x.id === id ? { ...x, ...patch } : x)));
@@ -336,7 +340,9 @@ export function LessonDrawer({
   const displaySrc =
     videoPreview || videoDisplayUrl || (videoUrl && isVideoUrl(videoUrl) ? videoUrl : null);
   return (
+    <AnimatePresence>
     <Modal
+      key="lesson-drawer"
       width="max-w-5xl"
       onClose={onClose}
       title={title || t('studio.newLesson', { default: 'New lesson' })}
@@ -344,7 +350,7 @@ export function LessonDrawer({
         <ModalHeader
           loading={false}
           initials={(title || 'L').charAt(0).toUpperCase()}
-          gradient="bg-info/10 text-info"
+          gradient="bg-primary/10 text-primary font-display"
           title={title || t('studio.newLesson', { default: 'New lesson' })}
           subtitle={'/' + (slug || 'slug')}
           onClose={onClose}
@@ -352,7 +358,7 @@ export function LessonDrawer({
       }
     >
       {' '}
-      <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
+      <div className="space-y-6 px-5 py-5 sm:px-7 sm:py-6">
         {' '}
         <div className="space-y-1.5">
           {' '}
@@ -399,7 +405,7 @@ export function LessonDrawer({
             <button
               type="button"
               onClick={() => onMoveSection(sectionId)}
-              className="mt-1 rounded-lg bg-accent px-3 py-1.5 font-sans text-sm font-medium text-accent-foreground transition hover:bg-primary"
+              className="mt-1 rounded-lg bg-primary px-3 py-1.5 font-sans text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
             >
               {' '}
               {t('studio.moveToSection', { title: sections.find((s) => s.id === sectionId)?.title ?? '', default: 'Move to “{title}”' })}{' '}
@@ -410,7 +416,7 @@ export function LessonDrawer({
           {' '}
           <label className={LABEL}>{t('studio.lessonVideo', { default: 'Lesson video' })}</label>{' '}
           {resolvingVideo && !displaySrc ? (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed px-4 py-6 font-sans text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 font-sans text-xs text-muted-foreground">
               <Loader2 className="size-4 animate-spin" /> {t('studio.resolvingVideo', { default: 'Resolving stored video for preview…' })}
             </div>
           ) : null}
@@ -428,7 +434,7 @@ export function LessonDrawer({
               <video
                 src={displaySrc}
                 controls
-                className="h-40 w-full rounded-xl bg-muted object-contain"
+                className="h-48 w-full rounded-xl border border-border/70 bg-muted object-contain"
               />{' '}
               <div className="flex items-center justify-between">
                 {' '}
@@ -441,7 +447,7 @@ export function LessonDrawer({
                 <button
                   type="button"
                   onClick={removeVideo}
-                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
+                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
                 >
                   {' '}
                   {tMedia('remove', { default: 'Remove' })}{' '}
@@ -462,10 +468,10 @@ export function LessonDrawer({
               void handleVideoFile(e.dataTransfer.files?.[0]);
             }}
             className={
-              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-6 text-center transition ' +
+              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center transition-colors ' +
               (dragOver
-                ? 'border-accent bg-accent/10'
-                : 'border-border bg-card hover:border-accent/60')
+                ? 'border-primary/60 bg-primary/5'
+                : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
             }
           >
             {' '}
@@ -491,11 +497,13 @@ export function LessonDrawer({
           {uploading.video && videoProgress !== null ? (
             <div className="flex items-center gap-2">
               {' '}
-              <div className="h-2 flex-1 overflow-hidden rounded-md bg-card dark:bg-card">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                 {' '}
-                <div
-                  className="h-full bg-accent transition-all duration-200"
-                  style={{ width: `${videoProgress}%` }}
+                <m.div
+                  className="h-full rounded-full bg-primary"
+                  initial={false}
+                  animate={{ width: `${videoProgress}%` }}
+                  transition={spring.smooth}
                 />{' '}
               </div>{' '}
               <span className="font-sans text-xs tabular-nums text-muted-foreground">
@@ -517,7 +525,7 @@ export function LessonDrawer({
               <img
                 src={thumbPreview || thumbUrl}
                 alt=""
-                className="h-32 w-full rounded-xl border border-border bg-muted object-cover"
+                className="h-36 w-full rounded-xl border border-border/70 bg-muted object-cover"
               />
               <div className="flex items-center justify-between">
                 <p className="font-sans text-xs text-muted-foreground">
@@ -526,7 +534,7 @@ export function LessonDrawer({
                 <button
                   type="button"
                   onClick={removeThumb}
-                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
+                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
                 >
                   {tMedia('remove', { default: 'Remove' })}
                 </button>
@@ -546,10 +554,10 @@ export function LessonDrawer({
               void handleThumbFile(e.dataTransfer.files?.[0]);
             }}
             className={
-              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center transition ' +
+              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-6 text-center transition-colors ' +
               (thumbDrag
-                ? 'border-accent bg-accent/10'
-                : 'border-border bg-card hover:border-accent/60')
+                ? 'border-primary/60 bg-primary/5'
+                : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
             }
           >
             <ImageIcon className="size-5 text-muted-foreground/70" />
@@ -587,7 +595,7 @@ export function LessonDrawer({
             dir={locale === 'ar' ? 'rtl' : 'ltr'}
           />{' '}
         </div>{' '}
-        <div className="border-t border-border pt-5">
+        <div className="border-t border-border/70 pt-6">
           <LessonBlockEditor
             key={lesson.id}
             lessonId={lesson.id}
@@ -597,33 +605,19 @@ export function LessonDrawer({
             onDocumentChange={onContentBlocksChange}
           />
         </div>
-        <label className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
-          {' '}
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/30 px-4 py-3.5">
           <span>
-            {' '}
-            <span className="font-sans text-sm font-medium text-foreground">{t('studio.freePreview', { default: 'Free preview' })}</span>{' '}
+            <span id="lesson-free-preview-label" className="font-sans text-sm font-medium text-foreground">{t('studio.freePreview', { default: 'Free preview' })}</span>
             <span className="block font-sans text-xs text-muted-foreground">
               {t('studio.freePreviewHint', { default: 'Let unenrolled learners watch this lesson' })}
-            </span>{' '}
-          </span>{' '}
-          <button
-            type="button"
-            onClick={() => setFreePreview((v) => !v)}
-            className={
-              'relative h-6 w-11 rounded-full transition ' +
-              (freePreview ? 'bg-accent' : 'bg-muted')
-            }
-            aria-pressed={freePreview}
-          >
-            {' '}
-            <span
-              className={
-                'absolute top-0.5 size-5 rounded-md bg-card shadow transition-all ' +
-                (freePreview ? 'start-[22px]' : 'start-0.5')
-              }
-            />{' '}
-          </button>{' '}
-        </label>{' '}
+            </span>
+          </span>
+          <Switch
+            checked={freePreview}
+            onCheckedChange={(v) => setFreePreview(v)}
+            aria-labelledby="lesson-free-preview-label"
+          />
+        </div>
         <div className="space-y-2">
           {' '}
           <label className={LABEL}>{t('studio.attachments', { default: 'Attachments' })}</label>{' '}
@@ -640,10 +634,10 @@ export function LessonDrawer({
               void handleAttachmentFiles(e.dataTransfer.files);
             }}
             className={
-              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-6 text-center transition ' +
+              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center transition-colors ' +
               (attDragOver
-                ? 'border-accent bg-accent/10'
-                : 'border-border bg-card hover:border-accent/60')
+                ? 'border-primary/60 bg-primary/5'
+                : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
             }
           >
             {' '}
@@ -667,13 +661,18 @@ export function LessonDrawer({
             }}
           />{' '}
           <div className="space-y-2">
-            {' '}
+            <AnimatePresence initial={false}>
             {attachments.map((a) => {
               const busy = uploading[a.id];
               return (
-                <div
+                <m.div
                   key={a.id}
-                  className="flex items-center gap-2 rounded-xl border border-border bg-card p-2"
+                  layout="position"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+                  transition={spring.smooth}
+                  className="flex items-center gap-2 rounded-lg border border-border/70 bg-card p-2 shadow-xs"
                 >
                   {' '}
                   {busy ? (
@@ -686,7 +685,7 @@ export function LessonDrawer({
                     disabled={busy}
                     onChange={(e) => patchAttachment(a.id, { name: e.target.value })}
                     placeholder={tMedia('label', { default: 'Label' })}
-                    className="w-36 rounded-md border border-border bg-transparent px-2 py-1 font-sans text-sm outline-none focus:ring-2 focus:ring-accent/30 disabled:opacity-60"
+                    className="w-36 rounded-md border border-border/80 bg-transparent px-2 py-1 font-sans text-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
                   />{' '}
                   {busy ? (
                     <span className="font-sans text-xs text-muted-foreground">{tMedia('uploading', { default: 'Uploading…' })}</span>
@@ -695,7 +694,7 @@ export function LessonDrawer({
                       href={a.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex-1 truncate font-sans text-xs text-info hover:underline"
+                      className="flex-1 truncate font-sans text-xs text-primary underline-offset-2 hover:underline"
                     >
                       {' '}
                       {a.url}{' '}
@@ -717,19 +716,20 @@ export function LessonDrawer({
                     {' '}
                     <X className="size-4" />{' '}
                   </button>{' '}
-                </div>
+                </m.div>
               );
-            })}{' '}
+            })}
+            </AnimatePresence>
           </div>{' '}
         </div>{' '}
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        <div className="sticky bottom-0 -mx-5 -mb-5 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-card/95 px-5 py-3.5 backdrop-blur sm:-mx-7 sm:-mb-6 sm:px-7">
           {' '}
           <div className="flex items-center gap-2">
             {' '}
             <button
               type="button"
               onClick={onDuplicate}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-transparent px-3 py-2 font-sans text-sm text-muted-foreground transition hover:text-foreground"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
             >
               {' '}
               <Copy className="size-4" /> {t('studio.duplicate', { default: 'Duplicate' })}{' '}
@@ -737,7 +737,7 @@ export function LessonDrawer({
             <button
               type="button"
               onClick={onDelete}
-              className="flex items-center gap-1.5 rounded-lg border border-red-300/60 px-3 py-2 font-sans text-sm text-destructive transition hover:bg-destructive/10 dark:border-red-900/40 dark:text-destructive"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 font-sans text-sm font-medium text-destructive transition hover:bg-destructive/10"
             >
               {' '}
               <Trash2 className="size-4" /> {tCommon('delete', { default: 'Delete' })}{' '}
@@ -747,7 +747,7 @@ export function LessonDrawer({
             type="button"
             onClick={save}
             disabled={uploadingCount > 0}
-            className="rounded-lg bg-accent px-4 py-2 font-sans text-sm font-medium text-accent-foreground transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg bg-primary px-4 py-2 font-sans text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {' '}
             {uploadingCount > 0 ? tMedia('uploading', { default: 'Uploading…' }) : t('studio.saveLesson', { default: 'Save lesson' })}{' '}
@@ -755,5 +755,6 @@ export function LessonDrawer({
         </div>{' '}
       </div>{' '}
     </Modal>
+    </AnimatePresence>
   );
 }

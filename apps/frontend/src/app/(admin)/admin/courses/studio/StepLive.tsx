@@ -6,7 +6,9 @@ import { CalendarClock, Loader2, Pencil, Plus, RefreshCw, Trash2, Video, X } fro
 import { Field, FormSection, TextField } from '@/components/admin/admin-form';
 import { StatusPill } from '@/components/admin/admin-ui';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/motion';
 import type { CourseStudioData, LiveSession, LiveSessionStatus } from './types';
 import * as api from './api';
 
@@ -180,7 +182,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.97]"
           >
             <Plus className="size-4" />
             {t('add', { default: 'Add live session' })}
@@ -189,7 +191,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
           >
             <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
             {t('refresh', { default: 'Refresh' })}
@@ -201,19 +203,20 @@ export function StepLive({ course }: { course: CourseStudioData }) {
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
-          <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</p>
+          <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</p>
         ) : sessions.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
             {t('empty', { default: 'No live sessions yet. Add one and paste a Google Meet URL.' })}
           </p>
         ) : (
           <ul className="space-y-2">
+            <AnimatePresence initial={false}>
             {sessions.map((session) => (
-              <li key={session.id} className="rounded-xl border border-border bg-background p-4 shadow-xs">
+              <m.li key={session.id} layout="position" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }} transition={spring.smooth} className="rounded-xl border border-border/70 bg-card p-4 shadow-xs transition-shadow hover:shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-foreground">{session.title}</p>
+                      <p className="truncate font-display text-base font-medium tracking-[-0.01em] text-foreground">{session.title}</p>
                       <StatusPill label={session.status} tone={STATUS_TONE[session.status] ?? 'slate'} dot={false} />
                     </div>
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -233,33 +236,36 @@ export function StepLive({ course }: { course: CourseStudioData }) {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                    <button type="button" onClick={() => openEdit(session)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-2.5 text-xs font-semibold text-foreground transition hover:bg-muted">
+                    <button type="button" onClick={() => openEdit(session)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-border/80 bg-card px-2.5 text-xs font-medium text-foreground transition hover:border-border-strong hover:bg-muted/60">
                       <Pencil className="size-3.5" />
                       {t('edit', { default: 'Edit' })}
                     </button>
                     {session.status === 'draft' ? (
-                      <button type="button" onClick={() => void act(session, 'publish')} disabled={busyId === session.id} className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary disabled:opacity-50">
+                      <button type="button" onClick={() => void act(session, 'publish')} disabled={busyId === session.id} className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 disabled:opacity-50">
                         {busyId === session.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
                         {t('publish', { default: 'Publish' })}
                       </button>
                     ) : null}
                     {session.status === 'scheduled' || session.status === 'live' ? (
-                      <button type="button" onClick={() => void act(session, 'cancel')} disabled={busyId === session.id} className="inline-flex h-8 items-center rounded-lg border border-border px-2.5 text-xs font-semibold text-destructive transition hover:bg-destructive/5 disabled:opacity-50">
+                      <button type="button" onClick={() => void act(session, 'cancel')} disabled={busyId === session.id} className="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-destructive transition hover:bg-destructive/10 disabled:opacity-50">
                         {t('cancel', { default: 'Cancel' })}
                       </button>
                     ) : null}
-                    <button type="button" onClick={() => void act(session, 'delete')} disabled={busyId === session.id} aria-label={t('delete', { default: 'Delete' })} className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-destructive/5 hover:text-destructive disabled:opacity-50">
+                    <button type="button" onClick={() => void act(session, 'delete')} disabled={busyId === session.id} aria-label={t('delete', { default: 'Delete' })} className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
                       <Trash2 className="size-3.5" />
                     </button>
                   </div>
                 </div>
-              </li>
+              </m.li>
             ))}
+            </AnimatePresence>
           </ul>
         )}
       </FormSection>
 
+      <AnimatePresence initial={false}>
       {draft ? (
+        <m.div key="live-draft" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8, transition: { duration: 0.16 } }} transition={spring.gentle}>
         <FormSection
           title={draft.id ? t('editTitle', { default: 'Edit live session' }) : t('createTitle', { default: 'New live session' })}
           icon={Video}
@@ -300,7 +306,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
                   list="live-session-timezones"
                   value={draft.timezone}
                   onChange={(event) => setDraft({ ...draft, timezone: event.target.value })}
-                  className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none transition hover:border-border-strong focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
                 />
               )}
             </Field>
@@ -324,24 +330,26 @@ export function StepLive({ course }: { course: CourseStudioData }) {
                     rows={3}
                     value={draft.description}
                     onChange={(event) => setDraft({ ...draft, description: event.target.value })}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition hover:border-border-strong focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
                   />
                 )}
               </Field>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => void saveDraft()} disabled={saving} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary disabled:opacity-50">
+            <button type="button" onClick={() => void saveDraft()} disabled={saving} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50">
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {draft.id ? t('save', { default: 'Save changes' }) : t('create', { default: 'Create session' })}
             </button>
-            <button type="button" onClick={() => setDraft(null)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border px-4 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">
+            <button type="button" onClick={() => setDraft(null)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
               <X className="size-4" />
               {t('discard', { default: 'Discard' })}
             </button>
           </div>
         </FormSection>
+        </m.div>
       ) : null}
+      </AnimatePresence>
     </div>
   );
 }

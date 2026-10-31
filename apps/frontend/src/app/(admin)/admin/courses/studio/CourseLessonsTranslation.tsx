@@ -188,11 +188,11 @@ export function CourseLessonsTranslation({
     : undefined;
 
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+    <div className="space-y-3 rounded-xl border border-border/70 bg-muted/30 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">{tLessons('studio.lessonsTranslation', { default: 'Lessons and content' })}</h3>
-          <p className="text-xs text-muted-foreground">
+          <h3 className="font-display text-base font-medium tracking-[-0.015em] text-foreground">{tLessons('studio.lessonsTranslation', { default: 'Lessons and content' })}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {tLessons('studio.lessonsTranslationHint', {
               default: 'Fills Arabic for every section, lesson and content block in one pass.',
             })}

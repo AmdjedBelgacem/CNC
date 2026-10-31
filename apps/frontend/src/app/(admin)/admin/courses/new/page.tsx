@@ -15,7 +15,10 @@ import {
   Wrench,
 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/motion';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import * as api from '../studio/api';
 import { slugify } from '../studio/slugify';
 
@@ -31,21 +34,21 @@ const templates = [
     nameKey: 'templates.blank.name',
     descriptionKey: 'templates.blank.description',
     icon: Sparkles,
-    tone: 'from-primary/20 to-primary/5 text-primary',
+    tone: 'bg-primary/10 text-primary',
   },
   {
     id: 'workshop',
     nameKey: 'templates.workshop.name',
     descriptionKey: 'templates.workshop.description',
     icon: Wrench,
-    tone: 'from-warning/20 to-warning/5 text-warning',
+    tone: 'bg-warning/10 text-warning',
   },
   {
     id: 'academy',
     nameKey: 'templates.academy.name',
     descriptionKey: 'templates.academy.description',
     icon: GraduationCap,
-    tone: 'from-info/20 to-info/5 text-info',
+    tone: 'bg-info/10 text-info',
   },
 ] as const;
 
@@ -133,30 +136,30 @@ export default function NewCoursePage() {
         <button
           type="button"
           onClick={() => router.push('/admin/courses')}
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+          className="group inline-flex items-center gap-2 rounded-lg px-2 py-1 -ms-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
-          <ArrowLeft className="size-4 rtl:rotate-180" />
+          <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5 rtl:rotate-180 rtl:group-hover:translate-x-0.5" />
           {tStudio('backToCourses')}
         </button>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-          <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8">
+          <Reveal><form onSubmit={submit} className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm sm:p-10">
             <div className="flex items-start gap-4">
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <BookOpen className="size-6" />
               </span>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{tStudio('title')}</p>
-                <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">{t('createTitle')}</h1>
+                <p className="eyebrow">{tStudio('title')}</p>
+                <h1 className="mt-2 text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl">{t('createTitle')}</h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
                   {t('subtitle')}
                 </p>
               </div>
             </div>
 
-            <div className="mt-8 space-y-6">
+            <div className="mt-10 space-y-7">
               <div className="space-y-2">
-                <label htmlFor="course-title" className="text-sm font-semibold text-foreground">{t('titleLabel')} <span className="text-destructive">*</span></label>
+                <label htmlFor="course-title" className="text-sm font-medium text-foreground">{t('titleLabel')} <span className="text-destructive">*</span></label>
                 <input
                   id="course-title"
                   autoFocus
@@ -166,15 +169,15 @@ export default function NewCoursePage() {
                     if (!slugTouched) setSlug(slugify(event.target.value));
                   }}
                   placeholder={tStudio('titlePlaceholder')}
-                  className="h-12 w-full rounded-xl border border-input bg-background px-4 text-base text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className="h-12 w-full rounded-lg border border-input bg-background px-4 font-display text-lg text-foreground outline-none transition placeholder:font-sans placeholder:text-base placeholder:text-muted-foreground/60 hover:border-border-strong focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
                 />
                 <p className="text-xs text-muted-foreground">{t('titleHint')}</p>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="course-slug" className="text-sm font-semibold text-foreground">{t('slugLabel')} <span className="text-destructive">*</span></label>
-                <div className="flex h-12 items-center rounded-xl border border-input bg-background px-4 transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
-                  <span className="shrink-0 text-sm text-muted-foreground">/courses/</span>
+                <label htmlFor="course-slug" className="text-sm font-medium text-foreground">{t('slugLabel')} <span className="text-destructive">*</span></label>
+                <div className="flex h-12 items-center rounded-lg border border-input bg-background px-4 transition hover:border-border-strong focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15">
+                  <span className="shrink-0 font-mono text-sm text-muted-foreground">/courses/</span>
                   <input
                     id="course-slug"
                     value={slugTouched ? slug : normalizedSlug}
@@ -190,13 +193,13 @@ export default function NewCoursePage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="course-academy" className="text-sm font-semibold text-foreground">{tCourses('academyLabel')}</label>
+                <label htmlFor="course-academy" className="text-sm font-medium text-foreground">{tCourses('academyLabel')}</label>
                 <select
                   id="course-academy"
                   value={academyId}
                   onChange={(event) => setAcademyId(event.target.value)}
                   disabled={loadingAcademies}
-                  className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:opacity-60"
+                  className="h-12 w-full rounded-lg border border-input bg-background px-4 text-sm text-foreground outline-none transition hover:border-border-strong focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
                 >
                   <option value="">{loadingAcademies ? t('loadingAcademies') : t('noAcademyOption')}</option>
                   {academies.map((academy) => (
@@ -209,51 +212,60 @@ export default function NewCoursePage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <LayoutTemplate className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{t('chooseTemplate')}</span>
+                  <span className="text-sm font-medium text-foreground">{t('chooseTemplate')}</span>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {templates.map((item) => {
+                <Stagger className="grid gap-3 sm:grid-cols-3">
+                  {templates.map((item, index) => {
                     const Icon = item.icon;
                     const active = template === item.id;
                     return (
+                      <StaggerItem key={item.id} index={index}>
                       <button
-                        key={item.id}
                         type="button"
                         onClick={() => setTemplate(item.id)}
+                        aria-pressed={active}
                         className={cn(
-                          'relative rounded-xl border p-4 text-start transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                          active ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background hover:border-primary/40 hover:bg-muted/40',
+                          'relative h-full w-full rounded-xl border p-4 text-start transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                          active ? 'border-primary/40 shadow-sm' : 'border-border/80 bg-background hover:border-border-strong hover:shadow-sm',
                         )}
                       >
-                        {active && <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3.5" /></span>}
-                        <span className={cn('mb-3 flex size-9 items-center justify-center rounded-lg bg-gradient-to-br', item.tone)}><Icon className="size-4" /></span>
-                        <span className="block text-sm font-semibold text-foreground">{t(item.nameKey)}</span>
-                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{t(item.descriptionKey)}</span>
+                        {active && <m.span layoutId="new-course-template" transition={spring.smooth} className="absolute inset-0 rounded-xl bg-primary/5 ring-1 ring-primary/30" aria-hidden />}
+                        <AnimatePresence>
+                          {active && <m.span key="check" initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.4, opacity: 0 }} transition={spring.snappy} className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3.5" /></m.span>}
+                        </AnimatePresence>
+                        <span className={cn('relative mb-3 flex size-9 items-center justify-center rounded-full', item.tone)}><Icon className="size-4" /></span>
+                        <span className="relative block font-display text-base font-medium tracking-[-0.01em] text-foreground">{t(item.nameKey)}</span>
+                        <span className="relative mt-1 block text-xs leading-relaxed text-muted-foreground">{t(item.descriptionKey)}</span>
                       </button>
+                      </StaggerItem>
                     );
                   })}
-                </div>
+                </Stagger>
               </div>
             </div>
 
-            {error && (
-              <div role="alert" className="mt-6 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
-                {error}
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {error && (
+                <m.div key="error" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={spring.smooth} className="overflow-hidden">
+                  <div role="alert" className="mt-6 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
+                    {error}
+                  </div>
+                </m.div>
+              )}
+            </AnimatePresence>
 
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => router.push('/admin/courses')} className="h-11 rounded-xl px-5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">{tCommon('cancel')}</button>
-              <button type="submit" disabled={!canSubmit} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+            <div className="mt-10 flex flex-col-reverse gap-3 border-t border-border/70 pt-6 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => router.push('/admin/courses')} className="h-11 rounded-lg px-5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">{tCommon('cancel')}</button>
+              <button type="submit" disabled={!canSubmit} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none">
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4 rtl:rotate-180" />}
                 {submitting ? t('creating') : t('submitLabel')}
               </button>
             </div>
-          </form>
+          </form></Reveal>
 
-          <aside className="space-y-4 lg:sticky lg:top-8">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('nextTitle')}</p>
+          <Reveal from="end" delay={0.08} className="lg:sticky lg:top-8"><aside className="space-y-4">
+            <div className="rounded-xl border border-border/70 bg-card p-6 shadow-xs">
+              <p className="font-display text-lg font-medium tracking-[-0.012em] text-foreground">{t('nextTitle')}</p>
               <ol className="mt-5 space-y-5">
                 {[
                   ['01', tStudio('steps.basics'), t('steps.basics.body')],
@@ -261,20 +273,20 @@ export default function NewCoursePage() {
                   ['03', tStudio('steps.publish'), t('steps.publish.body')],
                 ].map(([number, titleText, body]) => (
                   <li key={number} className="flex gap-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted font-mono text-xs font-semibold text-primary">{number}</span>
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-xs font-medium text-primary">{number}</span>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">{titleText}</p>
+                      <p className="text-sm font-medium text-foreground">{titleText}</p>
                       <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
                     </div>
                   </li>
                 ))}
               </ol>
             </div>
-            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm text-primary">
-              <p className="font-semibold">{t('guidedTitle')}</p>
-              <p className="mt-1 text-xs leading-relaxed text-primary/80">{t('guidedBody')}</p>
+            <div className="rounded-xl border border-border/70 bg-muted/40 p-5 text-sm">
+              <p className="font-medium text-foreground">{t('guidedTitle')}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t('guidedBody')}</p>
             </div>
-          </aside>
+          </aside></Reveal>
         </div>
       </div>
     </div>
