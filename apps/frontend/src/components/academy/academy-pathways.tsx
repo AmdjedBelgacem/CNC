@@ -1,3 +1,4 @@
+import { ISLAND_HEAD, ISLAND_PAD } from '@titan/shared';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -102,7 +103,8 @@ export async function AcademyPathways({
     <section
       id="pathways"
       className={cn(
-        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-24',
+        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto ',
+        ISLAND_PAD['academy-pathways'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -111,12 +113,12 @@ export async function AcademyPathways({
         : header ?? (
             <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="eyebrow">{t('directory')}</p>
-                <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-5xl">
+                <p className={ISLAND_HEAD.eyebrow}>{t('directory')}</p>
+                <h2 className={ISLAND_HEAD.titleXl}>
                   {t('chooseAcademy')}
                 </h2>
               </div>
-              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+              <p className={ISLAND_HEAD.aside}>
                 {t('directoryBlurb')}
               </p>
             </Reveal>

@@ -1,3 +1,4 @@
+import { ISLAND_HEAD, ISLAND_PAD } from '@titan/shared';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -286,7 +287,8 @@ export async function EventsNextUp({
     <section
       id="next-up"
       className={cn(
-        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop py-16 md:py-20',
+        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop ',
+        ISLAND_PAD['events-next-up'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -296,14 +298,14 @@ export async function EventsNextUp({
           : header ?? (
               <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="eyebrow">{t('nextUpHeading')}</p>
-                  <h2 className="mt-3 text-balance font-display text-2xl font-medium tracking-[-0.018em] text-foreground md:text-3xl">
+                  <p className={ISLAND_HEAD.eyebrow}>{t('nextUpHeading')}</p>
+                  <h2 className={ISLAND_HEAD.titleMd}>
                     Don&apos;t miss the next one
                   </h2>
                 </div>
                 <a
                   href="#browse"
-                  className="group inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                  className={ISLAND_HEAD.textLink}
                 >
                   Full board
                   <ArrowRight className="flip-rtl size-3.5" />
@@ -355,7 +357,7 @@ export async function EventsSchedule({
   return (
     <section
       id="schedule"
-      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-24"
+      className={cn('px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto', ISLAND_PAD['events-schedule'].section)}
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start xl:gap-12">
         <div className="min-w-0">
@@ -366,11 +368,11 @@ export async function EventsSchedule({
           ) : (
             header ?? (
               <Reveal className="mb-8 max-w-2xl">
-                <p className="eyebrow">Schedule</p>
-                <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground md:text-4xl">
+                <p className={ISLAND_HEAD.eyebrow}>Schedule</p>
+                <h2 className={ISLAND_HEAD.titleLg}>
                   What&apos;s coming up
                 </h2>
-                <p className="mt-3 max-w-prose leading-relaxed text-muted-foreground">
+                <p className={ISLAND_HEAD.lead}>
                   Ordered by date — workshops, webinars, and meets as they land on the board.
                 </p>
               </Reveal>
@@ -494,7 +496,8 @@ export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
     <section
       id="browse"
       className={cn(
-        'border-y border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop py-16 md:py-24',
+        'border-y border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop ',
+        ISLAND_PAD['events-browse'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -503,11 +506,11 @@ export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
           ? null
           : header ?? (
               <Reveal className="mb-8 max-w-2xl">
-                <p className="eyebrow">Full board</p>
-                <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground md:text-4xl">
+                <p className={ISLAND_HEAD.eyebrow}>Full board</p>
+                <h2 className={ISLAND_HEAD.titleLg}>
                   Browse every event
                 </h2>
-                <p className="mt-3 max-w-prose leading-relaxed text-muted-foreground">
+                <p className={ISLAND_HEAD.lead}>
                   Filter by format, toggle upcoming vs past, search by city or title — live from
                   the events API.
                 </p>

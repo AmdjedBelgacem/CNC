@@ -11,7 +11,9 @@ module.exports = {
   // ('media') made every `dark:` utility follow the OS setting while the tokens followed
   // the in-app toggle — so choosing dark on a light OS produced dark-on-dark text.
   darkMode: 'class',
-  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  // The shared package carries class strings too (block seeds, island tokens). Without
+  // scanning it, a class that appears only there is never generated.
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}', '../../packages/shared/src/**/*.ts'],
   theme: {
     extend: {
       colors: {

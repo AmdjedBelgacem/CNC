@@ -8,9 +8,14 @@ import { useTranslations } from 'next-intl';
 import { getImageSrc } from '@/lib/images';
 import type { CourseListItem } from '@/lib/courses';
 
-type Translate = ReturnType<typeof useTranslations>;
+export type Translate = ReturnType<typeof useTranslations>;
 
-function courseLevel(
+/**
+ * The one mapping from a published course to a program card. Production
+ * (`HomeBuilder`) and the canvas both use it, so a card can never read differently
+ * in one than the other.
+ */
+export function courseLevel(
   difficulty: number,
   t: Translate,
 ): { level: string; levelTone: 'primary' | 'secondary' | 'accent' } {
@@ -19,7 +24,7 @@ function courseLevel(
   return { level: t('levelAdvanced'), levelTone: 'accent' };
 }
 
-function courseToCardProps(course: CourseListItem, t: Translate): ProgramCardProps {
+export function courseToCardProps(course: CourseListItem, t: Translate): ProgramCardProps {
   const { level, levelTone } = courseLevel(course.difficulty, t);
   const tags = course.metadata?.tags?.filter(Boolean).join(', ') || undefined;
   return {

@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { LogoItemBlock } from './logo-item-block';
+import { SponsorWordmark } from './sponsor-wordmark';
 import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
 
 /** Eyebrow header above a glass logo wall. */
@@ -33,11 +34,7 @@ export function PartnerLogosBlock({ props, puck }: BlockComponentProps<PartnerLo
           key={sponsor.id}
           props={{ className: 'hover:scale-100' }}
           puck={{
-            renderSlot: () => (
-              <span className="font-display text-base font-medium tracking-[-0.01em] text-foreground opacity-60 transition-opacity duration-300 hover:opacity-100 sm:text-lg">
-                {sponsor.name}
-              </span>
-            ),
+            renderSlot: () => <SponsorWordmark name={sponsor.name} />,
             getSlotData: () => [],
           }}
         />

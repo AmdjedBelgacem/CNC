@@ -1,3 +1,4 @@
+import { ISLAND_HEAD, ISLAND_PAD } from '@titan/shared';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -43,7 +44,8 @@ export async function ProductsFeatured({
     <section
       id="on-the-bench"
       className={cn(
-        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop py-16 md:py-24',
+        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop ',
+        ISLAND_PAD['products-featured'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -53,12 +55,12 @@ export async function ProductsFeatured({
           : header ?? (
               <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <p className="eyebrow">{t('featuredHeading')}</p>
-                  <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground md:text-4xl">
+                  <p className={ISLAND_HEAD.eyebrow}>{t('featuredHeading')}</p>
+                  <h2 className={ISLAND_HEAD.titleLg}>
                     Featured this week
                   </h2>
                 </div>
-                <a href="#inventory" className="link-pill group">
+                <a href="#inventory" className={ISLAND_HEAD.pillLink}>
                   Full catalog
                   <ArrowRight className="flip-rtl size-3.5 transition-transform group-hover:translate-x-0.5" />
                 </a>
@@ -136,7 +138,8 @@ export async function ProductsInventory({
     <section
       id="inventory"
       className={cn(
-        'px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-[1800px] py-16 md:py-24',
+        'px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-[1800px] ',
+        ISLAND_PAD['products-inventory'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -145,9 +148,9 @@ export async function ProductsInventory({
         : header ?? (
             <Reveal className="mb-10 flex flex-col gap-8 border-b border-border/70 pb-10 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between lg:gap-10">
               <div className="max-w-2xl lg:min-w-[380px] lg:flex-1">
-                <p className="eyebrow">{t('liveInventory')}</p>
+                <p className={ISLAND_HEAD.eyebrow}>{t('liveInventory')}</p>
                 <h2 className="section-title mt-3">{t('catalogTitle')}</h2>
-                <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-muted-foreground">
+                <p className={ISLAND_HEAD.leadSm}>
                   {t('catalogSubtitle')}
                 </p>
               </div>
@@ -205,7 +208,8 @@ export async function ProductsDepartments({
     <section
       id="departments"
       className={cn(
-        'border-y border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop py-16 md:py-24',
+        'border-y border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop ',
+        ISLAND_PAD['products-departments'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -214,9 +218,9 @@ export async function ProductsDepartments({
           ? null
           : header ?? (
               <Reveal className="mb-10 max-w-2xl">
-                <p className="eyebrow">{t('directory')}</p>
+                <p className={ISLAND_HEAD.eyebrow}>{t('directory')}</p>
                 <h2 className="section-title mt-3">{t('shopByDepartment')}</h2>
-                <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
+                <p className={ISLAND_HEAD.leadSm}>
                   {t('shopByDepartmentHint')}
                 </p>
               </Reveal>

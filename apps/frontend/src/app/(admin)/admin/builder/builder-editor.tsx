@@ -100,7 +100,29 @@ async function fetchCatalogProductsForBuilder(): Promise<CatalogProduct[] | null
 }
 /**
  * Canvas chrome — injected INTO the iframe document (the override's children * are portaled into the frame). Recolours Puck's outline scale to the app * clay and adds smooth hover/selection rings, rounded dropzones, and a glassy * hover label chip. Class names are version-pinned to @measured/puck 0.20.2. */
+/**
+ * Rules that address a container's DIRECT children cannot see slot content in the
+ * canvas: Puck renders every block inside a DropZone and its own wrapper, so the
+ * children of `.space-y-6` are one DropZone, not the blocks. Production has no such
+ * layer. These repeat the same spacing one level down, from the same scale.
+ */
+const SPACE_Y_STEPS = [1, 2, 3, 4, 5, 6, 8, 10, 12] as const;
+const SLOT_SIBLING_CSS = [
+  ...SPACE_Y_STEPS.map(
+    (n) =>
+      `.space-y-${n}>[data-puck-dropzone]>[data-puck-component]~[data-puck-component]{margin-top:${n * 0.25}rem;}`,
+  ),
+  // `.logo-row > *` dims and greys each logo; the logos are slot blocks here.
+  '.logo-row>[data-puck-dropzone]>[data-puck-component]>*{opacity:.5;filter:grayscale(1);transition:opacity 300ms ease,filter 300ms ease,transform 300ms ease;}',
+  '.logo-row>[data-puck-dropzone]>[data-puck-component]>*:hover{opacity:1;filter:grayscale(0);transform:scale(1.1);}',
+  // A pill link is a flex item (so block-level) when a stack lays it out in production,
+  // but sits inline inside Puck's wrapper, where the line box adds a strut.
+  '[data-puck-component]>.link-pill{display:flex;width:fit-content;}',
+].join('\n');
 const CANVAS_CSS = `
+/* A block that renders nothing (a product card outside the current page, a hidden node) still gets a Puck wrapper, which would otherwise occupy a grid cell and push the page taller than production. */
+[data-puck-component]:empty{display:none;}
+${SLOT_SIBLING_CSS}
 :root{
 --puck-color-azure-01:#fdf8f5;
 --puck-color-azure-02:#fbf0ea;

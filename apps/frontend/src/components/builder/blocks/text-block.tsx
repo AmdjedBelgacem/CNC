@@ -10,6 +10,10 @@ const TEXT_SIZE: Record<string, string> = {
   sm: 'font-label-sm text-xs',
   md: 'font-body-md text-body-md',
   lg: 'font-body-lg text-body-lg',
+  // Sans label with a clay dot (the island eyebrow).
+  eyebrow: '',
+  // No type classes: inherits the surrounding size, for paragraphs styled through className.
+  plain: '',
 };
 const WEIGHT_CLASS: Record<string, string> = {
   normal: 'font-normal',

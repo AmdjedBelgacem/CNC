@@ -1,3 +1,4 @@
+import { ISLAND_HEAD, ISLAND_PAD } from '@titan/shared';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -66,7 +67,8 @@ export async function FeedTopics({
     <section
       id="topics"
       className={cn(
-        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop py-16 md:py-20',
+        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop ',
+        ISLAND_PAD['feed-topics'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -76,12 +78,12 @@ export async function FeedTopics({
           : header ?? (
               <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <p className="eyebrow">{t('topicsTitle')}</p>
-                  <h2 className="mt-3 text-balance font-display text-2xl font-medium tracking-[-0.018em] text-foreground md:text-3xl">
+                  <p className={ISLAND_HEAD.eyebrow}>{t('topicsTitle')}</p>
+                  <h2 className={ISLAND_HEAD.titleMd}>
                     {t('topicsBlurb')}
                   </h2>
                 </div>
-                <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{t('topicsHint')}</p>
+                <p className={ISLAND_HEAD.aside}>{t('topicsHint')}</p>
               </Reveal>
             )}
 
@@ -129,7 +131,7 @@ export async function FeedWire({
   return (
     <section
       id="live-wire"
-      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-24"
+      className={cn('px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto', ISLAND_PAD['feed-wire'].section)}
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start xl:gap-12">
         <div className="min-w-0">
@@ -140,11 +142,11 @@ export async function FeedWire({
           ) : (
             header ?? (
               <Reveal className="mb-8 max-w-2xl">
-                <p className="eyebrow">{t('wireTitle')}</p>
-                <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground md:text-4xl">
+                <p className={ISLAND_HEAD.eyebrow}>{t('wireTitle')}</p>
+                <h2 className={ISLAND_HEAD.titleLg}>
                   {t('wireBlurb')}
                 </h2>
-                <p className="mt-3 max-w-prose leading-relaxed text-muted-foreground">{t('wireHint')}</p>
+                <p className={ISLAND_HEAD.lead}>{t('wireHint')}</p>
               </Reveal>
             )
           )}

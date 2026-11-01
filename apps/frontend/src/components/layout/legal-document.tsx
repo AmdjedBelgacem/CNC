@@ -18,13 +18,16 @@ import { cn } from '@/lib/utils';
 export function LegalDocument({
   children,
   className,
+  progress = true,
 }: {
   children: ReactNode;
   className?: string;
+  /** The reading-progress bar tracks the window scroll, so the builder canvas turns it off. */
+  progress?: boolean;
 }) {
   return (
     <div className={cn('relative isolate', className)}>
-      <ScrollProgress className="z-[60]" />
+      {progress ? <ScrollProgress className="z-[60]" /> : null}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] ambient-wash opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent)]"
@@ -35,6 +38,9 @@ export function LegalDocument({
           '[&_h1]:text-[clamp(2.25rem,5vw,3.5rem)] [&_h1]:leading-[1.05] [&_h1]:tracking-[-0.028em]',
           // "Last updated" line directly under the title
           '[&_h1+p]:mt-4 [&_h1+p]:text-sm [&_h1+p]:text-muted-foreground',
+          // The builder canvas wraps every block in its own element, so the title and the
+          // line under it are no longer siblings there; this is the same rule for that shape.
+          '[&_[data-puck-component]:has(>h1)+[data-puck-component]>p]:mt-4 [&_[data-puck-component]:has(>h1)+[data-puck-component]>p]:text-sm [&_[data-puck-component]:has(>h1)+[data-puck-component]>p]:text-muted-foreground',
           // Clause headings: serif, set off by a hairline rule above
           '[&_h2]:border-t [&_h2]:border-border/70 [&_h2]:pt-10 [&_h2]:text-[1.625rem] [&_h2]:leading-snug [&_h2]:tracking-[-0.016em]',
           '[&_h3]:text-xl [&_h3]:tracking-[-0.012em]',

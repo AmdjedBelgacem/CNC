@@ -16,20 +16,33 @@ type SeedNode = PuckNode;
 
 const node = (type: string, props: Record<string, unknown>): SeedNode => ({ type, props });
 
+/**
+ * Every class below is copied from the matching default in `home-extras.tsx`.
+ * Those defaults are what production renders until a page is saved; once saved,
+ * these seeds ARE production. If the two ever differ, publishing a page silently
+ * restyles it — so change them together.
+ */
+const TITLE =
+  'text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl';
+const LEAD = 'mt-4 text-pretty text-base leading-7 text-muted-foreground';
+const ITEM_TITLE =
+  'text-balance font-display text-xl font-medium tracking-[-0.012em] text-foreground';
+const ITEM_BODY = 'mt-3 text-pretty text-base leading-7 text-muted-foreground';
+
 const heading = (text: string, extra: Record<string, unknown> = {}): SeedNode =>
   node('heading', {
     as: 'h2',
     text,
     size: '2xl',
-    className: 'font-display font-semibold tracking-tight text-foreground sm:text-3xl',
+    className: TITLE,
     ...extra,
   });
 
 const body = (text: string, extra: Record<string, unknown> = {}): SeedNode =>
   node('text', {
     text,
-    size: 'md',
-    className: 'text-base leading-7 text-muted-foreground',
+    size: 'plain',
+    className: LEAD,
     ...extra,
   });
 
@@ -41,13 +54,6 @@ const link = (label: string, href: string, extra: Record<string, unknown> = {}):
     ...extra,
   });
 
-const dot = (): SeedNode =>
-  node('text', {
-    text: '·',
-    size: 'md',
-    color: 'text-muted-foreground',
-  });
-
 const itemCard = (question: string, answer: string): SeedNode =>
   node('card', {
     padding: 'none',
@@ -55,41 +61,49 @@ const itemCard = (question: string, answer: string): SeedNode =>
     radius: 'none',
     border: false,
     align: 'left',
-    className: 'fixed-island-item border-b border-border pb-6',
+    className: 'fixed-island-item border-b border-border/70 pb-8',
     content: [
-      heading(question, {
-        as: 'h3',
-        size: 'lg',
-        className: 'font-display font-semibold text-foreground',
-      }),
-      body(answer, { className: 'mt-2 text-base leading-7 text-muted-foreground' }),
+      heading(question, { as: 'h3', size: 'xl', className: ITEM_TITLE }),
+      body(answer, { className: ITEM_BODY }),
     ],
   });
 
 const faqHeader = [heading('Frequently asked questions about CNC machining training')];
 const faqItems = HOMEPAGE_FAQ.map((item) => itemCard(item.question, item.answer));
 
+/** One pill, matching the public guides card (`link-pill` with its trailing arrow). */
+const guidePill = (label: string, href: string): SeedNode =>
+  node('link', { label, href, arrow: true, className: 'link-pill group' });
+
 const guidesHeader = [
-  heading('CNC solutions, training and practical guides'),
-  body(
-    'Start with our CNC training materials, then review CNC solutions, implementation guidance and partner options for your shop or learning centre.',
-    { className: 'mt-3 max-w-3xl text-base leading-7 text-muted-foreground' },
-  ),
-  node('stack', {
-    direction: 'row',
-    gap: 'sm',
-    align: 'center',
-    justify: 'start',
-    wrap: true,
-    className: 'mt-4 text-base leading-7 text-muted-foreground',
+  node('card', {
+    padding: 'none',
+    bg: 'transparent',
+    radius: '3xl',
+    border: true,
+    align: 'left',
+    className:
+      'ambient-wash-card relative overflow-hidden bg-card px-6 py-12 shadow-xs sm:px-12 md:py-14',
     content: [
-      link('CNC guides', '/learn'),
-      dot(),
-      link('CNC courses', '/courses'),
-      dot(),
-      link('CNC tools', '/products'),
-      dot(),
-      link('Become a partner', '/become-a-partner'),
+      heading('CNC solutions, training and practical guides', { className: `max-w-2xl ${TITLE}` }),
+      body(
+        'Start with our CNC training materials, then review CNC solutions, implementation guidance and partner options for your shop or learning centre.',
+        { className: `max-w-2xl ${LEAD}` },
+      ),
+      node('stack', {
+        direction: 'row',
+        gap: 'sm',
+        align: 'start',
+        justify: 'start',
+        wrap: true,
+        className: 'mt-8',
+        content: [
+          guidePill('CNC guides', '/learn'),
+          guidePill('CNC courses', '/courses'),
+          guidePill('CNC tools', '/products'),
+          guidePill('Become a partner', '/become-a-partner'),
+        ],
+      }),
     ],
   }),
 ];
@@ -98,7 +112,6 @@ const aboutHeader = [
   heading(`About ${BRAND_NAME}`),
   body(
     `${BRAND_NAME} is a manufacturing-education company. The following describes what it teaches and who it serves.`,
-    { className: 'mt-3 text-base text-muted-foreground' },
   ),
 ];
 
@@ -123,36 +136,24 @@ const aboutFacts = [
 
 const aboutItems = aboutFacts.map((fact) => itemCard(fact.heading, fact.body));
 
+/** Footer sentence. Spaces are non-breaking so the flex row keeps the sentence's word gaps. */
+const footerText = (text: string): SeedNode =>
+  node('text', { text, size: 'plain', className: 'text-sm leading-6 text-muted-foreground' });
+
 const aboutFooter = [
   node('stack', {
     direction: 'row',
-    gap: 'sm',
-    align: 'center',
+    gap: 'none',
+    align: 'start',
     justify: 'start',
     wrap: true,
-    className: 'mt-8 text-sm text-muted-foreground',
+    className: 'mt-10',
     content: [
-      node('text', {
-        text: 'Course catalogue, academies and pricing are listed on the',
-        size: 'sm',
-        className: 'text-sm text-muted-foreground',
-      }),
-      link('courses page', '/courses', {
-        className: 'underline underline-offset-4 text-muted-foreground hover:text-primary',
-      }),
-      node('text', {
-        text: '. For cohort and institutional training, see',
-        size: 'sm',
-        className: 'text-sm text-muted-foreground',
-      }),
-      link('educational purchasing', '/edu-purchases', {
-        className: 'underline underline-offset-4 text-muted-foreground hover:text-primary',
-      }),
-      node('text', {
-        text: '.',
-        size: 'sm',
-        className: 'text-sm text-muted-foreground',
-      }),
+      footerText('Course catalogue, academies and pricing are listed on the '),
+      link('courses page', '/courses', { className: 'text-sm leading-6 text-primary underline-offset-4 hover:underline' }),
+      footerText('. For cohort and institutional training, see '),
+      link('educational purchasing', '/edu-purchases', { className: 'text-sm leading-6 text-primary underline-offset-4 hover:underline' }),
+      footerText('.'),
     ],
   }),
 ];

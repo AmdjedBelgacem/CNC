@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { LiveIslandProps } from '@titan/shared';
+import { ISLAND_PAD, type LiveIslandProps } from '@titan/shared';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
 import { ProductsCatalog } from '@/components/store/products-catalog';
@@ -98,19 +98,15 @@ const ISLAND_COPY: Record<string, { label: string; detail: string; fixed?: boole
 const SIDE_RAIL_HEADER = new Set(['events-schedule', 'feed-wire']);
 
 const ISLAND_HEADER_WRAPPER: Record<string, string> = {
-  'academy-pathways':
-    'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto pt-16 md:pt-24',
-  'products-featured': 'px-margin-mobile md:px-margin-desktop pt-12 md:pt-16',
-  'products-inventory':
-    'px-margin-mobile md:px-margin-desktop max-w-[1800px] mx-auto pt-14 md:pt-20',
-  'products-departments': 'px-margin-mobile md:px-margin-desktop pt-14 md:pt-20',
-  'feed-topics': 'px-margin-mobile md:px-margin-desktop pt-14 md:pt-18',
-  'feed-wire':
-    'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto pt-16 md:pt-20',
-  'events-next-up': 'px-margin-mobile md:px-margin-desktop pt-12 md:pt-16',
-  'events-schedule':
-    'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto pt-16 md:pt-20',
-  'events-browse': 'px-margin-mobile md:px-margin-desktop pt-16 md:pt-20',
+  'academy-pathways': `px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto ${ISLAND_PAD['academy-pathways'].top}`,
+  'products-featured': `px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['products-featured'].top}`,
+  'products-inventory': `px-margin-mobile md:px-margin-desktop max-w-[1800px] mx-auto ${ISLAND_PAD['products-inventory'].top}`,
+  'products-departments': `px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['products-departments'].top}`,
+  'feed-topics': `px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['feed-topics'].top}`,
+  'feed-wire': `px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto ${ISLAND_PAD['feed-wire'].top}`,
+  'events-next-up': `px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['events-next-up'].top}`,
+  'events-schedule': `px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto ${ISLAND_PAD['events-schedule'].top}`,
+  'events-browse': `px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['events-browse'].top}`,
 };
 
 export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandProps>) {
@@ -252,7 +248,7 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
             sideRailHeader
               ? 'island-header-overlay'
               : ISLAND_HEADER_WRAPPER[variant] ??
-                'px-margin-mobile md:px-margin-desktop pt-12 md:pt-16'
+                'px-margin-mobile md:px-margin-desktop pt-16 md:pt-24'
           }
         >
           {header}
@@ -260,7 +256,7 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
       ) : null}
 
       {variant === 'products-inventory' ? (
-        <div className="px-margin-mobile md:px-margin-desktop pb-14 md:pb-20">
+        <div className={`px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['products-inventory'].bottom}`}>
           <ProductsCatalog
             records={puck.renderSlot('records', { className: 'contents' })}
             recordIds={recordIds}

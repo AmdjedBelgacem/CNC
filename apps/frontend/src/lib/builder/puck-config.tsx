@@ -1,6 +1,6 @@
 'use client';
 import { createElement } from 'react';
-import type { ComponentType, CSSProperties } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import { useGetPuck } from '@measured/puck';
 import type { ComponentConfig, Config } from '@measured/puck';
 import {
@@ -74,7 +74,8 @@ import {
 } from '@titan/shared';
 import { ImageUploadControl } from '@/components/builder/inspector/image-upload-control';
 import { BLOCK_COMPONENTS } from '@/components/builder/blocks';
-import { useBuilderLivePreview } from '@/components/builder/live-preview-context'; // ---------------------------------------------------------------- helpers
+import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
+import { BuilderPageFrame } from '@/components/builder/builder-page-frame'; // ---------------------------------------------------------------- helpers
 const imageField = (label: string) => ({
   type: 'custom' as const,
   label,
@@ -270,6 +271,7 @@ const heading: ComponentConfig = def('heading', 'Heading', headingDefaults, {
     { label: 'Small', value: 'sm' },
     { label: 'Label (11px caps)', value: 'label' },
     { label: 'Logo', value: 'logo' },
+    { label: 'Section title (fluid)', value: 'section' },
   ]),
   align: alignField,
   color: textField('Color class or hex', 'text-text-primary / #ffffff'),
@@ -284,6 +286,8 @@ const text: ComponentConfig = def('text', 'Text', textDefaults, {
     { label: '12px label', value: 'sm' },
     { label: 'Medium (16px)', value: 'md' },
     { label: 'Large (18px)', value: 'lg' },
+    { label: 'Eyebrow label', value: 'eyebrow' },
+    { label: 'Inherit (no size)', value: 'plain' },
   ]),
   align: alignField,
   color: textField('Color class or hex', 'text-text-muted / #6b7280'),
@@ -315,6 +319,7 @@ const link: ComponentConfig = def('link', 'Link', linkDefaults, {
   label: textField('Label', 'Leave empty for an icon circle'),
   href: textField('URL'),
   icon: iconField,
+  arrow: booleanSelect('Trailing arrow'),
 });
 const navLink: ComponentConfig = def('nav-link', 'Nav Link', navLinkDefaults, {
   label: textField('Label'),
@@ -1283,7 +1288,11 @@ export const puckConfig: Config = {
     'product-card': productCard,
     'live-island': liveIsland,
   },
-  root: { fields: {} },
+  root: {
+    fields: {},
+    render: ({ children }: { children: ReactNode }) =>
+      createElement(BuilderPageFrame, null, children),
+  },
   categories: {
     Sections: {
       components: [

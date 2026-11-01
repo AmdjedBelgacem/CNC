@@ -24,6 +24,8 @@ const HEADING_SIZE: Record<string, string> = {
   // Labels are UI, not voice: sentence-case muted sans.
   label: 'font-sans text-[13px] font-medium break-words',
   logo: 'font-display font-medium text-xl md:text-2xl tracking-[-0.015em] break-words',
+  // The shared fluid section title (`.section-title`).
+  section: '',
 }; /** Letter-spacing + line-height overrides (literal classes so Tailwind picks them up). */
 const TRACKING_CLASS: Record<string, string> = {
   '0.025em': 'tracking-[0.025em]',

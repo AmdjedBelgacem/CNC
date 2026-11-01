@@ -1,4 +1,5 @@
 'use client';
+import { SponsorWordmark } from '@/components/builder/blocks/sponsor-wordmark';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type {
@@ -8,7 +9,6 @@ import type {
   CtaSignupProps,
   PageLayout,
   PartnerLogosProps,
-  ProgramCardProps,
   ProgramCardsProps,
   PuckNode,
 } from '@titan/shared';
@@ -16,7 +16,7 @@ import { getSlotChildren, mergeBlockProps } from '@titan/shared';
 import { BuilderNode } from '@/components/builder/block-renderer';
 import { AcademyGridBlock } from '@/components/builder/blocks/academy-grid-block';
 import { CatalogHeroBlock } from '@/components/builder/blocks/catalog-hero-block';
-import { ProgramCardsBlock } from '@/components/builder/blocks/program-cards-block';
+import { ProgramCardsBlock, courseToCardProps } from '@/components/builder/blocks/program-cards-block';
 import { ProgramCardBlock } from '@/components/builder/blocks/program-card-block';
 import { PartnerLogosBlock } from '@/components/builder/blocks/partner-logos-block';
 import { LogoItemBlock } from '@/components/builder/blocks/logo-item-block';
@@ -26,39 +26,8 @@ import { AcademyCard } from '@/components/academy/academy-card';
 import type { AcademySummary } from '@/lib/academies';
 import type { CourseListItem } from '@/lib/courses';
 import type { Sponsor } from '@/lib/sponsors';
-import { getImageSrc } from '@/lib/images';
 
 const noopPuck: PuckBridge = { renderSlot: () => null, getSlotData: () => [] };
-
-type Translate = ReturnType<typeof useTranslations>;
-
-function courseLevel(
-  difficulty: number,
-  t: Translate,
-): { level: string; levelTone: 'primary' | 'secondary' | 'accent' } {
-  if (difficulty <= 1) return { level: t('levelBeginner'), levelTone: 'primary' };
-  if (difficulty <= 3) return { level: t('levelIntermediate'), levelTone: 'secondary' };
-  return { level: t('levelAdvanced'), levelTone: 'accent' };
-}
-
-function courseToCardProps(course: CourseListItem, t: Translate): ProgramCardProps {
-  const { level, levelTone } = courseLevel(course.difficulty, t);
-  const tags = course.metadata?.tags?.filter(Boolean).join(', ') || undefined;
-  return {
-    id: `course-card-${course.id}`,
-    level,
-    levelTone,
-    duration: course.estimatedHours ? t('durationHours', { hours: course.estimatedHours }) : undefined,
-    metaLabel: course.academy?.title || t('publishedCourse'),
-    title: course.title,
-    description: course.description || course.subtitle || undefined,
-    tags,
-    imageUrl: getImageSrc(course.thumbnailUrl, 'course'),
-    imageAlt: course.title,
-    ctaLabel: t('viewCourse'),
-    href: `/courses/${course.slug}`,
-  };
-}
 
 /**
  * Marketing page renderer: identical to BlockRenderer except
@@ -177,11 +146,7 @@ export function HomeBuilder({
               key={sponsor.id}
               props={{ className: 'hover:scale-100' }}
               puck={{
-                renderSlot: () => (
-                  <span className="font-mono font-bold tracking-tight text-text-primary opacity-70 hover:opacity-100 transition-opacity text-sm sm:text-base">
-                    {sponsor.name}
-                  </span>
-                ),
+                renderSlot: () => <SponsorWordmark name={sponsor.name} />,
                 getSlotData: () => [],
               }}
             />
