@@ -65,6 +65,13 @@ export default buildConfig({
     pool: {
       connectionString: databaseUrl,
     },
+    // Schema drift is managed through generated migrations, never auto-push:
+    // the dev database shares the public schema with the main app, whose
+    // composite primary keys (post_tags, comment_votes, post_likes) trip a
+    // drizzle-kit introspection bug that crashes every boot with
+    // "there is no parameter $1". Run `pnpm payload migrate:create` after
+    // collection changes, then `pnpm payload migrate`.
+    push: false,
   }),
   plugins: [
     s3Storage({
