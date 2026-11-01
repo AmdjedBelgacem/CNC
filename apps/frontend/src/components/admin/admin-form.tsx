@@ -275,15 +275,21 @@ export function SwitchField({
  * document outline stays correct when a form nests sections.
  */
 export function FormSection({
+  id,
   title,
   description,
   icon: Icon,
+  badge,
   actions,
   children,
   className,
   bodyClassName,
   as: Heading = 'h2',
 }: {
+  /** Anchor target for `SectionNav`. */
+  id?: string;
+  /** Small marker next to the title, e.g. "Optional". */
+  badge?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
   icon?: LucideIcon;
@@ -295,8 +301,9 @@ export function FormSection({
 }) {
   return (
     <section
+      id={id}
       className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs',
+        'flex scroll-mt-24 flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs',
         className,
       )}
     >
@@ -305,6 +312,11 @@ export function FormSection({
           <Heading className="flex items-center gap-2 font-display text-[1.0625rem] font-medium leading-snug tracking-[-0.015em] text-foreground">
             {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
             {title}
+            {badge && (
+              <span className="rounded-full bg-muted px-2 py-0.5 font-sans text-2xs font-medium tracking-normal text-muted-foreground">
+                {badge}
+              </span>
+            )}
           </Heading>
           {description && (
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
