@@ -29,6 +29,7 @@ import { EmptyState } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { serializeJsonLd } from '@/lib/json-ld';
 import { SITE_URL } from '@/lib/brand';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 
 /**
  * This route is dynamic, and must stay that way.
@@ -68,14 +69,14 @@ function AcademyStat({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-full', inverse ? 'bg-white/10 text-white' : 'bg-primary/10 text-primary')}>
         <Icon className="size-4" />
       </span>
       <div className="min-w-0">
-        <p className={cn('font-display text-lg font-semibold leading-none', inverse ? 'text-background' : 'text-foreground')}>
+        <p className={cn('font-display text-xl font-medium leading-none tracking-[-0.015em]', inverse ? 'text-white' : 'text-foreground')}>
           {value}
         </p>
-        <p className={cn('mt-1 truncate text-xs', inverse ? 'text-background/55' : 'text-muted-foreground')}>
+        <p className={cn('mt-1 truncate text-xs', inverse ? 'text-white/60' : 'text-muted-foreground')}>
           {label}
         </p>
       </div>
@@ -105,9 +106,9 @@ function AcademyCourseCard({
   return (
     <Link
       href={`/courses/${course.slug}`}
-      className="card-hover group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs hover:border-border-strong motion-reduce:transform-none motion-reduce:transition-none"
+      className="card-hover group flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-border-strong hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none"
     >
-      <div className="relative aspect-[16/9] overflow-hidden border-b border-border bg-surface-sunken">
+      <div className="relative m-2 mb-0 aspect-[16/9] overflow-hidden rounded-xl bg-surface-sunken">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={getImageSrc(course.thumbnailUrl, 'course')}
@@ -115,30 +116,30 @@ function AcademyCourseCard({
           loading="lazy"
           className="size-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/75 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
         <span
-          className="absolute start-4 top-4 inline-flex size-9 items-center justify-center rounded-lg font-mono text-xs font-semibold shadow-lg"
-          style={{ backgroundColor: accent, color: '#fff' }}
+          className="absolute start-3 top-3 inline-flex size-9 items-center justify-center rounded-full bg-card/90 font-display text-sm font-medium text-foreground shadow-sm backdrop-blur"
+          
         >
-          {String(index + 1).padStart(2, '0')}
+          {index + 1}
         </span>
-        <span className="absolute bottom-4 start-4 rounded-full border border-white/20 bg-black/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-md">
+        <span className="absolute bottom-3 start-3 rounded-full border border-white/20 bg-black/30 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
           {levelLabel}
         </span>
       </div>
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-4">
-          <h3 className="font-display text-xl font-semibold leading-tight tracking-tight text-foreground transition-colors group-hover:text-primary">
+          <h3 className="text-balance font-display text-xl font-medium leading-snug tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary">
             {course.title}
           </h3>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition group-hover:border-primary/40 group-hover:bg-primary/10 group-hover:text-primary">
-            <ArrowRight className="size-4 rtl:rotate-180" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition group-hover:border-primary/40 group-hover:bg-primary/10 group-hover:text-primary">
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
           </span>
         </div>
         {course.subtitle ? (
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{course.subtitle}</p>
         ) : null}
-        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
+        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Layers3 className="size-3.5 text-primary" />
             {seriesLabel}
@@ -147,11 +148,11 @@ function AcademyCourseCard({
             <Clock className="size-3.5 text-primary" />
             {course.estimatedHours ? `${course.estimatedHours}h` : selfPacedLabel}
           </span>
-          <span className="ms-auto font-mono text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: accent }}>
+          <span className="ms-auto text-xs font-medium" style={{ color: accent }}>
             {accessLabel}
           </span>
         </div>
-        <span className="mt-4 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{coursePathLabel}</span>
+        <span className="mt-3 text-xs text-muted-foreground/70">{coursePathLabel}</span>
       </div>
     </Link>
   );
@@ -309,27 +310,26 @@ export default async function AcademyDetailPage(props: Props) {
     <div dir={locale === 'ar' ? 'rtl' : 'ltr'} style={rootStyle} className="min-h-screen bg-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd).replace(/</g, '\\u003c') }} />
 
-      <section className="relative isolate min-h-[620px] overflow-hidden border-b border-border bg-foreground text-background lg:min-h-[680px]">
+      <section className="relative isolate min-h-[620px] overflow-hidden border-b border-border/70 bg-neutral-950 text-white lg:min-h-[680px]">
         {hero ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={hero} alt={academy.title} loading="eager" className="absolute inset-0 size-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-foreground/95 via-foreground/75 to-foreground/35" />
-            <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/10 to-foreground/25" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/20 rtl:bg-gradient-to-l" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-black/20" />
           </>
         ) : (
           <>
             <div className="blueprint-grid absolute inset-0" />
             <div className="absolute inset-0" style={{ backgroundColor: accent, opacity: 0.12 }} />
-            <div className="absolute inset-0 bg-foreground/70" />
+            <div className="absolute inset-0 bg-black/70" />
           </>
         )}
-        <div className="blueprint-grid absolute inset-0 opacity-10" />
-        <div className="absolute -end-32 -top-32 size-[28rem] rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute -end-32 -top-32 size-[28rem] rounded-full bg-primary/15 blur-3xl" />
         <div className="absolute -bottom-48 start-1/3 size-[24rem] rounded-full blur-3xl" style={{ backgroundColor: accent, opacity: 0.25 }} />
 
         <div className="relative mx-auto flex min-h-[620px] max-w-container-max flex-col px-margin-mobile pb-12 pt-5 md:px-margin-desktop md:pb-16 lg:min-h-[680px]">
-          <Link href="/academy" className="inline-flex w-fit items-center gap-2 text-sm font-medium text-background/70 transition-colors hover:text-background">
+          <Link href="/academy" className="group inline-flex w-fit items-center gap-2 rounded-full px-2 py-1 -ms-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white">
             <ArrowLeft className="size-4 rtl:rotate-180" />
             {t('backToAcademies')}
           </Link>
@@ -337,36 +337,36 @@ export default async function AcademyDetailPage(props: Props) {
           <div className="grid flex-1 items-end gap-10 pt-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
             <div className="min-w-0">
               <div className="mb-5 flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white" style={{ backgroundColor: accent }}>
+                <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium text-white shadow-sm" style={{ backgroundColor: accent }}>
                   <BookOpen className="size-3.5" />
                   {t('academyLabel')}
                 </span>
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-background/55">ACADEMY / {academy.slug}</span>
+                <span className="font-mono text-xs text-white/50">{academy.slug}</span>
               </div>
-              <h1 className="max-w-4xl font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-7xl">
+              <h1 className="max-w-4xl text-balance font-display text-4xl font-medium leading-[1.04] tracking-[-0.025em] sm:text-5xl lg:text-7xl">
                 {academy.title}
               </h1>
               {academy.subtitle ? (
-                <p className="mt-5 max-w-2xl text-lg leading-relaxed text-background/75 sm:text-xl">
+                <p className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-white/75 sm:text-xl">
                   {academy.subtitle}
                 </p>
               ) : null}
 
-              <div className="mt-8 grid max-w-xl grid-cols-2 gap-x-6 gap-y-4 border-y border-background/20 py-5 sm:grid-cols-3">
+              <div className="mt-8 grid max-w-xl grid-cols-2 gap-x-6 gap-y-4 border-y border-white/15 py-5 sm:grid-cols-3">
                 <AcademyStat inverse icon={BookOpen} value={String(courseCount)} label={courseCountLabel} />
                 <AcademyStat inverse icon={Clock} value={hoursLabel} label={t('estimatedHours')} />
                 <AcademyStat inverse icon={Layers3} value={String(pathwayCount)} label={t('learningPaths')} />
               </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Button asChild size="lg" className="h-12">
+                <Button asChild size="lg" className="h-12 rounded-full px-6">
                   <Link href="#courses">
                     {t('browseCourses')}
                     <ArrowRight className="rtl:rotate-180" />
                   </Link>
                 </Button>
                 {publishedProducts.length > 0 ? (
-                  <Button asChild size="lg" variant="outline" className="h-12 border-background/30 bg-transparent text-background hover:border-background/50 hover:bg-background/10 hover:text-background">
+                  <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/30 bg-white/5 text-white backdrop-blur hover:border-white/50 hover:bg-white/10 hover:text-white">
                     <Link href="#tools">
                       <Package className="size-4" />
                       {t('exploreTools')}
@@ -377,8 +377,8 @@ export default async function AcademyDetailPage(props: Props) {
             </div>
 
             <div className="relative justify-self-start lg:justify-self-end">
-              <div className="pointer-events-none absolute -inset-2 rounded-2xl border" style={{ borderColor: accent }} />
-              <div className="relative w-56 rounded-2xl border border-white/20 bg-black/25 p-4 shadow-2xl shadow-black/20 backdrop-blur-md">
+              <div className="pointer-events-none absolute -inset-2 rounded-3xl border opacity-60" style={{ borderColor: accent }} />
+              <div className="relative w-60 animate-fade-in-up rounded-2xl border border-white/15 bg-white/10 p-4 shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center gap-3">
                   <div className="size-14 shrink-0 overflow-hidden rounded-xl border border-white/25 bg-black/20">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -392,8 +392,8 @@ export default async function AcademyDetailPage(props: Props) {
                     <p className="mt-2 truncate text-sm font-medium text-white/85">{academy.subtitle || academy.title}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-white/55">
-                  <span>{t('visual')} / 01</span>
+                <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-3 text-xs text-white/60">
+                  <span>{t('visual')}</span>
                   <span>{courseCountLabel}</span>
                 </div>
               </div>
@@ -402,31 +402,31 @@ export default async function AcademyDetailPage(props: Props) {
         </div>
       </section>
 
-      <section id="overview" className="mx-auto max-w-container-max scroll-mt-24 px-margin-mobile py-12 md:px-margin-desktop md:py-16">
+      <section id="overview" className="mx-auto max-w-container-max scroll-mt-24 px-margin-mobile py-16 md:px-margin-desktop md:py-24">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-14">
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{t('academyOverview')}</p>
-            <h2 className="mt-3 max-w-3xl font-display text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl">
+          <Reveal className="min-w-0">
+            <p className="eyebrow">{t('academyOverview')}</p>
+            <h2 className="mt-4 max-w-3xl text-balance font-display text-3xl font-medium leading-tight tracking-[-0.02em] text-foreground sm:text-4xl">
               {academy.subtitle || academy.title}
             </h2>
-            <p className="mt-5 max-w-3xl whitespace-pre-line text-base leading-8 text-muted-foreground sm:text-lg">
+            <p className="mt-5 max-w-prose whitespace-pre-line text-base leading-8 text-muted-foreground sm:text-lg">
               {description}
             </p>
             <div className="mt-8 flex items-center gap-3">
               <span className="h-1 w-14 rounded-full" style={{ backgroundColor: accent }} />
-              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{t('academyPath')}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('academyPath')}</span>
             </div>
-          </div>
+          </Reveal>
 
-          <Card className="h-fit overflow-hidden">
-            <div className="border-b border-border bg-secondary px-5 py-5 text-secondary-foreground">
-              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{t('atAGlance')}</p>
+          <Card className="h-fit overflow-hidden rounded-2xl border-border/70 shadow-sm">
+            <div className="border-b border-border/60 bg-muted/40 px-6 py-5">
+              <p className="eyebrow">{t('atAGlance')}</p>
               <div className="mt-3 flex items-center gap-3">
                 <span className="h-1 w-10 rounded-full" style={{ backgroundColor: accent }} />
-                <span className="font-mono text-xs uppercase tracking-[0.1em]">{t('published')}</span>
+                <span className="text-xs font-medium text-foreground">{t('published')}</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-5 p-5">
+            <div className="grid grid-cols-2 gap-5 p-6">
               <AcademyStat icon={BookOpen} value={String(courseCount)} label={courseCountLabel} />
               <AcademyStat icon={Clock} value={hoursLabel} label={t('estimatedHours')} />
               <AcademyStat icon={Layers3} value={String(pathwayCount)} label={t('learningPaths')} />
@@ -436,18 +436,18 @@ export default async function AcademyDetailPage(props: Props) {
         </div>
       </section>
 
-      <section id="courses" className="scroll-mt-24 border-y border-border bg-surface-sunken/35">
-        <div className="mx-auto max-w-container-max px-margin-mobile py-12 md:px-margin-desktop md:py-16">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <section id="courses" className="scroll-mt-24 border-y border-border/70 bg-muted/30">
+        <div className="mx-auto max-w-container-max px-margin-mobile py-16 md:px-margin-desktop md:py-24">
+          <Reveal className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{t('learningPaths')}</p>
-              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{t('browseCourses')}</h2>
+              <p className="eyebrow">{t('learningPaths')}</p>
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-[-0.02em] text-foreground sm:text-4xl">{t('browseCourses')}</h2>
             </div>
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t('readyDescription')}</p>
-          </div>
+          </Reveal>
 
           {courses.length === 0 ? (
-            <Card className="mt-8 border-dashed bg-card/60">
+            <Card className="mt-10 rounded-2xl border-dashed bg-card/60">
               <EmptyState
                 icon={Compass}
                 title={t('noCoursesTitle')}
@@ -460,7 +460,7 @@ export default async function AcademyDetailPage(props: Props) {
               />
             </Card>
           ) : (
-            <div className="mt-8 grid gap-5 md:grid-cols-2">
+            <Stagger inViewOnly className="mt-10 grid gap-6 md:grid-cols-2">
               {courses.map((course, index) => {
                 const levelLabel = (course.difficulty ?? 1) <= 1 ? tc('beginner') : (course.difficulty ?? 1) === 2 ? tc('intermediate') : tc('advanced');
                 const seriesCount = course.series?.length ?? 0;
@@ -474,8 +474,8 @@ export default async function AcademyDetailPage(props: Props) {
                       ? t('courseAccess')
                       : t('openAccess');
                 return (
+                  <StaggerItem key={course.id} index={index}>
                   <AcademyCourseCard
-                    key={course.id}
                     course={course}
                     index={index}
                     accent={accent}
@@ -485,28 +485,31 @@ export default async function AcademyDetailPage(props: Props) {
                     selfPacedLabel={t('selfPaced')}
                     coursePathLabel={t('coursePath')}
                   />
+                  </StaggerItem>
                 );
               })}
-            </div>
+            </Stagger>
           )}
         </div>
       </section>
 
       {publishedProducts.length > 0 ? (
-        <section id="tools" className="mx-auto max-w-container-max scroll-mt-24 px-margin-mobile py-12 md:px-margin-desktop md:py-16">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <section id="tools" className="mx-auto max-w-container-max scroll-mt-24 px-margin-mobile py-16 md:px-margin-desktop md:py-24">
+          <Reveal className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{t('academyLabel')}</p>
-              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{t('toolsTitle')}</h2>
+              <p className="eyebrow">{t('academyLabel')}</p>
+              <h2 className="mt-3 font-display text-3xl font-medium tracking-[-0.02em] text-foreground sm:text-4xl">{t('toolsTitle')}</h2>
             </div>
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t('toolsDescription')}</p>
-          </div>
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {publishedProducts.map((product) => (
-              <ProductCard key={product.id} product={toStoreProduct(product)} />
+          </Reveal>
+          <Stagger inViewOnly className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {publishedProducts.map((product, index) => (
+              <StaggerItem key={product.id} index={index}>
+                <ProductCard product={toStoreProduct(product)} />
+              </StaggerItem>
             ))}
-          </div>
-          <Link href="/products" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-primary/80">
+          </Stagger>
+          <Link href="/products" className="group mt-8 inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 transition hover:underline">
             {t('browseAllTools')}
             <ArrowRight className="size-4 rtl:rotate-180" />
           </Link>
@@ -514,23 +517,23 @@ export default async function AcademyDetailPage(props: Props) {
       ) : null}
 
       <section className="mx-auto max-w-container-max px-margin-mobile pb-12 md:px-margin-desktop md:pb-16">
-        <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-foreground px-6 py-8 text-background sm:px-10 sm:py-10">
-          <div className="blueprint-grid absolute inset-0 -z-10 opacity-15" />
-          <div className="absolute -end-10 -top-20 -z-10 size-64 rounded-full blur-3xl" style={{ backgroundColor: `${accent}55` }} />
+        <Reveal className="relative isolate overflow-hidden rounded-2xl border border-border/70 bg-card px-6 py-10 shadow-sm sm:px-12 sm:py-14">
+          <div className="ambient-wash absolute inset-0 -z-10" aria-hidden />
+          <div className="absolute -end-10 -top-20 -z-10 size-64 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: accent }} aria-hidden />
           <div className="relative flex flex-col justify-between gap-7 md:flex-row md:items-center">
             <div className="max-w-2xl">
-              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{t('readyTitle')}</p>
-              <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">{academy.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-background/65">{t('readyDescription')}</p>
+              <p className="eyebrow">{t('readyTitle')}</p>
+              <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.02em] text-foreground sm:text-4xl">{academy.title}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t('readyDescription')}</p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-3">
-              <Button asChild size="lg" className="h-12">
+              <Button asChild size="lg" className="h-12 rounded-full px-6">
                 <Link href="#courses">
                   {t('browseCourses')}
                   <ArrowRight className="rtl:rotate-180" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-12 border-background/25 bg-transparent text-background hover:border-background/40 hover:bg-background/10 hover:text-background">
+              <Button asChild size="lg" variant="outline" className="h-12 rounded-full">
                 <Link href="/academy">
                   <ArrowLeft className="size-4 rtl:rotate-180" />
                   {t('backToAcademies')}
@@ -538,7 +541,7 @@ export default async function AcademyDetailPage(props: Props) {
               </Button>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
     </div>
   );

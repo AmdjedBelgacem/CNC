@@ -1,3 +1,4 @@
+import { ISLAND_HEAD, ISLAND_PAD } from '@titan/shared';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -14,6 +15,7 @@ import { getImageSrc } from '@/lib/images';
 import type { CatalogEvent } from '@/lib/events';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { HoverLift, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 
 type IslandChrome = {
   /** Builder-authored header nodes. Arabic pages omit it and keep the translated header. */
@@ -32,9 +34,9 @@ type IslandChrome = {
 function dayParts(iso: string, locale = 'en') {
   const d = new Date(iso);
   return {
-    month: formatDate(d, locale, { month: 'short' }).toUpperCase(),
+    month: formatDate(d, locale, { month: 'short' }),
     day: String(d.getDate()).padStart(2, '0'),
-    weekday: formatDate(d, locale, { weekday: 'short' }).toUpperCase(),
+    weekday: formatDate(d, locale, { weekday: 'short' }),
     year: d.getFullYear(),
   };
 }
@@ -86,15 +88,15 @@ function EventDateBlock({ iso, locale }: { iso: string; locale: string }) {
   return (
     <div
       aria-hidden
-      className="flex w-16 shrink-0 flex-col items-center rounded-md border border-border bg-card py-2 shadow-xs"
+      className="flex w-16 shrink-0 flex-col items-center overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs transition-[border-color,box-shadow] duration-300 group-hover:border-border group-hover:shadow-sm"
     >
-      <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-primary">
+      <span className="w-full bg-primary/10 py-1 text-center text-[11px] font-medium text-primary">
         {p.month}
       </span>
-      <span className="font-display text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
+      <span className="pt-1.5 font-display text-2xl font-medium leading-none tracking-[-0.02em] text-foreground tabular-nums">
         {p.day}
       </span>
-      <span className="font-mono text-[9px] font-semibold tracking-[0.1em] text-muted-foreground">
+      <span className="pb-1.5 pt-1 text-[10px] text-muted-foreground">
         {p.weekday}
       </span>
     </div>
@@ -107,34 +109,34 @@ function ScheduleRow({ event, locale, t }: { event: CatalogEvent; locale: string
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="group flex items-start gap-4 border-b border-border px-3 py-4 transition-colors last:border-b-0 hover:bg-surface-sunken/60 sm:gap-5 sm:px-5"
+      className="group flex items-start gap-4 border-b border-border/60 px-4 py-5 transition-colors last:border-b-0 hover:bg-muted/40 sm:gap-5 sm:px-6"
     >
       <EventDateBlock iso={event.startDate} locale={locale} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-primary capitalize">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize text-muted-foreground">
             {event.eventType}
           </span>
           {event.isVirtual ? (
-            <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-surface-sunken px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 px-2 py-0.5 text-xs font-medium text-muted-foreground">
               <Monitor className="size-3" />
               Online
             </span>
           ) : null}
         </div>
-        <h3 className="mt-1.5 font-display text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg">
+        <h3 className="mt-2 font-display text-lg font-medium leading-snug tracking-[-0.012em] text-foreground transition-colors group-hover:text-primary">
           {event.title}
         </h3>
         <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
-            <Clock className="size-3.5 shrink-0 text-primary" />
+            <Clock className="size-3.5 shrink-0" />
             {formatTime(event.startDate, locale)}
           </span>
           <span className="inline-flex items-center gap-1.5">
             {event.isVirtual ? (
-              <Monitor className="size-3.5 shrink-0 text-primary" />
+              <Monitor className="size-3.5 shrink-0" />
             ) : (
-              <MapPin className="size-3.5 shrink-0 text-primary" />
+              <MapPin className="size-3.5 shrink-0" />
             )}
             {placeLabel(event, t)}
           </span>
@@ -146,7 +148,7 @@ function ScheduleRow({ event, locale, t }: { event: CatalogEvent; locale: string
           </span>
         </div>
       </div>
-      <span className="mt-2 hidden shrink-0 items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary opacity-0 transition group-hover:opacity-100 sm:inline-flex">
+      <span className="mt-2 hidden shrink-0 -translate-x-1 items-center gap-1 text-sm font-medium text-primary opacity-0 transition duration-200 group-hover:translate-x-0 group-hover:opacity-100 rtl:translate-x-1 sm:inline-flex">
         Details
         <ArrowRight className="size-3.5 rtl:rotate-180" />
       </span>
@@ -159,37 +161,38 @@ function NextUpCard({ event, locale, t }: { event: CatalogEvent; locale: string;
   const { full, label: seats } = seatsInfo(event, t);
 
   return (
+    <HoverLift lift={3}>
     <Link
       href={`/events/${event.slug}`}
-      className="group grid overflow-hidden rounded-lg border border-border bg-card shadow-xs transition-colors hover:border-primary/40 md:grid-cols-[220px_minmax(0,1fr)]"
+      className="group grid overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-border hover:shadow-lg md:grid-cols-[260px_minmax(0,1fr)]"
     >
-      <div className="relative min-h-[180px] border-b border-border bg-surface-sunken md:border-b-0 md:border-e">
+      <div className="relative min-h-[200px] overflow-hidden border-b border-border/60 bg-muted md:border-b-0 md:border-e">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={getImageSrc(event.thumbnailUrl, 'event')}
           alt=""
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
         />
-        <div className="absolute start-3 top-3 flex flex-col items-center rounded-md border border-white/15 bg-overlay px-3 py-2 text-white shadow-sm">
-          <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-primary">
+        <div className="absolute start-3 top-3 flex min-w-16 flex-col items-center overflow-hidden rounded-xl bg-card/95 text-foreground shadow-md ring-1 ring-border/50 backdrop-blur">
+          <span className="w-full bg-primary/10 py-1 text-center text-[11px] font-medium text-primary">
             {p.month}
           </span>
-          <span className="font-display text-3xl font-bold leading-none tabular-nums">{p.day}</span>
-          <span className="font-mono text-[9px] font-semibold tracking-[0.1em] text-white/70">
+          <span className="px-3 pt-1.5 font-display text-3xl font-medium leading-none tracking-[-0.02em] tabular-nums">{p.day}</span>
+          <span className="px-3 pb-1.5 pt-1 text-[10px] text-muted-foreground">
             {p.weekday} {p.year}
           </span>
         </div>
       </div>
-      <div className="flex flex-col gap-3 p-5 md:p-6">
+      <div className="flex flex-col gap-3 p-6 md:p-8">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-sm bg-primary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-primary-foreground capitalize">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium capitalize text-muted-foreground">
             {event.eventType}
           </span>
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+          <span className="eyebrow">
             Next up
           </span>
         </div>
-        <h3 className="font-display text-xl font-bold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary md:text-2xl">
+        <h3 className="text-balance font-display text-2xl font-medium leading-snug tracking-[-0.018em] text-foreground transition-colors group-hover:text-primary md:text-3xl">
           {event.title}
         </h3>
         {event.description ? (
@@ -199,14 +202,14 @@ function NextUpCard({ event, locale, t }: { event: CatalogEvent; locale: string;
         ) : null}
         <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
-            <Clock className="size-4 text-primary" />
+            <Clock className="size-4" />
             {formatTime(event.startDate, locale)}
           </span>
           <span className="inline-flex items-center gap-1.5">
             {event.isVirtual ? (
-              <Monitor className="size-4 text-primary" />
+              <Monitor className="size-4" />
             ) : (
-              <MapPin className="size-4 text-primary" />
+              <MapPin className="size-4" />
             )}
             {placeLabel(event, t)}
           </span>
@@ -215,12 +218,13 @@ function NextUpCard({ event, locale, t }: { event: CatalogEvent; locale: string;
             {seats}
           </span>
         </div>
-        <span className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+        <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary">
           View &amp; register
-          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
+          <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
         </span>
       </div>
     </Link>
+    </HoverLift>
   );
 }
 
@@ -238,21 +242,21 @@ export async function EventsFormatTicker({
   const t = await getTranslations('pages.events');
   if (events.length === 0) return null;
   return (
-    <div className="relative border-y border-border bg-overlay text-white">
+    <div className="relative border-y border-border/70 bg-card text-foreground">
       <div className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto flex items-stretch overflow-hidden">
-        <div className="flex shrink-0 items-center gap-2 border-e border-white/10 py-2.5 pe-4 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+        <div className="flex shrink-0 items-center gap-2 border-e border-border/70 py-3 pe-4 text-xs font-medium text-primary">
           <span className="size-1.5 animate-pulse rounded-full bg-primary" />
           {t('tickerHeading')}
         </div>
-        <div className="relative flex-1 overflow-hidden">
-          <div className="flex w-max gap-8 py-2.5 ps-4 [animation:marquee_45s_linear_infinite] hover:[animation-play-state:paused]">
+        <div className="relative flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_4%,black_96%,transparent)]">
+          <div className="flex w-max gap-10 py-3 ps-4 [animation:marquee_45s_linear_infinite] hover:[animation-play-state:paused]">
             {[...events.slice(0, 10), ...events.slice(0, 10)].map((e, i) => (
               <span
                 key={`${e.id}-${i}`}
-                className="inline-flex max-w-md shrink-0 items-center gap-2 font-mono text-xs text-white/70"
+                className="inline-flex max-w-md shrink-0 items-center gap-2.5 text-sm text-muted-foreground"
               >
-                <span className="text-primary">›</span>
-                <span className="capitalize text-primary/90">{e.eventType}</span>
+                <span className="size-1 rounded-full bg-primary/60" aria-hidden />
+                <span className="font-medium capitalize text-foreground">{e.eventType}</span>
                 <span className="truncate">{e.title}</span>
               </span>
             ))}
@@ -283,7 +287,8 @@ export async function EventsNextUp({
     <section
       id="next-up"
       className={cn(
-        'border-b border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-12 md:py-16',
+        'border-b border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop ',
+        ISLAND_PAD['events-next-up'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -291,25 +296,25 @@ export async function EventsNextUp({
         {bodyOnly
           ? null
           : header ?? (
-              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+              <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                    {t('nextUpHeading')}
-                  </p>
-                  <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                  <p className={ISLAND_HEAD.eyebrow}>{t('nextUpHeading')}</p>
+                  <h2 className={ISLAND_HEAD.titleMd}>
                     Don&apos;t miss the next one
                   </h2>
                 </div>
                 <a
                   href="#browse"
-                  className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary"
+                  className={ISLAND_HEAD.textLink}
                 >
                   Full board
                   <ArrowRight className="flip-rtl size-3.5" />
                 </a>
-              </div>
+              </Reveal>
             )}
-        <NextUpCard event={nextEvent} locale={locale} t={t} />
+        <Reveal>
+          <NextUpCard event={nextEvent} locale={locale} t={t} />
+        </Reveal>
       </div>
     </section>
   );
@@ -352,9 +357,9 @@ export async function EventsSchedule({
   return (
     <section
       id="schedule"
-      className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-20"
+      className={cn('px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto', ISLAND_PAD['events-schedule'].section)}
     >
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start xl:gap-12">
         <div className="min-w-0">
           {bodyOnly ? (
             headerSpacerHeight > 0 ? (
@@ -362,52 +367,50 @@ export async function EventsSchedule({
             ) : null
           ) : (
             header ?? (
-              <div className="mb-6 max-w-2xl">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                  Schedule
-                </p>
-                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              <Reveal className="mb-8 max-w-2xl">
+                <p className={ISLAND_HEAD.eyebrow}>Schedule</p>
+                <h2 className={ISLAND_HEAD.titleLg}>
                   What&apos;s coming up
                 </h2>
-                <p className="mt-3 text-muted-foreground">
+                <p className={ISLAND_HEAD.lead}>
                   Ordered by date — workshops, webinars, and meets as they land on the board.
                 </p>
-              </div>
+              </Reveal>
             )
           )}
 
           {groups.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
+            <div className="rounded-xl border border-dashed border-border bg-card/60 px-6 py-14 text-center text-sm text-muted-foreground">
               Nothing scheduled yet — check the full board or past events below.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
-              {groups.map((group) => (
-                <div key={group.key}>
-                  <div className="flex items-center gap-3 border-b border-border bg-surface-sunken/60 px-3 py-2.5 sm:px-5">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
+            <Stagger inViewOnly className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+              {groups.map((group, gi) => (
+                <StaggerItem key={group.key} index={gi}>
+                  <div className="flex items-center gap-3 border-b border-border/60 bg-muted/40 px-4 py-2.5 sm:px-6">
+                    <span className="font-display text-sm font-medium text-foreground">
                       {group.label}
                     </span>
-                    <span className="h-px flex-1 bg-border" />
-                    <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground tabular-nums">
+                    <span className="h-px flex-1 bg-border/70" />
+                    <span className="text-xs tabular-nums text-muted-foreground">
                       {group.items.length} event{group.items.length === 1 ? '' : 's'}
                     </span>
                   </div>
                   {group.items.map((event) => (
                     <ScheduleRow key={event.id} event={event} locale={locale} t={t} />
                   ))}
-                </div>
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
           )}
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24">
-          <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+          <Reveal className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+            <h3 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
               Board status
-            </p>
-            <ul className="mt-3 space-y-2.5">
+            </h3>
+            <ul className="mt-3 divide-y divide-border/60">
               {[
                 { label: 'Upcoming', value: list.length },
                 { label: 'Past listed', value: past.length },
@@ -416,34 +419,34 @@ export async function EventsSchedule({
               ].map((row) => (
                 <li
                   key={row.label}
-                  className="flex items-center justify-between gap-3 text-sm"
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
                 >
                   <span className="text-muted-foreground">{row.label}</span>
-                  <span className="font-mono font-semibold text-foreground tabular-nums">
+                  <span className="font-display text-lg font-medium text-foreground tabular-nums">
                     {row.value}
                   </span>
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
           {past.length > 0 ? (
-            <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+            <Reveal delay={0.05} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+              <h3 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
                 Recently past
-              </p>
-              <ul className="mt-3 space-y-2">
+              </h3>
+              <ul className="mt-3 space-y-0.5">
                 {past.slice(0, 5).map((event) => (
                   <li key={event.id}>
                     <Link
                       href={`/events/${event.slug}`}
-                      className="group flex items-start justify-between gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-surface-sunken"
+                      className="group -mx-2 flex items-start justify-between gap-2 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted/70"
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-foreground group-hover:text-primary">
                           {event.title}
                         </span>
-                        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                        <span className="text-xs capitalize text-muted-foreground">
                           {formatDate(event.startDate, locale, {
                             month: 'short',
                             day: 'numeric',
@@ -456,14 +459,14 @@ export async function EventsSchedule({
                   </li>
                 ))}
               </ul>
-            </div>
+            </Reveal>
           ) : null}
 
-          <div className="rounded-lg border border-border bg-card p-5 shadow-xs">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+          <Reveal delay={0.1} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+            <h3 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
               Take it further
-            </p>
-            <ul className="mt-3 space-y-2">
+            </h3>
+            <ul className="mt-3 space-y-0.5">
               {[
                 { href: '/academy', label: 'Academy pathways' },
                 { href: '/products', label: 'Tool crib' },
@@ -472,15 +475,15 @@ export async function EventsSchedule({
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="group flex items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-foreground transition-colors hover:bg-surface-sunken"
+                    className="group -mx-2 flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm text-foreground transition-colors hover:bg-muted/70"
                   >
                     {link.label}
-                    <ArrowRight className="size-3.5 text-primary opacity-0 transition group-hover:opacity-100 rtl:rotate-180" />
+                    <ArrowRight className="size-3.5 -translate-x-1 text-primary opacity-0 transition duration-200 group-hover:translate-x-0 group-hover:opacity-100 rtl:rotate-180" />
                   </Link>
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
         </aside>
       </div>
     </section>
@@ -493,7 +496,8 @@ export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
     <section
       id="browse"
       className={cn(
-        'border-y border-border bg-surface-sunken/50 px-margin-mobile md:px-margin-desktop py-16 md:py-20',
+        'border-y border-border/70 bg-surface-sunken/40 px-margin-mobile md:px-margin-desktop ',
+        ISLAND_PAD['events-browse'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
@@ -501,18 +505,16 @@ export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
         {bodyOnly
           ? null
           : header ?? (
-              <div className="mb-6 max-w-2xl">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                  Full board
-                </p>
-                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              <Reveal className="mb-8 max-w-2xl">
+                <p className={ISLAND_HEAD.eyebrow}>Full board</p>
+                <h2 className={ISLAND_HEAD.titleLg}>
                   Browse every event
                 </h2>
-                <p className="mt-3 text-muted-foreground">
+                <p className={ISLAND_HEAD.lead}>
                   Filter by format, toggle upcoming vs past, search by city or title — live from
                   the events API.
                 </p>
-              </div>
+              </Reveal>
             )}
         <EventsBoard />
       </div>

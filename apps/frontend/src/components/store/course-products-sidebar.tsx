@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getImageSrc } from '@/lib/images';
 import { coerceCurrency, formatMinorUnits } from '@/lib/money';
 import { cardPrice } from '@/lib/product-pricing';
+import { Stagger, StaggerItem } from '@/components/ui/motion';
 
 export function CourseProductsSidebar({
   tags,
@@ -42,51 +43,52 @@ export function CourseProductsSidebar({
   }, [tags, courseId, academyId]);
   if (products.length === 0) return null;
   return (
-    <Card>
+    <Card className="rounded-2xl border-border/70 shadow-xs">
       <CardHeader className="pb-3">
-        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          {t('storeEyebrow')}
-        </p>
-        <CardTitle className="font-display text-base">{t('recommendedTitle')}</CardTitle>
+        <p className="eyebrow text-xs">{t('storeEyebrow')}</p>
+        <CardTitle className="font-display text-lg font-medium tracking-[-0.015em]">
+          {t('recommendedTitle')}
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-3">
-          {products.map((p) => {
+        <Stagger className="-mx-2 space-y-1">
+          {products.map((p, i) => {
             const unit = cardPrice(p);
             return (
+              <StaggerItem key={p.id} index={i}>
               <Link
-                key={p.id}
                 href={`/products/${p.slug}`}
-                className="group flex items-center gap-3"
+                className="group flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted/60"
               >
-                <div className="aspect-square w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                <div className="aspect-square w-14 shrink-0 overflow-hidden rounded-lg border border-border/70 bg-muted">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={getImageSrc(p.thumbnailUrl, 'product')}
                     alt={p.title}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
                     {p.title}
                   </p>
-                  <p className="font-mono text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
                     {unit == null
                       ? tp('priceOnRequest')
                       : formatMinorUnits(unit, coerceCurrency(p.currency, 'USD'), locale)}
                   </p>
                 </div>
               </Link>
+              </StaggerItem>
             );
           })}
-        </div>
+        </Stagger>
         <Link
           href="/products"
-          className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+          className="group mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
           {t('viewAllTools')}
-          <ArrowRight className="size-3.5 rtl:rotate-180" />
+          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
         </Link>
       </CardContent>
     </Card>

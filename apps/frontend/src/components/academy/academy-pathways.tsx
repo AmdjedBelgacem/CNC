@@ -1,3 +1,4 @@
+import { ISLAND_HEAD, ISLAND_PAD } from '@titan/shared';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
@@ -5,6 +6,7 @@ import { ArrowRight, BookOpen } from 'lucide-react';
 import type { AcademySummary } from '@/lib/academies';
 import { getImageSrc } from '@/lib/images';
 import { cn } from '@/lib/utils';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 
 type IslandChrome = {
   /** Builder-authored header nodes. Arabic pages omit it and keep the translated header. */
@@ -36,54 +38,54 @@ function PathwayRow({
   return (
     <Link
       href={`/academy/${academy.slug}`}
-      className="group relative block border-b border-border first:border-t"
+      className="group relative block border-b border-border/60 last:border-b-0"
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 start-0 w-1 origin-top scale-y-0 transition-transform duration-300 group-hover:scale-y-100"
+        className="absolute inset-y-3 start-0 w-0.5 origin-center scale-y-0 rounded-full transition-transform duration-300 ease-out group-hover:scale-y-100"
         style={{ backgroundColor: accent }}
       />
-      <div className="relative flex flex-col gap-4 px-4 py-7 transition-colors duration-200 group-hover:bg-surface-sunken/60 sm:flex-row sm:items-center sm:gap-6 sm:px-6 md:px-8">
+      <div className="relative flex flex-col gap-4 px-4 py-7 transition-colors duration-200 group-hover:bg-muted/40 sm:flex-row sm:items-center sm:gap-6 sm:px-6 md:px-8">
         <div className="flex items-center gap-4 sm:w-56 sm:shrink-0">
-          <span className="font-mono text-xs font-semibold tracking-[0.14em] text-muted-foreground tabular-nums sm:w-6">
+          <span className="font-display text-lg font-medium tabular-nums text-muted-foreground/70 transition-colors group-hover:text-primary sm:w-7">
             {num}
           </span>
-          <div className="relative size-14 shrink-0 overflow-hidden rounded-md border border-border bg-surface-sunken">
+          <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-surface-sunken ring-1 ring-inset ring-foreground/5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getImageSrc(image, 'academy')}
               alt=""
               loading="lazy"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           </div>
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-lg font-semibold leading-tight tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-xl">
+          <h3 className="text-balance font-display text-xl font-medium leading-snug tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary sm:text-2xl">
             {academy.title}
           </h3>
           {academy.subtitle ? (
             <p className="mt-1 text-sm text-muted-foreground">{academy.subtitle}</p>
           ) : null}
           {academy.description ? (
-            <p className="mt-1 line-clamp-2 max-w-2xl text-sm leading-relaxed text-text-muted">
+            <p className="mt-1 line-clamp-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               {academy.description}
             </p>
           ) : null}
         </div>
 
         <div className="flex items-center justify-between gap-4 sm:w-48 sm:shrink-0 sm:flex-col sm:items-end sm:justify-center sm:gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-card px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-secondary">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground">
             <BookOpen className="size-3" style={{ color: accent }} />
             {academy.courseCount} {courseLabel}
           </span>
           <span
-            className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em]"
+            className="inline-flex items-center gap-1 text-sm font-medium"
             style={{ color: accent }}
           >
             {enterLabel}
-            <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180" />
+            <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
           </span>
         </div>
       </div>
@@ -101,47 +103,47 @@ export async function AcademyPathways({
     <section
       id="pathways"
       className={cn(
-        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto py-16 md:py-24',
+        'px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto ',
+        ISLAND_PAD['academy-pathways'].section,
         bodyOnly && 'pt-0 md:pt-0',
       )}
     >
       {bodyOnly
         ? null
         : header ?? (
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                  {t('directory')}
-                </p>
-                <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                <p className={ISLAND_HEAD.eyebrow}>{t('directory')}</p>
+                <h2 className={ISLAND_HEAD.titleXl}>
                   {t('chooseAcademy')}
                 </h2>
               </div>
-              <p className="max-w-sm text-sm text-muted-foreground">
+              <p className={ISLAND_HEAD.aside}>
                 {t('directoryBlurb')}
               </p>
-            </div>
+            </Reveal>
           )}
 
       {academies.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
-          <p className="font-semibold text-foreground">{t('emptyTitle')}</p>
+        <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+          <p className="font-display text-xl font-medium text-foreground">{t('emptyTitle')}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('emptyBody')}
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+        <Stagger inViewOnly className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
           {academies.map((academy, i) => (
-            <PathwayRow
-              key={academy.id}
-              academy={academy}
-              index={i}
-              courseLabel={t('courseCount', { count: academy.courseCount })}
-              enterLabel={t('enterAcademy')}
-            />
+            <StaggerItem key={academy.id} index={i}>
+              <PathwayRow
+                academy={academy}
+                index={i}
+                courseLabel={t('courseCount', { count: academy.courseCount })}
+                enterLabel={t('enterAcademy')}
+              />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
     </section>
   );

@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AdminQuotesPage() {
   const t = await getTranslations('admin.quotes');
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto w-full max-w-[1500px] space-y-6">
       <AdminPageHeader title={t('title')} description={t('description')} />
       {/* The inbox is the whole page body, so a null fallback would leave a header above
           an empty void. */}

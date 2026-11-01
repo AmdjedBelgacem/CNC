@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CalendarDays, MapPin, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HoverLift } from '@/components/ui/motion';
 import type { StudyGroup } from '@/lib/groups-api';
 
 /**
@@ -18,29 +19,31 @@ export function GroupCard({ group, className }: { group: StudyGroup; className?:
   const full = group.maxMembers != null && group.memberCount >= group.maxMembers;
 
   return (
-    <article
+    <HoverLift
+      as="article"
+      lift={3}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-all',
-        'hover:border-primary/40 hover:shadow-lg focus-within:ring-2 focus-within:ring-primary/40',
+        'group relative flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs transition-[border-color,box-shadow] duration-300',
+        'hover:border-border hover:shadow-lg focus-within:ring-2 focus-within:ring-ring/40',
         !group.isActive && 'opacity-70',
         className,
       )}
     >
       {/* Cover. A gradient stands in when there is no image, so the card never opens with a
           broken-image icon; `coverUrl` is optional in the schema. */}
-      <div className="relative h-28 w-full overflow-hidden bg-gradient-to-br from-primary/25 via-primary/10 to-transparent">
+      <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-accent/10">
         {group.coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={group.coverUrl}
             alt=""
             aria-hidden="true"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         )}
         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent" />
         {group.academy && (
-          <span className="absolute start-3 top-3 rounded-full bg-background/90 px-2.5 py-0.5 text-xs font-medium text-foreground shadow-sm backdrop-blur">
+          <span className="absolute start-3 top-3 rounded-full bg-card/90 px-2.5 py-0.5 text-xs font-medium capitalize text-foreground shadow-xs ring-1 ring-border/50 backdrop-blur">
             {group.academy}
           </span>
         )}
@@ -52,7 +55,7 @@ export function GroupCard({ group, className }: { group: StudyGroup; className?:
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <h3 className="text-lg font-bold leading-snug">
+        <h3 className="font-display text-xl font-medium leading-snug tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary">
           {/* The title spans the card; the anchor overlay below is the single click target. */}
           <Link
             href={`/groups/${group.id}`}
@@ -63,10 +66,10 @@ export function GroupCard({ group, className }: { group: StudyGroup; className?:
         </h3>
 
         {group.description && (
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{group.description}</p>
+          <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{group.description}</p>
         )}
 
-        <dl className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+        <dl className="mb-4 mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
           {location && (
             <div className="flex items-center gap-1.5">
               <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
@@ -81,7 +84,7 @@ export function GroupCard({ group, className }: { group: StudyGroup; className?:
           )}
         </dl>
 
-        <div className="mt-4 flex items-center justify-between border-t pt-3 text-sm">
+        <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-3 text-sm">
           <span className="flex items-center gap-1.5 text-muted-foreground">
             <Users className="size-3.5" aria-hidden="true" />
             <span aria-live="polite">
@@ -89,12 +92,12 @@ export function GroupCard({ group, className }: { group: StudyGroup; className?:
             </span>
           </span>
           {full && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
               {t('full')}
             </span>
           )}
         </div>
       </div>
-    </article>
+    </HoverLift>
   );
 }

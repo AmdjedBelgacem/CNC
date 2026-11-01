@@ -6,6 +6,8 @@ import { Layers } from 'lucide-react';
 import { useAcademies } from '@/hooks/use-academies';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 
 /**
  * Course categories.
@@ -24,9 +26,9 @@ export function CategoryFilter() {
 
   if (isLoading) {
     return (
-      <div className="mb-8 flex flex-wrap gap-2">
+      <div className="mb-10 flex flex-wrap gap-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-24 rounded-md" />
+          <Skeleton key={i} className="h-9 w-24 rounded-full" />
         ))}
       </div>
     );
@@ -34,42 +36,44 @@ export function CategoryFilter() {
 
   if (academies.length === 0) return null;
 
+  const chip = (href: string, label: string, isActive: boolean, key: string) => (
+    <Link
+      key={key}
+      href={href}
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        'relative rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isActive ? 'text-background' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
+    >
+      {isActive && (
+        <m.span
+          layoutId="course-category-active"
+          transition={spring.smooth}
+          className="absolute inset-0 rounded-full bg-foreground shadow-sm"
+          aria-hidden
+        />
+      )}
+      <span className="relative">{label}</span>
+    </Link>
+  );
+
   return (
-    <div className="mb-8">
-      <h2 className="mb-3 flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        <Layers className="size-3" />
+    <div className="mb-10">
+      <h2 className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Layers className="size-3.5" />
         {t('browse')}
       </h2>
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/courses"
-          className={cn(
-            'rounded-md border px-4 py-1.5 text-sm font-medium transition-colors duration-150',
-            !active
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
-          )}
-        >
-          {t('all')}
-        </Link>
-
-        {academies.map((academy) => {
-          const isActive = active === academy.slug;
-          return (
-            <Link
-              key={academy.id}
-              href={`/courses?academy=${encodeURIComponent(academy.slug)}`}
-              className={cn(
-                'rounded-md border px-4 py-1.5 text-sm font-medium transition-colors duration-150',
-                isActive
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              {academy.title}
-            </Link>
-          );
-        })}
+      <div className="-mx-1 flex flex-wrap gap-1 rounded-full">
+        {chip('/courses', t('all'), !active, 'all')}
+        {academies.map((academy) =>
+          chip(
+            `/courses?academy=${encodeURIComponent(academy.slug)}`,
+            academy.title,
+            active === academy.slug,
+            academy.id,
+          ),
+        )}
       </div>
     </div>
   );

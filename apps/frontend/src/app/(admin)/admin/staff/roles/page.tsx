@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Shield, Trash2, Loader2, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { AnimatePresence, m } from 'framer-motion';
+import { Reveal } from '@/components/ui/motion';
+import { ease, spring } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,10 +39,10 @@ interface RoleSummary {
 }
 const roleGrad: Record<string, string> = {
   super_admin: 'bg-primary text-primary-foreground',
-  admin: 'bg-primary text-primary-foreground',
+  admin: 'bg-secondary text-secondary-foreground',
   instructor: 'bg-success text-success-foreground',
   moderator: 'bg-info text-info-foreground',
-  sponsor: 'bg-orange-600 text-white',
+  sponsor: 'bg-warning text-warning-foreground',
 };
 export default function AdminRolesPage() {
   const tAdmin = useTranslations('admin');
@@ -91,23 +94,25 @@ export default function AdminRolesPage() {
         }
       />
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
+        <Reveal>
         <AdminPageHeader
           title={tAdmin('roles.title', { default: 'Roles & Permissions' })}
           description={tAdmin('roles.description', {
             default: 'Define custom roles and the precise access each staff member gets.',
           })}
           badge={
-            <span className="flex items-center gap-2 self-start rounded-full border border-success/80 bg-success/80 px-3 py-1.5 text-xs font-medium text-success shadow-sm md:self-auto dark:border-success/40 dark:bg-success/40 dark:text-success">
-              <Shield className="size-4 text-success dark:text-success" />
+            <span className="flex items-center gap-2 self-start rounded-full border border-success/25 bg-success/10 px-3 py-1.5 text-xs font-medium text-success md:self-auto">
+              <Shield className="size-3.5" />
               {tAdmin('roles.auditedChanges', { default: 'Audited changes' })}
             </span>
           }
         />
-        <div>
-          <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
-            <div className="hidden border-b border-border bg-muted/40 px-6 py-2.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground md:flex md:items-center md:justify-between">
+        </Reveal>
+        <Reveal delay={0.05}>
+          <div className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            <div className="hidden border-b border-border/70 bg-muted/40 px-6 py-3 text-xs font-medium text-muted-foreground md:flex md:items-center md:justify-between">
               <span className="flex-1">{tAdmin('roles.roleColumn', { default: 'Role' })}</span>
-              <span className="w-[260px] text-right">
+              <span className="w-[260px] text-end">
                 {tAdmin('roles.permissionsMembers', { default: 'Permissions · Members' })}
               </span>
             </div>
@@ -117,10 +122,10 @@ export default function AdminRolesPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between border-b border-border p-6"
+                    className="flex items-center justify-between border-b border-border/70 p-6"
                   >
                     <div className="flex items-center gap-5">
-                      <Skeleton className="h-12 w-12 rounded-xl" />
+                      <Skeleton className="size-11 rounded-full" />
                       <div className="space-y-2">
                         <Skeleton className="h-4 w-36 rounded" />
                         <Skeleton className="h-3 w-52 rounded" />
@@ -132,7 +137,7 @@ export default function AdminRolesPage() {
               {!loading && roles && roles.length === 0 && (
                 <div className="px-6 py-20 text-center">
                   {' '}
-                  <p className="font-sans text-base font-medium text-foreground">
+                  <p className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
                     {tAdmin('roles.noCustomRoles', { default: 'No custom roles yet' })}
                   </p>{' '}
                   <p className="mt-1 font-sans text-sm text-muted-foreground">
@@ -144,17 +149,23 @@ export default function AdminRolesPage() {
               )}{' '}
               {!loading &&
                 roles &&
-                roles.map((r) => {
+                roles.map((r, roleIndex) => {
                   const rm = roleGrad[r.key] ?? 'from-muted to-muted/60 text-foreground';
                   const canEdit = canManage && (!r.isSystem || canManage);
                   return (
-                    <button
+                    <m.button
                       key={r.id}
                       disabled={!canEdit}
                       onClick={() => setEditing(r)}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        transition: { duration: 0.32, ease: ease.emerge, delay: Math.min(roleIndex, 11) * 0.04 },
+                      }}
                       className={cn(
-                        'group flex w-full items-center justify-between border-b border-border p-5 text-left transition-all duration-200 last:border-b-0',
-                        canEdit ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default',
+                        'group flex w-full items-center justify-between border-b border-border/70 p-5 text-start transition-colors duration-200 last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                        canEdit ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default',
                       )}
                     >
                       {' '}
@@ -162,7 +173,7 @@ export default function AdminRolesPage() {
                         {' '}
                         <span
                           className={cn(
-                            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-semibold',
+                            'flex size-11 shrink-0 items-center justify-center rounded-full shadow-xs transition-transform duration-200 group-hover:scale-105',
                             rm,
                           )}
                         >
@@ -173,11 +184,11 @@ export default function AdminRolesPage() {
                           {' '}
                           <div className="flex items-center gap-2">
                             {' '}
-                            <p className="truncate font-sans text-[17px] font-semibold text-foreground">
+                            <p className="truncate font-display text-lg font-medium tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary">
                               {r.name}
                             </p>{' '}
                             {r.isSystem && (
-                              <span className="rounded-md border border-primary/25 bg-primary/5 px-2 py-0.5 font-sans text-2xs font-semibold uppercase tracking-wide text-primary ">
+                              <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 font-sans text-2xs font-medium text-primary">
                                 {' '}
                                 {tAdmin('role.system', { default: 'System' })}{' '}
                               </span>
@@ -203,15 +214,17 @@ export default function AdminRolesPage() {
                           })}
                         </span>{' '}
                       </div>{' '}
-                    </button>
+                    </m.button>
                   );
                 })}
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
+      <AnimatePresence>
       {creating && (
         <RoleEditor
+          key="create"
           mode="create"
           catalog={catalog}
           onClose={() => setCreating(false)}
@@ -220,9 +233,10 @@ export default function AdminRolesPage() {
             load();
           }}
         />
-      )}{' '}
+      )}
       {editing && (
         <RoleEditor
+          key={`edit-${editing.id}`}
           mode="edit"
           role={editing}
           catalog={catalog}
@@ -236,7 +250,8 @@ export default function AdminRolesPage() {
             load();
           }}
         />
-      )}{' '}
+      )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -403,7 +418,7 @@ function RoleEditor({
           {' '}
           <div>
             {' '}
-            <label className="mb-1.5 block font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <label className="mb-1.5 block font-sans text-sm font-medium text-foreground">
               {tAdmin('roles.nameLabel', { default: 'Name' })}
             </label>{' '}
             <input
@@ -416,13 +431,13 @@ function RoleEditor({
               placeholder={tAdmin('roles.namePlaceholder', { default: 'e.g. Content Editor' })}
               className={cn(
                 GLASS_SUB,
-                'w-full rounded-lg px-3 py-2.5 font-sans text-sm text-foreground outline-none transition focus:ring-2 focus:ring-accent/30',
+                'w-full rounded-lg px-3 py-2.5 font-sans text-sm text-foreground outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60',
               )}
             />{' '}
           </div>{' '}
           <div>
             {' '}
-            <label className="mb-1.5 block font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <label className="mb-1.5 block font-sans text-sm font-medium text-foreground">
               {tAdmin('roles.descriptionLabel', { default: 'Description' })}
             </label>{' '}
             <input
@@ -437,12 +452,12 @@ function RoleEditor({
               })}
               className={cn(
                 GLASS_SUB,
-                'w-full rounded-lg px-3 py-2.5 font-sans text-sm text-foreground outline-none transition focus:ring-2 focus:ring-accent/30',
+                'w-full rounded-lg px-3 py-2.5 font-sans text-sm text-foreground outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60',
               )}
             />{' '}
           </div>{' '}
           {mode === 'edit' && role?.isSystem && (
-            <p className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 font-sans text-xs text-primary ">
+            <p className="rounded-lg border border-primary/20 bg-primary/[0.06] px-3 py-2.5 font-sans text-xs leading-relaxed text-primary">
               {' '}
               {tAdmin('roles.systemRoleLocked', {
                 default:
@@ -455,11 +470,11 @@ function RoleEditor({
           {' '}
           <div className="mb-3 flex items-center justify-between gap-3">
             {' '}
-            <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h3 className="font-display text-base font-medium tracking-[-0.01em] text-foreground">
               {' '}
               {tAdmin('drawer.permissionsLabel', { default: 'Permissions' })}{' '}
               {totalSelected > 0 && (
-                <span className="text-accent">
+                <span className="font-sans text-sm text-primary">
                   {tAdmin('roles.selectedCount', {
                     count: totalSelected,
                     default: '· {count} selected',
@@ -476,7 +491,7 @@ function RoleEditor({
                 placeholder={tAdmin('roles.filterPermissions', { default: 'Filter permissions' })}
                 className={cn(
                   GLASS_SUB,
-                  'w-full rounded-lg py-2 ps-9 pe-3 font-sans text-sm text-foreground outline-none transition focus:ring-2 focus:ring-accent/30',
+                  'w-full rounded-lg py-2 ps-9 pe-3 font-sans text-sm text-foreground outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30',
                 )}
               />{' '}
             </div>{' '}
@@ -502,13 +517,13 @@ function RoleEditor({
                     {' '}
                     <div className="mb-2 flex items-center justify-between">
                       {' '}
-                      <span className="font-sans text-sm font-semibold capitalize text-foreground">
+                      <span className="font-sans text-sm font-medium capitalize text-foreground">
                         {g.label}
                       </span>{' '}
                       <button
                         type="button"
                         onClick={() => toggleGroup(keys)}
-                        className="rounded-md px-2 py-1 font-sans text-xs font-medium text-accent transition hover:bg-muted/50"
+                        className="rounded-full px-2.5 py-1 font-sans text-xs font-medium text-primary transition hover:bg-primary/10 active:scale-95"
                       >
                         {' '}
                         {allOn
@@ -526,10 +541,10 @@ function RoleEditor({
                             type="button"
                             onClick={() => toggle(p.key)}
                             className={cn(
-                              'flex items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition',
+                              'flex items-start gap-2 rounded-lg border px-2.5 py-2 text-start transition-[background-color,border-color] duration-200 active:scale-[0.99]',
                               on
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:bg-muted/50',
+                                ? 'border-primary/40 bg-primary/[0.06]'
+                                : 'border-border/70 bg-card hover:border-border-strong hover:bg-muted/40',
                             )}
                           >
                             {' '}
@@ -542,7 +557,19 @@ function RoleEditor({
                                 )}
                               >
                               {' '}
-                              {on && <Check className="size-3.5" />}{' '}
+                              <AnimatePresence initial={false}>
+                                {on && (
+                                  <m.span
+                                    key="check"
+                                    initial={{ scale: 0.4, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1, transition: spring.snappy }}
+                                    exit={{ scale: 0.4, opacity: 0, transition: { duration: 0.1, ease: ease.exit } }}
+                                    className="grid place-items-center"
+                                  >
+                                    <Check className="size-3" strokeWidth={3} />
+                                  </m.span>
+                                )}
+                              </AnimatePresence>
                             </span>{' '}
                             <span className="min-w-0">
                               {' '}
@@ -575,7 +602,7 @@ function RoleEditor({
             )}{' '}
           </div>{' '}
         </section>{' '}
-        <div className="sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-4 sm:-mx-6 sm:px-6">
+        <div className="sticky bottom-0 -mx-4 flex items-center justify-between gap-3 border-t border-border/70 bg-card/95 px-4 py-4 backdrop-blur-sm sm:-mx-6 sm:px-6">
           {' '}
           <div>
             {' '}
@@ -584,7 +611,7 @@ function RoleEditor({
                 type="button"
                 onClick={del}
                 disabled={busy}
-                className="flex items-center gap-1.5 rounded-lg border border-destructive/70 px-3 py-2 font-sans text-sm font-medium text-destructive transition hover:bg-destructive/70 disabled:opacity-40 dark:border-red-900/40 dark:text-destructive dark:hover:bg-red-950/30"
+                className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-2 font-sans text-sm font-medium text-destructive transition hover:bg-destructive/10 active:scale-[0.98] disabled:opacity-40"
               >
                 {' '}
                 <Trash2 className="size-4" /> {tCommon('delete')}{' '}
@@ -595,14 +622,14 @@ function RoleEditor({
             {' '}
             <button
               onClick={onClose}
-              className="rounded-lg px-4 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:text-foreground"
+              className="rounded-lg px-4 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
             >
               {tCommon('cancel')}
             </button>{' '}
             <button
               onClick={save}
               disabled={busy || (!dirty && mode === 'edit')}
-              className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2 font-sans text-sm font-medium text-accent-foreground transition hover:bg-primary disabled:opacity-40"
+              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 font-sans text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40"
             >
               {' '}
               {busy && <Loader2 className="size-4 animate-spin" />}{' '}

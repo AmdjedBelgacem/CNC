@@ -41,12 +41,12 @@ export default async function CoursesPage() {
   const locale = (await getLocale()) as ContentLocale;
   const courses = await fetchPublishedCourses(DEFAULT_TENANT_SLUG, 60, locale).catch(() => []);
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-8 border-b border-border pb-8">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16 lg:px-8">
+      <div className="mb-10 max-w-3xl">
+        <h1 className="text-balance font-display text-4xl font-medium tracking-[-0.022em] text-foreground sm:text-5xl">
           {t('title')}
         </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+        <p className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
           {t('subtitle')}
         </p>
       </div>
@@ -85,7 +85,7 @@ async function CategoryFilterSkeleton() {
   const t = await getTranslations('pages.courseLibrary');
   return (
     <div
-      className="flex flex-wrap gap-2"
+      className="mb-10 flex flex-wrap gap-2"
       role="status"
       aria-busy="true"
       aria-label={t('loadingFilters')}
@@ -109,7 +109,7 @@ async function CourseGridSkeleton() {
   const t = await getTranslations('pages.courseLibrary');
   return (
     <div
-      className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+      className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
       role="status"
       aria-busy="true"
       aria-label={t('loadingCourses')}

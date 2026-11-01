@@ -2,40 +2,39 @@
 import { CreditCard, Check, Zap, Crown, ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { HoverLift, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { SettingsHeader, SettingsSection } from '../_components/settings-ui';
 export default function BillingPage() {
   const t = useTranslations('account');
   return (
     <div className="space-y-6">
-      {' '}
-      <div className="flex gap-4">
-        {' '}
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          {' '}
-          <CreditCard className="size-5" />{' '}
-        </div>{' '}
-        <div>
-          {' '}
-          <h1 className="text-xl font-semibold tracking-tight">{t('billing.pageTitle')}</h1>{' '}
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {t('billing.pageSubtitle')}
-          </p>{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="bg-primary p-8 text-white">
-          {' '}
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card">
-            {' '}
-            <Crown className="size-5" />{' '}
-          </div>{' '}
-          <h2 className="mt-4 text-lg font-semibold">{t('billing.upgradeToPro')}</h2>{' '}
-          <p className="mt-1 max-w-md text-sm leading-relaxed text-white/80">
-            {t('billing.proSubtitle')}
-          </p>{' '}
-        </div>{' '}
-        <div className="grid gap-4 p-6 sm:grid-cols-2">
-          {' '}
+      <SettingsHeader
+        icon={CreditCard}
+        title={t('billing.pageTitle')}
+        subtitle={t('billing.pageSubtitle')}
+      />
+      <Reveal
+        as="section"
+        className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs"
+      >
+        <div className="relative overflow-hidden border-b border-border/60 bg-muted/40 px-6 py-8 sm:px-8">
+          <div
+            className="ambient-wash pointer-events-none absolute inset-0 opacity-70"
+            aria-hidden
+          />
+          <div className="relative">
+            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Crown className="size-5" />
+            </div>
+            <h2 className="mt-4 text-balance font-display text-2xl font-medium tracking-[-0.02em] text-foreground">
+              {t('billing.upgradeToPro')}
+            </h2>
+            <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
+              {t('billing.proSubtitle')}
+            </p>
+          </div>
+        </div>
+        <Stagger className="grid gap-4 p-6 sm:grid-cols-2">
           {[
             {
               name: t('billing.planStarter'),
@@ -61,73 +60,64 @@ export default function BillingPage() {
               cta: t('billing.upgradeToPro'),
               highlight: true,
             },
-          ].map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative overflow-hidden rounded-2xl border p-5 ${plan.highlight ? 'border-primary bg-primary/[0.03] shadow-md' : 'border-border bg-card'}`}
-            >
-              {' '}
-              {plan.highlight && (
-                <div className="absolute end-3 top-3 rounded-full bg-primary px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-primary-foreground">
-                  {t('billing.popular')}
-                </div>
-              )}{' '}
-              <h3 className="text-sm font-semibold">{plan.name}</h3>{' '}
-              <p className="mt-1">
-                <span className="text-2xl font-bold">{plan.price}</span>
-                {plan.suffix && (
-                  <span className="text-sm text-muted-foreground">{plan.suffix}</span>
-                )}
-              </p>{' '}
-              <ul className="mt-4 space-y-2">
-                {' '}
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-xs">
-                    <span className="flex size-4 items-center justify-center rounded-full bg-success/10 text-success">
-                      <Check className="size-3.5" />
-                    </span>{' '}
-                    {f}
-                  </li>
-                ))}{' '}
-              </ul>{' '}
-              <Button
-                className={`mt-5 w-full rounded-full ${plan.highlight ? '' : 'opacity-60'}`}
-                variant={plan.highlight ? 'default' : 'outline'}
-                disabled={plan.active}
+          ].map((plan, index) => (
+            <StaggerItem key={plan.name} index={index}>
+              <HoverLift
+                lift={plan.highlight ? 3 : 0}
+                className={`relative h-full overflow-hidden rounded-xl border p-6 transition-shadow ${plan.highlight ? 'border-primary/40 bg-card shadow-md hover:shadow-lg' : 'border-border/70 bg-card'}`}
               >
-                {' '}
-                {plan.cta} {plan.highlight && <ArrowRight className="flip-rtl ms-1 size-3.5" />}{' '}
-              </Button>{' '}
-            </div>
-          ))}{' '}
-        </div>{' '}
-        <div className="border-t border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
+                {plan.highlight && (
+                  <div className="absolute end-4 top-4 rounded-full bg-primary/10 px-2.5 py-0.5 text-2xs font-medium text-primary">
+                    {t('billing.popular')}
+                  </div>
+                )}
+                <h3 className="text-sm font-medium text-muted-foreground">{plan.name}</h3>
+                <p className="mt-1.5 flex items-baseline gap-1">
+                  <span className="font-display text-3xl font-medium tracking-[-0.02em] text-foreground">
+                    {plan.price}
+                  </span>
+                  {plan.suffix && (
+                    <span className="text-sm text-muted-foreground">{plan.suffix}</span>
+                  )}
+                </p>
+                <ul className="mt-5 space-y-2.5">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-center gap-2.5 text-sm text-foreground/90">
+                      <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
+                        <Check className="size-3" />
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className="mt-6 w-full rounded-full"
+                  variant={plan.highlight ? 'default' : 'outline'}
+                  disabled={plan.active}
+                >
+                  {plan.cta} {plan.highlight && <ArrowRight className="flip-rtl ms-1 size-3.5" />}
+                </Button>
+              </HoverLift>
+            </StaggerItem>
+          ))}
+        </Stagger>
+        <div className="border-t border-border/60 px-6 py-4">
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <Zap className="size-3.5 text-primary" /> {t('billing.stripeNote')}
-          </p>{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <CreditCard className="size-3.5" />
-            </span>{' '}
-            {t('billing.invoices')}
-          </h2>{' '}
-        </div>{' '}
-        <div className="p-8 text-center">
-          {' '}
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-            <CreditCard className="size-6 text-muted-foreground" />
-          </div>{' '}
-          <p className="mt-3 text-sm font-medium">{t('billing.noInvoices')}</p>{' '}
-          <p className="text-xs text-muted-foreground">{t('billing.noInvoicesHint')}</p>{' '}
-        </div>{' '}
-      </div>{' '}
+          </p>
+        </div>
+      </Reveal>
+      <SettingsSection icon={CreditCard} title={t('billing.invoices')} delay={0.05}>
+        <div className="py-6 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
+            <CreditCard className="size-5 text-muted-foreground" />
+          </div>
+          <p className="mt-3 font-display text-base font-medium text-foreground">
+            {t('billing.noInvoices')}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('billing.noInvoicesHint')}</p>
+        </div>
+      </SettingsSection>
     </div>
   );
 }

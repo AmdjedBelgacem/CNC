@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AnimatePresence, m } from 'framer-motion';
+import { Crossfade, Reveal } from '@/components/ui/motion';
+import { spring, transition } from '@/lib/motion';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   AtSign,
@@ -152,7 +155,7 @@ export default function NotificationsPage() {
 
   if (!hydrated) {
     return (
-      <div className="mx-auto w-full max-w-3xl space-y-3 px-4 py-8 sm:px-6 lg:py-12">
+      <div className="mx-auto w-full max-w-3xl space-y-3 px-4 py-10 sm:px-6 lg:py-14">
         <Skeleton className="h-10 w-56" />
         {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full rounded-xl" />)}
       </div>
@@ -161,7 +164,7 @@ export default function NotificationsPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:py-12">
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
         <EmptyState
           icon={Bell}
           title={t('signInTitle')}
@@ -179,43 +182,52 @@ export default function NotificationsPage() {
   const liveLabel = connected ? t('liveOn') : reconnecting ? t('reconnecting') : t('polling');
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:py-12">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
+      <Reveal as="header" className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="flex items-center gap-3 font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-4xl">
             {t('title')}
             {isFetching && !isLoading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground">
             {unreadCount > 0 ? `${unreadCount} ${t('unread').toLowerCase()} · ${liveLabel}` : t('subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-2xs font-semibold',
+              'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
               connected ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground',
             )}
           >
             <Radio className="size-3.5" />
             {liveLabel}
           </span>
-          {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={() => void onMarkAll()} loading={markAllRead.isPending}>
-              <CheckCheck />
-              {t('markAllRead')}
-            </Button>
-          )}
+          <AnimatePresence initial={false}>
+            {unreadCount > 0 && (
+              <m.div
+                key="mark-all"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1, transition: spring.smooth }}
+                exit={{ opacity: 0, scale: 0.95, transition: transition.leave }}
+              >
+                <Button variant="outline" size="sm" onClick={() => void onMarkAll()} loading={markAllRead.isPending}>
+                  <CheckCheck />
+                  {t('markAllRead')}
+                </Button>
+              </m.div>
+            )}
+          </AnimatePresence>
         </div>
-      </header>
+      </Reveal>
 
       <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | 'unread')}>
-        <TabsList className="mb-4">
+        <TabsList className="mb-6">
           <TabsTrigger value="all">{tc('all')}</TabsTrigger>
           <TabsTrigger value="unread">
             {t('unread')}
             {unreadCount > 0 && (
-              <span className="ms-1.5 rounded-full bg-primary/15 px-1.5 text-2xs font-bold text-primary">
+              <span className="ms-1.5 rounded-full bg-primary/10 px-1.5 text-2xs font-semibold tabular-nums text-primary">
                 {unreadCount}
               </span>
             )}
@@ -223,6 +235,7 @@ export default function NotificationsPage() {
         </TabsList>
       </Tabs>
 
+      <Crossfade value={`${filter}-${isLoading ? 'l' : isError ? 'e' : visible.length === 0 ? '0' : 'list'}`} axis="none">
       {isLoading ? (
         <div className="space-y-2" role="status" aria-busy>
           {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full rounded-xl" />)}
@@ -236,13 +249,19 @@ export default function NotificationsPage() {
           description={t('emptyHint')}
         />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {groups.map((group) => (
-            <section key={group.key} aria-labelledby={`notification-group-${group.key}`}>
-              <h2 id={`notification-group-${group.key}`} className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <m.section
+              key={group.key}
+              layout="position"
+              transition={spring.layout}
+              aria-labelledby={`notification-group-${group.key}`}
+            >
+              <h2 id={`notification-group-${group.key}`} className="mb-3 px-1 text-xs font-medium text-muted-foreground">
                 {group.label === 'today' ? tc('today') : group.label === 'yesterday' ? tc('yesterday') : group.label}
               </h2>
               <ul className="space-y-2">
+                <AnimatePresence initial={false}>
                 {group.items.map((notification) => {
                   const Icon = TYPE_ICON[notification.type] ?? Bell;
                   const href = hrefFor(notification);
@@ -250,7 +269,7 @@ export default function NotificationsPage() {
                     <>
                       <span
                         className={cn(
-                          'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                          'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300',
                           notification.isRead ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
                         )}
                       >
@@ -258,30 +277,48 @@ export default function NotificationsPage() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-start gap-2">
-                          <span className={cn('truncate text-sm', notification.isRead ? 'text-muted-foreground' : 'font-medium text-foreground')}>
+                          <span className={cn('truncate text-sm transition-colors', notification.isRead ? 'text-muted-foreground' : 'font-medium text-foreground')}>
                             {notification.title}
                           </span>
-                          {!notification.isRead && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
+                          <AnimatePresence initial={false}>
+                            {!notification.isRead && (
+                              <m.span
+                                key="dot"
+                                aria-hidden
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1, transition: spring.snappy }}
+                                exit={{ scale: 0, opacity: 0, transition: transition.leave }}
+                                className="mt-1.5 size-2 shrink-0 rounded-full bg-primary"
+                              />
+                            )}
+                          </AnimatePresence>
                         </span>
-                        {notification.body && <span className="mt-0.5 block line-clamp-2 text-xs text-muted-foreground">{notification.body}</span>}
-                        <span className="mt-1 block text-2xs text-muted-foreground">{timeAgo(notification.createdAt, locale)}</span>
+                        {notification.body && <span className="mt-0.5 block line-clamp-2 text-sm leading-relaxed text-muted-foreground">{notification.body}</span>}
+                        <span className="mt-1.5 block text-xs text-muted-foreground">{timeAgo(notification.createdAt, locale)}</span>
                       </span>
                     </>
                   );
                   return (
-                    <li key={notification.id}>
+                    <m.li
+                      key={notification.id}
+                      layout="position"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0, transition: transition.enter }}
+                      exit={{ opacity: 0, x: 16, transition: transition.leave }}
+                      transition={spring.layout}
+                    >
                       <div
                         className={cn(
-                          'flex items-center gap-3 rounded-xl border p-3 transition-colors',
-                          notification.isRead ? 'border-border bg-card' : 'border-primary/20 bg-primary/[0.04]',
+                          'flex items-center gap-3 rounded-xl border p-3.5 shadow-xs transition-[background-color,border-color,box-shadow] duration-300 hover:shadow-md sm:p-4',
+                          notification.isRead ? 'border-border/70 bg-card' : 'border-primary/20 bg-primary/[0.04]',
                         )}
                       >
                         {href ? (
-                          <Link href={href} onClick={() => void onMarkOne(notification)} className="flex min-w-0 flex-1 items-center gap-3">
+                          <Link href={href} onClick={() => void onMarkOne(notification)} className="flex min-w-0 flex-1 items-center gap-3.5 rounded-md">
                             {body}
                           </Link>
                         ) : (
-                          <button type="button" onClick={() => void onMarkOne(notification)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                          <button type="button" onClick={() => void onMarkOne(notification)} className="flex min-w-0 flex-1 items-center gap-3.5 rounded-md text-start">
                             {body}
                           </button>
                         )}
@@ -297,11 +334,12 @@ export default function NotificationsPage() {
                           </Button>
                         )}
                       </div>
-                    </li>
+                    </m.li>
                   );
                 })}
+                </AnimatePresence>
               </ul>
-            </section>
+            </m.section>
           ))}
           {hasMore && (
             <div className="flex justify-center pt-2">
@@ -312,6 +350,7 @@ export default function NotificationsPage() {
           )}
         </div>
       )}
+      </Crossfade>
     </div>
   );
 }

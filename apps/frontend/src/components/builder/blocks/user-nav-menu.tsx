@@ -6,7 +6,9 @@ import { useTranslations } from 'next-intl';
 import { BookOpen, LayoutTemplate, LogOut, Settings, Shield, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api-client';
-import { toast } from '@/components/ui/toast'; /** Avatar + dropdown menu shown in the navbar when a user is signed in. */
+import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion'; /** Avatar + dropdown menu shown in the navbar when a user is signed in. */
 export function UserNavMenu() {
   const t = useTranslations('common');
   const router = useRouter();
@@ -44,116 +46,127 @@ export function UserNavMenu() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Account menu"
-        className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xs font-bold text-white shadow-md ring-2 ring-white transition hover:shadow-lg hover:scale-[1.02] dark:ring-ring"
+        aria-expanded={open}
+        className="relative flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary ring-1 ring-border transition-transform duration-200 hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
       >
         {' '}
         {initial}{' '}
       </button>{' '}
-      {open && (
-        <div className="absolute end-0 top-full mt-2 w-[260px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm z-50 dark:border-border dark:bg-overlay animate-popover-in [--popover-origin:top]">
-          {' '}
-          {/* Header — compact */}{' '}
-          <div className="flex gap-2.5 px-4 pb-3 pt-4">
+      <AnimatePresence>
+        {open && (
+          <m.div
+            key="user-menu"
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: spring.smooth }}
+            exit={{
+              opacity: 0,
+              y: -4,
+              scale: 0.98,
+              transition: { duration: 0.12, ease: [0.4, 0, 1, 1] },
+            }}
+            style={{ transformOrigin: 'top right' }}
+            className="absolute end-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-2xl border border-border/70 bg-popover shadow-lg"
+          >
             {' '}
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-bold text-white shadow-sm">
+            {/* Header — compact */}{' '}
+            <div className="flex gap-2.5 px-4 pb-3 pt-4">
               {' '}
-              {initial}{' '}
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                {' '}
+                {initial}{' '}
+              </div>{' '}
+              <div className="min-w-0 flex-1">
+                {' '}
+                <p className="truncate font-display text-[15px] font-medium leading-none text-foreground">
+                  {user?.name || 'User'}
+                </p>{' '}
+                <p className="mt-0.5 truncate text-xs leading-none text-muted-foreground dark:text-muted-foreground">
+                  {user?.email}
+                </p>{' '}
+                <span className="mt-1.5 inline-flex rounded-full bg-muted px-2 py-0.5 text-2xs font-medium capitalize text-muted-foreground">
+                  {' '}
+                  {user?.role?.replace('_', ' ') || 'Member'}{' '}
+                </span>{' '}
+              </div>{' '}
             </div>{' '}
-            <div className="min-w-0 flex-1">
+            <div className="px-1.5 pb-1">
               {' '}
-              <p className="truncate text-sm font-semibold leading-none text-foreground dark:text-foreground">
-                {user?.name || 'User'}
-              </p>{' '}
-              <p className="mt-0.5 truncate text-xs leading-none text-muted-foreground dark:text-muted-foreground">
-                {user?.email}
-              </p>{' '}
-              <span className="mt-1.5 inline-flex rounded-full bg-overlay px-1.5 py-0.5 text-2xs font-medium text-white dark:bg-card dark:text-foreground">
-                {' '}
-                {user?.role?.replace('_', ' ') || 'Member'}{' '}
-              </span>{' '}
-            </div>{' '}
-          </div>{' '}
-          <div className="px-1.5 pb-1">
-            {' '}
-            <Link
-              href={`/profile/${user?.id}`}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-surface-sunken dark:hover:bg-popover"
-            >
-              {' '}
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary">
-                {' '}
-                <User className="size-3.5" />{' '}
-              </span>{' '}
-              <span className="flex-1 text-sm font-medium text-secondary dark:text-foreground">
-                Profile
-              </span>{' '}
-            </Link>{' '}
-            <Link
-              href="/account"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-surface-sunken dark:hover:bg-popover"
-            >
-              {' '}
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success dark:bg-success/15 dark:text-success">
-                {' '}
-                <BookOpen className="size-3.5" />{' '}
-              </span>{' '}
-              <span className="flex-1 text-sm font-medium text-secondary dark:text-foreground">
-                My learning
-              </span>{' '}
-            </Link>{' '}
-            <Link
-              href="/settings"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition hover:bg-surface-sunken dark:text-muted-foreground dark:hover:bg-popover"
-            >
-              {' '}
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground dark:bg-popover dark:text-muted-foreground">
-                {' '}
-                <Settings className="size-3.5" />{' '}
-              </span>{' '}
-              Settings{' '}
-            </Link>{' '}
-            <Link
-              href="/settings/account/security"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition hover:bg-surface-sunken dark:text-muted-foreground dark:hover:bg-popover"
-            >
-              {' '}
-              <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-secondary dark:border-border-strong dark:bg-popover dark:text-muted-foreground">
-                {' '}
-                <Shield className="size-3.5" />{' '}
-              </span>{' '}
-              Security{' '}
-            </Link>{' '}
-            {isAdmin && (
               <Link
-                href="/admin"
+                href={`/profile/${user?.id}`}
                 onClick={() => setOpen(false)}
-                className="mt-1 flex items-center gap-2.5 rounded-lg border border-primary/25 bg-primary/10 px-2.5 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground hover:border-primary   dark:text-primary dark:hover:bg-primary dark:hover:text-primary-foreground"
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-muted/70 "
               >
                 {' '}
-                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary">
                   {' '}
-                  <LayoutTemplate className="size-3.5" />{' '}
+                  <User className="size-3.5" />{' '}
                 </span>{' '}
-                Admin Dashboard{' '}
-              </Link>
-            )}{' '}
-          </div>{' '}
-          <div className="border-t border-border p-1.5 dark:border-border">
-            {' '}
-            <button
-              onClick={() => void handleLogout()}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-surface-sunken hover:text-foreground dark:text-muted-foreground dark:hover:bg-popover dark:hover:text-foreground"
-            >
+                <span className="flex-1 text-sm font-medium text-foreground">Profile</span>{' '}
+              </Link>{' '}
+              <Link
+                href="/account"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-muted/70 "
+              >
+                {' '}
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 text-success dark:bg-success/15 dark:text-success">
+                  {' '}
+                  <BookOpen className="size-3.5" />{' '}
+                </span>{' '}
+                <span className="flex-1 text-sm font-medium text-foreground">My learning</span>{' '}
+              </Link>{' '}
+              <Link
+                href="/settings"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition hover:bg-muted/70 dark:text-muted-foreground "
+              >
+                {' '}
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground dark:bg-popover dark:text-muted-foreground">
+                  {' '}
+                  <Settings className="size-3.5" />{' '}
+                </span>{' '}
+                Settings{' '}
+              </Link>{' '}
+              <Link
+                href="/settings/account/security"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition hover:bg-muted/70 dark:text-muted-foreground "
+              >
+                {' '}
+                <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card text-secondary dark:border-border-strong dark:bg-popover dark:text-muted-foreground">
+                  {' '}
+                  <Shield className="size-3.5" />{' '}
+                </span>{' '}
+                Security{' '}
+              </Link>{' '}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="mt-1 flex items-center gap-2.5 rounded-lg border border-primary/25 bg-primary/10 px-2.5 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground hover:border-primary   dark:text-primary dark:hover:bg-primary dark:hover:text-primary-foreground"
+                >
+                  {' '}
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                    {' '}
+                    <LayoutTemplate className="size-3.5" />{' '}
+                  </span>{' '}
+                  Admin Dashboard{' '}
+                </Link>
+              )}{' '}
+            </div>{' '}
+            <div className="border-t border-border p-1.5 dark:border-border">
               {' '}
-              <LogOut className="size-3.5" /> Sign out{' '}
-            </button>{' '}
-          </div>{' '}
-        </div>
-      )}{' '}
+              <button
+                onClick={() => void handleLogout()}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted/70 hover:text-foreground dark:text-muted-foreground  dark:hover:text-foreground"
+              >
+                {' '}
+                <LogOut className="size-3.5" /> Sign out{' '}
+              </button>{' '}
+            </div>{' '}
+          </m.div>
+        )}
+      </AnimatePresence>{' '}
     </div>
   );
 }

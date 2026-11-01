@@ -118,9 +118,9 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
             {' '}
             <div className="flex -space-x-2.5" aria-hidden="true">
               {' '}
-              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-primary"></span>{' '}
-              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-secondary"></span>{' '}
-              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-accent"></span>{' '}
+              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-primary/70"></span>{' '}
+              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-secondary/40"></span>{' '}
+              <span className="inline-block h-9 w-9 rounded-full border-2 border-background bg-accent/60"></span>{' '}
             </div>{' '}
             <span className="flex items-center gap-0.5" aria-hidden="true">
               {' '}
@@ -144,7 +144,7 @@ export function HeroBlock({ props, puck }: BlockComponentProps<HeroProps>) {
       </div>{' '}
       {scrollIndicator && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 animate-bounce opacity-50 z-10"
+          className="absolute left-1/2 -translate-x-1/2 animate-bounce text-muted-foreground opacity-60 [animation-duration:2.2s] z-10"
           style={{ bottom: scrollIndicatorBottom }}
         >
           {' '}

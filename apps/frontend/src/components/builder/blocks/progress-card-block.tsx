@@ -19,7 +19,7 @@ export function ProgressCardBlock({ props }: BlockComponentProps<ProgressCardPro
   return (
     <div
       className={cn(
-        'bg-card text-card-foreground border border-border p-6 sm:p-8 rounded-3xl shadow-sm md:scale-110',
+        'rounded-3xl border border-border/70 bg-card p-6 text-card-foreground shadow-lg sm:p-8 md:scale-110',
         className,
       )}
       style={layoutStyle(props)}
@@ -27,21 +27,21 @@ export function ProgressCardBlock({ props }: BlockComponentProps<ProgressCardPro
       {' '}
       <div className="flex items-center gap-4 mb-6">
         {' '}
-        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+        <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 ring-1 ring-inset ring-primary/15">
           {' '}
-          <Icon name={resolveIconName(icon)} className="text-primary-foreground" />{' '}
+          <Icon name={resolveIconName(icon)} className="text-primary" />{' '}
         </div>{' '}
         <div>
           {' '}
-          <div className="text-card-foreground font-bold text-base">{title}</div>{' '}
-          <div className="text-muted-foreground text-2xs uppercase tracking-[0.2em] font-bold">
+          <div className="font-display text-lg font-medium text-card-foreground">{title}</div>{' '}
+          <div className="text-xs font-medium text-muted-foreground">
             {subtitle}
           </div>{' '}
         </div>{' '}
       </div>{' '}
-      <div className="flex justify-between text-2xs text-muted-foreground uppercase tracking-[0.2em] font-bold mb-2">
+      <div className="mb-2 flex justify-between text-xs font-medium text-muted-foreground">
         {' '}
-        <span>{label}</span> <span>{value}</span>{' '}
+        <span>{label}</span> <span className="font-mono tabular-nums text-foreground">{value}</span>{' '}
       </div>{' '}
       <div className={cn('w-full bg-muted rounded-full overflow-hidden', barHeight)}>
         {' '}

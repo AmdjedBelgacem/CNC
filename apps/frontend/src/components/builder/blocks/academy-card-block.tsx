@@ -17,7 +17,7 @@ export function AcademyCardBlock({ props, puck }: BlockComponentProps<AcademyCar
   return (
     <div
       className={cn(
-        'bg-card border border-border overflow-hidden transition-all duration-300 group',
+        'card-hover group overflow-hidden border border-border/70 bg-card shadow-xs',
         radius,
         className,
       )}

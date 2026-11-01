@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertCircle, GraduationCap, Loader2, Lock, ShoppingBag, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { useCartStore } from '@/stores/cart-store';
@@ -14,6 +13,10 @@ import { useAuthStore } from '@/stores/auth-store';
 import { trackBeginCheckout } from '@/lib/analytics';
 import { api } from '@/lib/api-client';
 import type { OrderView } from '@/hooks/use-payments';
+import { AnimatePresence, m } from 'framer-motion';
+import { Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { spring, transition } from '@/lib/motion';
+import { CheckoutStepper } from '@/components/store/checkout-stepper';
 
 /**
  * Loads Moyasar's Payment Form.
@@ -93,6 +96,7 @@ interface CreatedOrder {
 
 export default function CheckoutPage() {
   const t = useTranslations('checkout');
+  const tp = useTranslations('products');
   const router = useRouter();
   const locale = useLocale();
   const items = useCartStore((state) => state.items);
@@ -371,121 +375,155 @@ async function resolveProductRef(item: { productId: string; slug?: string }): Pr
     }).format(minor / 100);
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <header className="mb-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-          {t('eyebrow')}
-        </p>
-        <h1 className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-foreground">
+    <div className="container mx-auto px-4 py-12 md:py-16">
+      <CheckoutStepper
+        steps={[tp('cart'), t('paymentMethod'), t('paidEyebrow')]}
+        current={1}
+        className="mb-10"
+      />
+      <Reveal as="header" className="mb-10">
+        <p className="eyebrow">{t('eyebrow')}</p>
+        <h1 className="mt-3 font-display text-4xl font-medium tracking-[-0.022em] text-foreground md:text-[44px]">
           {t('title')}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
-      </header>
+        <p className="mt-2 text-[15px] text-muted-foreground">{t('subtitle')}</p>
+      </Reveal>
 
+      <Crossfade value={blocked ? 'blocked' : 'ready'}>
       {blocked ? (
-        <Card>
-          <CardContent className="flex items-start gap-3 p-5">
-            <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-            <div>
-              <p className="font-semibold text-foreground">{t('unavailableTitle')}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{blocked}</p>
-              <p className="mt-2 text-xs text-muted-foreground">{t('unavailableHint')}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-start gap-4 rounded-2xl border border-destructive/25 bg-destructive/[0.04] p-6">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <AlertCircle className="size-5" />
+          </span>
+          <div>
+            <p className="font-display text-xl font-medium text-foreground">{t('unavailableTitle')}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{blocked}</p>
+            <p className="mt-2 text-xs text-muted-foreground">{t('unavailableHint')}</p>
+          </div>
+        </div>
       ) : (
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-3 lg:gap-10">
           <div className="space-y-4 lg:col-span-2">
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-              {t('orderItems')}
-            </h2>
-            {effective?.lines.map((line) => (
-              <Card key={line.key}>
-                <CardContent className="flex items-center gap-4 p-4">
-                  <div className="flex aspect-square w-16 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
-                    {line.itemType === 'course' ? (
-                      <GraduationCap className="size-6 text-muted-foreground/50" />
-                    ) : line.itemType === 'event_ticket' ? (
-                      <Ticket className="size-6 text-muted-foreground/50" />
-                    ) : (
-                      <ShoppingBag className="size-6 text-muted-foreground/50" />
-                    )}
+            <h2 className="text-sm font-medium text-foreground">{t('orderItems')}</h2>
+            <Stagger as="ul" className="space-y-3">
+              {effective?.lines.map((line, i) => (
+                <StaggerItem as="li" key={line.key} index={i}>
+                  <div className="flex items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+                    <div className="flex aspect-square w-14 shrink-0 items-center justify-center rounded-xl bg-muted">
+                      {line.itemType === 'course' ? (
+                        <GraduationCap className="size-6 text-muted-foreground/60" />
+                      ) : line.itemType === 'event_ticket' ? (
+                        <Ticket className="size-6 text-muted-foreground/60" />
+                      ) : (
+                        <ShoppingBag className="size-6 text-muted-foreground/60" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-display text-[17px] font-medium tracking-[-0.01em] text-foreground">
+                        {line.title}
+                      </h3>
+                      <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                        {t('quantity')}: {line.quantity}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-display font-medium text-foreground">{line.title}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {t('quantity')}: {line.quantity}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                </StaggerItem>
+              ))}
+            </Stagger>
 
-            <div className="pt-2">
-              <h2 className="mb-3 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+            <div className="pt-6">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                <Lock className="size-3.5 text-muted-foreground" aria-hidden />
                 {t('paymentMethod')}
               </h2>
-              {creating || loadingDirect || (!effective && !error) ? (
-                <div className="flex items-center gap-2 rounded-lg border border-border p-6 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  {t('preparing')}
-                </div>
-              ) : (
-                <div
-                  id="moyasar-form"
-                  ref={formRef}
-                  className="rounded-lg border border-border p-4"
-                />
-              )}
+              {/* `popLayout`, not `wait`: the payment form must be in the DOM as soon as the
+                  order exists, because the Moyasar mount effect looks it up by ref. */}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {creating || loadingDirect || (!effective && !error) ? (
+                  <m.div
+                    key="preparing"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: transition.leave }}
+                    className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 p-6 text-sm text-muted-foreground"
+                  >
+                    <Loader2 className="size-4 animate-spin text-primary" />
+                    {t('preparing')}
+                  </m.div>
+                ) : (
+                  <m.div
+                    key="form"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0, transition: transition.enter }}
+                    exit={{ opacity: 0, transition: transition.leave }}
+                  >
+                    <div
+                      id="moyasar-form"
+                      ref={formRef}
+                      className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs"
+                    />
+                  </m.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
           <aside className="space-y-4">
-            <Card>
-              <CardContent className="space-y-3 p-5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{t('subtotal')}</span>
-                  <span className="font-medium tabular-nums text-foreground">
-                    {effective ? money(effective.amount, effective.currency) : '—'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-t border-border pt-3 text-base">
-                  <span className="font-semibold text-foreground">{t('total')}</span>
-                  <span className="font-display text-lg font-semibold tabular-nums text-foreground">
-                    {effective ? money(effective.amount, effective.currency) : '—'}
-                  </span>
-                </div>
-                {effective && (
-                  <p className="font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
-                    {t('orderRef')} {effective.orderId.slice(0, 8)}
-                  </p>
-                )}
-                <p className="flex items-start gap-1.5 pt-1 text-2xs text-muted-foreground">
-                  <Lock className="mt-px size-3 shrink-0" />
-                  {t('pciNote')}
-                </p>
-                {/* The cart is emptied by the success page once the payment is
-                    verified, so there is deliberately no "clear" button here. */}
-              </CardContent>
-            </Card>
-
-            {error && (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
-              >
-                <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <span className="min-w-0 flex-1">{error}</span>
-                {!requestedOrderId && (
-                  <Button size="sm" variant="ghost" onClick={() => void createOrder()}>
-                    {t('retry')}
-                  </Button>
-                )}
+            <div className="space-y-4 rounded-2xl border border-border/70 bg-card p-6 shadow-sm lg:sticky lg:top-24">
+              <p className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
+                {t('itemsTitle')}
+              </p>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{t('subtotal')}</span>
+                <span className="tabular-nums text-foreground">
+                  {effective ? money(effective.amount, effective.currency) : '—'}
+                </span>
               </div>
-            )}
+              <div className="flex items-baseline justify-between border-t border-border/70 pt-4">
+                <span className="text-sm font-medium text-foreground">{t('total')}</span>
+                <span className="font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground">
+                  {effective ? money(effective.amount, effective.currency) : '—'}
+                </span>
+              </div>
+              {effective && (
+                <p className="text-xs text-muted-foreground">
+                  {t('orderRef')}{' '}
+                  <span className="font-mono text-foreground/80">{effective.orderId.slice(0, 8)}</span>
+                </p>
+              )}
+              <p className="flex items-start gap-2 rounded-xl bg-muted/60 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                <Lock className="mt-0.5 size-3 shrink-0" />
+                {t('pciNote')}
+              </p>
+              {/* The cart is emptied by the success page once the payment is
+                  verified, so there is deliberately no "clear" button here. */}
+            </div>
+
+            <AnimatePresence initial={false}>
+              {error && (
+                <m.div
+                  key="error"
+                  role="alert"
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98, transition: transition.leave }}
+                  transition={spring.smooth}
+                  className="flex items-start gap-2.5 rounded-xl border border-destructive/25 bg-destructive/[0.05] p-3.5 text-sm text-destructive"
+                >
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                  <span className="min-w-0 flex-1">{error}</span>
+                  {!requestedOrderId && (
+                    <Button size="sm" variant="ghost" onClick={() => void createOrder()}>
+                      {t('retry')}
+                    </Button>
+                  )}
+                </m.div>
+              )}
+            </AnimatePresence>
           </aside>
         </div>
       )}
+      </Crossfade>
     </div>
   );
 }

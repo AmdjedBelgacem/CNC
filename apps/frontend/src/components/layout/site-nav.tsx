@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronRight } from 'lucide-react';
 import type { NavItemView } from '@titan/shared';
 import { cn } from '@/lib/utils';
-import { AnimatePresence, m } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, m } from 'framer-motion';
 import { Stagger, StaggerItem } from '@/components/ui/motion';
 import { spring } from '@/lib/motion';
 
@@ -45,14 +45,56 @@ function isActiveRoute(href: string, pathname: string, search = ''): boolean {
 
 /* ------------------------------------------------------------- desktop */
 
+/**
+ * Two shared-element indicators ride across the desktop nav:
+ *
+ *  - `primary-nav-hover` — a soft ivory pill that follows the pointer from item
+ *    to item. Only one item is ever hovered, so the layoutId stays unique.
+ *  - `primary-nav-indicator` — a short clay rule under the current route.
+ *    Route-gated (never hover-gated), so it can't collide with itself.
+ *
+ * Both are wrapped in one `LayoutGroup` so they measure against the same nav.
+ */
+const NAV_ITEM_CLASS =
+  'relative z-0 flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60';
+
+function HoverPill() {
+  return (
+    <m.span
+      layoutId="primary-nav-hover"
+      aria-hidden
+      className="absolute inset-0 -z-10 rounded-full bg-muted/80"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.12 } }}
+      transition={spring.smooth}
+    />
+  );
+}
+
+function ActiveRule() {
+  return (
+    <m.span
+      layoutId="primary-nav-indicator"
+      aria-hidden
+      className="absolute inset-x-0 -bottom-[13px] mx-auto h-[2px] w-5 rounded-full bg-primary"
+      transition={spring.smooth}
+    />
+  );
+}
+
 function DesktopDropdown({
   item,
   pathname,
   search,
+  hovered,
+  onHover,
 }: {
   item: NavItemView;
   pathname: string;
   search: string;
+  hovered: boolean;
+  onHover: (id: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -99,10 +141,11 @@ function DesktopDropdown({
   return (
     <div
       ref={ref}
-      className="relative flex items-stretch self-stretch"
+      className="relative flex items-center"
       onMouseEnter={() => {
         cancelClose();
         setOpen(true);
+        onHover(item.id);
       }}
       onMouseLeave={scheduleClose}
     >
@@ -111,63 +154,51 @@ function DesktopDropdown({
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((v) => !v)}
-        onFocus={() => setOpen(true)}
-        // Colour tracks `open || hasActiveChild` because the whole trigger is
-        // highlighted on hover; the *indicator* deliberately does not (see the
-        // note below) so it can't collide with an active sibling's.
+        onFocus={() => {
+          setOpen(true);
+          onHover(item.id);
+        }}
         className={cn(
-          'relative flex items-center gap-1 px-3.5 text-[13px] font-medium tracking-[0.01em] transition-colors',
+          NAV_ITEM_CLASS,
           open || hasActiveChild
             ? 'text-foreground'
             : 'text-muted-foreground hover:text-foreground',
         )}
       >
+        <AnimatePresence>{hovered && <HoverPill />}</AnimatePresence>
         {item.label}
         {/* Same spring as the mobile disclosure, so a group trigger's chevron
-            and its indicator agree about how "open" looks. */}
+            and its panel agree about how "open" looks. */}
         <m.span
-          className="flex"
+          className="flex opacity-60"
           animate={{ rotate: open ? 180 : 0 }}
           transition={spring.snappy}
           aria-hidden
         >
           <ChevronDown className="size-3.5" />
         </m.span>
-
-        {/* Shares `primary-nav-indicator` with DesktopLink, so the underline
-            slides between a plain item and a group trigger as well as between
-            two plain items.
-
-            Gated on `hasActiveChild`, NOT on `open`: hover is transient and can
-            be true for a group that isn't the current route, which would mount
-            a second element with the same `layoutId` at the same time as an
-            active DesktopLink's. Duplicate layoutIds break the shared-element
-            morph (Framer Motion warns and both snap). A route is either inside
-            the group or on a sibling link, so route-based gating can't collide. */}
-        {hasActiveChild && (
-          <m.span
-            layoutId="primary-nav-indicator"
-            aria-hidden
-            className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary"
-            transition={spring.smooth}
-          />
-        )}
+        {hasActiveChild && <ActiveRule />}
       </button>
 
-      {/* Hover-intent open means this appears on mouseenter, so it is on screen
-          for only a few hundred milliseconds at a time. Animating in and out
-          every time would be noise, so it uses the quick popover timing rather
-          than a full reveal. */}
+      {/* Hover-intent open means this appears on mouseenter, so it uses the
+          quick popover timing rather than a full reveal. Scales from the
+          trigger so it reads as unfolding out of it. */}
       <AnimatePresence>
         {open && (
           <m.div
             key="panel"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0, transition: spring.snappy }}
-            exit={{ opacity: 0, y: -2, transition: { duration: 0.1, ease: [0.4, 0, 1, 1] } }}
-            className="absolute start-0 top-full z-50 min-w-56 pt-1"
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: spring.smooth }}
+            exit={{
+              opacity: 0,
+              y: -4,
+              scale: 0.98,
+              transition: { duration: 0.12, ease: [0.4, 0, 1, 1] },
+            }}
+            style={{ transformOrigin: 'top left' }}
+            className="absolute start-0 top-full z-50 min-w-60 pt-3"
           >
-            <div className="overflow-hidden rounded-md border border-border bg-popover p-1 shadow-lg">
+            <div className="overflow-hidden rounded-xl border border-border/70 bg-popover p-1.5 shadow-lg ring-1 ring-black/[0.02] dark:ring-white/[0.03]">
               <Stagger gap={0.025} maxDelay={0.16}>
                 {item.children.map((child, i) => (
                   <StaggerItem key={child.id} index={i}>
@@ -195,17 +226,17 @@ function DesktopChild({
   const active = isActiveRoute(child.href, pathname, search);
   const external = child.openInNewTab || /^https?:\/\//.test(child.href);
   const className = cn(
-    'flex items-center justify-between gap-4 rounded-sm px-3 py-2 text-[13px] transition-colors',
+    'group/child flex items-center justify-between gap-4 rounded-lg px-3 py-2 text-sm transition-colors',
     active
-      ? 'bg-primary/10 font-medium text-foreground'
+      ? 'bg-primary/[0.07] font-medium text-foreground'
       : 'text-muted-foreground hover:bg-muted hover:text-foreground',
   );
 
   // A child with its own children would need a third level, which the service
-  // flattens away. Rendering it as a plain link is the honest fallback.
+  // flattens away. Rendering it as a plain label is the honest fallback.
   if (child.children.length) {
     return (
-      <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">
+      <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground/80">
         {child.label}
       </div>
     );
@@ -214,13 +245,15 @@ function DesktopChild({
   return external ? (
     <a href={child.href} target="_blank" rel="noopener noreferrer" className={className}>
       {child.label}
-      <span aria-hidden className="font-mono text-[10px] opacity-60">
-        ↗
-      </span>
+      <ArrowUpRight
+        aria-hidden
+        className="size-3.5 opacity-50 transition-transform duration-200 group-hover/child:-translate-y-0.5 group-hover/child:translate-x-0.5 group-hover/child:opacity-80 rtl:-scale-x-100"
+      />
     </a>
   ) : (
     <Link href={child.href} aria-current={active ? 'page' : undefined} className={className}>
       {child.label}
+      {active && <span aria-hidden className="size-1.5 rounded-full bg-primary" />}
     </Link>
   );
 }
@@ -248,12 +281,13 @@ function MobileGroup({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'flex items-center justify-between rounded-md border-s-2 px-3 py-2.5 text-sm font-medium transition-colors',
+          'relative flex items-center justify-between rounded-xl px-4 py-3 text-[15px] font-medium transition-colors',
           hasActiveChild
-            ? 'border-primary text-foreground'
-            : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
+            ? 'text-foreground'
+            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
         )}
       >
+        {hasActiveChild && <MobileActiveDot />}
         {item.label}
         {/* The chevron rides the same spring as the panel below it. Driving both
             with one transition is what makes the disclosure feel like a single
@@ -277,7 +311,7 @@ function MobileGroup({
             exit={{ height: 0, opacity: 0, transition: { duration: 0.14, ease: [0.4, 0, 1, 1] } }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-0.5 border-s-2 border-border/60 ps-3 pe-3 pt-1">
+            <div className="ms-4 flex flex-col gap-0.5 border-s border-border/70 pb-1 pe-1 ps-2 pt-0.5">
               <Stagger gap={0.03} maxDelay={0.2}>
                 {item.children.map((child, i) => {
                   const active = isActiveRoute(child.href, pathname, search);
@@ -287,10 +321,10 @@ function MobileGroup({
                         href={child.href}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
-                          'rounded-md px-3 py-2 text-sm transition-colors',
+                          'flex rounded-lg px-3 py-2 text-sm transition-colors',
                           active
-                            ? 'bg-primary/10 font-medium text-foreground'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                            ? 'bg-primary/[0.07] font-medium text-foreground'
+                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
                         )}
                       >
                         {child.label}
@@ -312,17 +346,41 @@ function MobileGroup({
 export function SiteNavDesktop({ items }: { items: NavItemView[] }) {
   const pathname = usePathname();
   const search = useSearchParams().toString();
+  const [hovered, setHovered] = useState<string | null>(null);
   if (!items.length) return null;
   return (
-    <nav className="hidden items-stretch self-stretch md:flex" aria-label="Primary">
-      {items.map((item) =>
-        item.type === 'group' ? (
-          <DesktopDropdown key={item.id} item={item} pathname={pathname} search={search} />
-        ) : (
-          <DesktopLink key={item.id} item={item} pathname={pathname} search={search} />
-        ),
-      )}
-    </nav>
+    <LayoutGroup id="primary-nav">
+      <nav
+        className="hidden items-center gap-0.5 md:flex"
+        aria-label="Primary"
+        onMouseLeave={() => setHovered(null)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHovered(null);
+        }}
+      >
+        {items.map((item) =>
+          item.type === 'group' ? (
+            <DesktopDropdown
+              key={item.id}
+              item={item}
+              pathname={pathname}
+              search={search}
+              hovered={hovered === item.id}
+              onHover={setHovered}
+            />
+          ) : (
+            <DesktopLink
+              key={item.id}
+              item={item}
+              pathname={pathname}
+              search={search}
+              hovered={hovered === item.id}
+              onHover={setHovered}
+            />
+          ),
+        )}
+      </nav>
+    </LayoutGroup>
   );
 }
 
@@ -330,21 +388,32 @@ function DesktopLink({
   item,
   pathname,
   search,
+  hovered,
+  onHover,
 }: {
   item: NavItemView;
   pathname: string;
   search: string;
+  hovered: boolean;
+  onHover: (id: string | null) => void;
 }) {
   const active = isActiveRoute(item.href, pathname, search);
+  const hoverProps = {
+    onMouseEnter: () => onHover(item.id),
+    onFocus: () => onHover(item.id),
+  };
   if (item.openInNewTab || /^https?:\/\//.test(item.href)) {
     return (
       <a
         href={item.href}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative flex items-center px-3.5 text-[13px] font-medium tracking-[0.01em] text-muted-foreground transition-colors hover:text-foreground"
+        {...hoverProps}
+        className={cn(NAV_ITEM_CLASS, 'text-muted-foreground hover:text-foreground')}
       >
+        <AnimatePresence>{hovered && <HoverPill />}</AnimatePresence>
         {item.label}
+        <ArrowUpRight aria-hidden className="size-3 opacity-50 rtl:-scale-x-100" />
       </a>
     );
   }
@@ -352,34 +421,20 @@ function DesktopLink({
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
+      {...hoverProps}
       className={cn(
-        'group relative flex items-center px-3.5 text-[13px] font-medium tracking-[0.01em] transition-colors',
+        NAV_ITEM_CLASS,
         active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
       )}
     >
+      <AnimatePresence>{hovered && <HoverPill />}</AnimatePresence>
       {item.label}
 
       {/* One shared indicator that MORPHS between items rather than a per-item
-          underline that fades in and out.
-
-          Every active item renders the same `layoutId`, so Framer Motion
-          measures the outgoing bar and the incoming one and tweens between
-          them: moving from "Courses" to "Academy" slides the underline across
-          instead of blinking one out and the other in. That continuity is what
-          makes the nav feel like a physical object rather than a set of
-          re-rendered links.
-
-          `layoutId` has to be unique among *simultaneously mounted* elements —
-          only one item is ever active, so that holds. (The mobile nav has no
-          indicator, so it can't collide.) */}
-      {active && (
-        <m.span
-          layoutId="primary-nav-indicator"
-          aria-hidden
-          className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary"
-          transition={spring.smooth}
-        />
-      )}
+          underline that fades in and out: moving from "Courses" to "Academy"
+          slides the clay rule across. `layoutId` has to be unique among
+          simultaneously mounted elements — only one item is ever active. */}
+      {active && <ActiveRule />}
     </Link>
   );
 }
@@ -396,26 +451,35 @@ export function SiteNavMobile({
   if (!items.length) return null;
   return (
     <>
-      {items.map((item) =>
-        item.type === 'group' ? (
-          <MobileGroup
-            key={item.id}
-            item={item}
-            pathname={pathname}
-            search={search}
-            defaultOpen={item.children.some((child) => isActiveRoute(child.href, pathname, search))}
-          />
-        ) : (
-          <MobileLink
-            key={item.id}
-            item={item}
-            pathname={pathname}
-            search={search}
-            onNavigate={onNavigate}
-          />
-        ),
-      )}
+      {items.map((item, i) => (
+        <StaggerItem key={item.id} index={i}>
+          {item.type === 'group' ? (
+            <MobileGroup
+              item={item}
+              pathname={pathname}
+              search={search}
+              defaultOpen={item.children.some((child) =>
+                isActiveRoute(child.href, pathname, search),
+              )}
+            />
+          ) : (
+            <MobileLink item={item} pathname={pathname} search={search} onNavigate={onNavigate} />
+          )}
+        </StaggerItem>
+      ))}
     </>
+  );
+}
+
+/** Clay marker on the current mobile row; slides between rows on route change. */
+function MobileActiveDot() {
+  return (
+    <m.span
+      layoutId="mobile-nav-indicator"
+      aria-hidden
+      className="absolute inset-y-3 start-0 w-[3px] rounded-full bg-primary"
+      transition={spring.smooth}
+    />
   );
 }
 
@@ -432,18 +496,16 @@ function MobileLink({
 }) {
   const active = isActiveRoute(item.href, pathname, search);
   const className = cn(
-    'flex items-center justify-between rounded-md border-s-2 px-3 py-2.5 text-sm font-medium transition-colors',
+    'group/mlink relative flex items-center justify-between rounded-xl px-4 py-3 text-[15px] font-medium transition-colors',
     active
-      ? 'border-primary bg-primary/5 text-foreground'
-      : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
+      ? 'bg-muted/70 text-foreground'
+      : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
   );
   if (item.openInNewTab || /^https?:\/\//.test(item.href)) {
     return (
       <a href={item.href} target="_blank" rel="noopener noreferrer" className={className}>
         {item.label}
-        <span aria-hidden className="font-mono text-[10px] opacity-60">
-          ↗
-        </span>
+        <ArrowUpRight aria-hidden className="size-4 opacity-50 rtl:-scale-x-100" />
       </a>
     );
   }
@@ -454,10 +516,12 @@ function MobileLink({
       aria-current={active ? 'page' : undefined}
       className={className}
     >
+      {active && <MobileActiveDot />}
       {item.label}
-      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60">
-        {item.href}
-      </span>
+      <ChevronRight
+        aria-hidden
+        className="size-4 opacity-40 transition-transform duration-200 group-hover/mlink:translate-x-0.5 rtl:rotate-180"
+      />
     </Link>
   );
 }

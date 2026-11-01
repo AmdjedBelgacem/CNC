@@ -10,7 +10,7 @@ import { useBuilderLivePreview } from '@/components/builder/live-preview-context
 import { CatalogStatBlock, CatalogStatValueOverrides } from './catalog-stat-block';
 import { CatalogCtaLink } from './catalog-cta-block';
 
-/** Catalog hero: blueprint grid, badge row, accent H1, stats strip, CTAs. */
+/** Catalog hero: paper dot field, eyebrow row, serif H1, stats strip, CTAs. */
 export function CatalogHeroBlock({
   props,
   puck,
@@ -71,43 +71,45 @@ export function CatalogHeroBlock({
   return (
     <section
       id={id}
-      className={cn('relative overflow-hidden', borderBottom && 'border-b border-border', className)}
+      className={cn('relative overflow-hidden', borderBottom && 'border-b border-border/70', className)}
       style={layoutStyle(props)}
     >
-      <div className="absolute inset-0 blueprint-grid opacity-60" aria-hidden />
+      <div className="absolute inset-0 ambient-wash" aria-hidden />
       <div
-        className="absolute -top-28 end-10 size-72 rounded-full bg-primary/10 blur-3xl"
+        className="absolute inset-0 blueprint-grid opacity-70 [mask-image:radial-gradient(ellipse_at_top,black_25%,transparent_70%)]"
         aria-hidden
       />
-      <div className="relative px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto pt-16 pb-12 md:pt-24 md:pb-16">
+      <div className="relative px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto pt-16 pb-14 md:pt-24 md:pb-20">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2 rounded-sm border border-border bg-card px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary shadow-xs">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3.5 py-1.5 text-[13px] font-medium text-foreground/80 shadow-xs backdrop-blur-sm">
             {eyebrowIcon ? (
-              <Icon name={eyebrowIcon} className="size-3.5" />
+              <Icon name={eyebrowIcon} className="size-3.5 text-primary" />
             ) : (
-              <span className="size-1.5 rounded-full bg-primary" />
+              <span className="size-1.5 rounded-full bg-primary shadow-[0_0_0_3px_rgb(var(--c-primary)/0.15)]" />
             )}
             {eyebrow}
           </span>
           {metaLine ? (
-            <span className="font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            <span className="text-[13px] text-muted-foreground">
               {metaLine}
             </span>
           ) : null}
         </div>
 
-        <h1 className="mt-6 max-w-3xl font-display text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+        <h1 className="mt-7 max-w-3xl text-balance font-display text-4xl font-medium leading-[1.05] tracking-[-0.025em] text-foreground sm:text-5xl md:text-[3.75rem]">
           {title}
-          {titleAccent ? <span className="block text-primary">{titleAccent}</span> : null}
+          {titleAccent ? (
+            <span className="block font-normal italic text-primary">{titleAccent}</span>
+          ) : null}
         </h1>
         {subtitle ? (
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+          <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
             {subtitle}
           </p>
         ) : null}
 
         {showStats ? (
-          <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
+          <dl className="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 shadow-xs sm:grid-cols-4">
             {renderSlotStats ? (
               <CatalogStatValueOverrides.Provider value={liveStatOverrides}>
                 {puck.renderSlot('statItems')}

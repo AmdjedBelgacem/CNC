@@ -29,7 +29,7 @@ export function CtaBannerBlock({ props, puck }: BlockComponentProps<CtaBannerPro
   const {
     id,
     imageUrl,
-    overlayColor = '#C2410C',
+    overlayColor = '#B65433',
     overlayOpacity = 90,
     radialVeil = true,
     padding: paddingProp,
@@ -44,7 +44,7 @@ export function CtaBannerBlock({ props, puck }: BlockComponentProps<CtaBannerPro
   const rgb = /^#([0-9a-fA-F]{6})$/.exec(overlayColor);
   const overlayRgb = rgb?.[1]
     ? `${parseInt(rgb[1].slice(0, 2), 16)},${parseInt(rgb[1].slice(2, 4), 16)},${parseInt(rgb[1].slice(4, 6), 16)}`
-    : '194,65,12';
+    : '182,84,51';
   const image = safeCssImageUrl(imageUrl);
   const gradient = `linear-gradient(rgba(${overlayRgb},${overlayOpacity / 100}),rgba(${overlayRgb},${overlayOpacity / 100}))${image ? `,url("${image}")` : ''}`;
   return (

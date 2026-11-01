@@ -20,12 +20,13 @@ import { useCourse, useLesson } from '@/hooks/use-courses';
 import { useLessonPlayback, useUpdateLessonProgress } from '@/hooks/use-learning';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/states';
 import { LessonAssistantButton } from '@/components/ai/lesson-assistant-button';
 import { LessonBlockRenderer } from '@/components/learning/lesson-block-renderer';
-import { ScrollProgress } from '@/components/ui/motion';
+import { Reveal, ScrollProgress, Stagger, StaggerItem } from '@/components/ui/motion';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import { CinematicVideoPlayer } from '@/components/media/cinematic-player';
 import { LanguageAvailability } from '@/components/academy/language-availability';
 import { toast } from '@/components/ui/toast';
@@ -133,9 +134,9 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
   if (lessonLoading && !courseLesson) {
     return (
       <div className="space-y-4">
-        <Skeleton className="aspect-video w-full rounded-xl" />
-        <Skeleton className="h-8 w-2/3 rounded-lg" />
-        <Skeleton className="h-4 w-1/3 rounded-md" />
+        <Skeleton className="aspect-video w-full rounded-2xl" />
+        <Skeleton className="mx-auto h-9 w-2/3 max-w-3xl rounded-lg" />
+        <Skeleton className="mx-auto h-4 w-1/3 max-w-3xl rounded-md" />
       </div>
     );
   }
@@ -155,6 +156,10 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
 
   const attachments = lesson.attachments ?? [];
   const fallbackContent = lesson.content && renderBlocks.length === 0 ? lesson.content : null;
+  // Where this lesson sits in the course, for the progress rail. Unknown (-1)
+  // reads as the start rather than hiding the rail.
+  const position = Math.max(0, index);
+  const coursePercent = lessons.length > 1 ? (position / (lessons.length - 1)) * 100 : 100;
 
   return (
     // Reading progress across the lesson. A course lesson is a long scroll —
@@ -164,41 +169,49 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
     // with the compositor rather than trailing it.
     <div className="relative" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <ScrollProgress height={2} />
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14">
+        <div className="min-w-0 space-y-8">
           {!hasVideoBlock &&
             (videoUrl ? (
-              <CinematicVideoPlayer
-                key={videoUrl}
-                ref={videoRef}
-                src={videoUrl}
-                poster={lesson.thumbnailUrl ?? videoContent?.posterUrl}
-                captionsUrl={videoContent?.captionsUrl}
-                locale={locale}
-                title={lesson.title}
-                variant="lesson"
-                onError={() => void refetchPlayback()}
-              />
+              <div className="overflow-hidden rounded-2xl shadow-lg">
+                <CinematicVideoPlayer
+                  key={videoUrl}
+                  ref={videoRef}
+                  src={videoUrl}
+                  poster={lesson.thumbnailUrl ?? videoContent?.posterUrl}
+                  captionsUrl={videoContent?.captionsUrl}
+                  locale={locale}
+                  title={lesson.title}
+                  variant="lesson"
+                  onError={() => void refetchPlayback()}
+                />
+              </div>
             ) : playbackLoading && hasVideo ? (
-              <div className="flex aspect-video w-full items-center justify-center rounded-2xl border border-border bg-muted">
-                <Loader2 className="size-10 animate-spin text-primary motion-reduce:animate-none" />
+              <div className="flex aspect-video w-full items-center justify-center rounded-2xl border border-border/70 bg-muted/60">
+                <Loader2 className="size-8 animate-spin text-primary motion-reduce:animate-none" />
                 <p className="ms-3 text-sm text-muted-foreground">{t('overview')}…</p>
               </div>
             ) : (
-              <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-border bg-surface-sunken p-6 text-center">
-                <img
-                  src={getImageSrc(lesson.thumbnailUrl, 'lesson')}
-                  alt=""
-                  className="absolute inset-0 size-full object-cover opacity-20"
-                />
+              <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-border/70 bg-surface-sunken p-6 text-center">
+                {/* Only a real thumbnail is washed in behind the prompt; the generic
+                    placeholder art carries its own play glyph and darkens the panel. */}
+                {lesson.thumbnailUrl && (
+                  <img
+                    src={getImageSrc(lesson.thumbnailUrl, 'lesson')}
+                    alt=""
+                    className="absolute inset-0 size-full object-cover opacity-[0.12] blur-[1px]"
+                  />
+                )}
                 <div className="blueprint-grid absolute inset-0" aria-hidden />
-                <div className="relative">
-                  {gated ? (
-                    <Lock className="mx-auto size-10 text-primary" />
-                  ) : (
-                    <PlayCircle className="mx-auto size-10 text-primary" />
-                  )}
-                  <p className="mt-3 text-base font-semibold text-foreground">
+                <m.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.32, 0.72, 0, 1] } }}
+                  className="relative flex flex-col items-center"
+                >
+                  <span className="flex size-14 items-center justify-center rounded-full bg-card text-primary shadow-md ring-1 ring-border/70">
+                    {gated ? <Lock className="size-6" /> : <PlayCircle className="size-6" />}
+                  </span>
+                  <p className="mt-4 max-w-sm text-balance font-display text-xl font-medium text-foreground">
                     {playbackStatus === 401
                       ? tp('signInToWatch')
                       : playbackStatus === 403
@@ -208,36 +221,29 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
                           : t('overview')}
                   </p>
                   {gated && (
-                    <Button asChild size="sm" className="mt-3">
+                    <Button asChild size="sm" className="mt-4 rounded-full px-5">
                       <Link href={playbackStatus === 401 ? '/login' : `/courses/${courseSlug}`}>
                         {playbackStatus === 401 ? tCommon('signIn') : tc('enroll')}
                       </Link>
                     </Button>
                   )}
-                </div>
+                </m.div>
               </div>
             ))}
 
-          <div>
+          <header className="mx-auto max-w-3xl">
+            {lessons.length > 0 && index >= 0 && (
+              <p className="eyebrow mb-3">
+                {tc('curriculum')} · <span className="tabular-nums">{index + 1} / {lessons.length}</span>
+              </p>
+            )}
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-balance font-display text-3xl font-medium leading-tight tracking-[-0.02em] text-foreground sm:text-4xl">
                   {lesson.title}
                 </h1>
-                <div className="mt-3">
-                  <LanguageAvailability
-                    availableLocales={lesson.availableLocales ?? course?.availableLocales}
-                    resolvedLocale={lesson.resolvedLocale ?? course?.resolvedLocale}
-                    fallbackFields={lesson.fallbackFields ?? course?.fallbackFields}
-                  />
-                </div>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                <LessonAssistantButton
-                  courseId={course?.id ?? ''}
-                  lessonId={lesson.id}
-                  canAccess={lesson.freePreview || !gated}
-                />
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pt-1">
                 {lesson.videoDuration && (
                   <Badge variant="soft-muted">{formatDuration(lesson.videoDuration)}</Badge>
                 )}
@@ -245,171 +251,230 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
               </div>
             </div>
             {lesson.description && (
-              <p className="mt-3 leading-relaxed text-muted-foreground">{lesson.description}</p>
+              <p className="mt-4 text-pretty text-lg leading-relaxed text-muted-foreground">{lesson.description}</p>
             )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={() => void markComplete()}
-              disabled={
-                completed || updateProgress.isPending || !isAuthenticated || requiredQuizPending
-              }
-              variant={completed ? 'secondary' : 'default'}
-              loading={updateProgress.isPending && !completed}
-            >
-              {completed ? <CheckCircle2 className="text-success" /> : <CheckCircle2 />}
-              {completed
-                ? t('completed')
-                : requiredQuizPending
-                  ? tp('passQuizRequired')
-                  : t('markComplete')}
-            </Button>
-            <div className="ms-auto flex items-center gap-2">
-              {previous && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/courses/${courseSlug}/lessons/${previous.slug}`}>
-                    <ChevronLeft className="rtl:rotate-180" />
-                    {t('prevLesson')}
-                  </Link>
-                </Button>
-              )}
-              {next &&
-                (requiredQuizPending ? (
-                  <Button size="sm" disabled>
-                    {tp('passQuizToContinue')}
-                  </Button>
-                ) : (
-                  <Button size="sm" asChild>
-                    <Link href={`/courses/${courseSlug}/lessons/${next.slug}`}>
-                      {t('nextLesson')}
-                      <ArrowRight className="rtl:rotate-180" />
-                    </Link>
-                  </Button>
-                ))}
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <LessonAssistantButton
+                courseId={course?.id ?? ''}
+                lessonId={lesson.id}
+                canAccess={lesson.freePreview || !gated}
+              />
+              <LanguageAvailability
+                availableLocales={lesson.availableLocales ?? course?.availableLocales}
+                resolvedLocale={lesson.resolvedLocale ?? course?.resolvedLocale}
+                fallbackFields={lesson.fallbackFields ?? course?.fallbackFields}
+              />
             </div>
-          </div>
+          </header>
 
-          {renderBlocks.length > 0 && (
-            <LessonBlockRenderer
-              blocks={{ schemaVersion: 1, blocks: renderBlocks }}
-              courseSlug={courseSlug}
-              lessonSlug={lessonSlug}
-              locale={locale}
-              videoUrl={videoUrl}
-              onQuizResult={handleQuizResult}
-              onVideoError={() => void refetchPlayback()}
-            />
-          )}
-          {fallbackContent && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">{t('overview')}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+          <div className="mx-auto max-w-3xl space-y-8">
+            {renderBlocks.length > 0 && (
+              <LessonBlockRenderer
+                blocks={{ schemaVersion: 1, blocks: renderBlocks }}
+                courseSlug={courseSlug}
+                lessonSlug={lessonSlug}
+                locale={locale}
+                videoUrl={videoUrl}
+                onQuizResult={handleQuizResult}
+                onVideoError={() => void refetchPlayback()}
+              />
+            )}
+            {fallbackContent && (
+              <Reveal>
+                <p className="whitespace-pre-line text-base leading-8 text-foreground/85">
                   {fallbackContent}
                 </p>
-              </CardContent>
-            </Card>
-          )}
-          {!renderBlocks.length && !fallbackContent && !hasVideo && (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">
-                  {tp('noPublishedContent')}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              </Reveal>
+            )}
+            {!renderBlocks.length && !fallbackContent && !hasVideo && (
+              <div className="rounded-xl border border-dashed border-border px-6 py-10 text-center">
+                <p className="text-sm text-muted-foreground">{tp('noPublishedContent')}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+              <Button
+                onClick={() => void markComplete()}
+                disabled={
+                  completed || updateProgress.isPending || !isAuthenticated || requiredQuizPending
+                }
+                variant={completed ? 'secondary' : 'default'}
+                loading={updateProgress.isPending && !completed}
+                className="rounded-full"
+              >
+                <AnimatePresence initial={false} mode="popLayout">
+                  <m.span
+                    key={completed ? 'done' : 'todo'}
+                    initial={{ scale: 0.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1, transition: spring.snappy }}
+                    exit={{ scale: 0.4, opacity: 0, transition: { duration: 0.1 } }}
+                    className="flex"
+                  >
+                    <CheckCircle2 className={completed ? 'text-success' : undefined} />
+                  </m.span>
+                </AnimatePresence>
+                {completed
+                  ? t('completed')
+                  : requiredQuizPending
+                    ? tp('passQuizRequired')
+                    : t('markComplete')}
+              </Button>
+              <div className="ms-auto flex items-center gap-2">
+                {previous && (
+                  <Button variant="ghost" size="sm" className="rounded-full" asChild>
+                    <Link href={`/courses/${courseSlug}/lessons/${previous.slug}`}>
+                      <ChevronLeft className="rtl:rotate-180" />
+                      {t('prevLesson')}
+                    </Link>
+                  </Button>
+                )}
+                {next &&
+                  (requiredQuizPending ? (
+                    <Button size="sm" variant="outline" className="rounded-full" disabled>
+                      {tp('passQuizToContinue')}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" className="group rounded-full" asChild>
+                      <Link href={`/courses/${courseSlug}/lessons/${next.slug}`}>
+                        {t('nextLesson')}
+                        <ArrowRight className="transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
+                      </Link>
+                    </Button>
+                  ))}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <aside className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Download className="size-4 text-primary" />
-                {t('resources')}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">{t('resourcesDesc')}</p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {attachments.length === 0 ? (
-                <p className="py-4 text-center text-xs text-muted-foreground">{t('noResources')}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {attachments.map((file) => (
-                    <li key={file.id ?? file.url}>
-                      <a
-                        href={file.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2.5 transition-colors hover:bg-muted"
-                      >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                          <Download className="size-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-foreground">
-                            {file.name}
-                          </span>
-                          {typeof file.size === 'number' && (
-                            <span className="block text-2xs text-muted-foreground">
-                              {(file.size / 1024).toFixed(0)} KB
-                            </span>
-                          )}
-                        </span>
-                        <Badge variant="outline" className="shrink-0 text-2xs">
-                          {file.type}
-                        </Badge>
-                        <ExternalLink className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
+        <aside className="space-y-6 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto lg:pb-6">
           {lessons.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">{tc('curriculum')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1 pt-0">
+            <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="font-display text-lg font-medium text-foreground">{tc('curriculum')}</h2>
+                {index >= 0 && (
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {index + 1} / {lessons.length}
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-muted">
+                <m.div
+                  className="h-full origin-left rounded-full bg-primary rtl:origin-right"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: coursePercent / 100 }}
+                  transition={spring.gentle}
+                />
+              </div>
+              {/* The rail: a hairline spine with a clay fill that grows to the
+                  current lesson, one node per lesson. */}
+              <ol className="relative mt-4">
+                <span
+                  className="pointer-events-none absolute bottom-4 start-[0.9375rem] top-4 w-px bg-border"
+                  aria-hidden
+                />
+                <m.span
+                  className="pointer-events-none absolute start-[0.9375rem] top-4 w-px origin-top bg-primary"
+                  style={{ height: 'calc(100% - 2rem)' }}
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: lessons.length > 1 ? position / (lessons.length - 1) : 0 }}
+                  transition={spring.gentle}
+                  aria-hidden
+                />
                 {lessons.map((item, itemIndex) => {
                   const active = item.slug === lessonSlug;
+                  const passed = index >= 0 && itemIndex < index;
                   return (
-                    <Link
-                      key={item.id}
-                      href={`/courses/${courseSlug}/lessons/${item.slug}`}
-                      className={cn(
-                        'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors',
-                        active
-                          ? 'bg-primary/10 font-medium text-primary'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                      )}
-                    >
-                      <span className="w-5 shrink-0 tabular-nums text-xs">{itemIndex + 1}</span>
-                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                      {item.freePreview && (
-                        <Badge variant="soft" className="shrink-0 text-[10px]">
-                          {tc('videoPreview')}
-                        </Badge>
-                      )}
-                      {!!item.videoDuration && (
-                        <span className="shrink-0 text-2xs tabular-nums opacity-70">
-                          {formatDuration(item.videoDuration)}
+                    <li key={item.id} className="relative">
+                      <Link
+                        href={`/courses/${courseSlug}/lessons/${item.slug}`}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'relative flex items-center gap-3 rounded-lg py-2 pe-2 ps-1 text-sm transition-colors',
+                          active ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
+                        )}
+                      >
+                        {active && (
+                          <m.span
+                            layoutId="lesson-rail-active"
+                            transition={spring.smooth}
+                            className="absolute inset-0 rounded-lg bg-muted"
+                            aria-hidden
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            'relative z-10 flex size-[1.875rem] shrink-0 items-center justify-center rounded-full border text-2xs tabular-nums transition-colors',
+                            active
+                              ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                              : passed
+                                ? 'border-primary/40 bg-card text-primary'
+                                : 'border-border bg-card text-muted-foreground',
+                          )}
+                        >
+                          {itemIndex + 1}
                         </span>
-                      )}
-                    </Link>
+                        <span className="relative min-w-0 flex-1 truncate">{item.title}</span>
+                        {item.freePreview && (
+                          <Badge variant="soft" className="relative shrink-0 text-[10px]">
+                            {tc('videoPreview')}
+                          </Badge>
+                        )}
+                        {!!item.videoDuration && (
+                          <span className="relative shrink-0 text-2xs tabular-nums opacity-70">
+                            {formatDuration(item.videoDuration)}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
                   );
                 })}
-              </CardContent>
-            </Card>
+              </ol>
+            </section>
           )}
 
-          <Button variant="outline" size="sm" className="w-full" asChild>
+          <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs">
+            <h2 className="flex items-center gap-2 font-display text-lg font-medium text-foreground">
+              <Download className="size-4 text-primary" />
+              {t('resources')}
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t('resourcesDesc')}</p>
+            {attachments.length === 0 ? (
+              <p className="mt-3 rounded-lg bg-muted/50 py-4 text-center text-xs text-muted-foreground">{t('noResources')}</p>
+            ) : (
+              <Stagger as="ul" className="mt-4 space-y-2">
+                {attachments.map((file, fileIndex) => (
+                  <StaggerItem as="li" index={fileIndex} key={file.id ?? file.url}>
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-3 rounded-lg border border-border/70 bg-card px-3 py-2.5 transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-sm"
+                    >
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Download className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {file.name}
+                        </span>
+                        {typeof file.size === 'number' && (
+                          <span className="block text-2xs tabular-nums text-muted-foreground">
+                            {(file.size / 1024).toFixed(0)} KB
+                          </span>
+                        )}
+                      </span>
+                      <Badge variant="outline" className="shrink-0 text-2xs">
+                        {file.type}
+                      </Badge>
+                      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    </a>
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            )}
+          </section>
+
+          <Button variant="ghost" size="sm" className="w-full rounded-full" asChild>
             <Link href={`/courses/${courseSlug}`}>
               <ArrowLeft className="rtl:rotate-180" />
               {tc('overview')}

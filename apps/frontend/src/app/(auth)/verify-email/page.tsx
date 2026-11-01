@@ -3,7 +3,15 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { Loader2, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import {
+  AuthStatus,
+  AuthStatusIcon,
+  AuthSteps,
+  AuthSubmit,
+  DrawnCheck,
+} from '@/components/auth/auth-kit';
 function VerifyEmailContent() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -35,114 +43,63 @@ function VerifyEmailContent() {
       });
   }, [token, verifyEmail, router]);
   return (
-    <div className="flex h-full flex-col items-center justify-center text-center">
-      {' '}
+    <AuthSteps step={status}>
       {status === 'verifying' && (
-        <>
-          {' '}
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
-            {' '}
-            <svg className="h-7 w-7 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
-              {' '}
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />{' '}
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />{' '}
-            </svg>{' '}
-          </div>{' '}
-          <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
-            {' '}
-            {t('verifyEmail.verifying')}{' '}
-          </h1>{' '}
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {' '}
-            {t('verifyEmail.verifyingHint')}{' '}
-          </p>{' '}
-        </>
-      )}{' '}
+        <AuthStatus
+          icon={
+            <AuthStatusIcon tone="primary">
+              <Loader2 className="size-6 animate-spin" aria-hidden />
+            </AuthStatusIcon>
+          }
+          title={t('verifyEmail.verifying')}
+        >
+          <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+            {t('verifyEmail.verifyingHint')}
+          </p>
+        </AuthStatus>
+      )}
       {status === 'success' && (
-        <>
-          {' '}
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-success/60 bg-success/40">
-            {' '}
-            <svg
-              className="h-7 w-7 text-success"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              {' '}
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />{' '}
-            </svg>{' '}
-          </div>{' '}
-          <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
-            {' '}
-            {t('verifyEmail.successTitle')}{' '}
-          </h1>{' '}
-          <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">
-            {' '}
-            {t('verifyEmail.successHint')}{' '}
-          </p>{' '}
-          <button
-            onClick={() => router.push('/login')}
-            className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
-          >
-            {' '}
-            {t('goToSignIn')}{' '}
-          </button>{' '}
-        </>
-      )}{' '}
+        <AuthStatus
+          icon={
+            <AuthStatusIcon tone="success">
+              <DrawnCheck />
+            </AuthStatusIcon>
+          }
+          title={t('verifyEmail.successTitle')}
+        >
+          <p className="mb-7 mt-3 text-[15px] leading-relaxed text-muted-foreground">
+            {t('verifyEmail.successHint')}
+          </p>
+          <AuthSubmit type="button" onClick={() => router.push('/login')}>
+            {t('goToSignIn')}
+          </AuthSubmit>
+        </AuthStatus>
+      )}
       {status === 'error' && (
-        <>
-          {' '}
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-red-900/60 bg-red-950/40">
-            {' '}
-            <svg
-              className="h-7 w-7 text-destructive"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              {' '}
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />{' '}
-            </svg>{' '}
-          </div>{' '}
-          <h1 className="font-display text-2xl font-semibold leading-[1.2] tracking-[-0.02em] text-foreground">
-            {' '}
-            {t('verifyEmail.failedTitle')}{' '}
-          </h1>{' '}
-          <p className="mb-6 mt-3 text-sm leading-relaxed text-muted-foreground">{message}</p>{' '}
+        <AuthStatus
+          icon={
+            <AuthStatusIcon tone="error">
+              <X className="size-6" strokeWidth={2} aria-hidden />
+            </AuthStatusIcon>
+          }
+          title={t('verifyEmail.failedTitle')}
+        >
+          <p className="mb-7 mt-3 text-[15px] leading-relaxed text-muted-foreground">{message}</p>
           <div className="w-full space-y-2.5">
-            {' '}
-            <button
-              onClick={() => router.push('/login')}
-              className="h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
-            >
-              {' '}
-              {t('goToSignIn')}{' '}
-            </button>{' '}
-            <button
+            <AuthSubmit type="button" onClick={() => router.push('/login')}>
+              {t('goToSignIn')}
+            </AuthSubmit>
+            <AuthSubmit
+              type="button"
+              variant="outline"
               onClick={() => router.push('/resend-verification')}
-              className="h-[44px] w-full rounded-xl border border-border bg-transparent text-13 font-semibold text-muted-foreground transition-all duration-200 hover:border-primary/40 hover:text-primary"
             >
-              {' '}
-              {t('verification.resend')}{' '}
-            </button>{' '}
-          </div>{' '}
-        </>
-      )}{' '}
-    </div>
+              {t('verification.resend')}
+            </AuthSubmit>
+          </div>
+        </AuthStatus>
+      )}
+    </AuthSteps>
   );
 }
 export default function VerifyEmailPage() {
@@ -151,13 +108,11 @@ export default function VerifyEmailPage() {
     <Suspense
       fallback={
         <div className="flex h-full flex-col items-center justify-center">
-          {' '}
-          <p className="text-sm text-muted-foreground">{tCommon('loading')}</p>{' '}
+          <p className="text-sm text-muted-foreground">{tCommon('loading')}</p>
         </div>
       }
     >
-      {' '}
-      <VerifyEmailContent />{' '}
+      <VerifyEmailContent />
     </Suspense>
   );
 }

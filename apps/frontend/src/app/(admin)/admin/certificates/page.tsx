@@ -23,6 +23,9 @@ import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
+import { AnimatedNumber, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { ease, spring } from '@/lib/motion';
 import {
   AdminCommandBar,
   AdminPageHeader,
@@ -129,20 +132,20 @@ function CertificateCard({
         }
       }}
       className={cn(
-        'card-hover group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs',
-        'hover:border-border-strong',
-        'focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10',
+        'card-hover group flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs',
+        'hover:border-border-strong hover:shadow-lg',
+        'focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         st === 'revoked' && 'opacity-75',
       )}
     >
-      <div className="flex items-start gap-4 p-4">
+      <div className="flex items-start gap-5 p-5">
         {/* A credential tile: bordered, numbered, tinted by status. */}
         <div
           className={cn(
-            'flex size-24 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 p-2 text-center sm:size-28',
-            st === 'active' && 'border-primary/30 bg-primary/8',
-            st === 'revoked' && 'border-destructive/30 bg-destructive/8',
-            st === 'expired' && 'border-warning/30 bg-warning/8',
+            'relative flex size-24 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-center ring-1 ring-inset transition-transform duration-300 group-hover:-rotate-1 sm:size-28',
+            st === 'active' && 'border-primary/25 bg-primary/[0.06] ring-primary/10',
+            st === 'revoked' && 'border-destructive/25 bg-destructive/[0.06] ring-destructive/10',
+            st === 'expired' && 'border-warning/25 bg-warning/[0.06] ring-warning/10',
           )}
         >
           <Award
@@ -153,7 +156,7 @@ function CertificateCard({
               st === 'expired' && 'text-warning',
             )}
           />
-          <span className="font-mono text-2xs font-bold leading-tight text-foreground">
+          <span className="font-mono text-2xs font-medium leading-tight text-foreground">
             {cert.certificateNumber}
           </span>
         </div>
@@ -163,7 +166,7 @@ function CertificateCard({
             <div className="flex min-w-0 items-center gap-2">
               <Avatar name={cert.userName} email={cert.userEmail} size="sm" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate font-display text-base font-medium tracking-[-0.01em] text-foreground">
                   {cert.userName || cert.userEmail?.split('@')[0] || t('unknownLearner', { default: 'Unknown learner' })}
                 </p>
                 <p className="truncate text-2xs text-muted-foreground">{cert.userEmail}</p>
@@ -212,14 +215,14 @@ function CertificateCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 border-t border-border bg-muted/20 px-4 py-2.5">
+      <div className="flex items-center gap-2 border-t border-border/70 bg-muted/30 px-4 py-2.5">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onOpen();
           }}
-          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.98]"
+          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted active:scale-[0.98]"
         >
           <Pencil className="size-3.5 text-muted-foreground" />
           {t('open', { default: 'Open' })}
@@ -283,12 +286,16 @@ function GettingStarted({
     { key: 'issued', icon: Award },
   ];
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-      <div className="flex flex-col items-center px-6 py-12 text-center">
-        <span className="flex size-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
+    <Reveal className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+      <div className="flex flex-col items-center px-6 py-16 text-center">
+        <m.span
+          initial={{ scale: 0.85, rotate: -6, opacity: 0 }}
+          animate={{ scale: 1, rotate: 0, opacity: 1, transition: { ...spring.gentle, delay: 0.1 } }}
+          className="flex size-14 items-center justify-center rounded-full bg-primary/10 ring-8 ring-primary/[0.04]"
+        >
           <Award className="size-7 text-primary" />
-        </span>
-        <h2 className="mt-5 text-lg font-bold tracking-tight text-foreground">
+        </m.span>
+        <h2 className="mt-6 text-balance font-display text-2xl font-medium tracking-[-0.018em] text-foreground">
           {t('emptyTitle', { default: 'No certificates issued yet' })}
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
@@ -298,27 +305,27 @@ function GettingStarted({
           })}
         </p>
 
-        <ol className="mt-8 flex w-full max-w-2xl flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+        <Stagger as="ol" delay={0.15} className="mt-10 flex w-full max-w-2xl flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           {steps.map((s, i) => (
-            <li key={s.key} className="flex flex-1 items-center gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-muted-foreground">
+            <StaggerItem as="li" index={i} key={s.key} className="flex flex-1 items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background text-muted-foreground shadow-xs">
                 <s.icon className="size-4" />
               </span>
-              <span className="text-start text-xs font-semibold leading-snug text-foreground">
+              <span className="text-start text-xs font-medium leading-snug text-foreground">
                 {t(`step.${s.key}`, { default: s.key })}
               </span>
               {i < steps.length - 1 && (
                 <span aria-hidden="true" className="hidden flex-1 border-t border-dashed border-border sm:block" />
               )}
-            </li>
+            </StaggerItem>
           ))}
-        </ol>
+        </Stagger>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
             onClick={onIssue}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
           >
             <Plus className="size-4" />
             {t('issueFirst', { default: 'Issue first certificate' })}
@@ -326,14 +333,14 @@ function GettingStarted({
           <button
             type="button"
             onClick={onTemplates}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground shadow-xs transition hover:bg-muted"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
           >
             <Palette className="size-4" />
             {t('designTemplate', { default: 'Design a template' })}
           </button>
         </div>
       </div>
-    </div>
+    </Reveal>
   );
 }
 
@@ -509,18 +516,20 @@ export default function AdminCertificatesPage() {
       />
 
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
+        <Reveal>
         <AdminPageHeader
           title={tAdmin('certificates', { default: 'Certificates' })}
           description={t('description', {
             default: 'Issue, verify, and manage learner certificates. Every action is audited and tenant-isolated.',
           })}
           badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success md:self-auto">
-              <BadgeCheck className="size-4" />
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/25 bg-success/10 px-3 py-1.5 text-xs font-medium text-success md:self-auto">
+              <BadgeCheck className="size-3.5" />
               {t('tenantSafeBadge', { default: 'Tenant-safe · Auto-issuance' })}
             </span>
           }
         />
+        </Reveal>
 
         <PillTabs
           value={tab}
@@ -535,16 +544,17 @@ export default function AdminCertificatesPage() {
           ]}
         />
 
+        <Crossfade value={tab}>
         {tab === 'templates' ? (
           <TemplatesTab />
         ) : (
-          <>
+          <div className="space-y-6">
             {error && (
               <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry', { default: 'Retry' })} />
             )}
 
-            <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-              <dl className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
+            <Reveal as="section" className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+              <dl className="grid grid-cols-2 divide-x divide-border/70 sm:grid-cols-4 rtl:divide-x-reverse">
                 {[
                   {
                     key: 'issued',
@@ -575,24 +585,41 @@ export default function AdminCertificatesPage() {
                     tone: countOf('revoked') > 0 ? ('text-destructive' as const) : ('text-foreground' as const),
                   },
                 ].map((s) => (
-                  <div key={s.key} className="flex items-center gap-3 px-5 py-4">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-muted-foreground">
+                  <div key={s.key} className="flex items-center gap-3.5 px-5 py-5">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                       <s.icon className="size-4" />
                     </span>
                     <div className="min-w-0">
-                      <dd className={cn('font-display text-xl font-bold leading-none tabular-nums', s.tone)}>
-                        {s.value}
+                      <dd
+                        className={cn(
+                          'font-display text-2xl font-medium leading-none tracking-[-0.015em] tabular-nums transition-colors',
+                          s.tone,
+                        )}
+                      >
+                        {typeof s.value === 'number' ? (
+                          <AnimatedNumber value={s.value} animateOnChange />
+                        ) : (
+                          s.value
+                        )}
                       </dd>
-                      <dt className="mt-1 truncate text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <dt className="mt-1.5 truncate text-xs font-medium text-muted-foreground">
                         {s.label}
                       </dt>
                     </div>
                   </div>
                 ))}
               </dl>
-            </section>
+            </Reveal>
 
+            <AnimatePresence initial={false}>
             {hasFilters && (
+              <m.div
+                key="active-filters"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto', transition: { duration: 0.26, ease: ease.emerge } }}
+                exit={{ opacity: 0, height: 0, transition: { duration: 0.16, ease: ease.exit } }}
+                className="overflow-hidden"
+              >
               <Toolbar>
                 {q && (
                   <FilterChip
@@ -629,12 +656,14 @@ export default function AdminCertificatesPage() {
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
                 >
                   {tCommon('clear', { default: 'Clear' })}
                 </button>
               </Toolbar>
+              </m.div>
             )}
+            </AnimatePresence>
 
             <Toolbar>
               <PillTabs
@@ -675,7 +704,7 @@ export default function AdminCertificatesPage() {
                 </Select>
               )}
 
-              <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1 shadow-xs">
+              <div className="flex h-9 items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2.5 shadow-xs transition hover:border-border-strong focus-within:ring-2 focus-within:ring-ring/30">
                 <input
                   type="date"
                   value={from}
@@ -711,7 +740,7 @@ export default function AdminCertificatesPage() {
             {loading ? (
               <div className="grid gap-4 lg:grid-cols-2">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+                  <div key={i} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
                     <div className="flex gap-4">
                       <Skeleton className="size-24 shrink-0 rounded-xl sm:size-28" />
                       <div className="flex-1 space-y-3">
@@ -725,7 +754,7 @@ export default function AdminCertificatesPage() {
               </div>
             ) : !rows || rows.length === 0 ? (
               hasFilters ? (
-                <div className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
                   <EmptyState
                     icon={Award}
                     tone="amber"
@@ -735,7 +764,7 @@ export default function AdminCertificatesPage() {
                       <button
                         type="button"
                         onClick={clearAll}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-xs transition hover:bg-muted"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
                       >
                         {t('clearFilters', { default: 'Clear filters' })}
                       </button>
@@ -750,38 +779,40 @@ export default function AdminCertificatesPage() {
                 />
               )
             ) : view === 'grid' ? (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {rows.map((c) => (
-                  <CertificateCard key={c.id} cert={c} onOpen={() => setFocusId(c.id)} t={t} />
+              <Stagger className="grid gap-4 lg:grid-cols-2">
+                {rows.map((c, i) => (
+                  <StaggerItem key={c.id} index={i} className="h-full">
+                    <CertificateCard cert={c} onOpen={() => setFocusId(c.id)} t={t} />
+                  </StaggerItem>
                 ))}
-              </div>
+              </Stagger>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+              <Reveal className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[900px] border-collapse text-start">
                     <thead>
-                      <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <th scope="col" className="px-6 py-3.5 text-start font-semibold">
+                      <tr className="border-b border-border/70 bg-muted/40 text-xs font-medium text-muted-foreground">
+                        <th scope="col" className="px-6 py-3.5 text-start font-medium">
                           {t('colCertificate', { default: 'Certificate' })}
                         </th>
-                        <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                        <th scope="col" className="px-4 py-3.5 text-start font-medium">
                           {t('colLearner', { default: 'Learner' })}
                         </th>
-                        <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                        <th scope="col" className="px-4 py-3.5 text-start font-medium">
                           {t('colCourse', { default: 'Course' })}
                         </th>
-                        <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                        <th scope="col" className="px-4 py-3.5 text-start font-medium">
                           {t('colIssued', { default: 'Issued' })}
                         </th>
-                        <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                        <th scope="col" className="px-4 py-3.5 text-start font-medium">
                           {t('colStatus', { default: 'Status' })}
                         </th>
-                        <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-semibold">
+                        <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-medium">
                           {t('colActions', { default: 'Actions' })}
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border text-13">
+                    <tbody className="divide-y divide-border/70 text-13">
                       {rows.map((c) => {
                         const st = certStatus(c);
                         return (
@@ -795,10 +826,10 @@ export default function AdminCertificatesPage() {
                                 setFocusId(c.id);
                               }
                             }}
-                            className="group cursor-pointer transition-colors duration-150 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                            className="group cursor-pointer transition-colors duration-150 hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
                           >
                             <td className="px-6 py-3.5">
-                              <span className="font-mono text-xs font-semibold text-foreground">
+                              <span className="font-mono text-xs font-medium text-foreground">
                                 {c.certificateNumber}
                               </span>
                             </td>
@@ -806,7 +837,7 @@ export default function AdminCertificatesPage() {
                               <div className="flex min-w-0 items-center gap-2.5">
                                 <Avatar name={c.userName} email={c.userEmail} size="sm" />
                                 <div className="min-w-0">
-                                  <p className="truncate font-semibold text-foreground transition group-hover:text-primary">
+                                  <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
                                     {c.userName || c.userEmail}
                                   </p>
                                   <p className="truncate text-2xs text-muted-foreground">{c.userEmail}</p>
@@ -837,7 +868,7 @@ export default function AdminCertificatesPage() {
                                   e.stopPropagation();
                                   setFocusId(c.id);
                                 }}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98]"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
                               >
                                 <Pencil className="size-3.5" />
                                 {t('open', { default: 'Open' })}
@@ -849,11 +880,11 @@ export default function AdminCertificatesPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Reveal>
             )}
 
             {!loading && rows && rows.length > 0 && (
-              <div className="rounded-xl border border-border bg-card px-5 py-3 shadow-xs">
+              <div className="rounded-xl border border-border/70 bg-card px-5 py-3 shadow-xs">
                 <Pagination
                   page={page}
                   totalPages={totalPages}
@@ -863,12 +894,15 @@ export default function AdminCertificatesPage() {
                 />
               </div>
             )}
-          </>
+          </div>
         )}
+        </Crossfade>
       </div>
 
+      <AnimatePresence>
       {focusId && (
         <CertificateDetailDialog
+          key={focusId}
           certificateId={focusId}
           onClose={() => setFocusId(null)}
           onChanged={(msg) => {
@@ -877,6 +911,7 @@ export default function AdminCertificatesPage() {
           }}
         />
       )}
+      </AnimatePresence>
 
       <IssueCertificateSheet
         open={issueOpen}

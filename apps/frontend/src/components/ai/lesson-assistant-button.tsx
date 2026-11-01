@@ -28,6 +28,7 @@ export function LessonAssistantButton({
       type="button"
       variant="outline"
       size="sm"
+      className="rounded-full"
       onClick={() =>
         // Same sourceRef path as the community post actions.
         openAssistant({
@@ -45,7 +46,7 @@ export function LessonAssistantButton({
       }
       aria-label={t('askAboutLesson')}
     >
-      <Sparkles />
+      <Sparkles className="text-primary" />
       {t('askAboutLesson')}
     </Button>
   );

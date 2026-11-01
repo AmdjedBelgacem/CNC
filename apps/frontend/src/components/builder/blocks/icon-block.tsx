@@ -9,9 +9,9 @@ import type { BlockComponentProps } from './index'; /** Icon tile treatments fro
 import { Icon } from '@/components/ui/icon';
 const ICON_BOX: Record<string, string> = {
   none: '',
-  tinted: 'w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary',
+  tinted: 'flex size-11 items-center justify-center rounded-xl bg-primary/[0.08] text-primary ring-1 ring-inset ring-primary/10',
   white:
-    'w-12 h-12 rounded-xl bg-card shadow-sm border border-glass-border flex items-center justify-center',
+    'flex size-11 items-center justify-center rounded-xl border border-border/70 bg-card shadow-xs',
 };
 export function IconBlock({ props }: BlockComponentProps<IconProps>) {
   const { icon: rawIcon, size = 24, color, box = 'none', href, className } = props;

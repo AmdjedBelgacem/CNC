@@ -13,6 +13,9 @@ import {
   SelectInput,
 } from '@/components/admin/admin-form';
 import { DIFFICULTY_LEVELS, difficultyKey, difficultyFallback } from '@/lib/difficulty';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
+import { Reveal } from '@/components/ui/motion';
 import { slugify } from './slugify';
 import type { CourseStudioData } from './types';
 import {
@@ -134,13 +137,13 @@ export function StepBasics({
 
   return (
     <div className="space-y-6" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="flex flex-col gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <Reveal className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Languages className="size-4" />
           </span>
           <div>
-            <p className="text-13 font-semibold text-foreground">
+            <p className="text-13 font-medium text-foreground">
               {t('studio.editingLanguage', { default: 'Editing language' })}
             </p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
@@ -157,8 +160,8 @@ export function StepBasics({
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-start gap-2 self-start sm:self-auto sm:items-end">
-          <span className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-primary/20 bg-background px-3 py-1.5 text-xs font-semibold text-primary">
-            <Languages className="size-3.5" />
+          <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border/80 bg-card px-3 py-1 text-xs font-medium text-foreground shadow-xs">
+            <Languages className="size-3.5 text-primary" />
             {locale === 'ar' ? 'العربية' : 'English'}
           </span>
           {/* Always visible on the English tab so it can be found before any field is filled;
@@ -174,7 +177,7 @@ export function StepBasics({
             </div>
           ) : null}
         </div>
-      </div>
+      </Reveal>
 
       <FormSection
         title={t('studio.basicsSection', { default: 'Identity' })}
@@ -185,7 +188,7 @@ export function StepBasics({
       >
         <div className="space-y-4">
           <TextField
-            label={t('studio.titleRequiredLabel', { default: 'Title' })}
+            label={t('studio.live.titleLabel', { default: 'Title' })}
             required
             dir="auto"
             value={title}
@@ -193,7 +196,7 @@ export function StepBasics({
             placeholder={t('studio.titlePlaceholder', { default: 'e.g. CNC Milling Fundamentals' })}
           />
           <Field
-            label={t('studio.slugLabel', { default: 'Slug' })}
+            label={t('studio.slug', { default: 'Slug' })}
             hint={t('studio.slugHint', { default: 'The public address of this course.' })}
           >
             {(field) => (
@@ -228,14 +231,16 @@ export function StepBasics({
         </div>
       </FormSection>
 
+      <AnimatePresence initial={false}>
       {locale === 'ar' && !course.translations?.ar?.title && (
-        <p className="rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-xs leading-relaxed text-warning">
+        <m.p key="ar-title-empty" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={spring.smooth} role="status" className="rounded-lg border border-warning/25 bg-warning/5 px-4 py-3 text-xs leading-relaxed text-warning">
           {t('studio.arabicTitleEmpty', {
             default:
               'Arabic title is empty; learners will see the English title until you add a translation.',
           })}
-        </p>
+        </m.p>
       )}
+      </AnimatePresence>
 
       <FormSection
         title={t('studio.placementSection', { default: 'Placement & level' })}

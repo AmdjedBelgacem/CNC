@@ -9,10 +9,10 @@ export function ConsoleModeBlock({ props }: BlockComponentProps<ConsoleModeProps
   return (
     <span
       className={cn(
-        'px-2.5 py-1 rounded font-medium transition',
+        'rounded-full px-3 py-1 font-medium transition-colors duration-200',
         active
-          ? 'bg-primary text-on-primary'
-          : 'bg-surface-container-low text-text-primary hover:bg-surface-container-high',
+          ? 'bg-primary/10 text-primary ring-1 ring-inset ring-primary/20'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
         hideOnMobile && 'hidden sm:inline-block',
         className,
       )}

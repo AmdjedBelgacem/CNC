@@ -1,10 +1,11 @@
-export const FONT_KEYS = ['inter', 'space-grotesk', 'jetbrains-mono'] as const;
+export const FONT_KEYS = ['inter', 'space-grotesk', 'jetbrains-mono', 'source-serif'] as const;
 export type FontKey = (typeof FONT_KEYS)[number];
 
 export const FONT_LABELS: Record<FontKey, string> = {
   inter: 'Inter',
   'space-grotesk': 'Space Grotesk',
   'jetbrains-mono': 'JetBrains Mono',
+  'source-serif': 'Source Serif',
 };
 
 /**
@@ -13,7 +14,7 @@ export const FONT_LABELS: Record<FontKey, string> = {
  */
 export const FONT_ALIASES: Record<string, FontKey> = {
   outfit: 'space-grotesk',
-  garamond: 'space-grotesk',
+  garamond: 'source-serif',
 };
 
 /** Resolve a stored font key (possibly retired) to a current FontKey. */

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 
 /**
  * "Upcoming live sessions" on the course page.
@@ -89,20 +90,27 @@ export function LiveSessionsSection({ courseId }: { courseId: string }) {
     const isLive = session.status === 'live';
     const canJoin = session.joinState === 'joinable';
     return (
-      <Card key={session.id} className="overflow-hidden">
+      <Card key={session.id} className="overflow-hidden rounded-xl border-border/70 shadow-xs transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-sm">
         <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="flex min-w-0 items-start gap-3">
             <span
               className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                'relative flex size-10 shrink-0 items-center justify-center rounded-full',
                 isLive ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary',
               )}
             >
-              {isLive ? <Radio className="size-5" /> : <Video className="size-5" />}
+              {isLive ? (
+                <>
+                  <span className="absolute inset-0 animate-ping rounded-full bg-destructive/20 motion-reduce:animate-none" aria-hidden />
+                  <Radio className="relative size-5" />
+                </>
+              ) : (
+                <Video className="size-5" />
+              )}
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="truncate font-display text-base font-semibold text-foreground">{session.title}</p>
+                <p className="truncate font-display text-lg font-medium text-foreground">{session.title}</p>
                 {isLive ? (
                   <Badge variant="soft" className="border-destructive/20 bg-destructive/10 text-destructive">
                     {t('liveBadge', { default: 'Live' })}
@@ -141,7 +149,7 @@ export function LiveSessionsSection({ courseId }: { courseId: string }) {
             onClick={() => void join(session)}
             disabled={!canJoin || joiningId === session.id || !session.hasMeetUrl}
             variant={canJoin ? 'default' : 'outline'}
-            className="shrink-0"
+            className="shrink-0 rounded-full"
           >
             {joiningId === session.id ? <Loader2 className="size-4 animate-spin" /> : null}
             {joinLabel(session)}
@@ -152,26 +160,28 @@ export function LiveSessionsSection({ courseId }: { courseId: string }) {
   };
 
   return (
-    <section id="live-sessions" className="scroll-mt-24 border-y border-border bg-surface-sunken/35">
-      <div className="container mx-auto px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <section id="live-sessions" className="scroll-mt-24 border-y border-border/70 bg-muted/30">
+      <div className="container mx-auto px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <Reveal className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
-              {t('eyebrow', { default: 'Live on Google Meet' })}
-            </p>
-            <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            <p className="eyebrow">{t('eyebrow', { default: 'Live on Google Meet' })}</p>
+            <h2 className="mt-3 font-display text-3xl font-medium tracking-[-0.02em] text-foreground sm:text-4xl">
               {t('title', { default: 'Upcoming live sessions' })}
             </h2>
           </div>
-        </div>
+        </Reveal>
         {upcoming.length > 0 ? (
-          <div className="mt-8 space-y-3">
-            {upcoming.map(renderCard)}
-          </div>
+          <Stagger inViewOnly className="mt-8 space-y-3">
+            {upcoming.map((session, index) => (
+              <StaggerItem key={session.id} index={index}>
+                {renderCard(session)}
+              </StaggerItem>
+            ))}
+          </Stagger>
         ) : null}
         {past.length > 0 ? (
           <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-muted-foreground transition hover:text-foreground">
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground transition hover:text-foreground">
               {t('pastSessions', { count: past.length })}
             </summary>
             <div className="mt-3 space-y-3 opacity-75">

@@ -1,6 +1,6 @@
 /** Shared visual tokens for the composable simulator console. */
 export const CONSOLE_DARK_GLASS =
-  'bg-overlay/85 backdrop-blur-md border border-white/10 shadow-lg text-white';
+  'bg-card/85 backdrop-blur-md border border-border/70 shadow-sm text-foreground';
 
 export const CONSOLE_RADIUS: Record<string, string> = {
   none: '',

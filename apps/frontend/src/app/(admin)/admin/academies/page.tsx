@@ -40,6 +40,7 @@ import {
   Toolbar,
   type Tone,
 } from '@/components/admin/admin-ui';
+import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { AcademyRowMenu, type AcademyAction } from './academy-row-menu';
 
 /* Academies are branded destinations: each one carries its own accent colour, a
@@ -162,8 +163,8 @@ function AcademyCard({
         }
       }}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition-all duration-200',
-        'card-hover cursor-pointer hover:border-border-strong',
+        'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs transition-[box-shadow,border-color,transform] duration-300',
+        'card-hover cursor-pointer hover:border-border-strong hover:shadow-lg',
         'focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10',
         archived && 'opacity-80',
       )}
@@ -186,7 +187,7 @@ function AcademyCard({
           <img
             src={academy.heroImageUrl}
             alt=""
-            className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
           />
         )}
         <div
@@ -227,7 +228,7 @@ function AcademyCard({
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <span className="line-clamp-2 block text-sm font-bold leading-snug tracking-tight text-foreground transition group-hover:text-primary">
+            <span className="line-clamp-2 block text-balance font-display text-lg font-medium leading-snug tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary">
               {academy.title}
             </span>
             <p className="mt-1 truncate font-mono text-2xs text-muted-foreground">/{academy.slug}</p>
@@ -246,7 +247,7 @@ function AcademyCard({
         )}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-1 text-2xs font-semibold text-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/50 px-2.5 py-1 text-2xs font-medium text-foreground">
             <BookOpen className="size-3 text-muted-foreground" />
             {academy.courseCount}
             <span className="font-normal text-muted-foreground">
@@ -264,11 +265,11 @@ function AcademyCard({
 
       {/* The whole card opens the editor, so these stay quiet until wanted. A row
           of identical primary buttons would out-shout the content it labels. */}
-      <div className="flex items-center gap-2 border-t border-border bg-muted/20 px-5 py-2.5">
+      <div className="flex items-center gap-2 border-t border-border/70 bg-surface-sunken/40 px-5 py-2.5">
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.98]"
+          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted active:scale-[0.98]"
         >
           <Pencil className="size-3.5 text-muted-foreground" />
           {t('manage', { default: 'Manage' })}
@@ -290,7 +291,7 @@ function AcademyCard({
 /** Card-shaped placeholder so the gallery does not reflow when data lands. */
 function AcademyCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
       <Skeleton className="h-32 w-full rounded-none" />
       <div className="space-y-3 p-5">
         <Skeleton className="h-3.5 w-3/4" />
@@ -510,7 +511,7 @@ export default function AdminAcademiesPage() {
               'Academies are branded destinations that group your courses into programs — assign courses from here or from Course Studio.',
           })}
           badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success md:self-auto">
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-medium text-success md:self-auto">
               <BadgeCheck className="size-4" />
               {t('tenantSafeBadge', { default: 'Tenant-safe · Instant publish' })}
             </span>
@@ -523,8 +524,8 @@ export default function AdminAcademiesPage() {
 
         {/* One unified summary rather than four competing boxes: the numbers read
             as a single sentence about the catalogue. */}
-        <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-          <dl className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
+        <section className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+          <dl className="grid grid-cols-2 divide-x divide-border/70 rtl:divide-x-reverse sm:grid-cols-4">
             {[
               {
                 key: 'total',
@@ -555,17 +556,21 @@ export default function AdminAcademiesPage() {
                 tone: 'text-foreground' as const,
               },
             ].map((s) => (
-              <div key={s.key} className="flex items-center gap-3 px-5 py-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-muted-foreground">
+              <div key={s.key} className="flex items-center gap-3.5 px-5 py-5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-surface-sunken text-muted-foreground">
                   <s.icon className="size-4" />
                 </span>
-                <div className="min-w-0">
-                  <dd className={cn('font-display text-xl font-bold leading-none tabular-nums', s.tone)}>
-                    {loading && s.key === 'courses' ? '—' : s.value}
+                <div className="flex min-w-0 flex-col-reverse">
+                  <dd className={cn('mt-1 font-display text-2xl font-medium leading-none tracking-[-0.02em] tabular-nums', s.tone)}>
+                    {loading && s.key === 'courses' ? (
+                      '—'
+                    ) : typeof s.value === 'number' ? (
+                      <AnimatedNumber value={s.value} animateOnChange />
+                    ) : (
+                      s.value
+                    )}
                   </dd>
-                  <dt className="mt-1 truncate text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {s.label}
-                  </dt>
+                  <dt className="truncate text-xs font-medium text-muted-foreground">{s.label}</dt>
                 </div>
               </div>
             ))}
@@ -617,7 +622,7 @@ export default function AdminAcademiesPage() {
                   setQInput('');
                   router.replace('/admin/academies');
                 }}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/70 bg-card px-3.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted active:scale-[0.98]"
               >
                 <X className="size-3.5" />
                 {tCommon('clear', { default: 'Clear' })}
@@ -643,12 +648,12 @@ export default function AdminAcademiesPage() {
               ))}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-border bg-card">
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
               <SkeletonRows rows={6} columns={3} />
             </div>
           )
         ) : !rows || rows.length === 0 ? (
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
             <EmptyState
               icon={hasFilters ? GraduationCap : Sparkles}
               tone={hasFilters ? 'amber' : 'blue'}
@@ -673,7 +678,7 @@ export default function AdminAcademiesPage() {
                       setQInput('');
                       router.replace('/admin/academies');
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-xs transition hover:bg-muted"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:bg-muted active:scale-[0.98]"
                   >
                     <X className="size-4" />
                     {t('clearFilters', { default: 'Clear filters' })}
@@ -682,7 +687,7 @@ export default function AdminAcademiesPage() {
                   <button
                     type="button"
                     onClick={() => router.push('/admin/academies/new')}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
                   >
                     <Plus className="size-4" />
                     {t('newAcademy', { default: 'New academy' })}
@@ -692,42 +697,43 @@ export default function AdminAcademiesPage() {
             />
           </div>
         ) : view === 'gallery' ? (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {rows.map((a) => (
+          <Stagger key={`gallery-${page}-${status}-${q}`} className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {rows.map((a, i) => (
+              <StaggerItem key={a.id} index={i}>
               <AcademyCard
-                key={a.id}
                 academy={a}
                 onOpen={() => router.push(`/admin/academies/${a.slug}/edit`)}
                 onAction={(slug, action) => void act(slug, action)}
                 labels={menuLabels}
                 tCommon={tCommon}
               />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+          <Crossfade value="table" axis="none" className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] border-collapse text-start">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th scope="col" className="px-6 py-3.5 text-start font-semibold">
+                  <tr className="border-b border-border/70 bg-surface-sunken/60 text-xs font-medium text-muted-foreground">
+                    <th scope="col" className="px-6 py-3 text-start font-medium">
                       {t('colAcademy', { default: 'Academy' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3 text-start font-medium">
                       {t('colStatus', { default: 'Status' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-end font-semibold">
+                    <th scope="col" className="px-4 py-3 text-end font-medium">
                       {t('colCourses', { default: 'Courses' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-end font-semibold">
+                    <th scope="col" className="px-4 py-3 text-end font-medium">
                       {t('colUpdated', { default: 'Updated' })}
                     </th>
-                    <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-semibold">
+                    <th scope="col" className="py-3 pe-6 ps-4 text-end font-medium">
                       {t('colActions', { default: 'Actions' })}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-13">
+                <tbody className="divide-y divide-border/60 text-13">
                   {rows.map((a) => {
                     const st = statusOf(a);
                     return (
@@ -741,12 +747,12 @@ export default function AdminAcademiesPage() {
                             router.push(`/admin/academies/${a.slug}/edit`);
                           }
                         }}
-                        className="group cursor-pointer transition-colors duration-150 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                        className="group cursor-pointer transition-colors duration-200 hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
                       >
                         <td className="px-6 py-3.5">
                           <div className="flex min-w-0 items-center gap-3">
                             <span
-                              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border"
+                              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-surface-sunken"
                               style={
                                 safeAccent(a.accentColor)
                                   ? { backgroundColor: `${safeAccent(a.accentColor)}1a`, color: safeAccent(a.accentColor)! }
@@ -761,7 +767,7 @@ export default function AdminAcademiesPage() {
                               )}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-foreground transition group-hover:text-primary">
+                              <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
                                 {a.title}
                               </p>
                               <p className="truncate font-mono text-2xs text-muted-foreground">/{a.slug}</p>
@@ -801,7 +807,7 @@ export default function AdminAcademiesPage() {
                             <button
                               type="button"
                               onClick={() => router.push(`/admin/academies/${a.slug}/edit`)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98]"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted active:scale-[0.98]"
                             >
                               <Pencil className="size-3.5" />
                               {t('manage', { default: 'Manage' })}
@@ -814,11 +820,11 @@ export default function AdminAcademiesPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Crossfade>
         )}
 
         {!loading && rows && rows.length > 0 && (
-          <div className="rounded-xl border border-border bg-card px-5 py-3 shadow-xs">
+          <div className="rounded-2xl border border-border/70 bg-card px-5 py-3 shadow-xs">
             <Pagination
               page={page}
               totalPages={totalPages}

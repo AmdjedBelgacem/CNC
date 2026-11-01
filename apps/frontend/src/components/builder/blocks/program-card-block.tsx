@@ -11,9 +11,9 @@ import { Icon } from '@/components/ui/icon';
 
 /** Level pill tones (top-left of the card media). */
 const LEVEL_TONE: Record<string, string> = {
-  primary: 'bg-primary text-on-primary',
-  secondary: 'bg-secondary text-secondary-foreground',
-  accent: 'bg-accent text-accent-foreground',
+  primary: 'bg-card/90 text-primary ring-1 ring-inset ring-primary/20',
+  secondary: 'bg-card/90 text-secondary ring-1 ring-inset ring-border',
+  accent: 'bg-card/90 text-accent ring-1 ring-inset ring-accent/25',
 };
 
 /** Instructor initials tile tones follow the level tone. */
@@ -55,14 +55,14 @@ export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCar
   const card = (
     <article
       className={cn(
-        'liquid-glass rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-xl transition-all duration-300 group h-full',
+        'card-hover group flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs',
         className,
       )}
       style={layoutStyle(props)}
     >
       <div>
         {/* Media */}
-        <div className="relative h-56 w-full overflow-hidden bg-surface-container-low">
+        <div className="relative h-52 w-full overflow-hidden bg-surface-container-low">
           {/* Intentional blueprint backdrop: visible if the remote image fails. */}
           <div className="absolute inset-0 blueprint-grid" aria-hidden="true"></div>
           {imageUrl && !imageFailed ? (
@@ -72,11 +72,11 @@ export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCar
               loading="lazy"
               decoding="async"
               onError={() => setImageFailed(true)}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.04]"
             />
           ) : null}
           {puck?.isEditing && (!imageUrl || imageFailed) ? (
-            <span className="absolute bottom-3 start-3 z-10 rounded bg-background/90 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shadow-sm">
+            <span className="absolute bottom-3 start-3 z-10 rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
               {imageFailed ? 'Image failed' : 'Add image'}
             </span>
           ) : null}
@@ -84,7 +84,7 @@ export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCar
             <div className="absolute top-4 start-4">
               <span
                 className={cn(
-                  'px-3 py-1 rounded-full text-xs font-bold shadow-md',
+                  'rounded-full px-2.5 py-1 text-xs font-medium shadow-sm backdrop-blur-sm',
                   LEVEL_TONE[levelTone ?? 'primary'] ?? LEVEL_TONE.primary,
                 )}
               >
@@ -93,7 +93,7 @@ export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCar
             </div>
           ) : null}
           {duration ? (
-            <div className="absolute bottom-3 end-3 bg-overlay/85 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded font-mono">
+            <div className="absolute bottom-3 end-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm tabular-nums">
               {duration}
             </div>
           ) : null}
@@ -101,23 +101,23 @@ export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCar
         {/* Body */}
         <div className="p-6">
           {metaLabel ? (
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-muted mb-2">
+            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
               {metaIcon ? <Icon name={metaIcon} className="size-4 text-primary" /> : null}
               <span>{metaLabel}</span>
             </div>
           ) : null}
-          <h3 className="font-headline-md text-xl font-bold text-text-primary mb-3 leading-snug">
+          <h3 className="mb-3 text-balance font-display text-xl font-medium leading-snug tracking-[-0.015em] text-foreground">
             {title}
           </h3>
           {description ? (
-            <p className="text-text-secondary text-sm leading-relaxed mb-6">{description}</p>
+            <p className="mb-6 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{description}</p>
           ) : null}
           {tagList.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {tagList.map((tag) => (
                 <span
                   key={tag}
-                  className="px-2 py-0.5 rounded bg-surface-container-low text-text-secondary text-xs font-mono"
+                  className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
                 >
                   {tag}
                 </span>
@@ -127,12 +127,12 @@ export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCar
         </div>
       </div>
       {/* Footer */}
-      <div className="mx-6 mb-6 mt-2 pt-4 border-t border-glass-border flex items-center justify-between gap-3">
+      <div className="mx-6 mb-6 mt-2 flex items-center justify-between gap-3 border-t border-border/70 pt-4">
         <div className="flex items-center gap-2 min-w-0">
           {instructorInitials ? (
             <div
               className={cn(
-                'size-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0',
+                'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium',
                 TILE_TONE[levelTone ?? 'primary'] ?? TILE_TONE.primary,
               )}
             >
@@ -140,14 +140,17 @@ export function ProgramCardBlock({ props, puck }: BlockComponentProps<ProgramCar
             </div>
           ) : null}
           {instructorName ? (
-            <span className="text-xs font-medium text-text-muted truncate">
+            <span className="truncate text-xs font-medium text-muted-foreground">
               Lead: {instructorName}
             </span>
           ) : null}
         </div>
-        <span className="inline-flex items-center gap-1 text-sm font-bold text-primary shrink-0 group-hover:underline">
+        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
           {ctaLabel}
-          <Icon name="chevron_right" className="size-4" />
+          <Icon
+            name="chevron_right"
+            className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
+          />
         </span>
       </div>
     </article>

@@ -12,7 +12,9 @@ import {
   Link2,
   Download,
 } from 'lucide-react';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease } from '@/lib/motion';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
@@ -53,10 +55,10 @@ interface CertificateDetail extends CertificateRow {
 }
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex justify-between gap-4 text-sm">
+    <div className="flex justify-between gap-4 py-2 text-sm">
       {' '}
       <dt className="shrink-0 text-muted-foreground">{label}</dt>{' '}
-      <dd className="min-w-0 truncate text-right font-medium">{children}</dd>{' '}
+      <dd className="min-w-0 truncate text-end font-medium text-foreground">{children}</dd>{' '}
     </div>
   );
 }
@@ -162,12 +164,14 @@ export function CertificateDetailDialog({
       {' '}
       <Dialog open onOpenChange={(v) => !v && onClose()}>
         {' '}
-        <DialogContent className="max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             {' '}
             <DialogTitle className="flex items-center gap-2">
               {' '}
-              <Award className="size-5 text-primary" />{' '}
+              <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary">
+                <Award className="size-4" />
+              </span>{' '}
               {t('title', { default: 'Certificate details' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
@@ -180,30 +184,34 @@ export function CertificateDetailDialog({
                 ))}{' '}
               </div>
             ) : error ? (
-              <div className="rounded-xl border border-red-500/30 bg-destructive/5 px-4 py-3">
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
                 {' '}
-                <p className="text-sm text-destructive dark:text-destructive">{error}</p>{' '}
-                <button type="button" onClick={load} className="mt-1 text-sm font-medium underline">
+                <p className="text-sm text-destructive">{error}</p>{' '}
+                <button type="button" onClick={load} className="mt-1 text-sm font-medium text-foreground underline underline-offset-4">
                   {' '}
                   {tCommon('retry', { default: 'Retry' })}{' '}
                 </button>{' '}
               </div>
             ) : cert ? (
-              <div className="space-y-5">
+              <m.div
+                className="space-y-5"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.3, ease: ease.emerge } }}
+              >
                 {' '}
-                <div className="rounded-xl border border-border bg-muted/40 p-3 text-center">
+                <div className="relative overflow-hidden rounded-xl border border-border/70 bg-muted/40 px-4 py-5 text-center">
                   {' '}
-                  <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {t('certificateNumber', { default: 'Certificate number' })}
                   </p>{' '}
-                  <p className="mt-0.5 font-mono text-base font-bold">{cert.certificateNumber}</p>{' '}
-                  <p className="mt-1 flex items-center justify-center gap-1 text-2xs text-muted-foreground">
+                  <p className="mt-1 font-mono text-lg font-medium tracking-tight text-foreground">{cert.certificateNumber}</p>{' '}
+                  <p className="mt-1.5 flex items-center justify-center gap-1 text-2xs text-muted-foreground">
                     {' '}
                     <Fingerprint className="size-3.5" /> {t('signature', { default: 'signature' })}{' '}
                     {cert.digitalSignature ? `${cert.digitalSignature.slice(0, 12)}…` : '—'}{' '}
                   </p>{' '}
                 </div>{' '}
-                <dl className="space-y-2 rounded-xl border border-border p-3">
+                <dl className="divide-y divide-border/60 rounded-xl border border-border/70 px-4 py-1">
                   {' '}
                   <DetailRow label={t('user', { default: 'User' })}>
                     {cert.user.name || cert.user.email}
@@ -245,8 +253,8 @@ export function CertificateDetailDialog({
                     the exact values and whether the default layout was used,
                     even after the template has been edited. */}
                   {cert.payload?.fields?.length ? (
-                    <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
-                      <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <div className="my-2 rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
                         {t('renderedFields', { default: 'Rendered fields (immutable snapshot)' })}
                       </p>
                       {cert.payload.usedDefaultLayout && (
@@ -269,15 +277,15 @@ export function CertificateDetailDialog({
                   <DetailRow label={t('status', { default: 'Status' })}>
                     {' '}
                     {isRevoked ? (
-                      <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-2xs font-semibold text-red-800 dark:bg-red-900 dark:text-red-100">
+                      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-2xs font-medium text-destructive">
                         {t('statusRevoked', { default: 'Revoked' })}
                       </span>
                     ) : cert.expiresAt && new Date(cert.expiresAt).getTime() <= Date.now() ? (
-                      <span className="rounded-md bg-warning/10 px-2 py-0.5 text-2xs font-semibold text-warning  ">
+                      <span className="rounded-full bg-warning/10 px-2 py-0.5 text-2xs font-medium text-warning">
                         {t('statusExpired', { default: 'Expired' })}
                       </span>
                     ) : (
-                      <span className="rounded-md bg-success/10 px-2 py-0.5 text-2xs font-semibold text-success  ">
+                      <span className="rounded-full bg-success/10 px-2 py-0.5 text-2xs font-medium text-success">
                         {t('statusActive', { default: 'Active' })}
                       </span>
                     )}{' '}
@@ -288,19 +296,19 @@ export function CertificateDetailDialog({
                       const src = (cert.metadata as any)?.source as string | undefined;
                       if (src === 'automatic')
                         return (
-                          <span className="rounded-md bg-primary/20 px-2 py-0.5 text-2xs font-semibold text-primary">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
                             {t('sourceAutomatic', { default: 'Automatic' })}
                           </span>
                         );
                       if (src === 'manual')
                         return (
-                          <span className="rounded-md bg-muted px-2 py-0.5 text-2xs font-semibold text-muted-foreground">
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                             {t('sourceManual', { default: 'Manual' })}
                           </span>
                         );
                       if (src)
                         return (
-                          <span className="rounded-md bg-muted px-2 py-0.5 text-2xs font-semibold capitalize">
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-2xs font-medium capitalize text-foreground">
                             {src}
                           </span>
                         );
@@ -328,13 +336,13 @@ export function CertificateDetailDialog({
                     href={cert.pdfUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                   >
                     {' '}
                     <FileText className="size-3.5" /> {t('viewPdf', { default: 'View PDF' })}{' '}
                   </a>
                 )}{' '}
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+                <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2">
                   {' '}
                   <Link2 className="size-3.5 shrink-0 text-muted-foreground" />{' '}
                   <code className="min-w-0 flex-1 truncate font-mono text-xs">{`${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${cert.certificateNumber}`}</code>{' '}
@@ -355,7 +363,7 @@ export function CertificateDetailDialog({
                         });
                       }
                     }}
-                    className="shrink-0 rounded-md border border-border bg-card p-1.5 hover:bg-muted"
+                    className="shrink-0 rounded-md border border-border/70 bg-card p-1.5 text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground active:scale-90"
                     aria-label={t('copyVerificationLinkAria', {
                       default: 'Copy verification link',
                     })}
@@ -368,7 +376,7 @@ export function CertificateDetailDialog({
                   <button
                     type="button"
                     onClick={() => setRevokeOpen(true)}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-card px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 active:scale-[0.98]"
                   >
                     {' '}
                     <ShieldX className="size-4" />{' '}
@@ -381,10 +389,10 @@ export function CertificateDetailDialog({
                     disabled={reissuing}
                     onBlur={() => setReissueArmed(false)}
                     className={cn(
-                      'flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition disabled:opacity-50',
+                      'flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition active:scale-[0.98] disabled:opacity-50',
                       reissueArmed
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-primary/40 text-primary hover:bg-primary/10 ',
+                        ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                        : 'border-primary/30 bg-card text-primary hover:bg-primary/10',
                     )}
                   >
                     {' '}
@@ -400,7 +408,7 @@ export function CertificateDetailDialog({
                         : t('reissueReplacement', { default: 'Reissue replacement' })}{' '}
                   </button>
                 )}{' '}
-              </div>
+              </m.div>
             ) : null}{' '}
           </DialogBody>{' '}
         </DialogContent>{' '}
@@ -408,13 +416,15 @@ export function CertificateDetailDialog({
       {/* Revoke reason dialog */}{' '}
       <Dialog open={revokeOpen} onOpenChange={(v) => !v && setRevokeOpen(false)}>
         {' '}
-        <DialogContent className="max-w-sm">
+        <DialogContent size="sm">
           {' '}
           <DialogHeader>
             {' '}
-            <DialogTitle className="flex items-center gap-2 text-destructive dark:text-destructive">
+            <DialogTitle className="flex items-center gap-2.5">
               {' '}
-              <ShieldX className="size-5" /> {t('revoke', { default: 'Revoke certificate' })}{' '}
+              <span className="grid size-8 place-items-center rounded-full bg-destructive/10 text-destructive">
+                <ShieldX className="size-4" />
+              </span> {t('revoke', { default: 'Revoke certificate' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
           <DialogBody className="space-y-4">
@@ -433,7 +443,7 @@ export function CertificateDetailDialog({
               rows={3}
               maxLength={500}
               placeholder={t('reasonPlaceholder', { default: 'Reason (stored on the record)…' })}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-xs outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
             />{' '}
           </DialogBody>{' '}
           <DialogFooter>
@@ -441,7 +451,7 @@ export function CertificateDetailDialog({
             <button
               type="button"
               onClick={() => setRevokeOpen(false)}
-              className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
             >
               {' '}
               {tCommon('cancel', { default: 'Cancel' })}{' '}
@@ -450,7 +460,7 @@ export function CertificateDetailDialog({
               type="button"
               onClick={revoke}
               disabled={revoking}
-              className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow-xs transition hover:bg-destructive/90 active:scale-[0.98] disabled:opacity-50"
             >
               {' '}
               {revoking && <Loader2 className="size-4 animate-spin" />}{' '}

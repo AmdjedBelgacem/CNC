@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { AnimatePresence, m } from 'framer-motion';
+import { ease, spring, transition } from '@/lib/motion';
 import { useTranslations } from 'next-intl';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, X, Send, Loader2, User, Bot } from 'lucide-react';
@@ -111,27 +113,41 @@ export function ChatWidget() {
 
   return (
     <div className="fixed bottom-6 end-6 z-50 flex flex-col items-end gap-3">
+      <AnimatePresence>
       {open && (
-        <div className="mb-2 flex h-[420px] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm shadow-black/30 animate-slide-in-from-bottom sm:w-[360px]">
-          <div className="flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
+        <m.div
+          key="support-chat"
+          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1, transition: spring.gentle }}
+          exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16, ease: ease.exit } }}
+          className="mb-2 flex h-[440px] w-[calc(100vw-2rem)] max-w-[400px] origin-bottom-right flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xl rtl:origin-bottom-left sm:w-[370px]"
+        >
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-full bg-card">
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <MessageCircle className="size-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold leading-tight">{t('title')}</p>
-                <p className="text-2xs opacity-80">{t('replyTime')}</p>
+                <p className="font-display text-base font-medium leading-tight text-foreground">{t('title')}</p>
+                <p className="mt-0.5 flex items-center gap-1.5 text-2xs text-muted-foreground">
+                  <span className="size-1.5 rounded-full bg-success" aria-hidden />
+                  {t('replyTime')}
+                </p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} className="rounded-full p-1 hover:bg-card transition-colors">
+            <button
+              onClick={() => setOpen(false)}
+              className="grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={t('closeChat')}
+            >
               <X className="size-4" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 space-y-4 overflow-y-auto bg-background/60 p-4">
             {unavailable && (
               // No REST fallback exists for chat, so say it plainly instead of leaving a
               // composer that silently swallows messages.
-              <div role="status" className="rounded-xl border border-border bg-muted/30 p-3.5 text-sm text-muted-foreground">
+              <div role="status" className="rounded-xl border border-border/70 bg-card p-3.5 text-sm text-muted-foreground shadow-xs">
                 <p className="font-medium text-foreground">{t('unavailableTitle')}</p>
                 <p className="mt-1 text-xs leading-relaxed">
                   {skipSocket()
@@ -142,41 +158,52 @@ export function ChatWidget() {
               </div>
             )}
             {!unavailable && showWelcome && messages.length === 0 && (
-              <div className="flex items-start gap-2.5">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <m.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0, transition: { ...transition.enter, delay: 0.1 } }}
+                className="flex items-start gap-2.5"
+              >
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <Bot className="size-3.5 text-primary" />
                 </div>
-                <div className="rounded-2xl rounded-tl-sm bg-secondary/50 px-3.5 py-2.5 text-sm max-w-[85%]">
-                  <p className="font-medium">{t('greeting')}</p>
+                <div className="max-w-[85%] rounded-2xl rounded-ss-md border border-border/70 bg-card px-3.5 py-2.5 text-sm shadow-xs">
+                  <p className="font-medium text-foreground">{t('greeting')}</p>
                   <p className="mt-1 text-muted-foreground">{t('greetingBody')}</p>
                 </div>
-              </div>
+              </m.div>
             )}
+            <AnimatePresence initial={false}>
             {messages.map((msg) => (
-              <div key={msg.id} className={`flex items-start gap-2.5 ${msg.senderType === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${msg.senderType === 'user' ? 'bg-primary/20' : 'bg-secondary/50'}`}>
-                  {msg.senderType === 'user' ? <User className="size-3.5 text-primary" /> : <Bot className="size-3.5 text-primary" />}
+              <m.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+                className={`flex items-start gap-2.5 ${msg.senderType === 'user' ? 'flex-row-reverse' : ''}`}
+              >
+                <div className={`flex size-7 shrink-0 items-center justify-center rounded-full ${msg.senderType === 'user' ? 'bg-muted' : 'bg-primary/10'}`}>
+                  {msg.senderType === 'user' ? <User className="size-3.5 text-muted-foreground" /> : <Bot className="size-3.5 text-primary" />}
                 </div>
-                <div className={`rounded-2xl px-3.5 py-2.5 text-sm max-w-[85%] ${msg.senderType === 'user' ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm bg-secondary/50'}`}>{msg.content}</div>
-              </div>
+                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${msg.senderType === 'user' ? 'rounded-se-md bg-muted text-foreground' : 'rounded-ss-md border border-border/70 bg-card text-foreground shadow-xs'}`}>{msg.content}</div>
+              </m.div>
             ))}
+            </AnimatePresence>
             <div ref={bottomRef} />
           </div>
           {!unavailable && (
-          <div className="border-t p-3">
-            <div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-1.5">
+          <div className="p-3">
+            <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-card px-3 py-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-border-strong focus-within:shadow-md">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t('messagePlaceholder')}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
                 aria-label={t('messageInputLabel')}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || connecting}
-                className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40 transition-opacity"
+                className="pressable flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
                 aria-label={t('sendMessage')}
               >
                 {connecting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
@@ -184,15 +211,28 @@ export function ChatWidget() {
             </div>
           </div>
           )}
-        </div>
+        </m.div>
       )}
-      <button
+      </AnimatePresence>
+      <m.button
         onClick={() => setOpen((v) => !v)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:scale-105 hover:shadow-sm hover:shadow-primary/40 active:scale-95"
+        whileHover={{ y: -2, transition: spring.smooth }}
+        whileTap={{ scale: 0.92, transition: spring.snappy }}
+        className="flex size-14 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-lg transition-shadow hover:shadow-xl"
         aria-label={open ? t('closeChat') : t('openChat')}
       >
-        {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}
-      </button>
+        <AnimatePresence initial={false} mode="popLayout">
+          <m.span
+            key={open ? 'close' : 'open'}
+            className="flex"
+            initial={{ opacity: 0, rotate: open ? -90 : 90, scale: 0.6 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1, transition: spring.smooth }}
+            exit={{ opacity: 0, scale: 0.6, transition: transition.leave }}
+          >
+            {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}
+          </m.span>
+        </AnimatePresence>
+      </m.button>
     </div>
   );
 }

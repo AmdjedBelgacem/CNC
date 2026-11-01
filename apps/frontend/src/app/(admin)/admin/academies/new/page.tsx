@@ -2,27 +2,24 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Loader2, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Palette, Search, Type, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
+import { AnimatePresence, m } from 'framer-motion';
+import { Reveal } from '@/components/ui/motion';
+import { spring, transition } from '@/lib/motion';
+import { AdminCommandBar, AdminPageHeader } from '@/components/admin/admin-chrome';
+import { FormSection, TextAreaField, TextField } from '@/components/admin/admin-form';
 import {
-  AdminCommandBar,
-  BarButton,
-  BarPrimaryButton,
-  AdminPageHeader,
-} from '@/components/admin/admin-chrome';
-
-function slugify(input: string) {
-  return (
-    input
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'academy-' + Date.now().toString(36)
-  );
-}
+  ColorField,
+  FormLayout,
+  SaveDock,
+  SectionNav,
+  SlugField,
+  StatusChip,
+  slugify,
+} from '@/components/admin/form-page';
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -53,7 +50,7 @@ function UploadPick({
   const t = useTranslations('admin.academiesNew.upload');
   return (
     <div className="space-y-2">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div
         onClick={() => ref.current?.click()}
         onDragOver={(e) => {
@@ -68,12 +65,12 @@ function UploadPick({
           if (f) onPick(f);
         }}
         className={cn(
-          'relative flex cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-dashed px-4 py-4 text-center text-xs transition',
+          'relative flex cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-dashed px-4 py-5 text-center text-xs transition-[background-color,border-color,transform] duration-300',
           drag
-            ? 'border-primary bg-primary/5'
+            ? 'scale-[1.01] border-primary/60 bg-primary/5'
             : pending
-              ? 'border-success/40 bg-success/40 '
-              : 'border-border bg-muted/50 hover:bg-muted',
+              ? 'border-success/40 bg-success/5'
+              : 'border-border bg-surface-sunken/60 hover:border-border-strong hover:bg-muted/60',
         )}
       >
         {pending ? (
@@ -86,7 +83,7 @@ function UploadPick({
         {drag ? <div className="absolute inset-0 bg-primary/10" /> : null}
         <div className="relative z-10 flex flex-col items-center gap-1.5">
           {pending ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-success px-2.5 py-1 text-2xs font-bold text-success-foreground shadow">
+            <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-2xs font-medium text-success">
               <ImageIcon className="size-3.5" /> {t('selected')}
             </span>
           ) : (
@@ -96,7 +93,7 @@ function UploadPick({
             <img
               src={pending.preview}
               alt=""
-              className="mt-1 h-20 w-20 rounded-lg border-2 border-white bg-card object-cover shadow-md"
+              className="mt-1 h-20 w-20 rounded-lg border-2 border-card bg-card object-cover shadow-md"
             />
           ) : null}
           <p className="font-sans font-medium text-foreground">
@@ -117,8 +114,15 @@ function UploadPick({
           e.target.value = '';
         }}
       />
+      <AnimatePresence initial={false} mode="popLayout">
       {pending ? (
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/50 p-2.5">
+        <m.div
+          key="pending"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+          exit={{ opacity: 0, y: -4, transition: transition.leave }}
+          className="flex items-center gap-3 rounded-xl border border-border/70 bg-surface-sunken/60 p-2.5"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={pending.preview}
@@ -134,14 +138,23 @@ function UploadPick({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <X className="size-4" />
           </button>
-        </div>
+        </m.div>
       ) : (
-        <p className="text-xs text-muted-foreground">{t('noFileSelected')}</p>
+        <m.p
+          key="empty"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: transition.crossfade }}
+          exit={{ opacity: 0, transition: transition.leave }}
+          className="text-xs text-muted-foreground"
+        >
+          {t('noFileSelected')}
+        </m.p>
       )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -152,17 +165,27 @@ export default function NewAcademyPage() {
   const tAdmin = useTranslations('admin');
   const tAcademiesPage = useTranslations('admin.academiesPage');
   const tEditor = useTranslations('admin.academiesPage.editor');
-  const tCommon = useTranslations('common');
+  const tForm = useTranslations('ui.adminForm');
   const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [description, setDescription] = useState('');
-  const [accentColor, setAccentColor] = useState('#0E7490');
+  // Brand clay, not the old teal: an academy that never picks a colour should still
+  // look like it belongs to this product.
+  const [accentColor, setAccentColor] = useState('#B65433');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [hero, setHero] = useState<PendingFile>(null);
   const [logo, setLogo] = useState<PendingFile>(null);
   const [seoImg, setSeoImg] = useState<PendingFile>(null);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Errors only appear after the first attempt, so the form is not red on arrival.
+  const [attempted, setAttempted] = useState(false);
+
+  const titleMissing = !title.trim();
+  const colorValid = /^#[0-9a-fA-F]{6}$/.test(accentColor);
+  const canSave = !titleMissing && colorValid;
 
   const makePreview = async (f: File, setter: (v: PendingFile) => void) => {
     if (!f.type.startsWith('image/')) {
@@ -182,15 +205,18 @@ export default function NewAcademyPage() {
   };
 
   const submit = async () => {
-    if (!title.trim()) {
-      toast({ type: 'err', title: t('titleRequired') });
+    setAttempted(true);
+    if (!canSave) {
+      // Bring the first problem into view rather than leaving the author to hunt for it.
+      document.getElementById('basics')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (titleMissing) toast({ type: 'err', title: t('titleRequired') });
       return;
     }
     setBusy(true);
+    setFailed(false);
     try {
-      const slug = slugify(title);
       const created = await api.post<{ slug: string }>('/admin/academies', {
-        slug,
+        slug: slug || slugify(title),
         title: title.trim(),
         subtitle: subtitle.trim() || undefined,
         description: description.trim() || undefined,
@@ -225,6 +251,7 @@ export default function NewAcademyPage() {
       toast({ type: 'ok', title: t('created') });
       router.replace(`/admin/academies/${newSlug}/edit`);
     } catch (e: any) {
+      setFailed(true);
       toast({ type: 'err', title: t('createFailed'), description: e?.message });
     } finally {
       setBusy(false);
@@ -238,177 +265,142 @@ export default function NewAcademyPage() {
           { label: tAdmin('academies'), href: '/admin/academies' },
           { label: tAcademiesPage('newAcademy') },
         ]}
-        live={tAdmin('live')}
-        actions={
-          <BarButton onClick={() => router.push('/admin/academies')}>{tCommon('cancel')}</BarButton>
-        }
-        primary={
-          <BarPrimaryButton
-            icon={busy ? <Loader2 className="size-4 animate-spin" /> : undefined}
-            disabled={busy || !title.trim()}
-            onClick={() => void submit()}
-          >
-            {busy ? t('creating') : t('createAcademy')}
-          </BarPrimaryButton>
-        }
+        // A record that does not exist yet is not "Live"; the page header carries a `New` chip.
+        live={false}
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 pt-6">
-        <AdminPageHeader
-          title={tAcademiesPage('newAcademy')}
-          description={t('description')}
-          badge={
-            <span className="flex items-center gap-2 self-start rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground md:self-auto">
-              <ImageIcon className="size-4" />
-              {t('uploadOnlyMedia')}
-            </span>
+      <div className="space-y-6 pt-6">
+        <div className="mx-auto w-full max-w-6xl">
+          <AdminPageHeader
+            title={tAcademiesPage('newAcademy')}
+            description={t('description')}
+            badge={<StatusChip tone="new">{tForm('statusNew')}</StatusChip>}
+          />
+        </div>
+
+        <FormLayout
+          aside={
+            <SectionNav
+              items={[
+                { id: 'basics', label: tEditor('basics'), icon: Type, invalid: attempted && titleMissing },
+                { id: 'branding', label: t('branding'), icon: Palette, invalid: attempted && !colorValid },
+                { id: 'seo', label: t('seoSharing'), icon: Search },
+              ]}
+            />
           }
-        />
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="space-y-4 rounded-lg border border-border bg-card p-5 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {tEditor('basics')}
-            </h2>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">{t('titleLabel')}</span>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={t('titlePlaceholder')}
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {tEditor('slug')}
-              </span>
-              <input
-                value={slugify(title)}
-                readOnly
-                className="h-9 w-full rounded-xl border border-border bg-muted px-3 font-mono text-sm text-muted-foreground outline-none"
-              />
-              <span className="text-2xs text-muted-foreground">
-                {t('slugHint', { slug: slugify(title) })}
-              </span>
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {tEditor('subtitle')}
-              </span>
-              <input
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {tEditor('description')}
-              </span>
-              <textarea
-                rows={5}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-          </section>
-
-          <section className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t('brandingSeo')}
-            </h2>
-            <UploadPick
-              label={tEditor('heroBanner')}
-              hint={t('heroHint')}
-              pending={hero}
-              onPick={(f) => void makePreview(f, setHero)}
-              onClear={() => setHero(null)}
-            />
-            <UploadPick
-              label={tEditor('logo')}
-              hint={t('logoHint')}
-              pending={logo}
-              onPick={(f) => void makePreview(f, setLogo)}
-              onClear={() => setLogo(null)}
-            />
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {t('accentColor')}
-              </span>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="h-9 w-12 rounded-lg border border-border bg-background"
+        >
+          <Reveal>
+            <FormSection id="basics" icon={Type} title={tEditor('basics')} description={t('basicsHint')}>
+              <div className="space-y-5">
+                <TextField
+                  label={t('titleLabel')}
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={t('titlePlaceholder')}
+                  error={attempted && titleMissing ? t('titleRequired') : undefined}
+                  autoFocus
                 />
-                <input
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="h-9 flex-1 rounded-xl border border-border bg-background px-3 font-mono text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                <SlugField
+                  label={tEditor('slug')}
+                  value={slug}
+                  onChange={setSlug}
+                  prefix="/academy/"
+                  source={title}
+                  mode="create"
+                />
+                <TextField
+                  label={tEditor('subtitle')}
+                  hint={t('subtitleHint')}
+                  value={subtitle}
+                  onChange={(e) => setSubtitle(e.target.value)}
+                />
+                <TextAreaField
+                  label={tEditor('description')}
+                  rows={5}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
-            </label>
-            <div className="h-px bg-border" />
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {tEditor('seoTitle')}
-              </span>
-              <input
-                value={seoTitle}
-                onChange={(e) => setSeoTitle(e.target.value)}
-                placeholder={t('seoTitlePlaceholder')}
-                className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {tEditor('seoDescription')}
-              </span>
-              <textarea
-                rows={3}
-                value={seoDescription}
-                onChange={(e) => setSeoDescription(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
-              />
-            </label>
-            <UploadPick
-              label={t('socialImageLabel')}
-              hint={t('socialImageHint')}
-              pending={seoImg}
-              onPick={(f) => void makePreview(f, setSeoImg)}
-              onClear={() => setSeoImg(null)}
-            />
-          </section>
-        </div>
+            </FormSection>
+          </Reveal>
 
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => router.push('/admin/academies')}
-            className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            {tCommon('cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={() => void submit()}
-            disabled={busy || !title.trim()}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50',
-              busy || !title.trim()
-                ? 'bg-muted-foreground/40'
-                : 'bg-primary shadow-xs hover:bg-primary/90',
-            )}
-          >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {busy ? t('creating') : t('createAcademy')}
-          </button>
-        </div>
-        <p className="text-center text-xs text-muted-foreground">{t('storageNote')}</p>
+          <Reveal delay={0.04}>
+            <FormSection
+              id="branding"
+              icon={Palette}
+              title={t('branding')}
+              description={t('brandingHint')}
+              badge={tForm('optional')}
+            >
+              <div className="space-y-6">
+                <div className="grid gap-5 md:grid-cols-2">
+                  <UploadPick
+                    label={tEditor('heroBanner')}
+                    hint={t('heroHint')}
+                    pending={hero}
+                    onPick={(f) => void makePreview(f, setHero)}
+                    onClear={() => setHero(null)}
+                  />
+                  <UploadPick
+                    label={tEditor('logo')}
+                    hint={t('logoHint')}
+                    pending={logo}
+                    onPick={(f) => void makePreview(f, setLogo)}
+                    onClear={() => setLogo(null)}
+                  />
+                </div>
+                <ColorField label={t('accentColor')} value={accentColor} onChange={setAccentColor} />
+              </div>
+            </FormSection>
+          </Reveal>
+
+          <Reveal delay={0.08}>
+            <FormSection
+              id="seo"
+              icon={Search}
+              title={t('seoSharing')}
+              description={t('seoHint')}
+              badge={tForm('optional')}
+            >
+              <div className="space-y-5">
+                <TextField
+                  label={tEditor('seoTitle')}
+                  value={seoTitle}
+                  onChange={(e) => setSeoTitle(e.target.value)}
+                  placeholder={t('seoTitlePlaceholder')}
+                />
+                <TextAreaField
+                  label={tEditor('seoDescription')}
+                  rows={3}
+                  value={seoDescription}
+                  onChange={(e) => setSeoDescription(e.target.value)}
+                />
+                <UploadPick
+                  label={t('socialImageLabel')}
+                  hint={t('socialImageHint')}
+                  pending={seoImg}
+                  onPick={(f) => void makePreview(f, setSeoImg)}
+                  onClear={() => setSeoImg(null)}
+                />
+              </div>
+            </FormSection>
+          </Reveal>
+
+          <p className="text-center text-xs text-muted-foreground">{t('storageNote')}</p>
+        </FormLayout>
       </div>
+
+      <SaveDock
+        mode="create"
+        saving={busy}
+        failed={failed}
+        canSave={canSave}
+        onSave={() => void submit()}
+        onCancel={() => router.push('/admin/academies')}
+        saveLabel={busy ? t('creating') : t('createAcademy')}
+        savingLabel={t('creating')}
+      />
     </div>
   );
 }

@@ -12,25 +12,25 @@ export function SpotlightCardBlock({ props }: BlockComponentProps<SpotlightCardP
     <Link
       href={href}
       className={cn(
-        'group flex flex-col rounded-lg border border-border bg-card p-6 shadow-xs transition-colors duration-200 hover:border-primary/40 hover:shadow-md',
+        'card-hover group flex flex-col rounded-2xl border border-border/70 bg-card p-6 shadow-xs md:p-7',
         className,
       )}
       style={layoutStyle(props)}
     >
       {tag ? (
-        <span className="mb-4 w-fit rounded-sm bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
+        <span className="mb-5 w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
           {tag}
         </span>
       ) : null}
-      <h3 className="font-display text-lg font-semibold leading-snug tracking-tight text-foreground">
+      <h3 className="text-balance font-display text-xl font-medium leading-snug tracking-[-0.015em] text-foreground">
         {title}
       </h3>
-      {meta ? <p className="mt-2 font-mono text-xs text-muted-foreground">{meta}</p> : null}
-      <span className="mt-6 inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+      {meta ? <p className="mt-2 text-sm text-muted-foreground">{meta}</p> : null}
+      <span className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-medium text-primary">
         Explore path
         <Icon
           name="arrow_forward"
-          className="size-3.5 transition-transform group-hover:translate-x-0.5 rtl:rotate-180"
+          className="size-4 transition-transform duration-200 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
         />
       </span>
     </Link>

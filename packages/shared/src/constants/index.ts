@@ -4,6 +4,7 @@ export * from './theme-defaults';
 export * from './page-defaults';
 export * from './page-templates';
 export * from './academy';
+export * from './island-style';
 
 export const ROLES = USER_ROLES;
 

@@ -15,19 +15,19 @@ export function AvatarStackBlock({ props, puck }: BlockComponentProps<AvatarStac
     (count === '+17k' || count === '+80')
       ? preview.homeMetrics.trustCount
       : count;
-  const plainColors = ['bg-muted', 'bg-border-strong'];
+  const plainColors = ['bg-muted', 'bg-surface-sunken', 'bg-border', 'bg-secondary/15'];
   return (
     <div className={cn('flex -space-x-2', className)} style={layoutStyle(props)}>
       {' '}
       {Array.from({ length: plainCircles }).map((_, i) => (
         <div
           key={i}
-          className={cn('rounded-full border-2 border-white', plainColors[i % plainColors.length])}
+          className={cn('rounded-full border-2 border-background shadow-xs', plainColors[i % plainColors.length])}
           style={{ width: size, height: size }}
         ></div>
       ))}{' '}
       <div
-        className="rounded-full border-2 border-white bg-primary flex items-center justify-center text-2xs text-primary-foreground font-bold"
+        className="flex items-center justify-center rounded-full border-2 border-background bg-primary/10 text-2xs font-semibold text-primary tabular-nums shadow-xs"
         style={{ width: size, height: size }}
       >
         {' '}

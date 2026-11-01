@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { LogoItemBlock } from './logo-item-block';
+import { SponsorWordmark } from './sponsor-wordmark';
 import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
 
 /** Eyebrow header above a glass logo wall. */
@@ -24,7 +25,7 @@ export function PartnerLogosBlock({ props, puck }: BlockComponentProps<PartnerLo
         ))}
       </div>
     ) : live.sponsors.length === 0 ? (
-      <div className="col-span-full rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center text-sm text-muted-foreground">
+      <div className="col-span-full rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center text-sm text-muted-foreground">
         No active partners — this strip is hidden on the live site.
       </div>
     ) : (
@@ -33,11 +34,7 @@ export function PartnerLogosBlock({ props, puck }: BlockComponentProps<PartnerLo
           key={sponsor.id}
           props={{ className: 'hover:scale-100' }}
           puck={{
-            renderSlot: () => (
-              <span className="font-mono font-bold tracking-tight text-text-primary opacity-70 hover:opacity-100 transition-opacity text-sm sm:text-base">
-                {sponsor.name}
-              </span>
-            ),
+            renderSlot: () => <SponsorWordmark name={sponsor.name} />,
             getSlotData: () => [],
           }}
         />
@@ -72,7 +69,7 @@ export function PartnerLogosBlock({ props, puck }: BlockComponentProps<PartnerLo
       </div>{' '}
       <div
         className={cn(
-          'bg-card border border-border rounded-3xl p-6 sm:p-8 md:p-12 flex flex-wrap items-center justify-center',
+          'flex flex-wrap items-center justify-center rounded-3xl border border-border/70 bg-card p-6 shadow-xs sm:p-8 md:p-12',
           logoGap,
         )}
       >

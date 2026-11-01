@@ -18,6 +18,8 @@ import {
 } from '@/components/admin/translation';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { useBuilderTranslation } from '@/components/builder/translation-context';
 
@@ -163,9 +165,9 @@ export function PageTranslationPanel({
   const hasTranslation = Boolean(existingLayout) || Boolean(draft?.layout);
 
   return (
-    <div className="min-w-0 max-w-full space-y-3 rounded-lg border border-border p-3">
+    <div className="min-w-0 max-w-full space-y-3 rounded-xl border border-border/70 bg-card p-3.5">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-medium text-muted-foreground">{t('page.title')}</p>
+        <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">{t('page.title')}</p>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {coverage.translated > 0 && (
             <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
@@ -177,19 +179,36 @@ export function PageTranslationPanel({
       </div>
       <TranslationCoveragePanel coverage={coverage} />
       <p className="text-xs text-muted-foreground">{t('page.hint')}</p>
+      <AnimatePresence initial={false} mode="popLayout">
       {draft?.layout && (
-        <div className="flex items-center gap-2">
+        <m.div
+          key="draft-actions"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+          exit={{ opacity: 0, y: 4, transition: transition.leave }}
+          className="flex items-center gap-2"
+        >
           <Button size="sm" onClick={() => void save()} disabled={saving}>
             {saving ? t('working') : t('page.save')}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
             {t('review.close')}
           </Button>
-        </div>
+        </m.div>
       )}
       {hasTranslation && !draft?.layout && (
-        <p className="text-xs text-muted-foreground">{t('page.saved')}</p>
+        <m.p
+          key="saved"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: transition.crossfade }}
+          exit={{ opacity: 0, transition: transition.leave }}
+          className="flex items-center gap-1.5 text-xs text-success"
+        >
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-success" />
+          {t('page.saved')}
+        </m.p>
       )}
+      </AnimatePresence>
       <TranslationReviewDialog
         open={open}
         onOpenChange={setOpen}

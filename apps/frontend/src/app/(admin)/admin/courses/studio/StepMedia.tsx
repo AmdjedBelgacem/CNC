@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, X, Paperclip, Upload, Loader2, Image as ImageIcon, Video } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { FormSection } from '@/components/admin/admin-form';
+import { spring } from '@/lib/motion';
 import type { CourseStudioData } from './types';
 import { toast } from '@/components/ui/toast';
 import { uploadFileToStorage } from '@/lib/upload';
@@ -136,10 +138,10 @@ export function StepMedia({
             void handleThumbFile(e.dataTransfer.files?.[0]);
           }}
           className={
-            'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center text-xs transition ' +
+            'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center text-xs transition-colors ' +
             (thumbDrag
-              ? 'border-accent bg-accent/10'
-              : 'border-border bg-card hover:border-accent/60')
+              ? 'border-primary/60 bg-primary/5'
+              : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
           }
         >
           {' '}
@@ -163,25 +165,27 @@ export function StepMedia({
             e.target.value = '';
           }}
         />{' '}
+        <AnimatePresence initial={false}>
         {(thumbPreview || course.thumbnailUrl) ? (
-          <div className="mt-3 flex items-center justify-between gap-2">
+          <m.div key="preview" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.15 } }} transition={spring.smooth} className="mt-3 flex items-center justify-between gap-2">
             {' '}
             {/* eslint-disable-next-line @next/next/no-img-element */}{' '}
             <img
                src={thumbPreview || course.thumbnailUrl || undefined}
               alt=""
-              className="h-28 w-44 rounded-xl object-cover shadow-sm"
+              className="h-28 w-48 rounded-lg border border-border/70 object-cover shadow-xs"
             />{' '}
             <button
               type="button"
               onClick={() => { setThumbPreview(null); update({ thumbnailUrl: null }); }}
-              className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
+              className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
             >
               {' '}
               {t('remove', { default: 'Remove' })}{' '}
             </button>{' '}
-          </div>
-        ) : null}{' '}
+          </m.div>
+        ) : null}
+        </AnimatePresence>
       </div>{' '}
       </FormSection>{' '}
 
@@ -206,10 +210,10 @@ export function StepMedia({
             void handleTrailerFile(e.dataTransfer.files?.[0]);
           }}
           className={
-            'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center text-xs transition ' +
+            'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center text-xs transition-colors ' +
             (trailerDrag
-              ? 'border-accent bg-accent/10'
-              : 'border-border bg-card hover:border-accent/60')
+              ? 'border-primary/60 bg-primary/5'
+              : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
           }
         >
           {' '}
@@ -233,24 +237,26 @@ export function StepMedia({
             e.target.value = '';
           }}
         />{' '}
+        <AnimatePresence initial={false}>
         {(trailerPreview || course.trailerUrl) ? (
-          <div className="mt-3 flex items-center justify-between gap-2">
+          <m.div key="preview" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.15 } }} transition={spring.smooth} className="mt-3 flex items-center justify-between gap-2">
             {' '}
             <video
               src={trailerPreview || course.trailerUrl || undefined}
               controls
-              className="h-40 flex-1 rounded-xl bg-muted object-contain"
+              className="h-44 flex-1 rounded-lg border border-border/70 bg-muted object-contain"
             />{' '}
             <button
               type="button"
               onClick={() => { setTrailerPreview(null); update({ trailerUrl: null }); }}
-              className="shrink-0 rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10 dark:text-destructive"
+              className="shrink-0 rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
             >
               {' '}
               {t('remove', { default: 'Remove' })}{' '}
             </button>{' '}
-          </div>
-        ) : null}{' '}
+          </m.div>
+        ) : null}
+        </AnimatePresence>
       </div>{' '}
       </FormSection>{' '}
 
@@ -263,7 +269,7 @@ export function StepMedia({
           <button
             type="button"
             onClick={addResource}
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted"
+            className="flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.97]"
           >
             {' '}
             <Plus className="size-4" /> {t('addResource', { default: 'Add resource' })}{' '}
@@ -280,19 +286,25 @@ export function StepMedia({
         )}{' '}
         <div className="space-y-2">
           {' '}
+          <AnimatePresence initial={false}>
           {resources.map((r) => (
-            <div
+            <m.div
               key={r.id}
-              className="flex items-center gap-2 rounded-xl border border-border bg-card p-2"
+              layout="position"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+              transition={spring.smooth}
+              className="flex items-center gap-2 rounded-lg border border-border/70 bg-card p-2 shadow-xs"
             >
               {' '}
               <input
                 value={r.name}
                 onChange={(e) => patchResource(r.id, { name: e.target.value })}
                 placeholder={t('label', { default: 'Label' })}
-                className="w-40 rounded-lg border border-border bg-transparent px-3 py-1.5 font-sans text-sm outline-none focus:ring-2 focus:ring-accent/30"
+                className="w-40 rounded-lg border border-border/80 bg-transparent px-3 py-1.5 font-sans text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
               />{' '}
-              <label className="flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-background px-3 py-1.5 text-center font-sans text-xs font-medium text-muted-foreground transition hover:border-accent/50 hover:text-foreground">
+              <label className="flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center font-sans text-xs font-medium text-muted-foreground transition hover:border-border-strong hover:text-foreground">
                 {resourceUploading === r.id ? t('uploading', { default: 'Uploading…' }) : r.url ? t('replaceUploadedFile', { default: 'Replace uploaded file' }) : t('chooseFileToUpload', { default: 'Choose file to upload' })}
                 <input
                   type="file"
@@ -313,8 +325,9 @@ export function StepMedia({
                 {' '}
                 <X className="size-4" />{' '}
               </button>{' '}
-            </div>
-          ))}{' '}
+            </m.div>
+          ))}
+          </AnimatePresence>
         </div>{' '}
       </div>{' '}
       </FormSection>{' '}

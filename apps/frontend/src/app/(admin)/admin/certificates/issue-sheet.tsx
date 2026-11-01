@@ -2,7 +2,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Loader2, Search, AlertTriangle } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { toast } from '@/components/ui/toast';
+import { ease, spring } from '@/lib/motion';
 import { api } from '@/lib/api-client';
 import { Modal, ModalHeader } from '@/components/ui/modal';
 import { INPUT, LABEL } from '../courses/studio/glass';
@@ -125,9 +127,11 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
       setSubmitting(false);
     }
   };
-  if (!open) return null;
   return (
+    <AnimatePresence>
+    {open && (
     <Modal
+      key="issue-certificate"
       onClose={onClose}
       title={t('title', { default: 'Issue certificate' })}
       header={
@@ -144,9 +148,9 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
       {' '}
       <div className="space-y-5 p-4 sm:p-6">
         {' '}
-        <div className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5 flex gap-2">
+        <div className="flex gap-2.5 rounded-xl border border-warning/25 bg-warning/10 px-3.5 py-3">
           {' '}
-          <AlertTriangle className="size-4 shrink-0 text-warning dark:text-warning mt-0.5" />{' '}
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />{' '}
           <p className="text-xs leading-relaxed text-muted-foreground">
             {' '}
             {t('manualIssueHintPrefix', { default: 'Manual issue works' })}{' '}
@@ -164,7 +168,11 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
           {' '}
           <label className={LABEL}>{t('learner', { default: 'Learner *' })}</label>{' '}
           {selectedUserId ? (
-            <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2">
+            <m.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1, transition: spring.smooth }}
+              className="flex items-center justify-between rounded-lg border border-primary/25 bg-primary/[0.05] px-3 py-2"
+            >
               {' '}
               <span className="truncate text-sm font-medium">{selectedUserLabel}</span>{' '}
               <button
@@ -173,12 +181,12 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
                   setSelectedUserId('');
                   setSelectedUserLabel('');
                 }}
-                className="text-xs font-medium text-primary hover:underline"
+                className="text-xs font-medium text-primary underline-offset-4 hover:underline"
               >
                 {' '}
                 {t('change', { default: 'Change' })}{' '}
               </button>{' '}
-            </div>
+            </m.div>
           ) : (
             <div className="relative">
               {' '}
@@ -192,15 +200,22 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
               {userSearching && (
                 <Loader2 className="absolute end-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
               )}{' '}
+              <AnimatePresence>
               {userOptions.length > 0 && (
-                <div className="absolute start-0 end-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-xl border border-border bg-popover shadow-lg">
+                <m.div
+                  key="user-options"
+                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1, transition: spring.smooth }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.12, ease: ease.exit } }}
+                  className="absolute start-0 end-0 top-full z-10 mt-1.5 max-h-48 origin-top overflow-auto rounded-xl border border-border/70 bg-popover p-1 shadow-lg"
+                >
                   {' '}
                   {userOptions.map((u) => (
                     <button
                       key={u.id}
                       type="button"
                       onClick={() => handleSelectUser(u)}
-                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-muted"
+                      className="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-start transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
                     >
                       {' '}
                       <span className="truncate text-sm font-medium">
@@ -209,8 +224,9 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
                       <span className="truncate text-xs text-muted-foreground">{u.email}</span>{' '}
                     </button>
                   ))}{' '}
-                </div>
-              )}{' '}
+                </m.div>
+              )}
+              </AnimatePresence>{' '}
             </div>
           )}{' '}
         </div>{' '}
@@ -232,7 +248,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
           {' '}
           <label className={LABEL}>
             {t('template', { default: 'Template' })}{' '}
-            <span className="font-normal normal-case text-muted-foreground">
+            <span className="font-normal text-muted-foreground/80">
               {t('optional', { default: '(optional)' })}
             </span>
           </label>{' '}
@@ -256,7 +272,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
           {' '}
           <label className={LABEL}>
             {t('expiresAt', { default: 'Expires at' })}{' '}
-            <span className="font-normal normal-case text-muted-foreground">
+            <span className="font-normal text-muted-foreground/80">
               {t('optional', { default: '(optional)' })}
             </span>
           </label>{' '}
@@ -272,7 +288,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted"
+            className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
           >
             {' '}
             {tCommon('cancel', { default: 'Cancel' })}{' '}
@@ -281,7 +297,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
             type="button"
             onClick={handleSubmit}
             disabled={submitting || !selectedUserId || !courseId}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
           >
             {' '}
             {submitting && <Loader2 className="size-4 animate-spin" />}{' '}
@@ -290,5 +306,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
         </div>{' '}
       </div>{' '}
     </Modal>
+    )}
+    </AnimatePresence>
   );
 }

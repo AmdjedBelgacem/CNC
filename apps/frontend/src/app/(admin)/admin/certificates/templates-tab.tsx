@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -31,10 +31,20 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { StatusPill } from '@/components/admin/admin-ui';
-import { SelectInput } from '@/components/admin/admin-form';
+import { SelectInput, TextInput } from '@/components/admin/admin-form';
+import { ColorField as KitColorField, useFormGuard } from '@/components/admin/form-page';
 import { toast } from '@/components/ui/toast';
 import { Modal, ModalHeader } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, m } from 'framer-motion';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { AnimatedNumber, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { ease, spring } from '@/lib/motion';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 /* ---------------------------------- types --------------------------------- */ type TemplateField =
@@ -166,9 +176,9 @@ const FONTS = [
   },
 ] as const;
 const SWATCHES = [
-  '#C2410C',
-  '#333F4C',
-  '#0F766E',
+  '#B65433',
+  '#3D3D3A',
+  '#4D6E58',
   '#067647',
   '#175CD3',
   '#B54708',
@@ -191,7 +201,7 @@ const PRESETS: Array<{
     key: 'royalViolet',
     name: 'Royal Violet',
     layout: 'modern',
-    primary: '#C2410C',
+    primary: '#B65433',
     secondary: '#191B1F',
     font: 'Inter',
   },
@@ -207,13 +217,13 @@ const PRESETS: Array<{
     key: 'arcticMinimal',
     name: 'Arctic Minimal',
     layout: 'minimal',
-    primary: '#0f766e',
+    primary: '#4D6E58',
     secondary: '#334155',
     font: 'DM Sans',
   },
 ];
-const GLASS = 'border border-border bg-card';
-const CARD = 'border border-border bg-card';
+const GLASS = 'border border-border/70 bg-card shadow-xs';
+const CARD = 'border border-border/70 bg-card';
 function fontStack(fontFamily: string) {
   return FONTS.find((f) => f.key === fontFamily)?.stack ?? fontFamily ?? 'Inter, sans-serif';
 }
@@ -522,6 +532,10 @@ function CertificateArt({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Template | null>(null);
   const [previewing, setPreviewing] = useState<Template | null>(null);
+  // The preview dialog keeps showing the last template while it animates out,
+  // so it is rendered from this snapshot rather than from `previewing` itself.
+  const [lastPreviewed, setLastPreviewed] = useState<Template | null>(null);
+  if (previewing && previewing !== lastPreviewed) setLastPreviewed(previewing);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const load = useCallback(
     async (silent = false) => {
@@ -643,80 +657,83 @@ function CertificateArt({
     <div className="space-y-4">
       {' '}
       {/* stats strip */}{' '}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+      <Stagger className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
         {' '}
         {[
           {
             icon: LayoutTemplate,
             label: t('statTotalTemplates', { default: 'Total templates' }),
-            value: String(stats.total),
+            value: stats.total,
             sub: t('statShown', { count: visible.length, default: '{count} shown' }),
             tint: '',
           },
           {
             icon: BadgeCheck,
             label: t('statActive', { default: 'Active' }),
-            value: String(stats.active),
+            value: stats.active,
             sub: t('statAvailableForIssuance', { default: 'Available for issuance' }),
             tint: '',
           },
           {
             icon: CircleDot,
             label: t('statDraftInactive', { default: 'Draft / inactive' }),
-            value: String(stats.inactive),
+            value: stats.inactive,
             sub: t('statHiddenFromIssuance', { default: 'Hidden from issuance' }),
             tint: '',
           },
           {
             icon: Layers,
             label: t('statAvgFields', { default: 'Avg. fields' }),
-            value: String(stats.fields),
+            value: stats.fields,
             sub: t('statVariablesPerTemplate', { default: 'Variables per template' }),
             tint: '',
           },
           {
             icon: AlertTriangle,
             label: t('statUnconfigured', { default: 'Needs variables' }),
-            value: String(stats.unconfigured),
+            value: stats.unconfigured,
             sub: t('statUnconfiguredSub', {
               default: 'Incomplete if issued',
             }),
             tint: 'warning',
           },
-        ].map((s) => (
-          <div
+        ].map((s, i) => (
+          <StaggerItem
             key={s.label}
+            index={i}
             className={cn(
-              'flex items-center gap-3 rounded-xl border p-3.5 shadow-xs',
+              'flex items-center gap-3.5 rounded-xl border p-4 shadow-xs transition-colors duration-300',
               s.tint === 'warning' && stats.unconfigured > 0
-                ? 'border-warning/30 bg-warning/8'
-                : 'border-border bg-card',
+                ? 'border-warning/25 bg-warning/10'
+                : 'border-border/70 bg-card',
             )}
           >
             {' '}
             <span
               className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                'flex size-10 shrink-0 items-center justify-center rounded-full',
                 s.tint === 'warning' && stats.unconfigured > 0
-                  ? 'bg-warning/12 text-warning'
+                  ? 'bg-warning/15 text-warning'
                   : 'bg-muted text-muted-foreground',
               )}
             >
               {' '}
-              <s.icon className="size-5" />{' '}
+              <s.icon className="size-4" />{' '}
             </span>{' '}
             <span className="min-w-0">
               {' '}
-              <span className="block text-xl font-semibold leading-none tracking-tight text-foreground">
-                {s.value}
-              </span>{' '}
-              <span className="mt-1.5 block truncate text-2xs font-medium text-muted-foreground">
+              <AnimatedNumber
+                value={s.value}
+                animateOnChange
+                className="block font-display text-2xl font-medium leading-none tracking-[-0.015em] tabular-nums text-foreground"
+              />{' '}
+              <span className="mt-1.5 block truncate text-xs text-muted-foreground">
                 {s.label} · {s.sub}
               </span>{' '}
             </span>{' '}
-          </div>
+          </StaggerItem>
         ))}{' '}
-      </div>{' '}
+      </Stagger>{' '}
       {/* toolbar */}{' '}
       <div className={cn('flex flex-wrap items-center gap-2 rounded-xl border p-3 ', GLASS)}>
         {' '}
@@ -727,7 +744,7 @@ function CertificateArt({
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
             placeholder={t('searchPlaceholder', { default: 'Search by name, layout, color…' })}
-            className="h-9.5 w-full rounded-xl border border-border bg-card py-2 ps-9 pe-8 text-sm outline-none placeholder:text-muted-foreground/70 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+            className="h-9 w-full rounded-lg border border-input bg-card py-2 ps-9 pe-8 text-sm outline-none transition placeholder:text-muted-foreground/70 hover:border-border-strong focus:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring/30"
           />{' '}
           {qInput && (
             <button
@@ -741,7 +758,7 @@ function CertificateArt({
             </button>
           )}{' '}
         </div>{' '}
-        <div className="flex items-center gap-1 rounded-xl bg-muted p-1">
+        <div className="flex items-center gap-0.5 rounded-xl bg-muted/70 p-1">
           {' '}
           {[
             { k: '', l: tCommon('all', { default: 'All' }) },
@@ -755,22 +772,28 @@ function CertificateArt({
                 setFilterActive(o.k);
                 setPage(1);
               }}
+              aria-pressed={filterActive === o.k}
               className={cn(
-                'rounded-lg px-3 py-1.5 text-xs font-semibold transition',
-                filterActive === o.k
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
+                'relative rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                filterActive === o.k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {' '}
-              {o.l}{' '}
+              {filterActive === o.k && (
+                <m.span
+                  layoutId="cert-template-status-filter"
+                  transition={spring.smooth}
+                  className="absolute inset-0 rounded-lg bg-card shadow-xs"
+                  aria-hidden="true"
+                />
+              )}
+              <span className="relative">{o.l}</span>{' '}
             </button>
           ))}{' '}
         </div>{' '}
         <select
           value={filterLayout}
           onChange={(e) => setFilterLayout(e.target.value)}
-          className="h-9 rounded-xl border border-border bg-card px-2.5 text-sm capitalize outline-none focus:border-primary/50"
+          className="h-9 rounded-lg border border-border/70 bg-card px-2.5 text-sm capitalize shadow-xs outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring/30"
           aria-label={t('filterByLayout', { default: 'Filter by layout' })}
         >
           {' '}
@@ -784,42 +807,54 @@ function CertificateArt({
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as any)}
-          className="h-9 rounded-xl border border-border bg-card px-2.5 text-sm outline-none focus:border-primary/50"
+          className="h-9 rounded-lg border border-border/70 bg-card px-2.5 text-sm shadow-xs outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring/30"
           aria-label={t('sortAria', { default: 'Sort' })}
         >
           {' '}
           <option value="newest">{t('sortNewest', { default: 'Newest first' })}</option>{' '}
           <option value="name">{t('sortName', { default: 'Name A–Z' })}</option>{' '}
         </select>{' '}
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
+        <div className="flex items-center gap-0.5 rounded-xl bg-muted/70 p-1">
           {' '}
           <button
             type="button"
             onClick={() => setView('grid')}
             aria-label={t('gridView', { default: 'Grid view' })}
+            aria-pressed={view === 'grid'}
             className={cn(
-              'rounded-lg p-1.5 transition',
-              view === 'grid'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+              'relative rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              view === 'grid' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {' '}
-            <LayoutGrid className="size-4" />{' '}
+            {view === 'grid' && (
+              <m.span
+                layoutId="cert-template-view"
+                transition={spring.smooth}
+                className="absolute inset-0 rounded-lg bg-card shadow-xs"
+                aria-hidden="true"
+              />
+            )}
+            <LayoutGrid className="relative size-4" />{' '}
           </button>{' '}
           <button
             type="button"
             onClick={() => setView('list')}
             aria-label={t('listView', { default: 'List view' })}
+            aria-pressed={view === 'list'}
             className={cn(
-              'rounded-lg p-1.5 transition',
-              view === 'list'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+              'relative rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              view === 'list' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {' '}
-            <ListIcon className="size-4" />{' '}
+            {view === 'list' && (
+              <m.span
+                layoutId="cert-template-view"
+                transition={spring.smooth}
+                className="absolute inset-0 rounded-lg bg-card shadow-xs"
+                aria-hidden="true"
+              />
+            )}
+            <ListIcon className="relative size-4" />{' '}
           </button>{' '}
         </div>{' '}
         <div className="ms-auto flex items-center gap-2">
@@ -827,7 +862,7 @@ function CertificateArt({
           <button
             type="button"
             onClick={() => load(true)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-sm font-medium shadow-sm transition hover:bg-muted"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
           >
             {' '}
             <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />{' '}
@@ -843,7 +878,7 @@ function CertificateArt({
               setEditing(null);
               setSheetOpen(true);
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
           >
             {' '}
             <Plus className="size-4" /> {t('newTemplate', { default: 'New template' })}{' '}
@@ -878,13 +913,11 @@ function CertificateArt({
           </div>
         )
       ) : visible.length === 0 ? (
-        <div className="relative overflow-hidden rounded-xl border border-border bg-card px-6 py-16 text-center">
-          {' '}
-          <div className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-            {' '}
-            <Palette className="size-8" />{' '}
+        <Reveal className="relative overflow-hidden rounded-2xl border border-border/70 bg-card px-6 py-16 text-center shadow-xs">
+          <div className="relative mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary ring-8 ring-primary/[0.04]">
+            <Palette className="size-6" />{' '}
           </div>{' '}
-          <p className="relative mt-4 text-lg font-bold tracking-tight">
+          <p className="relative mt-5 text-balance font-display text-2xl font-medium tracking-[-0.018em] text-foreground">
             {hasFilters
               ? t('emptyNoMatch', { default: 'No templates match your filters' })
               : t('emptyDesignFirst', { default: 'Design your first certificate' })}
@@ -912,7 +945,7 @@ function CertificateArt({
                   setFilterActive('');
                   setFilterLayout('');
                 }}
-                className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold shadow-sm hover:bg-muted"
+                className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
               >
                 {' '}
                 {t('clearFilters', { default: 'Clear filters' })}{' '}
@@ -940,7 +973,7 @@ function CertificateArt({
                       } as Template);
                       setSheetOpen(true);
                     }}
-                    className="rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold shadow-sm transition"
+                    className="rounded-full border border-border/70 bg-card px-3.5 py-2 text-xs font-medium shadow-xs transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm active:scale-[0.98]"
                   >
                     {' '}
                     <span
@@ -956,7 +989,7 @@ function CertificateArt({
                     setEditing(null);
                     setSheetOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
                 >
                   {' '}
                   <Plus className="size-4" />{' '}
@@ -965,17 +998,16 @@ function CertificateArt({
               </>
             )}{' '}
           </div>{' '}
-        </div>
+        </Reveal>
       ) : view === 'grid' ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {' '}
-          {visible.map((tpl) => (
+        <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visible.map((tpl, tplIndex) => (
+            <StaggerItem key={tpl.id} index={tplIndex} className="h-full">
             <article
-              key={tpl.id}
               className={cn(
-                'group flex flex-col overflow-hidden rounded-xl border bg-card shadow-xs transition',
-                unconfigured(tpl) ? 'border-destructive/40' : 'border-border',
-                'hover:border-border-strong',
+                'card-hover group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-xs',
+                unconfigured(tpl) ? 'border-destructive/30' : 'border-border/70',
+                'hover:border-border-strong hover:shadow-lg',
               )}
             >
               {' '}
@@ -984,28 +1016,28 @@ function CertificateArt({
                 <button
                   type="button"
                   onClick={() => setPreviewing(tpl)}
-                  className="block w-full overflow-hidden rounded-xl border border-border text-left"
+                  className="block w-full overflow-hidden rounded-lg border border-border/70 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={t('openPreview', { default: 'Open preview' })}
                 >
                   {' '}
-                  <div className="transition duration-300 group-hover:scale-[1.015]">
+                  <div className="transition-transform duration-500 ease-out group-hover:scale-[1.02]">
                     {' '}
                     <CertificateArt template={tpl} compact />{' '}
                   </div>{' '}
                 </button>{' '}
                 <span
                   className={cn(
-                    'absolute start-4 top-4 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-2xs font-bold shadow-sm backdrop-blur-sm',
+                    'absolute start-4 top-4 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-2xs font-medium shadow-xs backdrop-blur-sm',
                     tpl.isActive
-                      ? 'border-success/30 bg-success/95 text-white'
-                      : 'border-border bg-foreground/90 text-background',
+                      ? 'border-success/25 bg-card/90 text-success'
+                      : 'border-border/70 bg-card/90 text-muted-foreground',
                   )}
                 >
                   {' '}
                   <span
                     className={cn(
                       'size-1.5 rounded-full',
-                      tpl.isActive ? 'bg-white' : 'bg-background/60',
+                      tpl.isActive ? 'bg-success' : 'bg-muted-foreground/60',
                     )}
                   />{' '}
                   {tpl.isActive
@@ -1013,7 +1045,7 @@ function CertificateArt({
                     : t('statusDraft', { default: 'Draft' })}{' '}
                 </span>{' '}
                 <span className="absolute end-4 top-4">
-                  <span className="inline-flex items-center rounded-full border border-white/15 bg-foreground/85 px-2.5 py-0.5 text-2xs font-semibold capitalize text-background shadow-sm backdrop-blur-sm">
+                  <span className="inline-flex items-center rounded-full border border-border/70 bg-card/90 px-2.5 py-0.5 text-2xs font-medium capitalize text-foreground shadow-xs backdrop-blur-sm">
                     {layoutLabel(tpl.layout)}
                   </span>
                 </span>{' '}
@@ -1023,7 +1055,7 @@ function CertificateArt({
                   <button
                     type="button"
                     onClick={() => setPreviewing(tpl)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-foreground px-2.5 py-1.5 text-2xs font-semibold text-background shadow-lg hover:bg-muted"
+                    className="inline-flex items-center gap-1 rounded-full bg-foreground px-3 py-1.5 text-2xs font-medium text-background shadow-lg transition hover:bg-foreground/85 active:scale-95"
                   >
                     {' '}
                     <Eye className="size-3.5" />{' '}
@@ -1035,7 +1067,7 @@ function CertificateArt({
                       setEditing(tpl);
                       setSheetOpen(true);
                     }}
-                    className="inline-flex items-center gap-1 rounded-lg bg-card px-2.5 py-1.5 text-2xs font-semibold text-foreground shadow-sm hover:bg-muted"
+                    className="inline-flex items-center gap-1 rounded-full bg-card px-3 py-1.5 text-2xs font-medium text-foreground shadow-lg transition hover:bg-muted active:scale-95"
                   >
                     {' '}
                     <Pencil className="size-3.5" />{' '}
@@ -1044,7 +1076,7 @@ function CertificateArt({
                   <button
                     type="button"
                     onClick={() => handleDuplicate(tpl)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-card px-2.5 py-1.5 text-2xs font-semibold text-foreground shadow-sm hover:bg-muted"
+                    className="inline-flex items-center gap-1 rounded-full bg-card px-3 py-1.5 text-2xs font-medium text-foreground shadow-lg transition hover:bg-muted active:scale-95"
                   >
                     {' '}
                     <Copy className="size-3.5" />{' '}
@@ -1052,10 +1084,10 @@ function CertificateArt({
                   </button>{' '}
                 </span>{' '}
               </div>{' '}
-              <div className="flex flex-1 flex-col gap-3 p-4">
+              <div className="flex flex-1 flex-col gap-3 p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 dir="auto" className="truncate text-13 font-semibold text-foreground">
+                    <h3 dir="auto" className="truncate font-display text-lg font-medium tracking-[-0.015em] text-foreground">
                       {tpl.name}
                     </h3>
                     <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-2xs text-muted-foreground">
@@ -1104,7 +1136,7 @@ function CertificateArt({
                       <span
                         key={c}
                         title={c}
-                        className="size-5 rounded-md border border-border shadow-xs"
+                        className="size-5 rounded-full border border-border/70 shadow-xs"
                         style={{ backgroundColor: c }}
                       />
                     ))}
@@ -1116,7 +1148,7 @@ function CertificateArt({
                  * says so instead of looking ready to publish.
                  */}
                 {unconfigured(tpl) && (
-                  <p className="flex items-start gap-2 rounded-lg border border-destructive/25 bg-destructive/8 px-2.5 py-2 text-2xs leading-relaxed text-destructive">
+                  <p className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs leading-relaxed text-destructive">
                     <AlertTriangle className="mt-px size-3.5 shrink-0" />
                     <span>
                       {tpl.isActive
@@ -1136,19 +1168,19 @@ function CertificateArt({
                     {tpl.fields.slice(0, 4).map((f) => (
                       <span
                         key={f.key}
-                        className="rounded-md border border-primary/20 bg-primary/8 px-1.5 py-0.5 text-2xs font-medium text-primary"
+                        className="rounded-full border border-primary/20 bg-primary/[0.06] px-2 py-0.5 text-2xs font-medium text-primary"
                       >
                         {variableLabel(f.key)}
                       </span>
                     ))}
                     {tpl.fields.length > 4 && (
-                      <span className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-2xs font-semibold text-muted-foreground">
+                      <span className="rounded-full border border-border/70 bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                         +{tpl.fields.length - 4}
                       </span>
                     )}
                   </div>
                 )}{' '}
-                <div className="mt-auto flex items-center gap-2 border-t border-border pt-3">
+                <div className="mt-auto flex items-center gap-2 border-t border-border/70 pt-3.5">
                   {' '}
                   <button
                     type="button"
@@ -1156,7 +1188,7 @@ function CertificateArt({
                       setEditing(tpl);
                       setSheetOpen(true);
                     }}
-                    className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary text-xs font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
+                    className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
                   >
                     {' '}
                     <Pencil className="size-3.5" />{' '}
@@ -1168,9 +1200,9 @@ function CertificateArt({
                     disabled={togglingId === tpl.id}
                     aria-pressed={tpl.isActive}
                     className={cn(
-                      'inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition active:scale-[0.98] disabled:opacity-60',
+                      'inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition active:scale-[0.98] disabled:opacity-60',
                       tpl.isActive
-                        ? 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
                         : 'border-success/30 bg-success/10 text-success hover:bg-success/15',
                     )}
                   >
@@ -1187,16 +1219,22 @@ function CertificateArt({
                 </div>{' '}
               </div>{' '}
             </article>
+            </StaggerItem>
           ))}{' '}
-        </div>
+        </Stagger>
       ) : (
-        <div className={cn('overflow-hidden rounded-xl border shadow-sm', CARD)}>
-          {' '}
-          {visible.map((tpl) => (
-            <div
+        <div className={cn('overflow-hidden rounded-xl border shadow-xs', CARD)}>
+          {visible.map((tpl, rowIndex) => (
+            <m.div
               key={tpl.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                transition: { duration: 0.3, ease: ease.emerge, delay: Math.min(rowIndex, 11) * 0.03 },
+              }}
               className={cn(
-                'group flex items-center gap-4 border-b border-border p-3 transition last:border-0 hover:bg-muted/40',
+                'group flex items-center gap-4 border-b border-border/70 p-3.5 transition-colors last:border-0 hover:bg-muted/40',
                 unconfigured(tpl) && 'bg-destructive/[0.03]',
               )}
             >
@@ -1204,7 +1242,7 @@ function CertificateArt({
               <button
                 type="button"
                 onClick={() => setPreviewing(tpl)}
-                className="w-36 shrink-0 overflow-hidden rounded-lg border border-border"
+                className="w-36 shrink-0 overflow-hidden rounded-lg border border-border/70 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={t('openPreview', { default: 'Open preview' })}
               >
                 {' '}
@@ -1214,7 +1252,7 @@ function CertificateArt({
                 {' '}
                 <div className="flex flex-wrap items-center gap-2">
                   {' '}
-                  <p dir="auto" className="truncate text-13 font-semibold text-foreground">
+                  <p dir="auto" className="truncate font-display text-base font-medium tracking-[-0.01em] text-foreground">
                     {tpl.name}
                   </p>{' '}
                   <StatusPill
@@ -1276,7 +1314,7 @@ function CertificateArt({
                 {[tpl.primaryColor, tpl.secondaryColor].map((c) => (
                   <span
                     key={c}
-                    className="size-5 rounded-md border-2 border-white shadow ring-1 ring-border"
+                    className="size-5 rounded-full border border-border/70 shadow-xs"
                     style={{ backgroundColor: c }}
                   />
                 ))}{' '}
@@ -1291,9 +1329,9 @@ function CertificateArt({
                   disabled={togglingId === tpl.id}
                   aria-pressed={tpl.isActive}
                   className={cn(
-                    'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition disabled:opacity-60',
+                    'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition active:scale-[0.98] disabled:opacity-60',
                     tpl.isActive
-                      ? 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? 'border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
                       : 'border-success/30 bg-success/10 text-success hover:bg-success/15',
                   )}
                 >
@@ -1312,7 +1350,7 @@ function CertificateArt({
                   type="button"
                   onClick={() => setPreviewing(tpl)}
                   aria-label={tCommon('preview', { default: 'Preview' })}
-                  className="rounded-lg border border-border p-2 text-foreground shadow-xs transition hover:bg-muted"
+                  className="rounded-lg border border-border/70 p-2 text-foreground shadow-xs transition hover:bg-muted active:scale-95"
                 >
                   <Eye className="size-4" />
                 </button>{' '}
@@ -1320,7 +1358,7 @@ function CertificateArt({
                   type="button"
                   onClick={() => handleDuplicate(tpl)}
                   aria-label={t('duplicateAria', { default: 'Duplicate' })}
-                  className="rounded-lg border border-border p-2 shadow-sm transition hover:bg-muted"
+                  className="rounded-lg border border-border/70 p-2 shadow-xs transition hover:bg-muted active:scale-95"
                 >
                   <Copy className="size-4" />
                 </button>{' '}
@@ -1330,14 +1368,14 @@ function CertificateArt({
                     setEditing(tpl);
                     setSheetOpen(true);
                   }}
-                  className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow hover:bg-primary"
+                  className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
                 >
                   {' '}
                   <Pencil className="size-3.5" />{' '}
                   {tCommon('edit', { default: 'Edit' })}{' '}
                 </button>{' '}
               </div>{' '}
-            </div>
+            </m.div>
           ))}{' '}
         </div>
       )}{' '}
@@ -1353,9 +1391,9 @@ function CertificateArt({
           <p className="text-xs text-muted-foreground">
             {' '}
             {tCommon('page', { default: 'Page' })}{' '}
-            <span className="font-bold text-foreground">{page}</span>{' '}
+            <span className="font-medium tabular-nums text-foreground">{page}</span>{' '}
             {tCommon('of', { default: 'of' })}{' '}
-            <span className="font-bold text-foreground">{totalPages}</span> ·{' '}
+            <span className="font-medium text-foreground">{totalPages}</span> ·{' '}
             <span className="font-semibold">{total}</span>{' '}
             {t('totalCount', { count: total, default: 'total' })}{' '}
           </p>{' '}
@@ -1365,7 +1403,7 @@ function CertificateArt({
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="inline-flex items-center gap-1 rounded-xl border border-border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98] disabled:opacity-40"
             >
               {' '}
               <ChevronLeft className="flip-rtl size-4" />{' '}
@@ -1375,7 +1413,7 @@ function CertificateArt({
               type="button"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="inline-flex items-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground shadow hover:bg-primary disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98] disabled:opacity-40"
             >
               {' '}
               {tCommon('next', { default: 'Next' })} <ChevronRight className="flip-rtl size-4" />{' '}
@@ -1397,12 +1435,13 @@ function CertificateArt({
           load(true);
         }}
       />{' '}
-      {previewing && (
+      {lastPreviewed && (
         <TemplatePreviewDialog
-          template={previewing}
+          open={Boolean(previewing)}
+          template={lastPreviewed}
           onClose={() => setPreviewing(null)}
           onEdit={() => {
-            setEditing(previewing);
+            setEditing(lastPreviewed);
             setPreviewing(null);
             setSheetOpen(true);
           }}
@@ -1443,10 +1482,12 @@ function defaultFields(): TemplateField[] {
   ];
 }
 /* ------------------------------ preview dialog ----------------------------- */ function TemplatePreviewDialog({
+  open,
   template,
   onClose,
   onEdit,
 }: {
+  open: boolean;
   template: Template;
   onClose: () => void;
   onEdit: () => void;
@@ -1459,114 +1500,95 @@ function defaultFields(): TemplateField[] {
     if (!opt) return key;
     return t(`variable.${opt.key}`, { default: opt.label });
   };
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  // Escape and outside-click dismissal come from the Dialog primitive.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {' '}
-      <button
-        aria-label={t('closeAria', { default: 'Close' })}
-        onClick={onClose}
-        className="absolute inset-0 bg-overlay"
-      />{' '}
-      <div className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-card shadow-sm dark:bg-[#1C1C1E]">
-        {' '}
-        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-          {' '}
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent size="xl" hideClose className="max-w-3xl">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/70 px-5 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            {' '}
             <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
               style={{
                 background: `linear-gradient(135deg, ${template.primaryColor}, ${template.secondaryColor})`,
               }}
             >
-              {' '}
-              <Award className="size-5" />{' '}
-            </span>{' '}
+              <Award className="size-5" />
+            </span>
             <div className="min-w-0">
-              {' '}
-              <p className="truncate text-base font-bold tracking-tight">{template.name}</p>{' '}
-              <p className="truncate text-xs capitalize text-muted-foreground">
+              <DialogTitle className="truncate text-lg sm:text-xl">{template.name}</DialogTitle>
+              <DialogDescription className="truncate text-xs capitalize">
                 {template.layout} · {template.fontFamily} ·{' '}
                 {t('variablesCount', {
                   count: template.fields?.length ?? 0,
                   default: '{count, plural, one {# variable} other {# variables}}',
                 })}
-              </p>{' '}
-            </div>{' '}
-          </div>{' '}
+              </DialogDescription>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            {' '}
             <button
               type="button"
               onClick={() => setShowAnchors((v) => !v)}
+              aria-pressed={showAnchors}
               className={cn(
-                'rounded-xl border px-3 py-1.5 text-xs font-semibold transition',
+                'rounded-full border px-3 py-1.5 text-xs font-medium transition active:scale-95',
                 showAnchors
-                  ? 'border-primary/40 bg-primary/10 text-primary dark:text-[#2997FF]'
-                  : 'border-border text-muted-foreground hover:text-foreground',
+                  ? 'border-primary/30 bg-primary/10 text-primary'
+                  : 'border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground',
               )}
             >
-              {' '}
               {showAnchors
                 ? t('hideAnchors', { default: 'Hide anchors' })
-                : t('showAnchors', { default: 'Show anchors' })}{' '}
-            </button>{' '}
+                : t('showAnchors', { default: 'Show anchors' })}
+            </button>
             <button
               type="button"
               onClick={onEdit}
-              className="inline-flex items-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary"
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
             >
-              {' '}
-              <Pencil className="size-3.5" /> {tCommon('edit', { default: 'Edit' })}{' '}
-            </button>{' '}
+              <Pencil className="size-3.5" /> {tCommon('edit', { default: 'Edit' })}
+            </button>
             <button
               type="button"
               onClick={onClose}
               aria-label={t('closePreviewAria', { default: 'Close preview' })}
-              className="rounded-xl p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
             >
-              <X className="size-5" />
-            </button>{' '}
-          </div>{' '}
-        </div>{' '}
-        <div className="bg-muted p-5">
-          {' '}
-          <div className="overflow-hidden rounded-xl border border-border shadow-sm">
-            {' '}
-            <CertificateArt template={template} showAnchors={showAnchors} />{' '}
-          </div>{' '}
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {' '}
-            {(template.fields ?? []).map((f) => (
-              <div
-                key={f.key}
-                className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2 text-xs"
-              >
-                {' '}
-                <span
-                  className="size-6 rounded-md border border-white shadow"
-                  style={{ backgroundColor: f.color }}
-                />{' '}
-                <span className="min-w-0 flex-1">
-                  {' '}
-                  <span className="block truncate font-bold">
-                    {variableLabel(f.key)}
-                  </span>{' '}
-                  <span className="block truncate font-mono text-2xs text-muted-foreground">
-                    {SAMPLE_MAP[f.key] ?? f.key} · {f.fontSize}px
-                  </span>{' '}
-                </span>{' '}
-              </div>
-            ))}{' '}
-          </div>{' '}
-        </div>{' '}
-      </div>{' '}
-    </div>
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/50 p-5 sm:p-6">
+          <div className="overflow-hidden rounded-xl border border-border/70 shadow-md">
+            <CertificateArt template={template} showAnchors={showAnchors} />
+          </div>
+          {(template.fields ?? []).length > 0 && (
+            <Stagger className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {(template.fields ?? []).map((f, i) => (
+                <StaggerItem
+                  key={f.key}
+                  index={i}
+                  className="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs shadow-xs"
+                >
+                  <span
+                    className="size-5 shrink-0 rounded-full border border-border/70 shadow-xs"
+                    style={{ backgroundColor: f.color }}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-foreground">
+                      {variableLabel(f.key)}
+                    </span>
+                    <span className="block truncate font-mono text-2xs text-muted-foreground">
+                      {SAMPLE_MAP[f.key] ?? f.key} · {f.fontSize}px
+                    </span>
+                  </span>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 /* ------------------------------- studio sheet ------------------------------ */ type StudioTab =
@@ -1611,9 +1633,30 @@ function TemplateStudioSheet({
   const [academies, setAcademies] = useState<Array<{ id: string; title: string }>>([]);
   const [saving, setSaving] = useState(false);
   const [showAnchors, setShowAnchors] = useState(true);
+  const [attempted, setAttempted] = useState(false);
+  const tForm = useTranslations('ui.adminForm');
+  // Unsaved-changes tracking: the baseline is whatever the load effect below
+  // put into the form, captured once those state updates have rendered.
+  const snapshot = JSON.stringify({
+    name, layout, primaryColor, secondaryColor, logoUrl, backgroundUrl, fontFamily, fields,
+    courseId, academyId, scopeType,
+  });
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+  const [loadVersion, setLoadVersion] = useState(0);
+  const [baseline, setBaseline] = useState<string | null>(null);
+  useEffect(() => {
+    if (loadVersion > 0) setBaseline(snapshotRef.current);
+  }, [loadVersion]);
+  const dirty = baseline !== null && snapshot !== baseline;
+  const requestClose = () => {
+    if (dirty && !window.confirm(t('discardConfirm'))) return;
+    onClose();
+  };
   useEffect(() => {
     if (open) {
       setTab('design');
+      setAttempted(false);
       fetch('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
         .then((r) => (r.ok ? r.json() : { items: [] }))
         .then((d) => setCourses((d?.items ?? []).map((c: any) => ({ id: c.id, title: c.title }))))
@@ -1665,6 +1708,9 @@ function TemplateStudioSheet({
         setFontFamily('Inter');
         setFields(defaultFields());
       }
+      setLoadVersion((v) => v + 1);
+    } else {
+      setBaseline(null);
     }
   }, [open, template]);
   const updateField = (idx: number, patch: Partial<TemplateField>) =>
@@ -1704,6 +1750,7 @@ function TemplateStudioSheet({
     ]);
   };
   const handleSave = async () => {
+    setAttempted(true);
     if (!name.trim()) {
       toast({
         type: 'err',
@@ -1750,7 +1797,7 @@ function TemplateStudioSheet({
       setSaving(false);
     }
   };
-  if (!open) return null;
+  useFormGuard({ dirty: open && dirty, saving, onSave: () => void handleSave() });
   const preview: Partial<Template> = {
     name,
     layout,
@@ -1763,8 +1810,11 @@ function TemplateStudioSheet({
   };
   const usedKeys = new Set(fields.map((f) => f.key));
   return (
+    <AnimatePresence>
+    {open && (
     <Modal
-      onClose={onClose}
+      key="template-studio"
+      onClose={requestClose}
       width="max-w-[1040px]"
       title={isEdit ? t('editTemplate', { default: 'Edit template' }) : t('newTemplate', { default: 'New template' })}
       header={
@@ -1780,15 +1830,14 @@ function TemplateStudioSheet({
                   default: 'Start from a preset, then refine every pixel',
                 })
           }
-          onClose={onClose}
+          onClose={requestClose}
         />
       }
     >
       {' '}
       {/* preset strip */}{' '}
-      <div className="border-b border-border px-4 py-4 sm:px-6">
-        {' '}
-        <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+      <div className="border-b border-border/70 px-4 py-4 sm:px-6">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           {' '}
           <Sparkles className="size-3.5 text-primary" />{' '}
           {t('starterPresets', { default: 'Starter presets — one click' })}{' '}
@@ -1804,15 +1853,15 @@ function TemplateStudioSheet({
                 type="button"
                 onClick={() => applyPreset(p)}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl border p-2.5 text-left transition ',
+                  'flex items-center gap-3 rounded-xl border p-2.5 text-start transition-[border-color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 active:scale-[0.99]',
                   active
-                    ? 'border-primary/50 bg-primary/[0.07] shadow-sm'
-                    : 'border-border bg-card',
+                    ? 'border-primary/40 bg-primary/[0.06] shadow-xs'
+                    : 'border-border/70 bg-card hover:border-border-strong hover:shadow-sm',
                 )}
               >
                 {' '}
                 <span
-                  className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border"
+                  className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 shadow-xs"
                   style={{ background: `linear-gradient(135deg, ${p.primary}, ${p.secondary})` }}
                 >
                   {' '}
@@ -1820,7 +1869,7 @@ function TemplateStudioSheet({
                 </span>{' '}
                 <span className="min-w-0 flex-1">
                   {' '}
-                  <span className="flex items-center gap-1.5 text-13 font-bold">
+                  <span className="flex items-center gap-1.5 text-13 font-medium text-foreground">
                     {t(`preset.${p.key}`, { default: p.name })}{' '}
                     {active && <Check className="size-3.5 text-primary" />}
                   </span>{' '}
@@ -1833,7 +1882,7 @@ function TemplateStudioSheet({
           })}{' '}
         </div>{' '}
         {/* tabs */}{' '}
-        <div className="mt-3 flex gap-1 rounded-xl bg-muted p-1">
+        <div className="mt-4 flex gap-0.5 rounded-xl bg-muted/70 p-1">
           {' '}
           {(
             [
@@ -1850,15 +1899,21 @@ function TemplateStudioSheet({
               key={t.k}
               type="button"
               onClick={() => setTab(t.k)}
+              aria-pressed={tab === t.k}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-13 font-semibold transition',
-                tab === t.k
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
+                'relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-13 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                tab === t.k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {' '}
-              <t.icon className="size-4" /> {t.l}{' '}
+              {tab === t.k && (
+                <m.span
+                  layoutId="cert-studio-tab"
+                  transition={spring.smooth}
+                  className="absolute inset-0 rounded-lg bg-card shadow-xs"
+                  aria-hidden="true"
+                />
+              )}
+              <t.icon className="relative size-4" /> <span className="relative">{t.l}</span>{' '}
             </button>
           ))}{' '}
         </div>{' '}
@@ -1867,22 +1922,26 @@ function TemplateStudioSheet({
         {' '}
         {/* form column */}{' '}
         <div className="space-y-5 p-4 sm:p-6">
-          {' '}
+          <Crossfade value={tab} className="space-y-5">
           {tab === 'design' && (
             <>
               {' '}
-              <Field label={t('fieldTemplateName', { default: 'Template name *' })}>
+              <Field
+                label={t('fieldTemplateName', { default: 'Template name' })}
+                required
+                error={attempted && !name.trim() ? t('nameRequiredDesc', { default: 'Give your template a memorable name.' }) : undefined}
+              >
                 {' '}
-                <input
+                <TextInput
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t('namePlaceholder', {
                     default: 'e.g. Heritage Gold — Completion',
                   })}
-                  className={inputCls}
+                  
                   maxLength={80}
                 />{' '}
-                <p className="mt-1 text-right text-2xs text-muted-foreground">
+                <p className="mt-1 text-end text-2xs text-muted-foreground">
                   {name.length}/80
                 </p>{' '}
               </Field>{' '}
@@ -1916,10 +1975,10 @@ function TemplateStudioSheet({
                       }}
                       aria-pressed={scopeType === opt.k}
                       className={cn(
-                        'rounded-lg border px-2.5 py-2 text-xs font-semibold transition',
+                        'rounded-lg border px-2.5 py-2 text-xs font-medium transition active:scale-[0.98]',
                         scopeType === opt.k
-                          ? 'border-primary/50 bg-primary/8 text-primary'
-                          : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                          ? 'border-primary/40 bg-primary/[0.06] text-primary'
+                          : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
                       )}
                     >
                       {opt.label}
@@ -1935,7 +1994,7 @@ function TemplateStudioSheet({
                       'Learners who finish this course auto-receive this template.',
                   })}
                   error={
-                    !courseId
+                    attempted && !courseId
                       ? t('courseRequired', { default: 'Choose the course this template is for.' })
                       : undefined
                   }
@@ -1963,7 +2022,7 @@ function TemplateStudioSheet({
                       'Issued for any course in this academy that has no course-level template.',
                   })}
                   error={
-                    !academyId
+                    attempted && !academyId
                       ? t('academyRequired', { default: 'Choose the academy this template is for.' })
                       : undefined
                   }
@@ -1984,7 +2043,7 @@ function TemplateStudioSheet({
                 </Field>
               )}
               {scopeType === 'tenant' && (
-                <p className="rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                <p className="rounded-xl bg-muted/50 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
                   {t('tenantDefaultExplain', {
                     default:
                       'This template is the fallback for every course in your workspace that has no course or academy template. It will be used often, so it should be your most general design.',
@@ -2006,10 +2065,10 @@ function TemplateStudioSheet({
                       type="button"
                       onClick={() => setLayout(l.key)}
                       className={cn(
-                        'rounded-xl border p-2 text-left transition ',
+                        'rounded-xl border p-2 text-start transition-[border-color,background-color,box-shadow] duration-200 active:scale-[0.99]',
                         layout === l.key
-                          ? 'border-primary/60 bg-primary/[0.06] ring-2 ring-primary/20'
-                          : 'border-border bg-card',
+                          ? 'border-primary/40 bg-primary/[0.05] ring-2 ring-primary/15'
+                          : 'border-border/70 bg-card hover:border-border-strong',
                       )}
                     >
                       {' '}
@@ -2018,11 +2077,11 @@ function TemplateStudioSheet({
                         primary={primaryColor}
                         secondary={secondaryColor}
                       />{' '}
-                      <p className="mt-1.5 flex items-center gap-1 text-xs font-bold">
+                      <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-foreground">
                         {t(`layout.${l.key}.label`, { default: l.label })}{' '}
                         {layout === l.key && <Check className="size-3.5 text-primary" />}
                       </p>{' '}
-                      <p className="text-[10.5px] leading-tight text-muted-foreground">
+                      <p className="text-2xs leading-tight text-muted-foreground">
                         {t(`layout.${l.key}.tag`, { default: l.tag })}
                       </p>{' '}
                     </button>
@@ -2042,15 +2101,15 @@ function TemplateStudioSheet({
                       type="button"
                       onClick={() => setFontFamily(f.key)}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition',
+                        'flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-start transition-[border-color,background-color,box-shadow] duration-200 active:scale-[0.99]',
                         fontFamily === f.key
-                          ? 'border-primary/60 bg-primary/[0.06] ring-2 ring-primary/20'
-                          : 'border-border bg-card hover:border-border',
+                          ? 'border-primary/40 bg-primary/[0.05] ring-2 ring-primary/15'
+                          : 'border-border/70 bg-card hover:border-border-strong',
                       )}
                     >
                       {' '}
                       <span
-                        className="flex size-8 items-center justify-center rounded-lg bg-muted text-sm font-bold"
+                        className="flex size-9 items-center justify-center rounded-lg bg-muted text-base text-foreground"
                         style={{ fontFamily: f.stack }}
                       >
                         Ag
@@ -2058,7 +2117,7 @@ function TemplateStudioSheet({
                       <span className="flex-1">
                         {' '}
                         <span
-                          className="block text-13 font-bold"
+                          className="block text-13 font-medium"
                           style={{ fontFamily: f.stack }}
                         >
                           {t(`font.${f.key}.label`, { default: f.label })}
@@ -2074,21 +2133,23 @@ function TemplateStudioSheet({
               </Field>{' '}
               <div className="grid grid-cols-2 gap-3">
                 {' '}
-                <ColorField
+                <KitColorField
                   label={t('colorPrimary', { default: 'Primary' })}
                   value={primaryColor}
                   onChange={setPrimaryColor}
+                  presets={SWATCHES}
                 />{' '}
-                <ColorField
+                <KitColorField
                   label={t('colorSecondary', { default: 'Secondary' })}
                   value={secondaryColor}
                   onChange={setSecondaryColor}
+                  presets={SWATCHES}
                 />{' '}
               </div>{' '}
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2.5 rounded-xl bg-muted/50 px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground">
                 {' '}
                 <span
-                  className="h-6 w-10 overflow-hidden rounded-md border border-border"
+                  className="h-6 w-10 shrink-0 overflow-hidden rounded-full border border-border/70 shadow-xs"
                   style={{
                     background: `linear-gradient(135deg, ${primaryColor} 50%, ${secondaryColor} 50%)`,
                   }}
@@ -2105,7 +2166,7 @@ function TemplateStudioSheet({
               {' '}
               <div>
                 {' '}
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   {t('quickInsert', { default: 'Quick insert' })}
                 </p>{' '}
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -2119,10 +2180,10 @@ function TemplateStudioSheet({
                         disabled={used}
                         onClick={() => insertVariable(v.key)}
                         className={cn(
-                          'rounded-md px-2.5 py-1 text-[11.5px] font-semibold ring-1 transition',
+                          'rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition active:scale-95',
                           used
-                            ? 'bg-muted text-muted-foreground ring-border'
-                            : 'bg-primary/[0.08] text-primary ring-primary/20 hover:bg-primary/[0.14] dark:text-[#2997FF]',
+                            ? 'bg-muted text-muted-foreground ring-border/70'
+                            : 'bg-primary/[0.06] text-primary ring-primary/20 hover:bg-primary/[0.12]',
                         )}
                       >
                         {' '}
@@ -2136,7 +2197,7 @@ function TemplateStudioSheet({
               <div className="space-y-2.5">
                 {' '}
                 {fields.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground">
                     {' '}
                     {t('noVariablesYet', { default: 'No variables yet — insert one above.' })}{' '}
                   </div>
@@ -2144,15 +2205,18 @@ function TemplateStudioSheet({
                 {fields.map((f, idx) => {
                   const opt = VARIABLE_OPTIONS.find((v) => v.key === f.key);
                   return (
-                    <div
+                    <m.div
                       key={idx}
-                      className="rounded-xl border border-border bg-card p-3 shadow-sm"
+                      layout="position"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+                      className="rounded-xl border border-border/70 bg-card p-3.5 shadow-xs"
                     >
                       {' '}
                       <div className="flex items-center gap-2">
                         {' '}
                         <span
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-2xs font-bold text-white"
+                          className="flex size-7 shrink-0 items-center justify-center rounded-full text-2xs font-medium text-white shadow-xs"
                           style={{ background: primaryColor }}
                         >
                           {idx + 1}
@@ -2160,7 +2224,7 @@ function TemplateStudioSheet({
                         <select
                           value={f.key}
                           onChange={(e) => updateField(idx, { key: e.target.value })}
-                          className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 text-xs font-semibold outline-none"
+                          className="h-8 min-w-0 flex-1 rounded-lg border border-input bg-card px-2 text-xs font-medium outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring/30"
                         >
                           {' '}
                           {VARIABLE_OPTIONS.map((v) => (
@@ -2173,7 +2237,7 @@ function TemplateStudioSheet({
                           type="button"
                           onClick={() => setFields((p) => p.filter((_, i) => i !== idx))}
                           aria-label={t('removeFieldAria', { default: 'Remove field' })}
-                          className="rounded-lg border border-border p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                          className="rounded-lg border border-border/70 p-1.5 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive active:scale-90"
                         >
                           {' '}
                           <X className="size-3.5" />{' '}
@@ -2211,13 +2275,13 @@ function TemplateStudioSheet({
                         />{' '}
                         <label className="block">
                           {' '}
-                          <span className="mb-1 block text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+                          <span className="mb-1 block text-2xs font-medium text-muted-foreground">
                             {t('fieldWeight', { default: 'Weight' })}
                           </span>{' '}
                           <select
                             value={f.fontWeight}
                             onChange={(e) => updateField(idx, { fontWeight: e.target.value })}
-                            className="h-[30px] w-full rounded-lg border border-border bg-background px-2 text-xs outline-none"
+                            className="h-[30px] w-full rounded-lg border border-input bg-card px-2 text-xs outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring/30"
                           >
                             {' '}
                             <option value="normal">
@@ -2239,14 +2303,14 @@ function TemplateStudioSheet({
                           type="color"
                           value={f.color}
                           onChange={(e) => updateField(idx, { color: e.target.value })}
-                          className="h-8 w-10 cursor-pointer rounded-lg border border-border bg-background p-1"
+                          className="h-8 w-10 cursor-pointer rounded-lg border border-border/70 bg-card p-1"
                           aria-label={t('fieldColorAria', { default: 'Field color' })}
                         />{' '}
                         <input
                           value={f.color}
                           onChange={(e) => updateField(idx, { color: e.target.value })}
                           spellCheck={false}
-                          className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 font-mono text-xs uppercase outline-none"
+                          className="h-8 min-w-0 flex-1 rounded-lg border border-input bg-card px-2 font-mono text-xs uppercase outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring/30"
                         />{' '}
                         <span
                           className="hidden rounded-md px-2 py-1 text-2xs font-semibold sm:block"
@@ -2255,7 +2319,7 @@ function TemplateStudioSheet({
                           Aa
                         </span>{' '}
                       </div>{' '}
-                    </div>
+                    </m.div>
                   );
                 })}{' '}
               </div>{' '}
@@ -2277,7 +2341,7 @@ function TemplateStudioSheet({
                       },
                     ])
                   }
-                  className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-xs font-bold text-muted-foreground transition hover:border-primary/50 hover:text-primary"
+                  className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/[0.04] hover:text-primary active:scale-[0.99]"
                 >
                   {' '}
                   <Plus className="size-3.5" />{' '}
@@ -2286,7 +2350,7 @@ function TemplateStudioSheet({
                 <button
                   type="button"
                   onClick={() => setFields(defaultFields())}
-                  className="h-9 rounded-xl border border-border px-3 text-xs font-semibold transition hover:bg-muted"
+                  className="h-9 rounded-lg border border-border/70 px-3 text-xs font-medium transition hover:bg-muted active:scale-[0.98]"
                 >
                   {' '}
                   {t('reset', { default: 'Reset' })}{' '}
@@ -2306,26 +2370,26 @@ function TemplateStudioSheet({
                 {' '}
                 <div className="flex items-center gap-2">
                   {' '}
-                  <input
+                  <TextInput
                     value={logoUrl}
                     onChange={(e) => setLogoUrl(e.target.value)}
                     placeholder="https:// …/logo.png"
                     spellCheck={false}
-                    className={inputCls}
+                    
                   />{' '}
                   {logoUrl && (
                     <button
                       type="button"
                       onClick={() => setLogoUrl('')}
                       aria-label={t('clearLogoAria', { default: 'Clear logo' })}
-                      className="rounded-xl border border-border p-2.5 hover:bg-muted"
+                      className="rounded-lg border border-border/70 p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
                     >
                       <X className="size-4" />
                     </button>
                   )}{' '}
                 </div>{' '}
                 {logoUrl ? (
-                  <span className="mt-2 flex items-center gap-2 rounded-xl border border-border bg-card p-2">
+                  <span className="mt-2 flex items-center gap-2 rounded-xl border border-border/70 bg-card p-2 shadow-xs">
                     {' '}
                     {/* eslint-disable-next-line @next/next/no-img-element */}{' '}
                     <img
@@ -2355,28 +2419,28 @@ function TemplateStudioSheet({
                 {' '}
                 <div className="flex items-center gap-2">
                   {' '}
-                  <input
+                  <TextInput
                     value={backgroundUrl}
                     onChange={(e) => setBackgroundUrl(e.target.value)}
                     placeholder="https:// …/texture.jpg"
                     spellCheck={false}
-                    className={inputCls}
+                    
                   />{' '}
                   {backgroundUrl && (
                     <button
                       type="button"
                       onClick={() => setBackgroundUrl('')}
                       aria-label={t('clearBackgroundAria', { default: 'Clear background' })}
-                      className="rounded-xl border border-border p-2.5 hover:bg-muted"
+                      className="rounded-lg border border-border/70 p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
                     >
                       <X className="size-4" />
                     </button>
                   )}{' '}
                 </div>{' '}
               </Field>{' '}
-              <div className="rounded-xl border border-border bg-muted p-3.5 text-xs leading-relaxed text-muted-foreground">
+              <div className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">
                 {' '}
-                <p className="font-bold text-foreground">
+                <p className="font-medium text-foreground">
                   {t('printTips', { default: 'Print tips' })}
                 </p>{' '}
                 <ul className="mt-1 list-disc space-y-0.5 ps-4">
@@ -2400,39 +2464,46 @@ function TemplateStudioSheet({
               </div>{' '}
             </>
           )}{' '}
-          <div className="flex items-center gap-2 border-t border-border pt-4">
-            {' '}
+          </Crossfade>
+          <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center gap-2 border-t border-border/70 bg-card/90 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:-mb-6 sm:px-6">
+            <span
+              className={cn(
+                'me-auto inline-flex min-w-0 items-center gap-2 truncate text-xs',
+                dirty ? 'font-medium text-warning' : 'text-muted-foreground',
+              )}
+              aria-live="polite"
+            >
+              {dirty && <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden="true" />}
+              {dirty ? tForm('unsavedChanges') : isEdit ? tForm('allChangesSaved') : tForm('readyToCreate')}
+            </span>
             <button
               type="button"
-              onClick={onClose}
-              className="h-10 rounded-xl border border-border px-4 text-sm font-semibold transition hover:bg-muted"
+              onClick={requestClose}
+              className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
             >
-              {' '}
-              {tCommon('cancel', { default: 'Cancel' })}{' '}
-            </button>{' '}
+              {tCommon('cancel', { default: 'Cancel' })}
+            </button>
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving}
-              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm transition active:scale-[0.99] disabled:opacity-60"
+              disabled={saving || (isEdit && !dirty)}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
             >
-              {' '}
-              {saving && <Loader2 className="size-4 animate-spin" />}{' '}
+              {saving && <Loader2 className="size-4 animate-spin" />}
               {isEdit
                 ? tCommon('saveChanges', { default: 'Save changes' })
-                : t('createTemplate', { default: 'Create template' })}{' '}
-            </button>{' '}
+                : t('createTemplate', { default: 'Create template' })}
+            </button>
           </div>{' '}
         </div>{' '}
         {/* preview column */}{' '}
-        <div className="border-t border-border bg-muted p-6 lg:border-l lg:border-t-0">
+        <div className="border-t border-border/70 bg-muted/50 p-6 lg:border-s lg:border-t-0">
           {' '}
           <div className="lg:sticky lg:top-6">
             {' '}
             <div className="flex items-center justify-between">
               {' '}
-              <p className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                {' '}
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <Eye className="size-3.5" />{' '}
                 {t('livePreview', { default: 'Live preview' })}{' '}
               </p>{' '}
@@ -2440,10 +2511,10 @@ function TemplateStudioSheet({
                 type="button"
                 onClick={() => setShowAnchors((v) => !v)}
                 className={cn(
-                  'rounded-md px-2.5 py-1 text-2xs font-bold ring-1 transition',
+                  'rounded-full px-2.5 py-1 text-2xs font-medium ring-1 transition active:scale-95',
                   showAnchors
-                    ? 'bg-primary text-primary-foreground ring-primary'
-                    : 'bg-card text-muted-foreground ring-border hover:text-foreground',
+                    ? 'bg-primary/10 text-primary ring-primary/30'
+                    : 'bg-card text-muted-foreground ring-border/70 hover:text-foreground',
                 )}
               >
                 {' '}
@@ -2452,18 +2523,18 @@ function TemplateStudioSheet({
                   : t('anchorsOff', { default: 'Anchors off' })}{' '}
               </button>{' '}
             </div>{' '}
-            <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+            <div className="mt-3 overflow-hidden rounded-xl border border-border/70 bg-background shadow-md">
               {' '}
               <CertificateArt template={preview} showAnchors={showAnchors} />{' '}
             </div>{' '}
             <div className="mt-3 flex items-center gap-2 text-2xs text-muted-foreground">
               {' '}
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-semibold ring-1 ring-border">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2 py-0.5 font-mono font-medium ring-1 ring-border/70">
                 {' '}
                 <span className="h-2 w-2 rounded-full" style={{ background: primaryColor }} />{' '}
                 {primaryColor.toUpperCase()}{' '}
               </span>{' '}
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-semibold ring-1 ring-border">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-2 py-0.5 font-mono font-medium ring-1 ring-border/70">
                 {' '}
                 <span
                   className="h-2 w-2 rounded-full"
@@ -2471,7 +2542,7 @@ function TemplateStudioSheet({
                 />{' '}
                 {secondaryColor.toUpperCase()}{' '}
               </span>{' '}
-              <span className="ms-auto hidden font-semibold capitalize sm:inline">
+              <span className="ms-auto hidden font-medium capitalize sm:inline">
                 {layout} · {fontFamily}
               </span>{' '}
             </div>{' '}
@@ -2485,88 +2556,43 @@ function TemplateStudioSheet({
         </div>{' '}
       </div>{' '}
     </Modal>
+    )}
+    </AnimatePresence>
   );
 }
-/* --------------------------------- primitives ------------------------------ */ const inputCls =
-  'w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20';
+/* --------------------------------- primitives ------------------------------ */
 function Field({
   label,
   hint,
   error,
+  required,
   children,
 }: {
   label: string;
   hint?: string;
   error?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div>
       {' '}
-      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+      <p className="text-sm font-medium text-foreground">
         {label}
+        {required && (
+          <span className="ms-1 text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
       </p>{' '}
-      {hint && <p className="mb-1.5 mt-0.5 text-[11.5px] text-muted-foreground/90">{hint}</p>}{' '}
+      {hint && <p className="mb-1.5 mt-0.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}{' '}
       <div className="mt-1.5">{children}</div>{' '}
       {error && (
-        <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-destructive">
+        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-destructive">
           <AlertTriangle className="size-3.5 shrink-0" />
           {error}
         </p>
       )}{' '}
-    </div>
-  );
-}
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div>
-      {' '}
-      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>{' '}
-      <div className="mt-1.5 rounded-xl border border-border bg-card p-2">
-        {' '}
-        <div className="flex items-center gap-2">
-          {' '}
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-9 w-11 cursor-pointer rounded-lg border border-border bg-background p-1"
-            aria-label={`${label} picker`}
-          />{' '}
-          <input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            spellCheck={false}
-            className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 font-mono text-xs uppercase outline-none focus:border-primary/60"
-          />{' '}
-        </div>{' '}
-        <div className="mt-2 grid grid-cols-5 gap-1">
-          {' '}
-          {SWATCHES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              title={s}
-              onClick={() => onChange(s)}
-              className={cn(
-                'h-6 rounded-md ring-1 ring-border transition hover:scale-110',
-                value.toLowerCase() === s.toLowerCase() && 'ring-2 ring-primary ring-offset-1',
-              )}
-              style={{ backgroundColor: s }}
-            />
-          ))}{' '}
-        </div>{' '}
-      </div>{' '}
     </div>
   );
 }
@@ -2584,9 +2610,9 @@ function SliderRow({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="block rounded-xl border border-border bg-card px-2.5 py-1.5">
+    <label className="block rounded-lg border border-border/70 bg-card px-2.5 py-1.5">
       {' '}
-      <span className="mb-1 block text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+      <span className="mb-1 block text-2xs font-medium text-muted-foreground">
         {label}
       </span>{' '}
       <span className="flex items-center gap-2">
@@ -2605,7 +2631,7 @@ function SliderRow({
           max={max}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="h-7 w-14 rounded-md border border-border bg-background px-1 text-center text-xs outline-none"
+          className="h-7 w-14 rounded-md border border-input bg-card px-1 text-center font-mono text-xs tabular-nums outline-none transition hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring/30"
         />{' '}
       </span>{' '}
     </label>

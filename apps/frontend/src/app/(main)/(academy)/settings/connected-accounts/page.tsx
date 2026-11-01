@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { Link2, Shield, Check, X, AlertCircle } from 'lucide-react';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
+import { AnimatePresence, m } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { spring } from '@/lib/motion';
+import { SettingsBanner, SettingsHeader, SettingsSection } from '../_components/settings-ui';
 interface Account {
   provider: string;
   providerEmail?: string;
@@ -96,115 +101,101 @@ export default function ConnectedAccountsPage() {
   ];
   return (
     <div className="space-y-6">
-      {' '}
-      <div className="flex gap-4">
-        {' '}
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          {' '}
-          <Link2 className="size-5" />{' '}
-        </div>{' '}
-        <div>
-          {' '}
-          <h1 className="text-xl font-semibold tracking-tight">
-            {t('connectedAccounts.pageTitle')}
-          </h1>{' '}
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {t('connectedAccounts.pageSubtitle')}
-          </p>{' '}
-        </div>{' '}
-      </div>{' '}
-      {error && (
-        <div className="flex gap-3 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive dark:border-red-900/30 dark:bg-destructive/10 dark:text-red-300">
-          <AlertCircle className="size-4 shrink-0 mt-0.5" /> {error}
-        </div>
-      )}{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <Shield className="size-3.5" />
-            </span>{' '}
-            {t('connectedAccounts.oauthTitle')}
-          </h2>{' '}
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t('connectedAccounts.oauthDesc')}
-          </p>{' '}
-        </div>{' '}
-        <div className="p-6 space-y-3">
-          {' '}
-          {loading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t('loading')}</p>
-          ) : (
-            providers.map((p) => {
+      <SettingsHeader
+        icon={Link2}
+        title={t('connectedAccounts.pageTitle')}
+        subtitle={t('connectedAccounts.pageSubtitle')}
+      />
+      <SettingsBanner show={!!error} tone="error" icon={AlertCircle} role="alert">
+        {error}
+      </SettingsBanner>
+      <SettingsSection
+        icon={Shield}
+        title={t('connectedAccounts.oauthTitle')}
+        description={t('connectedAccounts.oauthDesc')}
+        bodyClassName="space-y-3"
+      >
+        {loading ? (
+          <div className="space-y-3" aria-busy="true">
+            <span className="sr-only">{t('loading')}</span>
+            {[0, 1].map((i) => (
+              <Skeleton key={i} className="h-[74px] w-full rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <Stagger className="space-y-3">
+            {providers.map((p, index) => {
               const linked = accounts.find((a) => a.provider === p.id);
               return (
-                <div
+                <StaggerItem
                   key={p.id}
-                  className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-card px-4 py-4 transition hover:border-primary/20 hover:shadow-sm"
+                  index={index}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card px-4 py-3.5 transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-sm"
                 >
-                  {' '}
-                  <div className="flex items-center gap-3">
-                    {' '}
+                  <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold shadow-sm ${p.id === 'google' ? 'bg-card border-border text-secondary' : 'bg-overlay border-border text-white'}`}
+                      className={`flex size-10 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${p.id === 'google' ? 'border-border/70 bg-background text-foreground' : 'border-transparent bg-foreground text-background'}`}
                     >
-                      {' '}
-                      {p.icon}{' '}
-                    </div>{' '}
-                    <div>
-                      {' '}
-                      <p className="text-sm font-semibold flex items-center gap-2">
-                        {' '}
-                        {p.name}{' '}
-                        {linked ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-success">
-                            <Check className="size-3.5" /> {t('connectedAccounts.linked')}
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-muted px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
-                            {t('connectedAccounts.notLinked')}
-                          </span>
-                        )}{' '}
-                      </p>{' '}
-                      <p className="text-xs text-muted-foreground">
+                      {p.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+                        {p.name}
+                        <AnimatePresence initial={false} mode="wait">
+                          {linked ? (
+                            <m.span
+                              key="linked"
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1, transition: spring.snappy }}
+                              className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-2xs font-medium text-success"
+                            >
+                              <Check className="size-3" /> {t('connectedAccounts.linked')}
+                            </m.span>
+                          ) : (
+                            <m.span
+                              key="unlinked"
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1, transition: spring.snappy }}
+                              className="rounded-full bg-muted px-2 py-0.5 text-2xs font-medium text-muted-foreground"
+                            >
+                              {t('connectedAccounts.notLinked')}
+                            </m.span>
+                          )}
+                        </AnimatePresence>
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
                         {linked?.providerEmail || p.desc}
-                      </p>{' '}
-                    </div>{' '}
-                  </div>{' '}
+                      </p>
+                    </div>
+                  </div>
                   {linked ? (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleUnlink(p.id)}
-                      className="h-8 rounded-full gap-1.5 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive dark:border-red-900/30"
+                      className="gap-1.5 rounded-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
-                      {' '}
-                      <X className="size-3.5" /> {t('connectedAccounts.unlink')}{' '}
+                      <X className="size-3.5" /> {t('connectedAccounts.unlink')}
                     </Button>
                   ) : (
                     <Button
                       size="sm"
+                      variant="outline"
                       onClick={() => void handleConnect(p.id)}
-                      className="h-8 rounded-full px-4"
+                      className="rounded-full px-4"
                     >
-                      {' '}
-                      {t('connectedAccounts.connect')}{' '}
+                      {t('connectedAccounts.connect')}
                     </Button>
-                  )}{' '}
-                </div>
+                  )}
+                </StaggerItem>
               );
-            })
-          )}{' '}
-        </div>{' '}
-        <div className="border-t border-border/60 bg-muted/20 px-6 py-3">
-          {' '}
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {t('connectedAccounts.neverPostNote')}
-          </p>{' '}
-        </div>{' '}
-      </div>{' '}
+            })}
+          </Stagger>
+        )}
+        <p className="pt-2 text-xs leading-relaxed text-muted-foreground">
+          {t('connectedAccounts.neverPostNote')}
+        </p>
+      </SettingsSection>
     </div>
   );
 }

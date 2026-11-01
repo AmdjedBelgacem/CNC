@@ -506,9 +506,9 @@ async function seed() {
         slug: 'cnc-fundamentals',
         name: 'CNC Fundamentals',
         description: 'Master the basics of CNC machining',
-        primaryColor: '#C2410C',
-        secondaryColor: '#333F4C',
-        accentColor: '#0F766E',
+        primaryColor: '#B65433',
+        secondaryColor: '#3D3D3A',
+        accentColor: '#4D6E58',
         isActive: true,
         settings: {
           allowRegistration: true,
@@ -536,9 +536,9 @@ async function seed() {
         slug: 'advanced-manufacturing',
         name: 'Advanced Manufacturing Institute',
         description: 'Cutting-edge manufacturing education',
-        primaryColor: '#C2410C',
-        secondaryColor: '#333F4C',
-        accentColor: '#0F766E',
+        primaryColor: '#B65433',
+        secondaryColor: '#3D3D3A',
+        accentColor: '#4D6E58',
         isActive: true,
         settings: {
           allowRegistration: true,
@@ -626,7 +626,7 @@ async function seed() {
 
   // --- Academies ---
   const academiesData = [
-    { slug: 'general', title: 'CNC Machining Academy', subtitle: 'From first cut to production-ready parts', description: 'A structured path through machine setup, tooling, workholding, feeds and speeds, and G-code — built for working machinists.', accentColor: '#C2410C' },
+    { slug: 'general', title: 'CNC Machining Academy', subtitle: 'From first cut to production-ready parts', description: 'A structured path through machine setup, tooling, workholding, feeds and speeds, and G-code — built for working machinists.', accentColor: '#B65433' },
     { slug: 'aerospace', title: 'Aerospace Manufacturing Academy', subtitle: 'Precision for the sky and beyond', description: 'AS9100-compliant machining, tight-tolerance finishing, and documentation for aerospace components.', accentColor: '#1E40AF' },
     { slug: 'metalworking', title: 'Metalworking Fundamentals', subtitle: 'Master the craft of metal', description: 'From manual lathes to CNC — learn the core metalworking skills every machinist needs.', accentColor: '#047857' },
     { slug: 'automation', title: 'Automation & Robotics Academy', subtitle: 'The future of manufacturing', description: 'Industrial robotics, pallet changers, bar feeders, and lights-out manufacturing.', accentColor: '#7C3AED' },
@@ -884,8 +884,8 @@ async function seed() {
     courseId: courses[0]!.id,
     name: 'CNC Fundamentals Certificate',
     layout: 'modern',
-    primaryColor: '#C2410C',
-    secondaryColor: '#191B1F',
+    primaryColor: '#B65433',
+    secondaryColor: '#141413',
     fontFamily: 'Inter',
   })) created.push('course');
 
@@ -903,7 +903,7 @@ async function seed() {
     scopeType: 'tenant',
     name: 'TITANS Default Certificate',
     layout: 'minimal',
-    primaryColor: '#0F766E',
+    primaryColor: '#4D6E58',
     secondaryColor: '#334155',
     fontFamily: 'DM Sans',
   })) created.push('tenant');

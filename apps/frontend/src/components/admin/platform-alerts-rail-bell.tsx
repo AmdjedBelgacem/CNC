@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import { useAuthStore } from '@/stores/auth-store';
 import { usePlatformAlertUnread } from '@/hooks/use-platform-alerts';
 import { formatNumber } from '@/lib/format';
@@ -36,19 +38,28 @@ export function PlatformAlertsRailBell({ className }: { className?: string }) {
           : t('title')
       }
       className={cn(
-        'relative flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground',
+        'group relative flex size-9 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >
-      <Bell aria-hidden className="size-[18px]" />
-      {unreadCount > 0 && (
-        <span
-          aria-live="polite"
-          className="absolute -end-0.5 -top-0.5 flex size-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-bold leading-none text-destructive-foreground ring-2 ring-background"
-        >
-          {unreadCount > 99 ? '99+' : unreadCount}
-        </span>
-      )}
+      <Bell
+        aria-hidden
+        className="size-[18px] origin-top transition-transform duration-200 group-hover:-rotate-12"
+      />
+      <AnimatePresence initial={false}>
+        {unreadCount > 0 && (
+          <m.span
+            key="badge"
+            aria-live="polite"
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1, transition: spring.snappy }}
+            exit={{ scale: 0.4, opacity: 0, transition: { duration: 0.12 } }}
+            className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-2xs font-semibold leading-none tabular-nums text-primary-foreground ring-2 ring-surface-sunken"
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </m.span>
+        )}
+      </AnimatePresence>
     </Link>
   );
 }

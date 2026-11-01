@@ -11,7 +11,10 @@ import {
   Lock,
   Sparkles,
 } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/motion';
+import { AnimatedNumber } from '@/components/ui/motion';
 import { StatusPill } from '@/components/admin/admin-ui';
 import { difficultyKey, difficultyTone, difficultyFallback } from '@/lib/difficulty';
 import type { CourseStudioData } from './types';
@@ -71,30 +74,30 @@ export function SummaryPanel({
       : null;
 
   return (
-    <div className="flex flex-col gap-5 rounded-xl border border-border bg-card shadow-xs">
+    <div className="flex flex-col gap-5 overflow-hidden rounded-xl border border-border/70 bg-card pb-5 shadow-xs">
       {/* Live course card */}
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden border-b border-border/70">
         <div className="relative">
           {course.thumbnailUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={course.thumbnailUrl} alt="" className="h-32 w-full object-cover" />
+            <img src={course.thumbnailUrl} alt="" className="h-36 w-full object-cover" />
           ) : (
-            <div className="flex h-32 w-full flex-col items-center justify-center gap-1.5 bg-muted/60">
+            <div className="flex h-36 w-full flex-col items-center justify-center gap-1.5 bg-muted/50">
               <ImageOff className="size-5 text-muted-foreground/70" />
-              <span className="text-2xs font-semibold text-muted-foreground">
+              <span className="text-2xs font-medium text-muted-foreground">
                 {t('noImage', { default: 'No thumbnail yet' })}
               </span>
             </div>
           )}
-          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/70 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/40 to-transparent" />
           <div className="absolute bottom-2 start-2 flex items-center gap-1.5">
             <StatusPill label={status.label} tone={status.tone} pulse={course.isPublished} />
           </div>
         </div>
-        <div className="space-y-2 bg-card p-4">
+        <div className="space-y-2 bg-card px-5 pb-1 pt-4">
           <p
             dir="auto"
-            className="font-display text-15 font-semibold leading-snug text-foreground"
+            className="text-balance font-display text-lg font-medium leading-snug tracking-[-0.015em] text-foreground"
           >
             {course.title || t('untitled', { default: 'Untitled course' })}
           </p>
@@ -123,12 +126,12 @@ export function SummaryPanel({
       </div>
 
       {/* Guided checklist */}
-      <div className="border-t border-border pt-4">
-        <div className="flex items-center justify-between gap-2 px-4">
-          <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="border-t border-border/70 pt-4">
+        <div className="flex items-center justify-between gap-2 px-5">
+          <p className="text-xs font-medium text-muted-foreground">
             {t('checklist', { default: 'Guided checklist' })}
           </p>
-          <span className="flex items-center gap-2 text-2xs font-semibold text-muted-foreground">
+          <span className="flex items-center gap-2 text-2xs font-medium text-muted-foreground">
             <span className="flex items-center gap-1">
               {saving ? (
                 <Clock3 className="size-3 animate-pulse" />
@@ -147,17 +150,19 @@ export function SummaryPanel({
             <span>{t('stepsDone', { done: doneCount, total: steps.length })}</span>
           </span>
         </div>
-        <div className="mx-4 mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-success transition-[width] duration-500"
-            style={{ width: `${percent}%` }}
+        <div className="mx-5 mt-2.5 h-1 overflow-hidden rounded-full bg-muted">
+          <m.div
+            className="h-full rounded-full bg-success"
+            initial={false}
+            animate={{ width: `${percent}%` }}
+            transition={spring.gentle}
             role="progressbar"
             aria-valuenow={percent}
             aria-valuemin={0}
             aria-valuemax={100}
           />
         </div>
-        <ul className="mt-3 space-y-0.5 px-2">
+        <ul className="mt-3 space-y-0.5 px-3">
           {steps.map((step) => {
             const hint = stepHint(step, tStudio);
             return (
@@ -168,11 +173,19 @@ export function SummaryPanel({
                     step.advisory && !step.done && 'opacity-80',
                   )}
                 >
-                  {step.done ? (
-                    <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                  ) : (
-                    <Circle className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/50" />
-                  )}
+                  <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {step.done ? (
+                        <m.span key="done" initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.4, opacity: 0 }} transition={spring.snappy}>
+                          <Check className="size-4 text-success" />
+                        </m.span>
+                      ) : (
+                        <m.span key="todo" initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.4, opacity: 0 }} transition={spring.snappy}>
+                          <Circle className="size-3.5 text-muted-foreground/50" />
+                        </m.span>
+                      )}
+                    </AnimatePresence>
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p
                       className={cn(
@@ -197,25 +210,31 @@ export function SummaryPanel({
       </div>
 
       {/* Curriculum counts */}
-      <div className="grid grid-cols-3 gap-2 border-t border-border pt-4 text-center">
+      <div className="mx-5 grid grid-cols-3 divide-x divide-border/70 rounded-lg bg-muted/40 py-3 text-center rtl:divide-x-reverse">
         <div>
-          <p className="font-display text-xl font-semibold text-foreground">{course.series.length}</p>
+          <p className="font-display text-xl font-medium tabular-nums text-foreground"><AnimatedNumber value={course.series.length} animateOnChange durationSeconds={0.6} /></p>
           <p className="text-2xs text-muted-foreground">{t('sections', { default: 'Sections' })}</p>
         </div>
         <div>
-          <p className="font-display text-xl font-semibold text-foreground">{totalLessons}</p>
+          <p className="font-display text-xl font-medium tabular-nums text-foreground"><AnimatedNumber value={totalLessons} animateOnChange durationSeconds={0.6} /></p>
           <p className="text-2xs text-muted-foreground">{t('lessons', { default: 'Lessons' })}</p>
         </div>
         <div>
-          <p className="font-display text-xl font-semibold text-foreground">{freePreviews}</p>
+          <p className="font-display text-xl font-medium tabular-nums text-foreground"><AnimatedNumber value={freePreviews} animateOnChange durationSeconds={0.6} /></p>
           <p className="text-2xs text-muted-foreground">{t('previews', { default: 'Previews' })}</p>
         </div>
       </div>
 
       {/* Publish blockers: each one is a link to the step that fixes it. */}
+      <AnimatePresence initial={false}>
       {!course.isPublished && publishReasons && publishReasons.length > 0 && (
-        <div className="mx-4 mb-4 rounded-xl border border-destructive/25 bg-destructive/8 p-3">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-destructive">
+        <m.div
+          key="blockers"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0, transition: { duration: 0.18 } }}
+          transition={spring.smooth} className="mx-5 overflow-hidden"><div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
             <Lock className="size-3.5" />
             {t('blockers', { count: publishReasons.length })}
           </div>
@@ -234,12 +253,19 @@ export function SummaryPanel({
               </li>
             ))}
           </ul>
-        </div>
+        </div></m.div>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence initial={false}>
       {!course.isPublished && warnings.length > 0 && (
-        <div className="mx-4 mb-4 rounded-xl border border-warning/30 bg-warning/8 p-3">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-warning">
+        <m.div
+          key="warnings"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0, transition: { duration: 0.18 } }}
+          transition={spring.smooth} className="mx-5 overflow-hidden"><div className="rounded-lg border border-warning/25 bg-warning/5 p-3">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-warning">
             {warnings.length > 0 ? <AlertTriangle className="size-3.5" /> : <Sparkles className="size-3.5" />}
             {t('optionalReview', { default: 'Optional review' })}
           </div>
@@ -250,8 +276,9 @@ export function SummaryPanel({
               </li>
             ))}
           </ul>
-        </div>
+        </div></m.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

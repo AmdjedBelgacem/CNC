@@ -1,4 +1,5 @@
 import type { PuckNode } from '../types/page';
+import { ISLAND_HEAD } from '../constants/island-style';
 
 /**
  * Static header trees for the live-data islands.
@@ -33,12 +34,9 @@ const text = (
     'text',
     withId(id, {
       text: value,
-      size: 'sm',
-      uppercase: true,
-      tracking: '0.1em',
-      weight: 'semibold',
-      color: 'text-primary',
-      className: 'font-mono',
+      // `eyebrow` is the same sans label (with its clay dot) the public islands print.
+      size: 'eyebrow',
+      className: ISLAND_HEAD.eyebrow,
       ...extra,
     }),
   );
@@ -52,8 +50,10 @@ const body = (
     'text',
     withId(id, {
       text: value,
-      size: 'md',
-      color: 'text-muted-foreground',
+      // `plain` adds no type classes, so the paragraph styling below is exactly
+      // what the public island prints.
+      size: 'plain',
+      className: ISLAND_HEAD.lead,
       ...extra,
     }),
   );
@@ -69,8 +69,7 @@ const heading = (
       as: 'h2',
       text: value,
       size: '2xl',
-      leading: 'tight',
-      className: 'font-display font-bold text-foreground',
+      className: ISLAND_HEAD.titleLg,
       ...extra,
     }),
   );
@@ -86,8 +85,8 @@ const link = (
     withId(id, {
       label,
       href,
-      className:
-        'font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary whitespace-nowrap',
+      arrow: true,
+      className: ISLAND_HEAD.pillLink,
       ...extra,
     }),
   );
@@ -143,20 +142,33 @@ const card = (
   );
 
 const trustCard = (id: string | undefined, title: string, hint: string): SeedNode =>
-  card(id, [
-    heading(id ? `${id}-title` : undefined, title, {
-      as: 'h3',
-      size: 'sm',
-      className: 'font-display text-sm font-semibold text-foreground',
-    }),
-    body(id ? `${id}-hint` : undefined, hint, {
-      size: 'sm',
-      className: 'font-mono text-[11px] leading-snug text-muted-foreground',
-    }),
-  ]);
+  card(
+    id,
+    [
+      heading(id ? `${id}-title` : undefined, title, {
+        as: 'h3',
+        size: 'sm',
+        className: 'font-sans text-sm font-semibold text-foreground',
+      }),
+      body(id ? `${id}-hint` : undefined, hint, {
+        className: 'mt-0.5 text-xs leading-snug text-muted-foreground',
+      }),
+    ],
+    {
+      padding: 'none',
+      bg: 'transparent',
+      radius: 'xl',
+      border: true,
+      className: 'bg-card px-4 py-3.5 shadow-xs',
+    },
+  );
 
 function headerFor(variant: string, baseId: string | undefined): SeedNode[] | null {
   const id = (key: string) => (baseId ? `${baseId}-header-${key}` : undefined);
+
+  /** Eyebrow over a title: the plain block the public islands print. */
+  const copy = (children: SeedNode[], extra: NodeProps = {}) =>
+    stack(id('copy'), children, { gap: 'none', ...extra });
 
   switch (variant) {
     case 'products-featured':
@@ -164,13 +176,9 @@ function headerFor(variant: string, baseId: string | undefined): SeedNode[] | nu
         stack(
           id('root'),
           [
-            stack(id('copy'), [
+            copy([
               text(id('eyebrow'), 'On the bench'),
-              heading(id('title'), 'Featured this week', {
-                size: '2xl',
-                className:
-                  'mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl',
-              }),
+              heading(id('title'), 'Featured this week'),
             ]),
             link(id('link'), 'Full catalog', '#inventory'),
           ],
@@ -180,31 +188,34 @@ function headerFor(variant: string, baseId: string | undefined): SeedNode[] | nu
             justify: 'between',
             wrap: true,
             gap: 'md',
-            className: 'mb-6',
+            className: 'mb-10',
           },
         ),
       ];
 
     case 'products-inventory':
       return [
-        stack(
+        // A grid, not a row stack: one column below `lg`, copy + trust strip from `lg`.
+        // Grid items follow the same rules whether they are the blocks themselves
+        // (production) or the wrappers around them (builder canvas); a wrapping flex
+        // row does not, and squeezed the copy column to a few pixels on mobile.
+        grid(
           id('root'),
           [
-            stack(
-              id('copy'),
+            copy(
               [
                 text(id('eyebrow'), 'Live inventory'),
                 heading(id('title'), 'Shop the catalog', {
-                  size: '2xl',
-                  className:
-                    'mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl',
+                  size: 'section',
+                  className: 'section-title mt-3',
                 }),
                 body(
                   id('body'),
                   'Every template, calculator and shop resource we publish — filter by department, availability, format and price to find what you need.',
+                  { className: ISLAND_HEAD.leadSm },
                 ),
               ],
-              { className: 'max-w-2xl lg:min-w-[380px] lg:flex-1' },
+              { className: 'max-w-2xl lg:min-w-[380px]' },
             ),
             grid(
               id('trust'),
@@ -213,16 +224,14 @@ function headerFor(variant: string, baseId: string | undefined): SeedNode[] | nu
                 trustCard(id('trust-instant'), 'Instant delivery', 'Digital products land in your inbox after checkout.'),
                 trustCard(id('trust-support'), 'Support', 'Questions before you buy?'),
               ],
-              { className: 'max-w-full shrink-0 lg:w-[600px]' },
+              { className: 'w-full max-w-full' },
             ),
           ],
           {
-            direction: 'row',
-            align: 'end',
-            justify: 'between',
-            wrap: true,
+            columns: 1,
             gap: 'lg',
-            className: 'mb-8 border-b border-border pb-8',
+            className:
+              'mb-10 items-end border-b border-border/70 pb-10 lg:grid-cols-[minmax(0,1fr)_600px] lg:gap-10',
           },
         ),
       ];
@@ -234,13 +243,14 @@ function headerFor(variant: string, baseId: string | undefined): SeedNode[] | nu
           [
             text(id('eyebrow'), 'Directory'),
             heading(id('title'), 'Shop by department', {
-              size: '2xl',
-              className:
-                'mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl',
+              size: 'section',
+              className: 'section-title mt-3',
             }),
-            body(id('body'), 'Jump straight to the tools for your workflow.'),
+            body(id('body'), 'Jump straight to the tools for your workflow.', {
+              className: ISLAND_HEAD.leadSm,
+            }),
           ],
-          { className: 'mb-8 max-w-2xl' },
+          { gap: 'none', align: 'start', className: 'mb-10 max-w-2xl' },
         ),
       ];
 
@@ -249,18 +259,94 @@ function headerFor(variant: string, baseId: string | undefined): SeedNode[] | nu
         stack(
           id('root'),
           [
-            stack(id('copy'), [
+            copy([
               text(id('eyebrow'), 'Directory'),
-              heading(id('title'), 'Choose your academy', {
-                size: '2xl',
-                className:
-                  'mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl',
-              }),
+              heading(id('title'), 'Choose your academy', { className: ISLAND_HEAD.titleXl }),
             ]),
             body(
               id('blurb'),
               'Each pathway is a full curriculum — start anywhere, switch anytime, keep your progress.',
-              { className: 'max-w-sm text-sm' },
+              { className: ISLAND_HEAD.aside },
+            ),
+          ],
+          {
+            direction: 'row',
+            align: 'end',
+            justify: 'between',
+            wrap: true,
+            gap: 'md',
+            className: 'mb-10',
+          },
+        ),
+      ];
+
+    case 'events-next-up':
+      return [
+        stack(
+          id('root'),
+          [
+            copy([
+              text(id('eyebrow'), 'Next on the board'),
+              heading(id('title'), "Don't miss the next one", { className: ISLAND_HEAD.titleMd }),
+            ]),
+            link(id('link'), 'Full board', '#browse', { className: ISLAND_HEAD.textLink }),
+          ],
+          {
+            direction: 'row',
+            align: 'end',
+            justify: 'between',
+            wrap: true,
+            gap: 'md',
+            className: 'mb-8',
+          },
+        ),
+      ];
+
+    case 'events-schedule':
+      return [
+        stack(
+          id('root'),
+          [
+            text(id('eyebrow'), 'Schedule'),
+            heading(id('title'), "What's coming up"),
+            body(
+              id('body'),
+              'Ordered by date — workshops, webinars, and meets as they land on the board.',
+            ),
+          ],
+          { gap: 'none', align: 'start', className: 'mb-8 max-w-2xl' },
+        ),
+      ];
+
+    case 'events-browse':
+      return [
+        stack(
+          id('root'),
+          [
+            text(id('eyebrow'), 'Full board'),
+            heading(id('title'), 'Browse every event'),
+            body(
+              id('body'),
+              'Filter by format, toggle upcoming vs past, search by city or title — live from the events API.',
+            ),
+          ],
+          { gap: 'none', align: 'start', className: 'mb-8 max-w-2xl' },
+        ),
+      ];
+
+    case 'feed-topics':
+      return [
+        stack(
+          id('root'),
+          [
+            copy([
+              text(id('eyebrow'), 'Topics on the wire'),
+              heading(id('title'), 'What the shop is tagging', { className: ISLAND_HEAD.titleMd }),
+            ]),
+            body(
+              id('hint'),
+              'Tags pulled from live posts — scroll the wire below for full context.',
+              { className: ISLAND_HEAD.aside },
             ),
           ],
           {
@@ -274,119 +360,19 @@ function headerFor(variant: string, baseId: string | undefined): SeedNode[] | nu
         ),
       ];
 
-    case 'events-next-up':
-      return [
-        stack(
-          id('root'),
-          [
-            stack(id('copy'), [
-              text(id('eyebrow'), 'Next on the board'),
-              heading(id('title'), "Don't miss the next one", {
-                size: '2xl',
-                className:
-                  'mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl',
-              }),
-            ]),
-            link(id('link'), 'Full board', '#browse'),
-          ],
-          {
-            direction: 'row',
-            align: 'end',
-            justify: 'between',
-            wrap: true,
-            gap: 'md',
-            className: 'mb-6',
-          },
-        ),
-      ];
-
-    case 'events-schedule':
-      return [
-        stack(
-          id('root'),
-          [
-            text(id('eyebrow'), 'Schedule'),
-            heading(id('title'), "What's coming up", {
-              size: '2xl',
-              className:
-                'mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl',
-            }),
-            body(
-              id('body'),
-              'Ordered by date — workshops, webinars, and meets as they land on the board.',
-            ),
-          ],
-          { className: 'mb-6 max-w-2xl' },
-        ),
-      ];
-
-    case 'events-browse':
-      return [
-        stack(
-          id('root'),
-          [
-            text(id('eyebrow'), 'Full board'),
-            heading(id('title'), 'Browse every event', {
-              size: '2xl',
-              className:
-                'mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl',
-            }),
-            body(
-              id('body'),
-              'Filter by format, toggle upcoming vs past, search by city or title — live from the events API.',
-            ),
-          ],
-          { className: 'mb-6 max-w-2xl' },
-        ),
-      ];
-
-    case 'feed-topics':
-      return [
-        stack(
-          id('root'),
-          [
-            stack(id('copy'), [
-              text(id('eyebrow'), 'Topics on the wire'),
-              heading(id('title'), 'What the shop is tagging', {
-                size: '2xl',
-                className:
-                  'mt-2 font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl',
-              }),
-            ]),
-            body(
-              id('hint'),
-              'Tags pulled from live posts — scroll the wire below for full context.',
-              { className: 'max-w-sm text-sm' },
-            ),
-          ],
-          {
-            direction: 'row',
-            align: 'end',
-            justify: 'between',
-            wrap: true,
-            gap: 'md',
-            className: 'mb-6',
-          },
-        ),
-      ];
-
     case 'feed-wire':
       return [
         stack(
           id('root'),
           [
             text(id('eyebrow'), 'Live wire'),
-            heading(id('title'), 'The feed, unfiltered', {
-              size: '2xl',
-              className:
-                'mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl',
-            }),
+            heading(id('title'), 'The feed, unfiltered'),
             body(
               id('body'),
               'Discover public posts from the floor — like, comment, or drop your own setup.',
             ),
           ],
-          { className: 'mb-6 max-w-2xl' },
+          { gap: 'none', align: 'start', className: 'mb-8 max-w-2xl' },
         ),
       ];
 

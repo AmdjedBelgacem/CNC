@@ -14,7 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Input, Textarea } from '@/components/ui/input';
+import { AnimatePresence, m } from 'framer-motion';
+import { transition } from '@/lib/motion';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -141,23 +143,30 @@ export function QuoteRequestDialog({
 
             <div className="space-y-1.5">
               <Label htmlFor="quote-message">{t('message')}</Label>
-              {/* No shared Textarea component exists; this matches the styling used by the
-                other free-text fields in the app. */}
-              <textarea
+              <Textarea
                 id="quote-message"
                 rows={4}
                 value={message}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
                 placeholder={t('messagePlaceholder')}
-                className="flex w-full resize-y rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="resize-y leading-relaxed"
               />
             </div>
 
-            {error ? (
-              <p role="alert" className="text-xs font-medium text-destructive">
-                {error}
-              </p>
-            ) : null}
+            <AnimatePresence initial={false}>
+              {error ? (
+                <m.p
+                  key="error"
+                  role="alert"
+                  initial={{ opacity: 0, height: 0, y: -4 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0, transition: transition.enter }}
+                  exit={{ opacity: 0, height: 0, transition: transition.leave }}
+                  className="overflow-hidden rounded-lg bg-destructive/[0.06] px-3 py-2 text-sm text-destructive"
+                >
+                  {error}
+                </m.p>
+              ) : null}
+            </AnimatePresence>
           </DialogBody>
 
           <DialogFooter>

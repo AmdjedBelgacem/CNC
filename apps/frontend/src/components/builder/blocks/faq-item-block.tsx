@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** FAQ card: question row toggles the answer panel open/closed. */
 import { Icon } from '@/components/ui/icon';
+import { m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 export function FaqItemBlock({ props, puck }: BlockComponentProps<FaqItemProps>) {
   const [open, setOpen] = useState(false);
   const {
@@ -18,7 +20,8 @@ export function FaqItemBlock({ props, puck }: BlockComponentProps<FaqItemProps>)
   return (
     <div
       className={cn(
-        'bg-card border border-border rounded-2xl overflow-hidden border border-border transition-all duration-300 hover:shadow-lg group',
+        'group overflow-hidden rounded-2xl border bg-card transition-[border-color,box-shadow] duration-300',
+        open ? 'border-border shadow-md' : 'border-border/70 shadow-xs hover:border-border-strong hover:shadow-sm',
         className,
       )}
       style={layoutStyle(props)}
@@ -29,25 +32,29 @@ export function FaqItemBlock({ props, puck }: BlockComponentProps<FaqItemProps>)
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'w-full flex items-center justify-between text-left cursor-pointer',
+          'flex w-full cursor-pointer items-center justify-between gap-6 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40',
           buttonPaddingX,
           buttonPaddingY,
         )}
       >
         {' '}
         <span>{puck.renderSlot('toggle')}</span>{' '}
-        <Icon
-          name={icon}
+        <m.span
+          aria-hidden
           className={cn(
-            'size-5 text-primary transition-transform duration-300',
-            open && 'rotate-45',
+            'flex size-8 shrink-0 items-center justify-center rounded-full transition-colors duration-200',
+            open ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground group-hover:text-foreground',
           )}
-        />{' '}
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={spring.snappy}
+        >
+          <Icon name={icon} className="size-4" />
+        </m.span>{' '}
       </button>{' '}
       <div
         className={cn(
-          'grid transition-[grid-template-rows] duration-300 ease-out',
-          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+          'grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
         )}
       >
         {' '}

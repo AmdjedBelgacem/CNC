@@ -71,8 +71,8 @@ export function DynamicContentNotice({
 
   if (onHome && HIDDEN_ON_HOME.has(type)) {
     return (
-      <div className="border-b border-border bg-warning/10 px-3 py-2.5">
-        <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-warning">
+      <div className="mx-3 mt-3 rounded-xl border border-warning/20 bg-warning/8 px-3 py-2.5 animate-fade-in">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
           <EyeOff className="size-3.5 shrink-0" aria-hidden />
           Hidden on the homepage
         </p>
@@ -92,8 +92,8 @@ export function DynamicContentNotice({
     // they must not claim their content is uneditable live data.
     if (!live) return null;
     return (
-      <div className="border-b border-border bg-info/5 px-3 py-2.5">
-        <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-info">
+      <div className="mx-3 mt-3 rounded-xl border border-info/15 bg-info/5 px-3 py-2.5 animate-fade-in">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-info">
           <Database className="size-3.5 shrink-0" aria-hidden />
           Live data rows
         </p>
@@ -134,8 +134,8 @@ export function DynamicContentNotice({
     if (!text.includes('17,400')) return null;
   }
   return (
-    <div className="border-b border-border bg-info/5 px-3 py-2.5">
-      <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-info">
+    <div className="mx-3 mt-3 rounded-xl border border-info/15 bg-info/5 px-3 py-2.5 animate-fade-in">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-info">
         <Database className="size-3.5 shrink-0" aria-hidden />
         Dynamic content
       </p>

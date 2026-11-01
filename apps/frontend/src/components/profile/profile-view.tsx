@@ -16,6 +16,38 @@ import {
 import { useProfileLearning } from '@/hooks/use-profile';
 import { useAuthStore } from '@/stores/auth-store';
 import type { Profile, ProfileLearningRecord } from '@/lib/api/types';
+import { m } from 'framer-motion';
+import { spring } from '@/lib/motion';
+
+/**
+ * Editorial tab bar: the shared Tabs keep their keyboard model and panels, but
+ * the pill is swapped for a clay underline that glides between triggers.
+ */
+const TAB_LIST_CLASS =
+  'h-auto w-full justify-start gap-6 overflow-x-auto rounded-none border-0 border-b border-border/70 bg-transparent p-0 sm:gap-8';
+const TAB_TRIGGER_CLASS =
+  'rounded-none px-0.5 pb-3 pt-1 text-sm data-[state=active]:bg-transparent data-[state=active]:shadow-none [&>span[aria-hidden]]:hidden';
+
+function TabUnderline({ active }: { active: boolean }) {
+  if (!active) return null;
+  return (
+    <m.span
+      aria-hidden
+      layoutId="profile-tab-underline"
+      transition={spring.smooth}
+      className="absolute inset-x-0 -bottom-[13px] h-0.5 rounded-full bg-primary"
+    />
+  );
+}
+
+function TabCount({ value }: { value: number }) {
+  if (value <= 0) return null;
+  return (
+    <span className="ms-1.5 rounded-full bg-muted px-1.5 py-px text-2xs font-medium tabular-nums text-muted-foreground">
+      {value}
+    </span>
+  );
+}
 
 type TabKey = 'overview' | 'learning' | 'portfolio' | 'activity';
 
@@ -49,29 +81,31 @@ export function ProfileView({
 
       <div className="px-margin-mobile md:px-margin-desktop mx-auto w-full max-w-container-max py-10 md:py-14">
         <Tabs value={tab} onValueChange={(value) => setTab(value as TabKey)}>
-          <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList>
-              <TabsTrigger value="overview">{t('tabOverview')}</TabsTrigger>
-              <TabsTrigger value="learning">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <TabsList className={TAB_LIST_CLASS}>
+              <TabsTrigger value="overview" className={TAB_TRIGGER_CLASS}>
+                {t('tabOverview')}
+                <TabUnderline active={tab === 'overview'} />
+              </TabsTrigger>
+              <TabsTrigger value="learning" className={TAB_TRIGGER_CLASS}>
                 {t('tabLearning')}
-                {counts.learning > 0 && <span className="ms-1.5 tabular-nums">{counts.learning}</span>}
+                <TabCount value={counts.learning} />
+                <TabUnderline active={tab === 'learning'} />
               </TabsTrigger>
-              <TabsTrigger value="portfolio">
+              <TabsTrigger value="portfolio" className={TAB_TRIGGER_CLASS}>
                 {t('tabPortfolio')}
-                {counts.portfolio > 0 && (
-                  <span className="ms-1.5 tabular-nums">{counts.portfolio}</span>
-                )}
+                <TabCount value={counts.portfolio} />
+                <TabUnderline active={tab === 'portfolio'} />
               </TabsTrigger>
-              <TabsTrigger value="activity">
+              <TabsTrigger value="activity" className={TAB_TRIGGER_CLASS}>
                 {t('tabActivity')}
-                {counts.activity > 0 && (
-                  <span className="ms-1.5 tabular-nums">{counts.activity}</span>
-                )}
+                <TabCount value={counts.activity} />
+                <TabUnderline active={tab === 'activity'} />
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
+          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
             <div className="min-w-0">
               <TabsContent value="overview" className="pb-6">
                 <ProfileOverview profile={profile} />

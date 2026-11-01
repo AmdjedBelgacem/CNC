@@ -25,7 +25,10 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease } from '@/lib/motion';
+import { AnimatedNumber, Crossfade } from '@/components/ui/motion';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
@@ -36,6 +39,8 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { StatusChip } from '@/components/admin/form-page';
+import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/admin/drawer-kit';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCan, useCanAny, useIsSuper } from '@/lib/use-permissions';
 import {
@@ -105,13 +110,25 @@ const roleBadge: Record<string, 'default' | 'info' | 'success' | 'warning' | 'ac
   learner: 'secondary',
 };
 
+/** Soft tinted pills for the drawer header — solid fills read too loud (and
+ *  low-contrast in dark mode) next to the serif name. */
+const softBadge: Record<string, string> = {
+  default: 'border-primary/20 bg-primary/10 text-primary',
+  secondary: 'border-border/60 bg-muted text-muted-foreground',
+  accent: 'border-border/60 bg-muted text-muted-foreground',
+  destructive: 'border-destructive/20 bg-destructive/10 text-destructive',
+  success: 'border-success/20 bg-success/10 text-success',
+  warning: 'border-warning/20 bg-warning/10 text-warning',
+  info: 'border-info/20 bg-info/10 text-info',
+};
+
 function SectionLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-3">
-      <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h3 className="font-display text-base font-medium tracking-[-0.01em] text-foreground">
         {children}
       </h3>
-      {hint && <span className="font-sans text-2xs text-muted-foreground/70">{hint}</span>}
+      {hint && <span className="font-sans text-xs text-muted-foreground">{hint}</span>}
     </div>
   );
 }
@@ -133,7 +150,7 @@ function StatTile({
         className={cn(
           'flex size-8 shrink-0 items-center justify-center rounded-lg',
           tone === 'success' && 'bg-success/10 text-success',
-          tone === 'warning' && 'bg-warning/15 text-warning',
+          tone === 'warning' && 'bg-warning/10 text-warning',
           tone === 'danger' && 'bg-destructive/10 text-destructive',
           tone === 'info' && 'bg-info/10 text-info',
           tone === 'default' && 'bg-muted text-muted-foreground',
@@ -142,10 +159,10 @@ function StatTile({
         <Icon className="size-4" />
       </span>
       <div className="min-w-0">
-        <p className="font-sans text-lg font-semibold tabular-nums leading-tight text-foreground">
-          {value}
+        <p className="font-display text-xl font-medium tabular-nums leading-tight tracking-[-0.015em] text-foreground">
+          {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
         </p>
-        <p className="truncate font-sans text-2xs text-muted-foreground">{label}</p>
+        <p className="truncate font-sans text-xs text-muted-foreground">{label}</p>
       </div>
     </div>
   );
@@ -184,26 +201,35 @@ function ActionButton({
         }
       }}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 font-sans text-sm font-medium transition-all duration-200',
+        'flex w-full items-center gap-2.5 rounded-lg border px-3.5 py-2.5 font-sans text-sm font-medium transition-[background-color,border-color,color,transform] duration-200 active:scale-[0.98]',
         confirm
           ? variant === 'danger'
-            ? 'border-red-500 bg-destructive text-destructive-foreground'
-            : 'border-accent bg-accent text-accent-foreground'
+            ? 'border-destructive bg-destructive text-destructive-foreground shadow-sm'
+            : 'border-foreground bg-foreground text-background shadow-sm'
           : variant === 'danger'
-            ? 'border-destructive/70 text-destructive hover:bg-destructive/70 dark:border-red-900/40 dark:text-destructive dark:hover:bg-red-950/30'
+            ? 'border-destructive/25 text-destructive hover:bg-destructive/10'
             : variant === 'success'
-              ? 'border-success/70 text-success hover:bg-success/70 dark:border-success/40 dark:text-success dark:hover:bg-success/30'
+              ? 'border-success/25 text-success hover:bg-success/10'
               : variant === 'info'
-                ? 'border-primary/40 text-primary hover:bg-primary/10'
-                : 'border-border text-foreground hover:bg-muted',
+                ? 'border-primary/25 text-primary hover:bg-primary/10'
+                : 'border-border/80 text-foreground hover:bg-muted/60',
       )}
     >
       {busy ? <Loader2 className="size-4 animate-spin" /> : <Icon className="size-4" />}
-      {busy
-        ? tAdmin('drawer.working', { default: 'Working…' })
-        : confirm
-          ? tAdmin('drawer.confirm', { default: 'Confirm' })
-          : label}
+      <AnimatePresence mode="wait" initial={false}>
+        <m.span
+          key={busy ? 'busy' : confirm ? 'confirm' : 'idle'}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: ease.emerge } }}
+          exit={{ opacity: 0, y: -4, transition: { duration: 0.1 } }}
+        >
+          {busy
+            ? tAdmin('drawer.working', { default: 'Working…' })
+            : confirm
+              ? tAdmin('drawer.confirm', { default: 'Confirm' })
+              : label}
+        </m.span>
+      </AnimatePresence>
     </button>
   );
 }
@@ -248,6 +274,9 @@ export function LearnerDrawer({
   const [rolesLoading, setRolesLoading] = useState(false);
   const [savingRoles, setSavingRoles] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  /** Roles as last loaded / saved — the baseline the dirty check compares against. */
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const me = useAuthStore((s) => s.user);
   const tAdmin = useTranslations('admin');
@@ -261,12 +290,6 @@ export function LearnerDrawer({
   const canAssignRoles = useCan('staff:assign_roles');
   const canDelete = useIsSuper();
   const isSuper = useIsSuper();
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -327,7 +350,9 @@ export function LearnerDrawer({
         if (!cancelled && rolesRes.ok) setAllRoles(await rolesRes.json());
         if (!cancelled && assignedRes.ok) {
           const assigned = await assignedRes.json();
-          setAssignedIds(Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : []);
+          const ids = Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : [];
+          setAssignedIds(ids);
+          setSavedIds(ids);
         }
       } catch {
       } finally {
@@ -422,10 +447,30 @@ export function LearnerDrawer({
         },
         tAdmin('drawer.rolesUpdated', { default: 'Roles updated' }),
       );
+      setSavedIds(assignedIds);
     } finally {
       setSavingRoles(false);
     }
   };
+
+  const rolesDirty =
+    canAssignRoles &&
+    editableRoles &&
+    !(assignedIds.length === savedIds.length && assignedIds.every((id) => savedIds.includes(id)));
+  const saveAll = async () => {
+    setSaveFailed(false);
+    try {
+      await saveRoles();
+    } catch {
+      // `mutate` already toasted the server's message.
+      setSaveFailed(true);
+    }
+  };
+  const discardEdits = () => {
+    setAssignedIds(savedIds);
+    setSaveFailed(false);
+  };
+  const guard = useDirtyClose(rolesDirty, onClose);
 
   const toggleSuspend = async (suspend: boolean) => {
     if (!canSuspend) return;
@@ -600,6 +645,12 @@ export function LearnerDrawer({
                     }
                   />
                 )}
+              </div>
+              {((canSuspend && user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted') || (canDelete && !isSelf)) && (
+                <div className="space-y-2 rounded-lg border border-destructive/25 bg-destructive/[0.04] p-3">
+                  <p className="font-sans text-xs font-medium text-destructive">
+                    {tAdmin('drawer.dangerZone', { default: 'Danger zone' })}
+                  </p>
                 {canSuspend && user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted' && (
                   <ActionButton
                     label={tAdmin('learnerDrawer.suspendLearner', { default: 'Suspend learner' })}
@@ -633,7 +684,8 @@ export function LearnerDrawer({
                     }}
                   />
                 )}
-              </div>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -722,17 +774,6 @@ export function LearnerDrawer({
                     </label>
                   );
                 })
-              )}
-              {editableRoles && (
-                <Button
-                  type="button"
-                  className="mt-2 w-full"
-                  disabled={savingRoles || rolesLoading}
-                  loading={savingRoles}
-                  onClick={saveRoles}
-                >
-                  {savingRoles ? tCommon('saving') : tAdmin('drawer.saveRoles', { default: 'Save roles' })}
-                </Button>
               )}
               {!editableRoles && (
                 <p className="px-1 pt-1 font-sans text-xs text-muted-foreground">
@@ -994,7 +1035,7 @@ export function LearnerDrawer({
                             tAdmin('drawer.sessionRevoked', { default: 'Session revoked' }),
                           ).then(() => loadAll())
                         }
-                        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive dark:hover:bg-red-950/30 dark:hover:text-destructive"
+                        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive "
                       >
                         <ShieldX className="size-4" />
                       </button>
@@ -1036,7 +1077,7 @@ export function LearnerDrawer({
 
   return (
     <Modal
-      onClose={onClose}
+      onClose={guard.requestClose}
       width="max-w-3xl"
       tabs={TABS.map((tab) => ({
         ...tab,
@@ -1048,38 +1089,55 @@ export function LearnerDrawer({
         user?.name || user?.email || tAdmin('learnerDrawer.learnerDetails', { default: 'Learner details' })
       }
       header={
-        <div className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5">
+        <div className="border-b border-border/70 bg-card px-4 py-4 sm:px-6 sm:py-5">
           {loading ? (
             <div className="flex items-center gap-3 sm:gap-4">
-              <Skeleton className="size-12 rounded-xl sm:size-14" />
+              <Skeleton className="size-12 rounded-full sm:size-14" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-40 rounded" />
                 <Skeleton className="h-3 w-56 rounded" />
               </div>
             </div>
           ) : user ? (
-            <div className="flex items-start gap-3 sm:gap-4">
+            <m.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.32, ease: ease.emerge }}
+              className="flex items-start gap-3 sm:gap-4"
+            >
               <span
                 className={cn(
-                  'flex size-12 shrink-0 items-center justify-center rounded-xl font-sans text-lg font-semibold sm:size-14 sm:text-xl',
+                  'flex size-12 shrink-0 items-center justify-center rounded-full font-display text-lg font-medium ring-1 ring-inset sm:size-14 sm:text-xl',
                   user.accountStatus === 'suspended'
-                    ? 'bg-destructive text-destructive-foreground'
-                    : 'bg-foreground text-background',
+                    ? 'bg-destructive/10 text-destructive ring-destructive/20'
+                    : 'bg-primary/10 text-primary ring-primary/15',
                 )}
               >
                 {userInitials(user.name, user.email)}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-display text-xl font-semibold leading-tight text-foreground sm:text-[26px]">
+                  <p className="truncate font-display text-xl font-medium leading-tight tracking-[-0.02em] text-foreground sm:text-[26px]">
                     {user.name || user.email.split('@')[0] || user.email}
                   </p>
                   {statusMeta && (
-                    <Badge variant={statusMeta.variant}>
+                    <StatusChip
+                      tone={
+                        user.accountStatus === 'active'
+                          ? 'live'
+                          : user.accountStatus.startsWith('pending')
+                            ? 'draft'
+                            : 'archived'
+                      }
+                      className={cn(user.accountStatus === 'suspended' && 'bg-destructive/10 text-destructive')}
+                    >
                       {tAdmin(`status.${user.accountStatus}`, { default: statusMeta.label })}
-                    </Badge>
+                    </StatusChip>
                   )}
-                  <Badge variant={roleBadge[user.role] ?? 'secondary'}>
+                  <Badge
+                    variant={roleBadge[user.role] ?? 'secondary'}
+                    className={softBadge[roleBadge[user.role] ?? 'secondary']}
+                  >
                     {tAdmin(`role.${user.role}`, { default: roleLabel[user.role] ?? user.role })}
                   </Badge>
                 </div>
@@ -1102,13 +1160,13 @@ export function LearnerDrawer({
                 <button
                   type="button"
                   aria-label={tAdmin('drawer.closePanel', { default: 'Close panel' })}
-                  onClick={onClose}
-                  className="rounded-xl p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
+                  onClick={guard.requestClose}
+                  className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90"
                 >
                   <X className="size-5" />
                 </button>
               </div>
-            </div>
+            </m.div>
           ) : (
             <p className="font-sans text-sm text-muted-foreground">
               {tAdmin('learnerDrawer.learner', { default: 'Learner' })}
@@ -1117,14 +1175,14 @@ export function LearnerDrawer({
         </div>
       }
     >
-      <div className="flex-1 space-y-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
         {loadError && (
           <ErrorState
             title={tAdmin('learnerDrawer.couldNotLoad', { default: 'Could not load learner' })}
             description={loadError}
             onRetry={loadAll}
             compact
-            className="mb-4 rounded-xl border border-destructive/40 bg-destructive/5"
+            className="mb-4 rounded-xl border border-destructive/20 bg-destructive/[0.06]"
           />
         )}
         {loading && !user ? (
@@ -1133,9 +1191,21 @@ export function LearnerDrawer({
             rows={4}
           />
         ) : (
-          renderTab()
+          <Crossfade value={activeTab} distance={6}>
+            {renderTab()}
+          </Crossfade>
         )}
       </div>
+      <DrawerFooter
+        editable={canAssignRoles && editableRoles && !!user}
+        dirty={rolesDirty}
+        saving={savingRoles}
+        failed={saveFailed}
+        onSave={saveAll}
+        onDiscard={discardEdits}
+        onClose={guard.requestClose}
+      />
+      <DiscardChangesDialog guard={guard} />
     </Modal>
   );
 }

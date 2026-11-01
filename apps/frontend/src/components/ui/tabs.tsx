@@ -1,6 +1,8 @@
 'use client';
 import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
+import { LayoutGroup, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 const Tabs = TabsPrimitive.Root;
@@ -45,18 +47,21 @@ const TabsList = React.forwardRef<
     return () => mo.disconnect();
   }, []);
 
-  const ctx = React.useMemo(() => ({ values, activeId }), [values, activeId]);
+  const groupId = React.useId();
+  const ctx = React.useMemo(() => ({ values, activeId, groupId }), [values, activeId, groupId]);
 
   return (
     <TabsListContext.Provider value={ctx}>
-      <TabsPrimitive.List
-        ref={setRefs}
-        className={cn(
-          'inline-flex items-center gap-1 rounded-md border border-border bg-muted/60 p-1',
-          className,
-        )}
-        {...props}
-      />
+      <LayoutGroup id={groupId}>
+        <TabsPrimitive.List
+          ref={setRefs}
+          className={cn(
+            'inline-flex items-center gap-1 rounded-xl border border-border/70 bg-muted/70 p-1',
+            className,
+          )}
+          {...props}
+        />
+      </LayoutGroup>
     </TabsListContext.Provider>
   );
 });
@@ -65,20 +70,39 @@ TabsList.displayName = TabsPrimitive.List.displayName;
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors',
-      'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-      'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-xs',
-      'disabled:pointer-events-none disabled:opacity-50',
-      '[&_svg]:size-4',
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, children, value, ...props }, ref) => {
+  const list = React.useContext(TabsListContext);
+  const active = list?.activeId != null && list.activeId === value;
+  return (
+    <TabsPrimitive.Trigger
+      ref={ref}
+      value={value}
+      data-value={value}
+      className={cn(
+        'relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors duration-200',
+        'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'data-[state=active]:text-foreground',
+        // Until the list has measured itself the spring pill isn't mounted;
+        // a static active background covers that first frame.
+        !list?.activeId && 'data-[state=active]:bg-card data-[state=active]:shadow-xs',
+        'disabled:pointer-events-none disabled:opacity-50',
+        '[&_svg]:size-4',
+        className,
+      )}
+      {...props}
+    >
+      {active && (
+        <m.span
+          aria-hidden
+          layoutId="tabs-active-pill"
+          transition={spring.smooth}
+          className="absolute inset-0 rounded-lg bg-card shadow-sm ring-1 ring-border/50"
+        />
+      )}
+      <span className="relative z-[1] inline-flex items-center gap-1.5">{children}</span>
+    </TabsPrimitive.Trigger>
+  );
+});
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
 /**
@@ -134,6 +158,7 @@ TabsContent.displayName = TabsPrimitive.Content.displayName;
 const TabsListContext = React.createContext<{
   values: string[];
   activeId: string | null;
+  groupId: string;
 } | null>(null);
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };

@@ -7,6 +7,9 @@ import { Award, Download, ExternalLink, Loader2, ShieldCheck, Ban } from 'lucide
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
+import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { transition } from '@/lib/motion';
 
 /**
  * A learner's earned certificates.
@@ -82,7 +85,7 @@ export function CertificateList({ className }: { className?: string }) {
     return (
       <div className={cn('space-y-3', className)}>
         {[0, 1].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-xl border border-border" />
+          <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
       </div>
     );
@@ -94,12 +97,14 @@ export function CertificateList({ className }: { className?: string }) {
     return (
       <div
         className={cn(
-          'rounded-xl border border-dashed border-border bg-card p-10 text-center',
+          'rounded-2xl border border-dashed border-border px-8 py-14 text-center',
           className,
         )}
       >
-        <Award className="mx-auto mb-3 size-9 text-muted-foreground/50" />
-        <p className="text-sm font-medium text-foreground">
+        <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <Award className="size-5" />
+        </span>
+        <p className="font-display text-xl font-medium text-foreground">
           {t('emptyTitle', { default: 'No certificates yet' })}
         </p>
         <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
@@ -112,28 +117,35 @@ export function CertificateList({ className }: { className?: string }) {
   }
 
   return (
-    <div className={cn('space-y-3', className)}>
-      {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/25 bg-destructive/8 px-3 py-2 text-xs text-destructive"
-        >
-          {error}
-        </p>
-      )}
-      {certs.map((cert) => {
+    <Stagger className={cn('space-y-3', className)}>
+      <AnimatePresence initial={false}>
+        {error && (
+          <m.p
+            role="alert"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0, transition: transition.enter }}
+            exit={{ opacity: 0, transition: transition.leave }}
+            className="rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+          >
+            {error}
+          </m.p>
+        )}
+      </AnimatePresence>
+      {certs.map((cert, index) => {
         const revoked = Boolean(cert.revokedAt);
         return (
-          <article
+          <StaggerItem
+            as="article"
             key={cert.id}
+            index={index}
             className={cn(
-              'flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs transition sm:flex-row sm:items-center',
-              revoked ? 'border-destructive/30 opacity-80' : 'border-border hover:border-border-strong',
+              'flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs transition-[border-color,box-shadow] sm:flex-row sm:items-center',
+              revoked ? 'border-destructive/30 opacity-80' : 'border-border/70 hover:border-border-strong hover:shadow-sm',
             )}
           >
             <span
               className={cn(
-                'flex size-11 shrink-0 items-center justify-center rounded-xl',
+                'flex size-11 shrink-0 items-center justify-center rounded-full',
                 revoked ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
               )}
             >
@@ -141,7 +153,7 @@ export function CertificateList({ className }: { className?: string }) {
             </span>
 
             <div className="min-w-0 flex-1">
-              <p dir="auto" className="truncate text-13 font-semibold text-foreground">
+              <p dir="auto" className="truncate font-display text-lg font-medium text-foreground">
                 {cert.course?.title || t('untitledCourse', { default: 'Course' })}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs text-muted-foreground">
@@ -184,13 +196,13 @@ export function CertificateList({ className }: { className?: string }) {
                 href={`/verify/${encodeURIComponent(cert.certificateNumber)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground transition hover:bg-muted"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground transition hover:border-border-strong hover:bg-muted"
               >
                 <ExternalLink className="size-3.5" />
                 {t('verify', { default: 'Verify' })}
               </a>
               {revoked ? (
-                <span className="inline-flex h-8 items-center rounded-lg border border-border px-2.5 text-xs font-semibold text-muted-foreground">
+                <span className="inline-flex h-8 items-center rounded-full border border-border px-3 text-xs font-medium text-muted-foreground">
                   {t('revoked', { default: 'Revoked' })}
                 </span>
               ) : (
@@ -198,7 +210,7 @@ export function CertificateList({ className }: { className?: string }) {
                   type="button"
                   onClick={() => void download(cert.id, cert.certificateNumber)}
                   disabled={downloading === cert.id}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-xs transition hover:bg-primary/90 disabled:opacity-60"
+                  className="pressable inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 disabled:opacity-60"
                 >
                   {downloading === cert.id ? (
                     <Loader2 className="size-3.5 animate-spin" />
@@ -211,9 +223,9 @@ export function CertificateList({ className }: { className?: string }) {
                 </button>
               )}
             </div>
-          </article>
+          </StaggerItem>
         );
       })}
-    </div>
+    </Stagger>
   );
 }

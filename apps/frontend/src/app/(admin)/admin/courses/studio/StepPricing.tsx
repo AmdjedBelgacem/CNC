@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Activity, Globe, Loader2, RefreshCw, Ticket, Wallet } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import {
   CartesianGrid,
   Line,
@@ -118,25 +120,28 @@ export function StepPricing({
                 onClick={() => update({ accessMode: mode.value })}
                 aria-pressed={selected}
                 className={cn(
-                  'flex flex-col items-start gap-2 rounded-xl border p-4 text-start transition',
+                  'relative flex flex-col items-start gap-2 rounded-xl border p-4 text-start transition-[border-color,box-shadow,background-color] duration-200 active:scale-[0.99]',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                   selected
-                    ? 'border-primary/50 bg-primary/8 shadow-xs'
-                    : 'border-border bg-background hover:border-primary/30 hover:bg-muted/40',
+                    ? 'border-primary/40 shadow-sm'
+                    : 'border-border/80 bg-background hover:border-border-strong hover:shadow-sm',
                 )}
               >
+                {selected && (
+                  <m.span layoutId="studio-access-mode" transition={spring.smooth} className="absolute inset-0 rounded-xl bg-primary/5 ring-1 ring-primary/30" aria-hidden />
+                )}
                 <span
                   className={cn(
-                    'flex size-8 items-center justify-center rounded-lg transition',
+                    'relative flex size-8 items-center justify-center rounded-full transition-colors',
                     selected ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
                   )}
                 >
                   <Icon className="size-4" />
                 </span>
-                <span className="text-13 font-semibold text-foreground">
+                <span className="relative font-display text-base font-medium tracking-[-0.01em] text-foreground">
                   {t(`mode.${mode.value}`, { default: mode.value })}
                 </span>
-                <span className="text-xs leading-relaxed text-muted-foreground">
+                <span className="relative text-xs leading-relaxed text-muted-foreground">
                   {t(`modeHint.${mode.value}`, { default: '' })}
                 </span>
               </button>
@@ -145,17 +150,18 @@ export function StepPricing({
         </div>
       </FormSection>
 
+      <AnimatePresence initial={false} mode="popLayout">
       {course.accessMode === 'invite' && (
-        <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm leading-relaxed text-muted-foreground shadow-xs">
+        <m.div key="invite" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }} transition={spring.smooth} className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
           {t('inviteNote', {
             default:
               'Invite-only courses do not appear in open catalogs. Enrollment is granted manually or via invite links.',
           })}
-        </div>
+        </m.div>
       )}
 
       {course.accessMode === 'paid' && (
-        <>
+        <m.div key="paid" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }} transition={spring.smooth} className="space-y-6">
           <FormSection
             title={t('priceSection', { default: 'Price' })}
             icon={Wallet}
@@ -214,10 +220,10 @@ export function StepPricing({
 
           {/* Conversion panel: SAR is the workspace's focus currency, so the
               editor needs to see what the chosen price is worth in it. */}
-          <section className="rounded-xl border border-primary/20 bg-primary/5 p-5" dir="ltr">
+          <section className="rounded-xl border border-border/70 bg-card p-5 shadow-xs" dir="ltr">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="flex items-center gap-2 text-13 font-semibold text-foreground">
+                <p className="flex items-center gap-2 font-display text-base font-medium tracking-[-0.01em] text-foreground">
                   <Activity className="size-4 text-primary" />
                   {t('liveConversion', { default: 'Live conversion' })}
                 </p>
@@ -234,7 +240,7 @@ export function StepPricing({
                 type="button"
                 onClick={() => void loadRates()}
                 disabled={ratesLoading}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted disabled:opacity-50"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.97] disabled:opacity-50"
               >
                 {ratesLoading ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -273,9 +279,9 @@ export function StepPricing({
             <div className="mt-4 h-48 w-full" aria-label={t('chartLabel', { default: 'Exchange rate chart' })}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border" />
-                  <XAxis dataKey="currency" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} width={42} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/70" vertical={false} />
+                  <XAxis dataKey="currency" tick={{ fontSize: 11, fill: 'var(--color-muted-foreground)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--color-muted-foreground)' }} width={42} axisLine={false} tickLine={false} />
                   <Tooltip formatter={(value) => Number(value).toFixed(4)} />
                   <Line
                     type="monotone"
@@ -288,8 +294,9 @@ export function StepPricing({
               </ResponsiveContainer>
             </div>
           </section>
-        </>
+        </m.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

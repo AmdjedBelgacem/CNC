@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
+import { Reveal } from '@/components/ui/motion';
 
 /** Spotlight path cards: tag pill, title, meta line, explore link. */
 export function SpotlightCardsBlock({ props, puck }: BlockComponentProps<SpotlightCardsProps>) {
@@ -29,25 +30,25 @@ export function SpotlightCardsBlock({ props, puck }: BlockComponentProps<Spotlig
       id={id}
       className={cn(
         'px-margin-mobile md:px-margin-desktop',
-        band === 'sunken' && 'border-y border-border bg-surface-sunken/50',
+        band === 'sunken' && 'border-y border-border/70 bg-surface-sunken/50',
         className,
       )}
       style={layoutStyle(props)}
     >
       <div className="max-w-container-max mx-auto py-16 md:py-24">
-        <div className="mb-8 max-w-2xl">
-          {eyebrow ? (
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              {eyebrow}
-            </p>
-          ) : null}
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+        <Reveal className="mb-10 max-w-2xl md:mb-12">
+          {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+          <h2 className="mt-3 text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground md:text-[2.5rem] md:leading-[1.1]">
             {title}
           </h2>
-          {subtitle ? <p className="mt-3 text-muted-foreground">{subtitle}</p> : null}
-        </div>
+          {subtitle ? (
+            <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
+              {subtitle}
+            </p>
+          ) : null}
+        </Reveal>
 
-        <div className={cn('grid gap-4', columns)}>
+        <div className={cn('grid gap-5 md:gap-6', columns)}>
           {hasSlotCards
             ? puck.renderSlot('cards')
             : legacyItems.length > 0
@@ -55,22 +56,22 @@ export function SpotlightCardsBlock({ props, puck }: BlockComponentProps<Spotlig
                   <Link
                     key={`${item.href}-${item.title}`}
                     href={item.href}
-                    className="group flex flex-col rounded-lg border border-border bg-card p-6 shadow-xs transition-colors duration-200 hover:border-primary/40 hover:shadow-md"
+                    className="card-hover group flex flex-col rounded-2xl border border-border/70 bg-card p-6 shadow-xs md:p-7"
                   >
-                    <span className="mb-4 w-fit rounded-sm bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-primary">
+                    <span className="mb-5 w-fit rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                       {item.tag}
                     </span>
-                    <h3 className="font-display text-lg font-semibold leading-snug tracking-tight text-foreground">
+                    <h3 className="text-balance font-display text-xl font-medium leading-snug tracking-[-0.015em] text-foreground">
                       {item.title}
                     </h3>
                     {item.meta ? (
-                      <p className="mt-2 font-mono text-xs text-muted-foreground">{item.meta}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{item.meta}</p>
                     ) : null}
-                    <span className="mt-6 inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+                    <span className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-medium text-primary">
                       Explore path
                       <Icon
                         name="arrow_forward"
-                        className="size-3.5 transition-transform group-hover:translate-x-0.5 rtl:rotate-180"
+                        className="size-4 transition-transform duration-200 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
                       />
                     </span>
                   </Link>

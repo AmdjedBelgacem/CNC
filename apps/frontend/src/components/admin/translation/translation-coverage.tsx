@@ -3,6 +3,8 @@
 import { useTranslations } from 'next-intl';
 import type { TranslationCoverage } from '@titan/shared';
 import { cn } from '@/lib/utils';
+import { m } from 'framer-motion';
+import { ease } from '@/lib/motion';
 
 /**
  * How much of one entity is translated.
@@ -27,7 +29,7 @@ export function TranslationCoverageBadge({
     return (
       <span
         className={cn(
-          'inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground',
+          'inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground',
           className,
         )}
       >
@@ -39,7 +41,7 @@ export function TranslationCoverageBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em]',
+        'inline-flex items-center gap-2 text-xs font-medium',
         complete ? 'text-success' : 'text-warning',
         className,
       )}
@@ -72,12 +74,14 @@ function CoverageSegments({
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        <span
+        <m.span
           className={cn(
             'block h-full rounded-full',
             coverage.translated === coverage.total ? 'bg-success' : 'bg-warning',
           )}
-          style={{ width: `${percent}%` }}
+          initial={false}
+          animate={{ width: `${percent}%` }}
+          transition={{ duration: 0.5, ease: ease.emerge }}
         />
       </span>
     );
@@ -88,8 +92,8 @@ function CoverageSegments({
         <span
           key={index}
           className={cn(
-            'block h-1.5 w-2 rounded-[2px]',
-            index < coverage.translated ? 'bg-success' : 'bg-warning/70',
+            'block h-1.5 w-2 rounded-full transition-colors duration-300',
+            index < coverage.translated ? 'bg-success' : 'bg-warning/50',
           )}
         />
       ))}
@@ -117,7 +121,7 @@ export function TranslationCoveragePanel({
   return (
     <div className={cn('space-y-1.5', className)}>
       <div className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground">
           {t('coverage.label')}
         </span>
         <TranslationCoverageBadge coverage={coverage} />

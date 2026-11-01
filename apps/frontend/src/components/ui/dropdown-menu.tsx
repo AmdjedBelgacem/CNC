@@ -16,7 +16,7 @@ const DropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 min-w-48 overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg',
+        'z-50 min-w-52 overflow-hidden rounded-xl border border-border/80 bg-popover p-1.5 text-popover-foreground shadow-xl ring-1 ring-black/[0.02]',
         // Grows out of the trigger rather than the viewport centre. The origin
         // is derived from `data-side`, which Radix sets from the placement that
         // was actually resolved — so a menu that flipped to avoid a viewport
@@ -39,8 +39,8 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex cursor-default select-none items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none transition-colors',
-      'focus:bg-muted focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'relative flex cursor-default select-none items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm outline-none transition-[background-color,color,padding] duration-150',
+      'focus:bg-muted focus:text-foreground focus:ps-3 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       '[&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground',
       destructive && 'text-destructive focus:bg-destructive/10 [&_svg]:text-destructive',
       className,
@@ -56,7 +56,7 @@ const DropdownMenuLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
-    className={cn('px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground', className)}
+    className={cn('px-2.5 pb-1 pt-2 text-xs font-medium text-muted-foreground', className)}
     {...props}
   />
 ));
@@ -68,7 +68,7 @@ const DropdownMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={cn('my-1 h-px bg-border', className)}
+    className={cn('-mx-1.5 my-1.5 h-px bg-border/70', className)}
     {...props}
   />
 ));

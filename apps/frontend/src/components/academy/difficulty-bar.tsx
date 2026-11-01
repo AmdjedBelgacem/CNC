@@ -9,7 +9,7 @@ const labels: Record<number, string> = {
 };
 
 // Semantic token ramp: easy levels read as "go", mid as caution, top as danger.
-const fills = ['bg-success', 'bg-success', 'bg-warning', 'bg-warning', 'bg-destructive'];
+const fills = ['bg-success/80', 'bg-success/80', 'bg-warning/80', 'bg-warning/80', 'bg-destructive/80'];
 
 interface DifficultyBarProps {
   level: number;
@@ -34,7 +34,7 @@ export function DifficultyBar({ level, size = 'md', showLabel = true }: Difficul
           <div
             key={segment}
             className={cn(
-              'flex-1 rounded-sm transition-colors duration-150',
+              'flex-1 rounded-full transition-colors duration-150',
               segment <= level ? fills[clamped - 1] : 'bg-muted',
             )}
           />

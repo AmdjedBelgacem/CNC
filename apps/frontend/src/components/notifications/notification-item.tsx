@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AnimatePresence, m } from 'framer-motion';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   ArrowUpRight,
@@ -23,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { safeInternalHref } from '@/lib/safe-href';
 import { cn } from '@/lib/utils';
+import { spring, transition } from '@/lib/motion';
 import type { Notification } from '@/lib/api/types';
 
 export type NotificationCategory = 'social' | 'learning' | 'commerce' | 'security' | 'system';
@@ -185,13 +187,20 @@ export function NotificationItem({
           {notification.title}
         </h3>
         <span className="sr-only">{notification.isRead ? t('read') : t('unread')}</span>
-        <span
-          aria-hidden
-          className={cn(
-            'mt-1.5 size-1.5 shrink-0 rounded-full',
-            notification.isRead ? 'bg-border-strong' : 'bg-primary',
-          )}
-        />
+        <span aria-hidden className="relative mt-1.5 grid size-2 shrink-0 place-items-center">
+          <span className="size-1.5 rounded-full bg-border-strong/70" />
+          <AnimatePresence initial={false}>
+            {!notification.isRead && (
+              <m.span
+                key="unread"
+                className="absolute inset-0 rounded-full bg-primary ring-[3px] ring-primary/15"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1, transition: spring.snappy }}
+                exit={{ scale: 0, opacity: 0, transition: transition.leave }}
+              />
+            )}
+          </AnimatePresence>
+        </span>
       </div>
       {notification.body && (
         <p
@@ -212,7 +221,7 @@ export function NotificationItem({
         <time
           dateTime={notification.createdAt}
           title={formatDateTime(notification.createdAt, locale) || undefined}
-          className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground"
+          className="text-xs text-muted-foreground"
         >
           {timeAgo(notification.createdAt, locale)}
         </time>
@@ -221,30 +230,37 @@ export function NotificationItem({
   );
 
   return (
-    <li className={cn('group relative min-w-0', className)}>
+    <m.li
+      layout="position"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, transition: transition.enter }}
+      exit={{ opacity: 0, x: 16, transition: transition.leave }}
+      transition={spring.layout}
+      className={cn('group relative min-w-0', className)}
+    >
       <article
         className={cn(
-          'relative flex min-w-0 items-start gap-3 overflow-hidden border-b border-border transition-colors',
-          compact ? 'gap-2.5 px-4 py-3.5' : 'px-4 py-4 sm:px-5 sm:py-5',
+          'relative flex min-w-0 items-start gap-3 overflow-hidden border-b border-border/60 transition-colors duration-300',
+          compact ? 'gap-3 px-4 py-3.5' : 'gap-4 px-4 py-4 sm:px-6 sm:py-5',
           notification.isRead
-            ? 'bg-card/50 hover:bg-muted/25'
-            : 'bg-primary/[0.035] hover:bg-primary/[0.065]',
+            ? 'bg-card hover:bg-muted/40'
+            : 'bg-primary/[0.04] hover:bg-primary/[0.07]',
         )}
       >
-        <span
+        <m.span
           aria-hidden
-          className={cn(
-            'absolute inset-y-0 start-0 w-[3px]',
-            notification.isRead ? 'bg-transparent' : 'bg-primary',
-          )}
+          className="absolute inset-y-3 start-0 w-[3px] origin-center rounded-e-full bg-primary"
+          initial={false}
+          animate={{ scaleY: notification.isRead ? 0 : 1, opacity: notification.isRead ? 0 : 1 }}
+          transition={spring.smooth}
         />
         <span
           className={cn(
-            'flex shrink-0 items-center justify-center rounded-sm border',
+            'flex shrink-0 items-center justify-center rounded-full transition-colors duration-300',
             compact ? 'size-9' : 'size-10 sm:size-11',
             notification.isRead
-              ? 'border-border bg-muted/60 text-muted-foreground'
-              : cn('border-current/15 bg-card shadow-xs', CATEGORY_TONE[category]),
+              ? 'bg-muted text-muted-foreground'
+              : CATEGORY_TONE[category],
           )}
         >
           <Icon className={compact ? 'size-4' : 'size-[18px]'} aria-hidden />
@@ -256,7 +272,7 @@ export function NotificationItem({
               markRead();
               onNavigate?.();
             }}
-            className="min-w-0 flex-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
           >
             {body}
           </Link>
@@ -284,6 +300,6 @@ export function NotificationItem({
           />
         )}
       </article>
-    </li>
+    </m.li>
   );
 }

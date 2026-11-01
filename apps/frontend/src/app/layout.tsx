@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { cookies, headers } from 'next/headers';
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
+import { Inter, JetBrains_Mono, Source_Serif_4, Space_Grotesk } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import '@/styles/globals.css';
@@ -33,6 +33,15 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   variable: '--font-space-grotesk',
   display: 'swap',
+});
+// Book serif for display type — the editorial voice of the "Ivory & Clay" look.
+// Optical sizing (`opsz`) keeps hero-size headlines crisp and small headings sturdy.
+const sourceSerif = Source_Serif_4({
+  subsets: ['latin'],
+  variable: '--font-serif',
+  display: 'swap',
+  axes: ['opsz'],
+  style: ['normal', 'italic'],
 });
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const jetBrainsMono = JetBrains_Mono({
@@ -119,6 +128,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const colorMode = cookieStore.get('titans:color-mode')?.value;
   const htmlClass = [
     spaceGrotesk.variable,
+    sourceSerif.variable,
     inter.variable,
     jetBrainsMono.variable,
     colorMode === 'dark' ? 'dark' : colorMode === 'light' ? 'light' : '',

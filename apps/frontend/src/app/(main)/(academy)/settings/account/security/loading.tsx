@@ -9,5 +9,5 @@
  */
 import { SettingsSkeleton } from '@/components/skeletons/route-skeletons';
 export default function Loading() {
-  return <SettingsSkeleton fields={4} />;
+  return <SettingsSkeleton fields={4} embedded />;
 }

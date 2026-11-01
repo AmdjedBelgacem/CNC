@@ -16,8 +16,11 @@ const TooltipContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 overflow-hidden rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-md',
-        'data-[state=delayed-open]:animate-fade-in',
+        // Inverted chip (ink on ivory / ivory on charcoal), like a printed label.
+        'z-50 overflow-hidden rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-lg',
+        'data-[state=delayed-open]:animate-popover-in data-[state=instant-open]:animate-popover-in data-[state=closed]:animate-popover-out',
+        'data-[side=top]:[--popover-origin:bottom] data-[side=bottom]:[--popover-origin:top]',
+        'data-[side=left]:[--popover-origin:right] data-[side=right]:[--popover-origin:left]',
         className,
       )}
       {...props}

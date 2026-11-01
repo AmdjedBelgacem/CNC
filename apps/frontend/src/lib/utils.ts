@@ -12,6 +12,9 @@ const twMergeWithTheme = extendTailwindMerge({
         'text-body-lg',
         'text-body-md',
         'text-stats-number',
+        // Admin density steps from tailwind.config.js (`fontSize['13']`, `['2xs']`).
+        'text-13',
+        'text-2xs',
       ],
     },
   },

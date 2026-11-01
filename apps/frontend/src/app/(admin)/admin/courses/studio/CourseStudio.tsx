@@ -20,6 +20,7 @@ import { LessonDrawer } from './LessonDrawer';
 import { allStepsDone, stepStates } from './completeness';
 import { slugify } from './slugify';
 import { toast } from '@/components/ui/toast';
+import { Crossfade, Reveal } from '@/components/ui/motion';
 import type { CourseStudioData, Lesson, Section } from './types';
 import * as api from './api';
 
@@ -518,14 +519,16 @@ export function CourseStudio({ slug }: { slug: string }) {
   };
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="size-7 animate-spin text-muted-foreground" /></div>;
+    return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="size-6 animate-spin text-muted-foreground/70" /></div>;
   }
   if (error || !course) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
-        <AlertTriangle className="size-8 text-warning" />
-        <p className="font-sans text-base text-foreground">{error || t('studio.courseNotFound', { default: 'Course not found' })}</p>
-        <div className="flex flex-wrap items-center justify-center gap-2"><button type="button" onClick={() => void load()} className="rounded-lg bg-primary px-4 py-2 font-sans text-sm font-medium text-primary-foreground">{tCommon('retry', { default: 'Retry' })}</button><button type="button" onClick={() => router.push('/admin/courses')} className="rounded-lg border border-border px-4 py-2 font-sans text-sm font-medium text-muted-foreground">{t('studio.backToCourses', { default: 'Back to courses' })}</button></div>
+      <div className="flex min-h-screen items-center justify-center bg-background px-6">
+        <Reveal className="flex max-w-md flex-col items-center gap-4 rounded-2xl border border-border/70 bg-card px-8 py-10 text-center shadow-sm">
+          <span className="flex size-12 items-center justify-center rounded-full bg-warning/10 text-warning"><AlertTriangle className="size-6" /></span>
+          <p className="text-balance font-display text-xl font-medium tracking-[-0.015em] text-foreground">{error || t('studio.courseNotFound', { default: 'Course not found' })}</p>
+          <div className="flex flex-wrap items-center justify-center gap-2"><button type="button" onClick={() => void load()} className="rounded-lg bg-primary px-4 py-2 font-sans text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]">{tCommon('retry', { default: 'Retry' })}</button><button type="button" onClick={() => router.push('/admin/courses')} className="rounded-lg border border-border/80 bg-card px-4 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-[0.98]">{t('studio.backToCourses', { default: 'Back to courses' })}</button></div>
+        </Reveal>
       </div>
     );
   }
@@ -569,10 +572,12 @@ export function CourseStudio({ slug }: { slug: string }) {
           openStudioPreview(firstLesson);
         }}
       />
-      <main className="mx-auto w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <section className="min-w-0 rounded-xl border border-border bg-card p-5 shadow-xs sm:p-6">
-            {stepContent[STEP_KEYS.indexOf(step)]}
+      <main className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
+          <section className="min-w-0 rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-7 lg:p-8">
+            <Crossfade value={step}>
+              {stepContent[STEP_KEYS.indexOf(step)]}
+            </Crossfade>
           </section>
           <aside className="min-w-0 lg:sticky lg:top-44 lg:self-start">
             <SummaryPanel course={course} steps={steps} saving={saveStatus === 'saving'} lastSavedAt={lastSavedAt} publishReasons={publishReasons} warnings={warnings} onJump={(index) => setStep(STEP_KEYS[index] ?? 'basics')} />

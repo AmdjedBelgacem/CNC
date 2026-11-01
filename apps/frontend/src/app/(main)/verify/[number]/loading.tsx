@@ -9,5 +9,5 @@
  */
 import { VerifySkeleton } from '@/components/skeletons/route-skeletons';
 export default function Loading() {
-  return <VerifySkeleton  />;
+  return <VerifySkeleton />;
 }

@@ -45,8 +45,8 @@ export function NavBlock({ props, puck }: BlockComponentProps<NavProps>) {
   return (
     <header
       className={cn(
-        'fixed left-1/2 -translate-x-1/2 z-50 transition-transform duration-300',
-        scaled && 'scale-95',
+        'fixed left-1/2 -translate-x-1/2 z-50 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]',
+        scaled && 'scale-[0.97]',
         className,
       )}
       style={{
@@ -59,7 +59,8 @@ export function NavBlock({ props, puck }: BlockComponentProps<NavProps>) {
       {' '}
       <div
         className={cn(
-          'bg-card border border-border flex justify-between items-center',
+          'flex items-center justify-between border bg-card/85 backdrop-blur-xl transition-[box-shadow,border-color] duration-300',
+          scaled ? 'border-border shadow-lg' : 'border-border/70 shadow-sm',
           containerPaddingX,
           containerPaddingY,
           containerRadius,

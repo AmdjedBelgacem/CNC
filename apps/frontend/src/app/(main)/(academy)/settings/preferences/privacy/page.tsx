@@ -1,10 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ElementType } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { Eye, Users, MessageSquare, UserPlus, Check, Shield, Lock } from 'lucide-react';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
+import {
+  ChoiceTile,
+  SettingsBanner,
+  SettingsHeader,
+  SettingsSaveBar,
+  SettingsSection,
+} from '../../_components/settings-ui';
 export default function PrivacyPage() {
   const t = useTranslations('account');
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public');
@@ -49,9 +56,7 @@ export default function PrivacyPage() {
         saved_.whoCanMessage !== messages ||
         saved_.whoCanFollow !== follows
       ) {
-        throw new Error(
-          t('privacy.notApplied', { default: 'Privacy settings were not applied.' }),
-        );
+        throw new Error(t('privacy.notApplied', { default: 'Privacy settings were not applied.' }));
       }
       setSaved(true);
       toast({ type: 'ok', title: t('privacy.savedToast') });
@@ -64,164 +69,136 @@ export default function PrivacyPage() {
       setSaving(false);
     }
   };
-  const Card = ({ active, onClick, icon: Icon, title, desc }: any) => (
-    <button
-      onClick={onClick}
-      className={`relative flex flex-col items-center gap-2 rounded-2xl border-2 p-5 text-center transition ${active ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/20 hover:bg-muted/20'}`}
-    >
-      {' '}
-      {active && (
-        <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Check className="size-3.5" />
-        </span>
-      )}{' '}
-      <span
-        className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground'}`}
-      >
-        {' '}
-        <Icon className="size-5" />{' '}
-      </span>{' '}
-      <span className="text-sm font-semibold">{title}</span>{' '}
-      <span className="text-xs leading-relaxed text-muted-foreground">{desc}</span>{' '}
-    </button>
-  );
   return (
     <div className="space-y-6">
-      {' '}
-      <div className="flex gap-4">
-        {' '}
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          {' '}
-          <Eye className="size-5" />{' '}
-        </div>{' '}
-        <div>
-          {' '}
-          <h1 className="text-xl font-semibold tracking-tight">{t('privacy.pageTitle')}</h1>{' '}
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {t('privacy.pageSubtitle')}
-          </p>{' '}
-        </div>{' '}
-      </div>{' '}
-      {saved && (
-        <div className="flex gap-2 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success">
-          <Check className="size-4 shrink-0 mt-0.5" /> {t('privacy.savedToast')}
-        </div>
-      )}{' '}
-      {error && (
-        <div
-          role="alert"
-          className="flex gap-2 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive"
-        >
-          <Shield className="size-4 shrink-0 mt-0.5" /> {error}
-        </div>
-      )}{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <Eye className="size-3.5" />
-            </span>{' '}
-            {t('privacy.visibilityTitle')}
-          </h2>{' '}
-        </div>{' '}
-        <div className="grid gap-3 p-6 sm:grid-cols-3">
-          {' '}
+      <SettingsHeader
+        icon={Eye}
+        title={t('privacy.pageTitle')}
+        subtitle={t('privacy.pageSubtitle')}
+      />
+      <SettingsBanner show={saved} tone="success" icon={Check} role="status">
+        {t('privacy.savedToast')}
+      </SettingsBanner>
+      <SettingsBanner show={!!error} tone="error" icon={Shield} role="alert">
+        {error}
+      </SettingsBanner>
+      <SettingsSection icon={Eye} title={t('privacy.visibilityTitle')}>
+        <div className="grid gap-3 sm:grid-cols-3">
           <Card
+            group="visibility"
             active={visibility === 'public'}
             onClick={() => setVisibility('public')}
             icon={Users}
             title={t('privacy.visibilityPublic')}
             desc={t('privacy.visibilityPublicDesc')}
-          />{' '}
+          />
           <Card
+            group="visibility"
             active={visibility === 'followers'}
             onClick={() => setVisibility('followers')}
             icon={Shield}
             title={t('privacy.visibilityFollowers')}
             desc={t('privacy.visibilityFollowersDesc')}
-          />{' '}
+          />
           <Card
+            group="visibility"
             active={visibility === 'private'}
             onClick={() => setVisibility('private')}
             icon={Lock}
             title={t('privacy.visibilityPrivate')}
             desc={t('privacy.visibilityPrivateDesc')}
-          />{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <MessageSquare className="size-3.5" />
-            </span>{' '}
-            {t('privacy.messagesTitle')}
-          </h2>{' '}
-        </div>{' '}
-        <div className="grid gap-3 p-6 sm:grid-cols-3">
-          {' '}
+          />
+        </div>
+      </SettingsSection>
+      <SettingsSection icon={MessageSquare} title={t('privacy.messagesTitle')} delay={0.04}>
+        <div className="grid gap-3 sm:grid-cols-3">
           <Card
+            group="messages"
             active={messages === 'everyone'}
             onClick={() => setMessages('everyone')}
             icon={MessageSquare}
             title={t('privacy.everyone')}
             desc={t('privacy.messagesEveryoneDesc')}
-          />{' '}
+          />
           <Card
+            group="messages"
             active={messages === 'followers'}
             onClick={() => setMessages('followers')}
             icon={Users}
             title={t('privacy.visibilityFollowers')}
             desc={t('privacy.messagesFollowersDesc')}
-          />{' '}
+          />
           <Card
+            group="messages"
             active={messages === 'none'}
             onClick={() => setMessages('none')}
             icon={Eye}
             title={t('privacy.noOne')}
             desc={t('privacy.messagesNoneDesc')}
-          />{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
-              <UserPlus className="size-3.5" />
-            </span>{' '}
-            {t('privacy.followsTitle')}
-          </h2>{' '}
-        </div>{' '}
-        <div className="grid gap-3 p-6 sm:grid-cols-2">
-          {' '}
+          />
+        </div>
+      </SettingsSection>
+      <SettingsSection icon={UserPlus} title={t('privacy.followsTitle')} delay={0.08}>
+        <div className="grid gap-3 sm:grid-cols-2">
           <Card
+            group="follows"
             active={follows === 'everyone'}
             onClick={() => setFollows('everyone')}
             icon={Users}
             title={t('privacy.everyone')}
             desc={t('privacy.followsEveryoneDesc')}
-          />{' '}
+          />
           <Card
+            group="follows"
             active={follows === 'approval'}
             onClick={() => setFollows('approval')}
             icon={Shield}
             title={t('privacy.approval')}
             desc={t('privacy.followsApprovalDesc')}
-          />{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="sticky bottom-4 flex justify-end rounded-2xl border border-border bg-card px-4 py-3 shadow-lg">
-        {' '}
-        <Button onClick={handleSave} disabled={saving} className="h-9 rounded-full px-6 shadow-md">
+          />
+        </div>
+      </SettingsSection>
+      <SettingsSaveBar>
+        <Button onClick={handleSave} disabled={saving} className="rounded-full px-6">
           {saving ? t('saving') : saved ? t('savedOk') : t('privacy.savePreferences')}
-        </Button>{' '}
-      </div>{' '}
+        </Button>
+      </SettingsSaveBar>
     </div>
+  );
+}
+
+/** One option in a privacy choice group; the ring slides between siblings. */
+function Card({
+  group,
+  active,
+  onClick,
+  icon: Icon,
+  title,
+  desc,
+}: {
+  group: string;
+  active: boolean;
+  onClick: () => void;
+  icon: ElementType;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <ChoiceTile
+      active={active}
+      onSelect={onClick}
+      layoutId={`privacy-${group}-active`}
+      className="flex items-start gap-3 p-4"
+    >
+      <span
+        className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-colors ${active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{desc}</span>
+      </span>
+    </ChoiceTile>
   );
 }

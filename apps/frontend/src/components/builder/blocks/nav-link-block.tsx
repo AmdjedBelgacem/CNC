@@ -3,12 +3,12 @@ import type { NavLinkProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import { isInternalHref } from '@/lib/builder/href';
-import type { BlockComponentProps } from './index'; /** Small uppercase navbar link; the first/active link is primary-coloured. */
+import type { BlockComponentProps } from './index'; /** Quiet navbar link; the active link reads in full ink. */
 export function NavLinkBlock({ props }: BlockComponentProps<NavLinkProps>) {
   const { label = '', href = '#', active, className } = props;
   const classes = cn(
-    'inline-flex items-center font-label-sm text-2xs font-bold tracking-[0.1em]',
-    active ? 'text-primary' : 'text-text-muted hover:text-primary transition-colors',
+    'inline-flex items-center text-13 font-medium',
+    active ? 'text-foreground' : 'text-muted-foreground transition-colors hover:text-foreground',
     className,
   );
   const style = layoutStyle(props);

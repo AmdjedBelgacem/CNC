@@ -2,7 +2,9 @@
 import { useId, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, type LucideIcon } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease } from '@/lib/motion';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from './admin-ui';
 
@@ -20,10 +22,10 @@ import { Skeleton } from './admin-ui';
  * --------------------------------------------------------------------------- */
 
 const CONTROL_BASE =
-  'w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground shadow-xs outline-none transition ' +
+  'w-full rounded-lg border border-border/90 bg-card px-3 py-2 text-sm text-foreground shadow-xs outline-none transition-[border-color,box-shadow,background-color] duration-150 ' +
   'placeholder:text-muted-foreground/60 ' +
   'hover:border-border-strong ' +
-  'focus:border-primary/60 focus:ring-4 focus:ring-primary/10 ' +
+  'focus:border-primary/50 focus:ring-[3px] focus:ring-primary/15 ' +
   'disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground';
 
 export function TextInput({
@@ -134,7 +136,7 @@ export function Field({
     <div className={cn('space-y-1.5', className)}>
       <label
         htmlFor={id}
-        className={cn('block text-xs font-semibold text-foreground', labelClassName)}
+        className={cn('block text-13 font-medium text-foreground', labelClassName)}
       >
         {label}
         {required && (
@@ -144,12 +146,22 @@ export function Field({
         )}
       </label>
       {children({ id, 'aria-describedby': describedBy, invalid: !!error })}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="flex items-start gap-1.5 text-xs text-destructive">
-          <AlertCircle className="mt-px size-3.5 shrink-0" />
-          <span>{error}</span>
-        </p>
-      )}
+      <AnimatePresence initial={false}>
+        {error && (
+          <m.p
+            key="error"
+            id={`${id}-error`}
+            role="alert"
+            initial={{ opacity: 0, height: 0, y: -4 }}
+            animate={{ opacity: 1, height: 'auto', y: 0, transition: { duration: 0.22, ease: ease.emerge } }}
+            exit={{ opacity: 0, height: 0, transition: { duration: 0.14, ease: ease.exit } }}
+            className="flex items-start gap-1.5 overflow-hidden text-xs text-destructive"
+          >
+            <AlertCircle className="mt-px size-3.5 shrink-0" />
+            <span>{error}</span>
+          </m.p>
+        )}
+      </AnimatePresence>
       {hint && !error && (
         <p id={`${id}-hint`} className="text-xs leading-relaxed text-muted-foreground">
           {hint}
@@ -235,12 +247,12 @@ export function SwitchField({
   return (
     <div
       className={cn(
-        'flex items-start justify-between gap-4 rounded-xl border border-border bg-card p-4',
+        'flex items-start justify-between gap-4 rounded-xl border border-border/70 bg-card p-4 transition-colors duration-150 hover:border-border',
         className,
       )}
     >
       <div className="min-w-0">
-        <label htmlFor={id} className="block cursor-pointer text-13 font-semibold text-foreground">
+        <label htmlFor={id} className="block cursor-pointer text-sm font-medium text-foreground">
           {label}
         </label>
         {description && (
@@ -263,15 +275,21 @@ export function SwitchField({
  * document outline stays correct when a form nests sections.
  */
 export function FormSection({
+  id,
   title,
   description,
   icon: Icon,
+  badge,
   actions,
   children,
   className,
   bodyClassName,
   as: Heading = 'h2',
 }: {
+  /** Anchor target for `SectionNav`. */
+  id?: string;
+  /** Small marker next to the title, e.g. "Optional". */
+  badge?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
   icon?: LucideIcon;
@@ -283,16 +301,22 @@ export function FormSection({
 }) {
   return (
     <section
+      id={id}
       className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xs',
+        'flex scroll-mt-24 flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs',
         className,
       )}
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/30 px-4 py-3.5 sm:px-5">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-4 sm:px-5">
         <div className="min-w-0">
-          <Heading className="flex items-center gap-2 text-13 font-semibold text-foreground">
-            {Icon && <Icon className="size-4 shrink-0 text-primary" />}
+          <Heading className="flex items-center gap-2 font-display text-[1.0625rem] font-medium leading-snug tracking-[-0.015em] text-foreground">
+            {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
             {title}
+            {badge && (
+              <span className="rounded-full bg-muted px-2 py-0.5 font-sans text-2xs font-medium tracking-normal text-muted-foreground">
+                {badge}
+              </span>
+            )}
           </Heading>
           {description && (
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
@@ -358,16 +382,34 @@ export function FormActions({
   const t = useTranslations('ui.adminForm');
   const tc = useTranslations('common');
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 mt-6 flex flex-col items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <div className="sticky bottom-0 z-20 -mx-4 mt-6 flex flex-col items-stretch gap-3 border-t border-border/70 bg-background/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground sm:justify-start">
-        {dirty ? (
-          <span className="inline-flex items-center gap-1.5 font-semibold text-warning">
-            <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
-            {t('unsavedChanges')}
-          </span>
-        ) : (
-          <span>{t('allChangesSaved')}</span>
-        )}
+        <AnimatePresence mode="wait" initial={false}>
+          {dirty ? (
+            <m.span
+              key="dirty"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: ease.emerge } }}
+              exit={{ opacity: 0, y: -4, transition: { duration: 0.12, ease: ease.exit } }}
+              className="inline-flex items-center gap-1.5 font-medium text-warning"
+            >
+              <span className="relative flex size-1.5" aria-hidden="true">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-warning opacity-60" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-warning" />
+              </span>
+              {t('unsavedChanges')}
+            </m.span>
+          ) : (
+            <m.span
+              key="saved"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: ease.emerge } }}
+              exit={{ opacity: 0, y: -4, transition: { duration: 0.12, ease: ease.exit } }}
+            >
+              {t('allChangesSaved')}
+            </m.span>
+          )}
+        </AnimatePresence>
         {extra}
       </div>
       <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -376,7 +418,7 @@ export function FormActions({
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-50 sm:h-auto sm:flex-none"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-border/80 bg-card px-4 py-2 text-13 font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98] disabled:opacity-50 sm:h-auto sm:flex-none"
           >
             {cancelLabel ?? tc('cancel')}
           </button>
@@ -386,7 +428,7 @@ export function FormActions({
             type="button"
             onClick={onReset}
             disabled={saving || !dirty}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 py-2 text-13 font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98] disabled:opacity-40 sm:h-auto sm:flex-none"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-border/80 bg-card px-4 py-2 text-13 font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98] disabled:opacity-40 sm:h-auto sm:flex-none"
           >
             {resetLabel ?? t('discard')}
           </button>
@@ -396,7 +438,7 @@ export function FormActions({
             type="button"
             onClick={onSave}
             disabled={saving || !dirty}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-primary px-4 py-2 text-13 font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98] disabled:opacity-40 sm:h-auto sm:flex-none"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2 text-13 font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 hover:shadow-md active:scale-[0.98] disabled:opacity-40 disabled:shadow-none sm:h-auto sm:flex-none"
           >
             {saving ? tc('saving') : (saveLabel ?? tc('saveChanges'))}
           </button>
@@ -411,13 +453,13 @@ export function FormActions({
 export function FormSkeleton({ fields = 4, className }: { fields?: number; className?: string }) {
   return (
     <div className={cn('space-y-4', className)}>
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
         <Skeleton className="h-4 w-40" />
         <div className="mt-5 space-y-4">
           {Array.from({ length: fields }).map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-10 w-full rounded-xl" />
+              <Skeleton className="h-10 w-full rounded-lg" />
             </div>
           ))}
         </div>

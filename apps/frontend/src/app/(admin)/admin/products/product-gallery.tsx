@@ -3,6 +3,8 @@ import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Crosshair, ImageOff, Star, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
 import { HotspotStudio } from '@/components/hotspot/hotspot-studio';
 import { api } from '@/lib/api-client';
 import { uploadImage } from '@/lib/upload';
@@ -246,7 +248,7 @@ export function ProductGalleryManager({
           type="button"
           disabled={busy || images.length >= MAX_IMAGES}
           onClick={() => inputRef.current?.click()}
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:border-primary/50 disabled:opacity-50"
+          className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface-sunken/50 px-4 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98] disabled:opacity-50"
         >
           <Upload className="size-4" />
           {busy ? t('working', { default: 'Working…' }) : t('add', { default: 'Add images' })}
@@ -268,20 +270,29 @@ export function ProductGalleryManager({
       </div>
 
       {images.length === 0 ? (
-        <p className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-xs text-muted-foreground">
+        <p className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-surface-sunken/40 px-4 py-6 text-xs text-muted-foreground">
           <ImageOff className="size-4" />
           {t('empty', { default: 'No images yet. The storefront falls back to a placeholder.' })}
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
+          <AnimatePresence initial={false}>
           {images.map((image, index) => (
-            <li key={image.id} className="space-y-2 rounded-xl border border-border bg-card p-3">
+            <m.li
+              key={image.id}
+              layout
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1, transition: spring.smooth }}
+              exit={{ opacity: 0, scale: 0.96, transition: transition.leave }}
+              transition={spring.layout}
+              className="space-y-2 rounded-xl border border-border/70 bg-card p-3 shadow-xs"
+            >
               <div className="flex gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={image.url}
                   alt={image.alt ?? ''}
-                  className="size-20 shrink-0 rounded-lg border border-border object-cover"
+                  className="size-20 shrink-0 rounded-lg border border-border/70 object-cover"
                 />
                 <div className="min-w-0 flex-1 space-y-2">
                   <input
@@ -293,7 +304,7 @@ export function ProductGalleryManager({
                     }
                     onBlur={(e) => void setAlt(image, e.target.value)}
                     placeholder={t('alt', { default: 'Alt text (describe the image)' })}
-                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-xs outline-none focus:border-primary/60"
+                    className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-xs outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
                   />
                   <div className="flex flex-wrap items-center gap-1.5">
                     <button
@@ -301,10 +312,10 @@ export function ProductGalleryManager({
                       onClick={() => void setPrimary(image)}
                       disabled={busy || image.isPrimary}
                       className={cn(
-                        'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-2xs font-semibold transition',
+                        'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-2xs font-medium transition-colors',
                         image.isPrimary
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border text-foreground hover:bg-primary/8',
+                          ? 'border-primary/30 bg-primary/10 text-primary'
+                          : 'border-border/70 text-foreground hover:bg-primary/8',
                       )}
                     >
                       <Star className="size-3" />
@@ -317,7 +328,7 @@ export function ProductGalleryManager({
                       onClick={() => void move(index, -1)}
                       disabled={busy || index === 0}
                       aria-label={t('moveUp', { default: 'Move earlier' })}
-                      className="rounded-lg border border-border px-2 py-1 text-2xs font-semibold transition hover:bg-primary/8 disabled:opacity-40"
+                      className="rounded-lg border border-border/70 px-2 py-1 text-2xs font-medium transition hover:bg-muted active:scale-95 disabled:opacity-40"
                     >
                       ↑
                     </button>
@@ -326,7 +337,7 @@ export function ProductGalleryManager({
                       onClick={() => void move(index, 1)}
                       disabled={busy || index === images.length - 1}
                       aria-label={t('moveLater', { default: 'Move later' })}
-                      className="rounded-lg border border-border px-2 py-1 text-2xs font-semibold transition hover:bg-primary/8 disabled:opacity-40"
+                      className="rounded-lg border border-border/70 px-2 py-1 text-2xs font-medium transition hover:bg-muted active:scale-95 disabled:opacity-40"
                     >
                       ↓
                     </button>
@@ -335,7 +346,7 @@ export function ProductGalleryManager({
                       onClick={() => void remove(image)}
                       disabled={busy}
                       aria-label={t('remove', { default: 'Remove image' })}
-                      className="ms-auto inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-2xs font-semibold text-destructive transition hover:bg-destructive/8 disabled:opacity-40"
+                      className="ms-auto inline-flex items-center gap-1 rounded-lg border border-border/70 px-2 py-1 text-2xs font-medium text-destructive transition hover:border-destructive/30 hover:bg-destructive/8 disabled:opacity-40"
                     >
                       <X className="size-3" />
                       {t('remove', { default: 'Remove' })}
@@ -353,9 +364,9 @@ export function ProductGalleryManager({
                 type="button"
                 onClick={() => setStudioImage(image)}
                 disabled={busy}
-                className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-start transition hover:border-primary/40 disabled:opacity-50"
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/70 bg-surface-sunken/50 px-3 py-2 text-start transition hover:border-primary/30 hover:bg-primary/5 disabled:opacity-50"
               >
-                <span className="inline-flex items-center gap-2 text-2xs font-semibold text-muted-foreground">
+                <span className="inline-flex items-center gap-2 text-2xs font-medium text-muted-foreground">
                   <Crosshair className="size-3.5" />
                   {t('hotspotsTitle', { default: 'Hotspots' })}
                   {(image.hotspots ?? []).length > 0 ? (
@@ -364,12 +375,13 @@ export function ProductGalleryManager({
                     </span>
                   ) : null}
                 </span>
-                <span className="text-2xs font-semibold text-primary">
+                <span className="text-2xs font-medium text-primary">
                   {t('edit', { default: 'Edit' })}
                 </span>
               </button>
-            </li>
+            </m.li>
           ))}
+          </AnimatePresence>
         </ul>
       )}
 

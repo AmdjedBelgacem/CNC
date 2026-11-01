@@ -14,9 +14,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { AnimatePresence, m } from 'framer-motion';
+import { ease, spring, transition } from '@/lib/motion';
 import {
   ChevronRight,
   Copy,
+  ClipboardPaste,
   CopyPlus,
   Eye,
   EyeOff,
@@ -237,7 +240,7 @@ export function BlockProductivity() {
           disabled={!clipboard}
           onClick={pasteClipboard}
         >
-          <span className="text-2xs font-semibold">PASTE</span>
+          <ClipboardPaste className="size-3.5" />
         </ToolbarButton>
         <ToolbarButton
           label={selectedHidden ? tb('productivity.show') : tb('productivity.hide')}
@@ -247,10 +250,17 @@ export function BlockProductivity() {
           {selectedHidden ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
         </ToolbarButton>
 
-        <span className="mx-1 h-4 w-px bg-border" aria-hidden />
+        <span className="mx-1 h-4 w-px bg-border/80" aria-hidden />
 
+        <AnimatePresence mode="wait" initial={false}>
         {findOpen ? (
-          <div className="flex items-center gap-1">
+          <m.div
+            key="find-open"
+            initial={{ opacity: 0, width: 32 }}
+            animate={{ opacity: 1, width: 'auto', transition: spring.smooth }}
+            exit={{ opacity: 0, width: 32, transition: { duration: 0.14, ease: ease.exit } }}
+            className="flex items-center gap-1 overflow-hidden rounded-lg bg-surface-sunken/70 pe-0.5 ring-1 ring-inset ring-border/60"
+          >
             <Search className="ms-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
             <Input
               ref={searchRef}
@@ -272,16 +282,32 @@ export function BlockProductivity() {
             <ToolbarButton label={tb('productivity.close')} onClick={() => setFindOpen(false)}>
               <X className="size-3.5" />
             </ToolbarButton>
-          </div>
+          </m.div>
         ) : (
-          <ToolbarButton label={tb('productivity.find')} onClick={() => setFindOpen(true)}>
-            <Search className="size-3.5" />
-          </ToolbarButton>
+          <m.span
+            key="find-closed"
+            className="inline-flex"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: transition.crossfade }}
+            exit={{ opacity: 0, transition: transition.leave }}
+          >
+            <ToolbarButton label={tb('productivity.find')} onClick={() => setFindOpen(true)}>
+              <Search className="size-3.5" />
+            </ToolbarButton>
+          </m.span>
         )}
+        </AnimatePresence>
       </div>
 
+      <AnimatePresence>
       {findOpen && query.trim().length >= 2 && (
-        <div className="fixed start-4 top-24 z-50 w-80 rounded-md border border-border bg-popover p-1 shadow-lg">
+        <m.div
+          key="find-results"
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+          exit={{ opacity: 0, y: -4, transition: { duration: 0.12, ease: ease.exit } }}
+          className="fixed start-4 top-24 z-50 w-80 origin-top rounded-2xl border border-border/70 bg-popover p-1.5 shadow-xl"
+        >
           {matches.length === 0 ? (
             <p className="px-2 py-4 text-center text-2xs text-muted-foreground">
               {tb('productivity.findEmpty')}
@@ -297,10 +323,17 @@ export function BlockProductivity() {
                       jumpToMatch(match);
                     }}
                     className={cn(
-                      'w-full rounded-sm px-2 py-1.5 text-start hover:bg-muted',
-                      index === activeMatch && 'bg-muted',
+                      'relative isolate w-full rounded-lg px-2.5 py-1.5 text-start transition-colors hover:bg-muted/60',
                     )}
                   >
+                    {index === activeMatch && (
+                      <m.span
+                        layoutId="builder-find-active"
+                        aria-hidden="true"
+                        className="absolute inset-0 -z-10 rounded-lg bg-muted"
+                        transition={spring.snappy}
+                      />
+                    )}
                     <span className="block font-mono text-2xs text-muted-foreground">
                       {match.label}
                     </span>
@@ -310,8 +343,9 @@ export function BlockProductivity() {
               ))}
             </ul>
           )}
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
 
       {trail.length > 1 && (
         <nav
@@ -352,7 +386,7 @@ function ToolbarButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="h-7 px-1.5"
+      className="h-7 rounded-lg px-1.5 active:scale-[0.94]"
     >
       {children}
     </Button>

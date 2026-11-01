@@ -6,7 +6,7 @@ const CARD_PADDING: Record<string, string> = { none: '', sm: 'p-4', md: 'p-6', l
 const CARD_BG: Record<string, string> = {
   transparent: '',
   muted: 'bg-surface-container-low',
-  glass: 'bg-card border border-border',
+  glass: 'bg-card border border-border/70 shadow-xs',
   gradient: 'bg-primary text-primary-foreground',
   'gradient-muted': 'bg-surface-container-low',
 };
@@ -16,7 +16,7 @@ const CARD_SHADOW: Record<string, string> = {
   md: 'shadow-md',
   lg: 'shadow-lg',
   xl: 'shadow-xl',
-  glow: 'shadow-[0_0_44px_-12px_rgb(var(--c-primary)/0.35)]',
+  glow: 'shadow-lg ring-1 ring-primary/10',
 };
 const CARD_RADIUS: Record<string, string> = {
   none: '',
@@ -48,10 +48,10 @@ export function CardBlock({ props, puck }: BlockComponentProps<CardProps>) {
         CARD_BG[bg],
         CARD_RADIUS[radius],
         CARD_SHADOW[shadow],
-        border && 'border border-glass-border',
+        border && 'border border-border/70',
         align === 'center' && 'text-center',
         align === 'right' && 'text-right',
-        hover && ' transition-all duration-300',
+        hover && 'card-hover',
         accent && 'relative overflow-hidden group',
         className,
       )}
@@ -61,7 +61,7 @@ export function CardBlock({ props, puck }: BlockComponentProps<CardProps>) {
       {accent && (
         <div
           className={cn(
-            'absolute top-0 start-0 w-1 h-full opacity-0 group-hover:opacity-100 transition-opacity',
+            'absolute inset-y-4 start-0 w-[3px] rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100',
             accentColor,
           )}
         ></div>

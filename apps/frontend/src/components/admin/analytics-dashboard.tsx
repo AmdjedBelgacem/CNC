@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from '@/components/ui/toast';
 import {
   Activity as ActivityIcon,
+  ArrowRight,
   AlertCircle,
   Award,
   Building2,
@@ -23,7 +24,10 @@ import {
   UserX,
   type LucideIcon,
 } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
+import { AnimatedNumber, Stagger, StaggerItem } from '@/components/ui/motion';
 import { getImageSrc } from '@/lib/images';
 import { formatMinorUnits } from '@/lib/money';
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@titan/shared';
@@ -45,6 +49,7 @@ import {
   SkeletonRows,
   StatusPill,
   TONE_ICON,
+  TONE_SOLID,
   type Tone,
 } from './admin-ui';
 import { RankedListItem, TrendChart, type TrendPoint } from './analytics-charts';
@@ -153,7 +158,7 @@ function DeltaBadge({ delta }: { delta: number | null }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-bold tabular-nums',
+        'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-medium tabular-nums',
         pos ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive',
       )}
     >
@@ -421,7 +426,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-[132px] rounded-xl" />
           ))}
@@ -488,17 +493,26 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
             default: 'Growth, revenue and learning health across your academy.',
           })}
           badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success md:self-auto">
-              <ShieldCheck className="size-4" />
-              {isFetching
-                ? t('updating', { default: 'Updating…' })
-                : t('tenantIsolatedBadge', { default: 'Tenant-isolated · Admin only' })}
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/15 bg-success/10 px-3 py-1.5 text-xs font-medium text-success md:self-auto">
+              <ShieldCheck className="size-3.5" />
+              <AnimatePresence mode="wait" initial={false}>
+                <m.span
+                  key={isFetching ? 'updating' : 'idle'}
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: ease.emerge } }}
+                  exit={{ opacity: 0, y: -3, transition: { duration: 0.1 } }}
+                >
+                  {isFetching
+                    ? t('updating', { default: 'Updating…' })
+                    : t('tenantIsolatedBadge', { default: 'Tenant-isolated · Admin only' })}
+                </m.span>
+              </AnimatePresence>
             </span>
           }
         />
 
         {/* Range + compare controls */}
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-2 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-card p-2 shadow-xs">
           <PillTabs
             value={range}
             onChange={(k) => setRange(k)}
@@ -509,24 +523,35 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
             onClick={() => setCompare((c) => !c)}
             aria-pressed={compare}
             className={cn(
-              'inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition',
+              'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors duration-150 active:scale-[0.98]',
               compare
-                ? 'border-primary/30 bg-primary/10 text-primary'
-                : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                ? 'border-primary/20 bg-primary/10 text-primary'
+                : 'border-border/80 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
             )}
           >
             <span
               className={cn(
-                'flex size-3.5 items-center justify-center rounded-[4px] border transition',
+                'flex size-3.5 items-center justify-center rounded-[4px] border transition-colors',
                 compare ? 'border-primary bg-primary' : 'border-border-strong',
               )}
               aria-hidden="true"
             >
-              {compare && (
-                <svg viewBox="0 0 10 10" className="size-2.5 text-primary-foreground" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1.5 5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
+              <AnimatePresence initial={false}>
+                {compare && (
+                  <m.svg
+                    viewBox="0 0 10 10"
+                    className="size-2.5 text-primary-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    initial={{ scale: 0.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1, transition: spring.snappy }}
+                    exit={{ scale: 0.4, opacity: 0, transition: { duration: 0.1 } }}
+                  >
+                    <path d="M1.5 5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </m.svg>
+                )}
+              </AnimatePresence>
             </span>
             {t('compareToPrevious', { default: 'Compare to previous' })}
           </button>
@@ -541,7 +566,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                 onChange={(e) => setTenantId(e.target.value.trim())}
                 placeholder={t('tenantIdPlaceholder', { default: 'tenantId' })}
                 aria-label={t('tenantIdPlaceholder', { default: 'tenantId' })}
-                className="h-9 w-36 rounded-xl border border-border bg-background px-2.5 text-xs outline-none transition placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-4 focus:ring-primary/10"
+                className="h-9 w-36 rounded-lg border border-border/80 bg-card px-2.5 font-mono text-xs shadow-xs outline-none transition placeholder:text-muted-foreground/60 hover:border-border-strong focus:border-primary/50 focus:ring-[3px] focus:ring-primary/15"
               />
             </div>
           )}
@@ -554,14 +579,26 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
           </span>
         </div>
 
-        {error && <ErrorBanner message={error} onRetry={() => fetchData(range, tenantId)} retryLabel={tCommon('retry', { default: 'Retry' })} />}
+        <AnimatePresence initial={false}>
+          {error && (
+            <m.div
+              key="error"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto', transition: { duration: 0.28, ease: ease.emerge } }}
+              exit={{ opacity: 0, height: 0, transition: { duration: 0.16, ease: ease.exit } }}
+              className="overflow-hidden"
+            >
+              <ErrorBanner message={error} onRetry={() => fetchData(range, tenantId)} retryLabel={tCommon('retry', { default: 'Retry' })} />
+            </m.div>
+          )}
+        </AnimatePresence>
 
-        <div className={cn('space-y-6 transition-opacity', isFetching && 'pointer-events-none opacity-60')}>
+        <div className={cn('space-y-6 transition-opacity duration-300', isFetching && 'pointer-events-none opacity-60')}>
           {/* KPI grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {kpis.map((k) => (
+          <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {kpis.map((k, index) => (
+              <StaggerItem key={k.key} index={index}>
               <AdminKpiCard
-                key={k.key}
                 icon={k.icon}
                 label={k.label}
                 value={k.value}
@@ -571,8 +608,9 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                 sparkline={k.sparkline}
                 trendUp={k.delta === null ? null : k.delta >= 0}
               />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
 
           {/* Trends */}
           <div className="grid gap-6 lg:grid-cols-2">
@@ -644,7 +682,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
             <PanelCard
               title={
                 <span className="flex items-center gap-2">
-                  <Trophy className="size-4 text-primary" />
+                  <Trophy className="size-4 text-muted-foreground" />
                   {t('topByEnrollments', { default: 'Top Courses by Enrollment' })}
                 </span>
               }
@@ -677,7 +715,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
             <PanelCard
               title={
                 <span className="flex items-center gap-2">
-                  <Percent className="size-4 text-primary" />
+                  <Percent className="size-4 text-muted-foreground" />
                   {t('topByCompletion', { default: 'Top Courses by Completion' })}
                 </span>
               }
@@ -693,9 +731,9 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
               {isFetching ? (
                 <SkeletonRows rows={5} columns={2} />
               ) : (breakdowns?.topCoursesByCompletion.length ?? 0) === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-10 text-center">
-                  <Award className="size-7 text-muted-foreground/40" />
-                  <p className="text-sm font-medium text-muted-foreground">
+                <div className="flex flex-col items-center gap-2 py-10 text-center animate-fade-in-up">
+                  <span className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground/70"><Award className="size-5" /></span>
+                  <p className="font-display text-base font-medium text-foreground">
                     {t('noCompletionsYet', { default: 'No completions yet' })}
                   </p>
                   <p className="max-w-[28ch] text-xs text-muted-foreground">
@@ -727,7 +765,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
             <PanelCard
               title={
                 <span className="flex items-center gap-2">
-                  <Package className="size-4 text-primary" />
+                  <Package className="size-4 text-muted-foreground" />
                   {t('topProductsByRevenue', { default: 'Top Products by Revenue' })}
                 </span>
               }
@@ -743,9 +781,9 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
               {isFetching ? (
                 <SkeletonRows rows={5} columns={2} />
               ) : (breakdowns?.topProductsByRevenue.length ?? 0) === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-10 text-center">
-                  <Package className="size-7 text-muted-foreground/40" />
-                  <p className="text-sm font-medium text-muted-foreground">
+                <div className="flex flex-col items-center gap-2 py-10 text-center animate-fade-in-up">
+                  <span className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground/70"><Package className="size-5" /></span>
+                  <p className="font-display text-base font-medium text-foreground">
                     {t('noRevenueInPeriod', { default: 'No revenue in this period' })}
                   </p>
                   <p className="max-w-[28ch] text-xs text-muted-foreground">
@@ -849,14 +887,14 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                     className={cn(
                       'flex flex-col gap-2 rounded-xl border p-4',
                       (insights?.suspendedUsers ?? 0) > 0 || insights?.ordersSilent30d
-                        ? 'border-warning/30 bg-warning/8'
-                        : 'border-border bg-card',
+                        ? 'border-warning/20 bg-warning/[0.06]'
+                        : 'border-border/70 bg-card',
                     )}
                   >
-                    <span className={cn('flex size-8 items-center justify-center rounded-lg', TONE_ICON.amber)}>
+                    <span className={cn('flex size-8 items-center justify-center rounded-lg bg-warning/10', TONE_ICON.amber)}>
                       <UserX className="size-4" />
                     </span>
-                    <p className="text-sm font-semibold text-foreground">
+                    <p className="text-sm font-medium text-foreground">
                       {t('operationalAlerts', { default: 'Operational alerts' })}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -870,7 +908,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                     </p>
                     <Link
                       href="/admin/users?suspended=true"
-                      className="mt-auto inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                      className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
                       {t('reviewUsers', { default: 'Review users' })}
                     </Link>
@@ -884,7 +922,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
           <PanelCard
             title={
               <span className="flex items-center gap-2">
-                <Clock className="size-4 text-primary" />
+                <Clock className="size-4 text-muted-foreground" />
                 {t('recentActivity', { default: 'Recent Activity' })}
               </span>
             }
@@ -907,9 +945,9 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                 ))}
               </div>
             ) : (activity?.items.length ?? 0) === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-10 text-center">
-                <Clock className="size-7 text-muted-foreground/40" />
-                <p className="text-sm font-medium text-muted-foreground">
+              <div className="flex flex-col items-center gap-2 py-10 text-center animate-fade-in-up">
+                <span className="mb-1 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground/70"><Clock className="size-5" /></span>
+                <p className="font-display text-base font-medium text-foreground">
                   {t('noActivityInPeriod', { default: 'No activity in this period' })}
                 </p>
                 <p className="max-w-[36ch] text-xs text-muted-foreground">
@@ -917,8 +955,8 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                 </p>
               </div>
             ) : (
-              <ul className="relative space-y-1 before:absolute before:bottom-2 before:start-[7px] before:top-2 before:w-px before:bg-border">
-                {activity!.items.map((item) => {
+              <ul className="relative space-y-1 before:absolute before:bottom-2 before:start-[7px] before:top-2 before:w-px before:bg-border/70">
+                {activity!.items.map((item, index) => {
                   const tone: Tone =
                     item.type === 'signup'
                       ? 'blue'
@@ -928,10 +966,16 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                           ? 'rose'
                           : 'amber';
                   return (
-                    <li key={item.id} className="relative flex items-center gap-3 py-2.5 ps-6">
+                    <m.li
+                      key={item.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: ease.emerge, delay: Math.min(index * 0.035, 0.42) }}
+                      className="relative flex items-center gap-3 py-2.5 ps-6"
+                    >
                       <span
                         className={cn(
-                          'absolute start-0 top-1/2 size-3.5 -translate-y-1/2 rounded-full border-2 border-card',
+                          'absolute start-[1px] top-1/2 size-3 -translate-y-1/2 rounded-full border-2 border-card ring-1 ring-border/60',
                           tone === 'blue'
                             ? 'bg-primary'
                             : tone === 'emerald'
@@ -942,12 +986,12 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                         )}
                       />
                       <div className="min-w-0 flex-1">
-                        <Link href={item.href} className="group flex items-center gap-1 truncate text-sm text-foreground hover:underline">
+                        <Link href={item.href} className="group flex items-center gap-1 truncate text-sm text-foreground underline-offset-4 hover:underline">
                           <span className="truncate font-medium">{item.title}</span>
                         </Link>
                         <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
                       </div>
-                      <span className="shrink-0 text-xs text-muted-foreground">
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                         {(() => {
                           const d = new Date(item.at);
                           const diff = Math.floor((Date.now() - d.getTime()) / 60000);
@@ -958,7 +1002,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                           return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
                         })()}
                       </span>
-                    </li>
+                    </m.li>
                   );
                 })}
               </ul>
@@ -966,7 +1010,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
           </PanelCard>
 
           {/* Footer meta */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-border/80 bg-surface-sunken/40 px-4 py-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Clock className="size-3.5" />
               {t('lastUpdated', { time: lastUpdated ?? '—', default: 'Last updated {time}' })} ·{' '}
@@ -1015,18 +1059,20 @@ function InsightCard({
     <Link
       href={href}
       className={cn(
-        'group flex flex-col gap-2 rounded-xl border p-4 transition hover:shadow-sm',
-        active ? cn('border-transparent', TONE_ICON[tone], 'bg-card') : 'border-border bg-card',
-        active && tone === 'amber' && 'border-warning/30 bg-warning/8',
-        active && tone === 'rose' && 'border-destructive/30 bg-destructive/8',
-        active && tone === 'blue' && 'border-primary/30 bg-primary/8',
+        'card-hover group flex flex-col gap-2 rounded-xl border p-4',
+        active ? 'bg-card' : 'border-border/70 bg-card',
+        active && tone === 'amber' && 'border-warning/20 bg-warning/[0.06]',
+        active && tone === 'rose' && 'border-destructive/20 bg-destructive/[0.06]',
+        active && tone === 'blue' && 'border-primary/20 bg-primary/[0.06]',
       )}
     >
-      <span className={cn('flex size-8 items-center justify-center rounded-lg', TONE_ICON[tone])}>
+      <span className={cn('flex size-8 items-center justify-center rounded-lg', TONE_SOLID[tone])}>
         <Icon className="size-4" />
       </span>
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      <p className="text-2xl font-bold tabular-nums text-foreground">{count}</p>
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="font-display text-[28px] font-medium leading-none tracking-[-0.022em] text-foreground">
+        <AnimatedNumber value={count} animateOnChange />
+      </p>
       <p className="text-xs text-muted-foreground">{description}</p>
       {samples.length > 0 && (
         <ul className="mt-1 space-y-1">
@@ -1037,8 +1083,12 @@ function InsightCard({
           ))}
         </ul>
       )}
-      <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-semibold text-primary">
+      <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-medium text-primary">
         {actionLabel}
+        <ArrowRight
+          aria-hidden="true"
+          className="flip-rtl size-3 transition-transform duration-200 group-hover:translate-x-0.5"
+        />
       </span>
     </Link>
   );

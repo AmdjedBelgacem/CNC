@@ -36,7 +36,9 @@ import { toast } from '@/components/ui/toast';
 import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { useBuilderUI } from '@/components/builder/builder-ui-store';
 import { useOpenPage } from '@/components/builder/use-open-page';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring, transition } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -195,12 +197,12 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? 'builder-page-manager' : undefined}
-          className="flex h-8 max-w-full items-center gap-2 rounded-md px-2 text-start transition hover:bg-muted"
+          className="flex h-9 max-w-full items-center gap-2 rounded-lg px-2 text-start transition hover:bg-card hover:shadow-xs active:scale-[0.99]"
           title={tb('page.switch')}
         >
           <FileText className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="min-w-0">
-            <span className="block truncate text-13 font-semibold leading-tight text-foreground">
+            <span className="block truncate font-display text-[0.9375rem] font-medium leading-tight tracking-[-0.01em] text-foreground">
               {current?.title ?? status?.title ?? slug}
             </span>
             <span className="flex items-center gap-1 text-2xs leading-tight">
@@ -245,8 +247,7 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
           </span>
         </button>
 
-        {open && (
-          <AnchorPanel
+        <AnchorPanel
             anchorRef={triggerRef}
             open={open}
             onDismiss={() => setOpen(false)}
@@ -264,9 +265,9 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
               id="builder-page-manager"
               role="dialog"
               aria-label={tb('pages.dialogLabel')}
-              className="w-[min(24rem,90vw)] rounded-md border border-border bg-popover p-1 shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
+              className="w-[min(24rem,90vw)] p-1.5"
             >
-              <div className="flex items-center gap-1 border-b border-border p-1">
+              <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-surface-sunken/60 p-1 transition focus-within:border-primary/40 focus-within:bg-background">
                 <Search className="ms-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                 <Input
                   value={query}
@@ -278,33 +279,50 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
                 {loading && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
               </div>
 
+              <AnimatePresence initial={false}>
               {error && (
-                <p
+                <m.p
                   role="alert"
-                  className="m-1 rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto', transition: transition.enter }}
+                  exit={{ opacity: 0, height: 0, transition: transition.leave }}
+                  className="mx-1 mt-1.5 overflow-hidden rounded-lg bg-destructive/10 px-2.5 py-1.5 text-2xs text-destructive"
                 >
                   {error}
-                </p>
+                </m.p>
               )}
+              </AnimatePresence>
 
-              <div className="max-h-72 overflow-y-auto py-1">
+              <div className="max-h-72 overflow-y-auto py-1.5">
                 {filtered.length === 0 && !loading ? (
                   <p className="px-3 py-6 text-center text-2xs text-muted-foreground">
                     {pages.length === 0 ? tb('pages.empty') : tb('pages.noMatches')}
                   </p>
                 ) : (
-                  filtered.map((page) => {
+                  filtered.map((page, index) => {
                     const active = page.slug === slug;
                     const disabled = page.status === 'disabled';
                     return (
-                      <div
+                      <m.div
                         key={page.id}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{
+                          opacity: disabled ? 0.6 : 1,
+                          y: 0,
+                          transition: { ...spring.smooth, delay: Math.min(index, 10) * 0.025 },
+                        }}
                         className={cn(
-                          'group flex items-center gap-1 rounded-sm px-1 hover:bg-muted',
-                          active && 'bg-muted',
-                          disabled && 'opacity-60',
+                          'group relative isolate flex items-center gap-1 rounded-lg px-1 transition-colors hover:bg-muted/60',
                         )}
                       >
+                        {active && (
+                          <m.span
+                            layoutId="builder-page-active"
+                            aria-hidden="true"
+                            className="absolute inset-0 -z-10 rounded-lg bg-muted"
+                            transition={spring.smooth}
+                          />
+                        )}
                         <button
                           type="button"
                           onClick={() => void go(page.slug)}
@@ -326,12 +344,12 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
                           </span>
                           <span
                             className={cn(
-                              'shrink-0 rounded-sm px-1.5 py-0.5 text-2xs font-medium',
+                              'shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium',
                               page.status === 'published'
-                                ? 'bg-success/15 text-success'
+                                ? 'bg-success/10 text-success'
                                 : page.status === 'disabled'
                                   ? 'bg-muted text-muted-foreground'
-                                  : 'bg-warning/15 text-warning',
+                                  : 'bg-warning/10 text-warning',
                             )}
                           >
                             {page.status === 'published'
@@ -342,7 +360,7 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
                           </span>
                           {page.isSystem && (
                             <span
-                              className="shrink-0 rounded-sm bg-secondary px-1.5 py-0.5 text-2xs text-secondary-foreground"
+                              className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-2xs text-secondary"
                               title={tb('page.systemHint')}
                             >
                               {tb('page.system')}
@@ -380,17 +398,17 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
                             <Trash2 className="size-3.5" />
                           </IconAction>
                         </div>
-                      </div>
+                      </m.div>
                     );
                   })
                 )}
               </div>
 
-              <div className="border-t border-border p-1">
+              <div className="border-t border-border/70 pt-1.5">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-full justify-start text-13"
+                  className="h-8 w-full justify-start rounded-lg text-13"
                   onClick={() => setCreating(true)}
                 >
                   <Plus className="size-3.5" />
@@ -399,7 +417,6 @@ export function PageManager({ onNavigate }: PageManagerProps = {}) {
               </div>
             </div>
           </AnchorPanel>
-        )}
       </div>
 
       {creating && (
@@ -483,7 +500,7 @@ function IconAction({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'rounded-sm p-1.5 text-muted-foreground transition hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-30',
+        'rounded-md p-1.5 text-muted-foreground transition hover:bg-card hover:text-foreground hover:shadow-xs active:scale-90 disabled:pointer-events-none disabled:opacity-30',
         danger && 'hover:text-destructive',
       )}
     >
@@ -595,12 +612,20 @@ function CreatePageDialog({
                   onClick={() => setTemplate(value)}
                   aria-pressed={template === value}
                   className={cn(
-                    'flex flex-col items-center gap-1 rounded-md border px-2 py-2.5 text-2xs transition',
+                    'relative isolate flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-2xs transition-colors active:scale-[0.98]',
                     template === value
-                      ? 'border-primary bg-primary/5 text-foreground'
-                      : 'border-border text-muted-foreground hover:bg-muted',
+                      ? 'border-primary/40 text-foreground'
+                      : 'border-border/70 text-muted-foreground hover:bg-muted/60',
                   )}
                 >
+                  {template === value && (
+                    <m.span
+                      layoutId="builder-template-choice"
+                      aria-hidden="true"
+                      className="absolute inset-0 -z-10 rounded-xl bg-primary/5"
+                      transition={spring.smooth}
+                    />
+                  )}
                   {value === 'blank' ? (
                     <FileText className="size-4" aria-hidden />
                   ) : value === 'landing' ? (
@@ -620,7 +645,7 @@ function CreatePageDialog({
           {error && (
             <p
               role="alert"
-              className="rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive"
+              className="rounded-lg bg-destructive/10 px-2.5 py-1.5 text-2xs text-destructive"
             >
               {error}
             </p>
@@ -721,13 +746,13 @@ function DuplicateDialog({
               </p>
             )}
           </div>
-          <p className="rounded-sm bg-secondary/50 px-2 py-1.5 text-2xs text-muted-foreground">
+          <p className="rounded-lg bg-surface-sunken px-2.5 py-1.5 text-2xs text-muted-foreground">
             {tb('pages.duplicateDraftNote')}
           </p>
           {error && (
             <p
               role="alert"
-              className="rounded-sm bg-destructive/10 px-2 py-1 text-2xs text-destructive"
+              className="rounded-lg bg-destructive/10 px-2.5 py-1.5 text-2xs text-destructive"
             >
               {error}
             </p>

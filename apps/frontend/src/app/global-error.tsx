@@ -43,130 +43,67 @@ export default function GlobalError({
     void error;
   }, [error]);
 
+  // The root layout (and with it globals.css and the theme tokens) is gone when
+  // this renders, so the Ivory & Clay palette is restated here in a tiny inline
+  // sheet — including dark mode — rather than inherited.
   return (
     <html lang="en">
       <head>
         <style
           dangerouslySetInnerHTML={{
-            __html: `*,*::before,*::after{box-sizing:border-box;border:0 solid #e5e7eb}
+            __html: `*,*::before,*::after{box-sizing:border-box;border:0 solid}
+:root{--bg:#faf9f5;--fg:#141413;--muted:#5e5d59;--line:#e6e3da;--card:#fff;--well:#f0eee6;--clay:#b65433;--danger:#b3372b;--danger-bg:rgba(179,55,43,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#1f1e1d;--fg:#f5f4ee;--muted:#a6a39a;--line:#3a3936;--card:#2a2927;--well:#30302e;--clay:#c15f3c;--danger:#e0705f;--danger-bg:rgba(224,112,95,.12)}}
 html{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
-body{margin:0;background:#fafafa;color:#18181b;min-height:100dvh}
+body{margin:0;background:var(--bg);color:var(--fg);min-height:100dvh;background-image:radial-gradient(60% 50% at 15% 0%,rgba(182,84,51,.08),transparent 70%)}
+.ge-wrap{display:flex;min-height:100dvh;align-items:center;justify-content:center;padding:1.5rem}
+.ge{width:100%;max-width:28rem;text-align:center}
+.ge-icon{display:flex;width:3.5rem;height:3.5rem;margin:0 auto 1.5rem;align-items:center;justify-content:center;border-radius:9999px;background:var(--danger-bg);color:var(--danger);box-shadow:0 0 0 8px var(--danger-bg)}
+.ge h1{font-family:"Source Serif 4","Source Serif Pro",Georgia,"Times New Roman",serif;font-size:2rem;font-weight:500;letter-spacing:-.022em;line-height:1.15;margin:0}
+.ge-lead{margin:1rem auto 0;max-width:24rem;font-size:.9375rem;line-height:1.65;color:var(--muted)}
+.ge pre{margin:1.5rem 0 0;padding:.75rem 1rem;border-radius:.75rem;border:1px solid var(--line);background:var(--well);font-size:.75rem;text-align:start;overflow-x:auto;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
+.ge-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:2rem}
+.ge-btn{display:inline-flex;align-items:center;gap:.5rem;height:2.5rem;padding-inline:1rem;border-radius:.5rem;font-size:.875rem;font-weight:500;cursor:pointer;transition:transform .12s cubic-bezier(.32,.72,0,1),background-color .15s}
+.ge-btn:active{transform:scale(.975)}
+.ge-primary{background:var(--clay);color:#fff}
+.ge-primary:hover{filter:brightness(.95)}
+.ge-outline{border:1px solid var(--line);background:var(--card);color:var(--fg)}
+.ge-outline:hover{background:var(--well)}
+.ge-ref{margin:2rem 0 0;font-size:.75rem;color:var(--muted)}
+.ge-ref code{font-family:ui-monospace,monospace;font-size:.6875rem;background:var(--well);padding:.125rem .375rem;border-radius:.375rem}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-@media (prefers-reduced-motion:no-preference){.fu{animation:fadeUp .4s cubic-bezier(.32,.72,0,1) both}}
-:root{--f:.75rem}`,
+@media (prefers-reduced-motion:no-preference){.fu{animation:fadeUp .5s cubic-bezier(.32,.72,0,1) both}}`,
           }}
         />
       </head>
       <body>
-        <div className="fu flex min-h-[100dvh] items-center justify-center p-6">
-          <div style={{ width: '100%', maxWidth: '28rem', textAlign: 'center' }}>
-            <div
-              style={{
-                display: 'flex',
-                width: '3.5rem',
-                height: '3.5rem',
-                margin: '0 auto 1.25rem',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '1rem',
-                border: '1px solid #fecaca',
-                background: '#fef2f2',
-              }}
-            >
-              <AlertTriangle size={24} color="#dc2626" />
+        <div className="fu ge-wrap">
+          <div className="ge">
+            <div className="ge-icon">
+              <AlertTriangle size={24} />
             </div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.02em', margin: 0 }}>
-              Something went wrong
-            </h1>
-            <p
-              style={{
-                margin: '.75rem auto 0',
-                maxWidth: '24rem',
-                fontSize: '0.875rem',
-                lineHeight: 1.65,
-                color: '#71717a',
-              }}
-            >
+            <h1>Something went wrong</h1>
+            <p className="ge-lead">
               The app failed to start. Reloading usually clears it. If this keeps happening, the
               problem is with the application build rather than the page you were on.
             </p>
 
-            {isSpecificMessage(error.message) && (
-              <pre
-                dir="ltr"
-                style={{
-                  margin: '1.5rem 0 0',
-                  padding: '.75rem 1rem',
-                  borderRadius: '.5rem',
-                  background: '#f4f4f5',
-                  fontSize: '0.75rem',
-                  // Logical, so it resolves against the pinned ltr direction above.
-                  textAlign: 'start',
-                  overflowX: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {error.message}
-              </pre>
-            )}
+            {isSpecificMessage(error.message) && <pre dir="ltr">{error.message}</pre>}
 
-            <div
-              style={{
-                display: 'flex',
-                gap: '.75rem',
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-                marginTop: '1.75rem',
-              }}
-            >
-              <button
-                type="button"
-                onClick={reset}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '.5rem',
-                  height: '2.5rem',
-                  paddingInline: '1rem',
-                  borderRadius: '.5rem',
-                  border: 0,
-                  background: '#18181b',
-                  color: '#fafafa',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
+            <div className="ge-actions">
+              <button type="button" onClick={reset} className="ge-btn ge-primary">
                 <RefreshCw size={16} />
                 Reload
               </button>
-              <button
-                type="button"
-                onClick={() => router.push('/')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '.5rem',
-                  height: '2.5rem',
-                  paddingInline: '1rem',
-                  borderRadius: '.5rem',
-                  border: '1px solid #e4e4e7',
-                  background: '#fff',
-                  color: '#18181b',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
+              <button type="button" onClick={() => router.push('/')} className="ge-btn ge-outline">
                 <Home size={16} />
                 Go home
               </button>
             </div>
 
             {error.digest && (
-              <p style={{ margin: '1.5rem 0 0', fontSize: '0.6875rem', color: '#a1a1aa', fontFamily: 'ui-monospace,monospace' }}>
-                Reference: {error.digest}
+              <p className="ge-ref">
+                Reference: <code>{error.digest}</code>
               </p>
             )}
           </div>

@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Data } from '@measured/puck';
 import { ChevronDown } from 'lucide-react';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/motion';
 import { findNodeById, getBlockDefinition, getSlotChildren, getZoneItems } from '@titan/shared';
 import type { PageLayout, PuckNode } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
@@ -156,10 +158,10 @@ export function StructureTree() {
           {' '}
           <div
             className={cn(
-              'group flex w-full items-center gap-1.5 rounded-lg px-2 py-[5px] text-left text-xs transition',
+              'group relative isolate flex w-full items-center gap-1.5 rounded-lg px-2 py-[5px] text-left text-xs transition-colors duration-150',
               isSelected
-                ? 'bg-primary/10 font-semibold text-primary'
-                : 'text-foreground hover:bg-muted',
+                ? 'font-medium text-primary'
+                : 'text-foreground hover:bg-muted/70',
               dragged === node.id && 'opacity-50',
             )}
             style={{ paddingLeft: 6 + node.depth * 14 }}
@@ -240,7 +242,14 @@ export function StructureTree() {
             }}
             title={node.label}
           >
-            {' '}
+            {isSelected && (
+              <m.span
+                layoutId="builder-structure-selection"
+                aria-hidden="true"
+                className="absolute inset-0 -z-10 rounded-lg bg-primary/10 ring-1 ring-inset ring-primary/15"
+                transition={spring.smooth}
+              />
+            )}
             <span
               role="button"
               tabIndex={-1}
@@ -265,7 +274,7 @@ export function StructureTree() {
             </span>{' '}
             <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', color)} />{' '}
             <span className="flex-1 truncate">{node.label}</span>{' '}
-            <span className="shrink-0 font-mono text-2xs uppercase text-muted-foreground/60 group-hover:text-muted-foreground/80">
+            <span className="shrink-0 font-mono text-2xs text-muted-foreground/60 transition-colors group-hover:text-muted-foreground/80">
               {node.type}
             </span>{' '}
           </div>{' '}
@@ -277,7 +286,7 @@ export function StructureTree() {
     return (
       <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
         {' '}
-        <p className="text-sm font-semibold text-foreground">{t('pageEmpty')}</p>{' '}
+        <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">{t('pageEmpty')}</p>{' '}
         <p className="max-w-[200px] text-xs leading-relaxed text-muted-foreground">
           {' '}
           {t('pageEmptyHint')}{' '}

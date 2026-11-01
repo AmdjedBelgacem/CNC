@@ -16,7 +16,7 @@ export function ConsoleScreenBlock({ props, puck }: BlockComponentProps<ConsoleS
   return (
     <div
       className={cn(
-        'relative rounded-lg overflow-hidden group bg-surface-sunken',
+        'relative overflow-hidden rounded-xl bg-surface-sunken ring-1 ring-inset ring-border/60 group',
         'h-[var(--console-screen-height-mobile)] sm:h-[var(--console-screen-height)]',
         className,
       )}

@@ -13,6 +13,9 @@ import { EmptyState, ErrorState } from '@/components/ui/states';
 import { GroupCard } from '@/components/groups/group-card';
 import { groupsApi, type StudyGroup } from '@/lib/groups-api';
 import { useAuthStore } from '@/stores/auth-store';
+import { AnimatePresence, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { ActivePill } from '@/components/feed/feed-motion';
+import { cn } from '@/lib/utils';
 
 const MapView = dynamic(() => import('./map-view'), {
   ssr: false,
@@ -32,7 +35,7 @@ export default function GroupsPage() {
 
 function GroupsSkeleton() {
   return (
-    <div className="container mx-auto space-y-4 px-4 py-20" aria-hidden="true">
+    <div className="container mx-auto space-y-4 px-4 py-20 md:py-28" aria-hidden="true">
       <Skeleton className="mx-auto h-10 w-64" />
       <Skeleton className="mx-auto h-5 w-96 max-w-full" />
       <Skeleton className="h-80 w-full rounded-xl" />
@@ -141,10 +144,13 @@ function GroupsContent() {
 
   return (
     <div>
-      <section className="border-b bg-surface-sunken/60 blueprint-grid py-16 sm:py-20">
+      <section className="relative isolate overflow-hidden border-b border-border/70 py-20 md:py-28">
+        <div className="ambient-wash absolute inset-0 -z-10" aria-hidden="true" />
         <div className="container mx-auto px-4 text-center">
-          <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">{t('title')}</h1>
-          <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">{t('subtitle')}</p>
+          <h1 className="mx-auto mb-4 max-w-3xl text-balance font-display text-4xl font-medium tracking-[-0.022em] text-foreground sm:text-5xl">
+            {t('title')}
+          </h1>
+          <p className="mx-auto mb-8 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">{t('subtitle')}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button asChild>
               <Link href="/groups/new">
@@ -158,13 +164,15 @@ function GroupsContent() {
         </div>
       </section>
 
-      <section className="border-b py-8">
-        <div className="container mx-auto px-4">
-          <MapView locations={locations} />
-        </div>
+      <section className="border-b border-border/70 py-10">
+        <Reveal className="container mx-auto px-4">
+          <div className="overflow-hidden rounded-2xl border border-border/70 shadow-xs">
+            <MapView locations={locations} />
+          </div>
+        </Reveal>
       </section>
 
-      <section className="py-8">
+      <section className="py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -189,7 +197,7 @@ function GroupsContent() {
                 id="group-city-filter"
                 value={city}
                 onChange={(e) => setFilter('city', e.target.value)}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">{t('allCities')}</option>
                 {(cityList ?? []).map((c) => (
@@ -206,13 +214,15 @@ function GroupsContent() {
               type="button"
               onClick={() => setFilter('academy', '')}
               aria-pressed={!academy}
-              className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={cn(
+                'relative shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
                 !academy
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'hover:border-primary/50'
-              }`}
+                  ? 'border-transparent text-primary'
+                  : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
+              )}
             >
-              {tCommon('all')}
+              {!academy && <ActivePill layoutId="groups-academy-pill" className="bg-primary/10 shadow-none ring-primary/25" />}
+              <span className="relative">{tCommon('all')}</span>
             </button>
             {academies.map((a) => (
               <button
@@ -220,17 +230,20 @@ function GroupsContent() {
                 type="button"
                 onClick={() => setFilter('academy', academy === a ? '' : a)}
                 aria-pressed={academy === a}
-                className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={cn(
+                  'relative shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium capitalize transition-colors',
                   academy === a
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'hover:border-primary/50'
-                }`}
+                    ? 'border-transparent text-primary'
+                    : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
+                )}
               >
-                {a}
+                {academy === a && <ActivePill layoutId="groups-academy-pill" className="bg-primary/10 shadow-none ring-primary/25" />}
+                <span className="relative">{a}</span>
               </button>
             ))}
           </div>
 
+          <Crossfade value={isLoading ? 'loading' : error ? 'error' : groups.length === 0 ? 'empty' : 'list'} axis="none">
           {isLoading && (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -271,13 +284,15 @@ function GroupsContent() {
               <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">
                 {t('resultsCount', { count: total })}
               </p>
-              <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {groups.map((g) => (
-                  <li key={g.id}>
-                    <GroupCard group={g} className="h-full" />
-                  </li>
-                ))}
-              </ul>
+              <Stagger as="ul" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <AnimatePresence>
+                  {groups.map((g, i) => (
+                    <StaggerItem as="li" key={g.id} index={i} layout="position">
+                      <GroupCard group={g} className="h-full" />
+                    </StaggerItem>
+                  ))}
+                </AnimatePresence>
+              </Stagger>
 
               {pageCount > 1 && (
                 <nav className="mt-8 flex items-center justify-center gap-4" aria-label={t('pagination')}>
@@ -289,7 +304,7 @@ function GroupsContent() {
                   >
                     {t('previous')}
                   </Button>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm tabular-nums text-muted-foreground">
                     {t('pageOf', { page, pages: pageCount })}
                   </span>
                   <Button
@@ -304,6 +319,7 @@ function GroupsContent() {
               )}
             </>
           )}
+          </Crossfade>
 
           {!isAuthenticated && (
             <p className="mt-10 text-center text-sm text-muted-foreground">

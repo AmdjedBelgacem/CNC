@@ -30,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import type { AiWebSearchProvider } from '@/lib/api/types';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 
 const PROVIDERS: Array<{ value: AiWebSearchProvider; label: string }> = [
   { value: 'none', label: '—' },
@@ -152,17 +153,18 @@ export function AiLearningPanel() {
   const previous = runs.data?.data[1];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {/* ---------------------------------------------------------------- */}
+      <Reveal>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Globe className="size-4" />
+        <CardHeader className="border-b border-border/70 pb-5">
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="size-4 text-primary" />
             {t('webSearch')}
           </CardTitle>
           <CardDescription>{t('webSearchHint')}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 pt-6">
           {webSearch.isPending ? (
             <LoadingState label={ta('loading')} />
           ) : webSearch.isError ? (
@@ -178,7 +180,7 @@ export function AiLearningPanel() {
                     onChange={(event) =>
                       setForm({ ...form, provider: event.target.value as AiWebSearchProvider })
                     }
-                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs outline-none transition-colors hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {PROVIDERS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -205,7 +207,7 @@ export function AiLearningPanel() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">{t('searchEnabled')}</p>
                   <p className="text-xs text-muted-foreground">{t('searchEnabledHint')}</p>
@@ -221,9 +223,10 @@ export function AiLearningPanel() {
                 <legend className="text-sm font-medium text-foreground">{t('searchModes')}</legend>
                 <div className="flex flex-wrap gap-3">
                   {MODES.map((mode) => (
-                    <label key={mode} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <label key={mode} className="flex cursor-pointer items-center gap-2 rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs text-muted-foreground transition hover:border-border-strong has-[:checked]:border-primary/40 has-[:checked]:bg-primary/[0.06] has-[:checked]:text-foreground">
                       <input
                         type="checkbox"
+                        className="size-3.5 accent-primary"
                         checked={form.modes.includes(mode)}
                         onChange={(event) =>
                           setForm({
@@ -278,7 +281,7 @@ export function AiLearningPanel() {
                   value={form.domains}
                   onChange={(event) => setForm({ ...form, domains: event.target.value })}
                   placeholder="example.com&#10;docs.example.org"
-                  className="w-full rounded-md border border-input bg-background p-2 font-mono text-xs"
+                  className="w-full rounded-lg border border-input bg-card p-3 font-mono text-xs shadow-xs outline-none transition-colors hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
                 />
                 <p className="text-2xs text-muted-foreground">{t('searchDomainsHint')}</p>
               </div>
@@ -313,16 +316,18 @@ export function AiLearningPanel() {
           )}
         </CardContent>
       </Card>
+      </Reveal>
 
       {/* ---------------------------------------------------------------- */}
+      <Reveal>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <ThumbsUp className="size-4" />
+        <CardHeader className="border-b border-border/70 pb-5">
+          <CardTitle className="flex items-center gap-2">
+            <ThumbsUp className="size-4 text-primary" />
             {t('feedback')}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {feedback.isPending ? (
             <LoadingState label={ta('loading')} />
           ) : feedback.isError ? (
@@ -330,24 +335,32 @@ export function AiLearningPanel() {
           ) : !summary || summary.total === 0 ? (
             <p className="text-sm text-muted-foreground">{t('feedbackNoData')}</p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-4">
-              <Stat label={t('feedbackTotal')} value={String(summary.total)} />
-              <Stat
-                label={t('feedbackScore')}
-                value={summary.score > 0 ? `+${percent(summary.score)}` : percent(summary.score)}
-              />
-              <Stat label="👍" value={String(summary.helpful)} />
-              <Stat
-                label={t('feedbackWebRate')}
-                value={summary.webAnswered === 0 ? '—' : percent(summary.webHelpfulRate)}
-              />
-            </div>
+            <Stagger className="grid gap-3 sm:grid-cols-4">
+              <StaggerItem index={0}>
+                <Stat label={t('feedbackTotal')} value={String(summary.total)} />
+              </StaggerItem>
+              <StaggerItem index={1}>
+                <Stat
+                  label={t('feedbackScore')}
+                  value={summary.score > 0 ? `+${percent(summary.score)}` : percent(summary.score)}
+                />
+              </StaggerItem>
+              <StaggerItem index={2}>
+                <Stat label="👍" value={String(summary.helpful)} />
+              </StaggerItem>
+              <StaggerItem index={3}>
+                <Stat
+                  label={t('feedbackWebRate')}
+                  value={summary.webAnswered === 0 ? '—' : percent(summary.webHelpfulRate)}
+                />
+              </StaggerItem>
+            </Stagger>
           )}
 
           {(feedback.data?.data.recent.length ?? 0) > 0 && (
-            <ul className="mt-4 space-y-2">
+            <ul className="mt-5 divide-y divide-border/70 border-t border-border/70">
               {feedback.data!.data.recent.slice(0, 6).map((vote) => (
-                <li key={vote.messageId} className="flex items-start gap-2 text-xs">
+                <li key={vote.messageId} className="flex items-start gap-2 py-2.5 text-xs">
                   {vote.rating > 0 ? (
                     <ThumbsUp className="mt-0.5 size-3.5 shrink-0 text-success" />
                   ) : (
@@ -361,17 +374,19 @@ export function AiLearningPanel() {
           )}
         </CardContent>
       </Card>
+      </Reveal>
 
       {/* ---------------------------------------------------------------- */}
+      <Reveal>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <BarChart3 className="size-4" />
+        <CardHeader className="border-b border-border/70 pb-5">
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="size-4 text-primary" />
             {t('evals')}
           </CardTitle>
           <CardDescription>{t('evalsHint')}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 pt-6">
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-48 flex-1 space-y-2">
               <Label htmlFor="ai-eval-label">{t('evalLabel')}</Label>
@@ -400,8 +415,8 @@ export function AiLearningPanel() {
             <p className="text-sm text-muted-foreground">{t('noEvalRuns')}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="text-2xs uppercase tracking-wide text-muted-foreground">
+              <table className="w-full text-start text-xs">
+                <thead className="text-xs font-medium text-muted-foreground">
                   <tr>
                     <th className="py-2 pe-3">{t('evalLabel')}</th>
                     <th className="py-2 pe-3">{t('evalScore')}</th>
@@ -418,7 +433,7 @@ export function AiLearningPanel() {
                     const delta =
                       isLatest && previous ? run.score - previous.score : null;
                     return (
-                      <tr key={run.id} className="border-t border-border">
+                      <tr key={run.id} className="border-t border-border/70 transition-colors hover:bg-muted/40">
                         <td className="py-2 pe-3">
                           <span className="font-medium text-foreground">{run.label}</span>
                           {run.webEnabled && (
@@ -461,15 +476,16 @@ export function AiLearningPanel() {
           )}
         </CardContent>
       </Card>
+      </Reveal>
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border p-3">
-      <p className="text-2xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 font-display text-lg font-semibold tabular-nums text-foreground">{value}</p>
+    <div className="h-full rounded-xl bg-muted/50 p-4">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground">{value}</p>
     </div>
   );
 }

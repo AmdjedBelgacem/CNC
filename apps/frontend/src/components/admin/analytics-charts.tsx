@@ -11,7 +11,9 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import { formatDate } from '@/lib/format';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease } from '@/lib/motion';
 import { PanelCard, Skeleton } from './admin-ui';
 
 /* Reusable chart atoms for the analytics dashboard.
@@ -20,12 +22,15 @@ import { PanelCard, Skeleton } from './admin-ui';
 
 export type TrendPoint = { date: string; count?: number; cents?: number };
 
+/* Token colours. The plain aliases (`--primary`, …) are complete `rgb()` values,
+ * so they are used as-is — wrapping them in `hsl()` produced an invalid colour
+ * and every series fell back to black. */
 const CHART_COLORS: Record<string, string> = {
-  primary: 'hsl(var(--primary))',
-  success: 'hsl(var(--success))',
-  info: 'hsl(var(--info))',
-  warning: 'hsl(var(--warning))',
-  accent: 'hsl(var(--accent))',
+  primary: 'var(--primary)',
+  success: 'var(--success)',
+  info: 'var(--info)',
+  warning: 'var(--warning)',
+  accent: 'var(--accent)',
 };
 
 /** Shared tooltip so every chart in the dashboard feels identical. */
@@ -44,15 +49,15 @@ function ChartTooltip({
   if (!active || !payload?.length) return null;
   const d = label ? new Date(label) : null;
   return (
-    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-md">
+    <div className="rounded-lg border border-border/80 bg-popover px-3 py-2 text-xs shadow-lg">
       {d && !Number.isNaN(d.getTime()) && (
-        <p className="mb-1 font-semibold text-popover-foreground">
+        <p className="mb-1 font-medium text-muted-foreground">
           {formatDate(d, locale, { month: 'short', day: 'numeric' })}
         </p>
       )}
       {payload.map((p, i) => (
         <p key={i} className="text-muted-foreground">
-          <span className="font-semibold text-popover-foreground">
+          <span className="font-medium tabular-nums text-popover-foreground">
             {formatter(Number(p.value ?? 0))}
           </span>{' '}
           {p.name}
@@ -106,7 +111,7 @@ export function TrendChart({
     <PanelCard
       title={
         <span className="flex items-center gap-2">
-          <Icon className="size-4 shrink-0 text-primary" />
+          <Icon className="size-4 shrink-0 text-muted-foreground" />
           {title}
         </span>
       }
@@ -119,31 +124,42 @@ export function TrendChart({
           ))}
         </div>
       ) : !hasData ? (
-        <div className="flex h-[260px] flex-col items-center justify-center gap-2 text-center">
-          <Icon className="size-7 text-muted-foreground/40" />
-          <p className="text-sm font-medium text-muted-foreground">{emptyMessage}</p>
-        </div>
+        <m.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, ease: ease.emerge }}
+          className="flex h-[260px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/70 bg-surface-sunken/30 text-center"
+        >
+          <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground/70">
+            <Icon className="size-5" />
+          </span>
+          <p className="max-w-xs text-sm text-muted-foreground">{emptyMessage}</p>
+        </m.div>
       ) : (
-        <>
+        <m.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: ease.emerge }}
+        >
           <ResponsiveContainer width="100%" height={height}>
             <AreaChart data={data} margin={{ top: 6, right: 6, bottom: 0, left: -18 }}>
               <defs>
                 <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={stroke} stopOpacity={0.28} />
+                  <stop offset="5%" stopColor={stroke} stopOpacity={0.18} />
                   <stop offset="95%" stopColor={stroke} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" strokeOpacity={0.8} vertical={false} />
               <XAxis
                 dataKey="date"
                 tickFormatter={(v) => formatDate(v, locale, { month: 'short', day: 'numeric' })}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 minTickGap={24}
               />
               <YAxis
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -151,7 +167,7 @@ export function TrendChart({
                 tickFormatter={(v) => (valueKey === 'cents' ? `$${Math.round(v / 100)}` : String(v))}
               />
               <Tooltip
-                cursor={{ stroke: 'hsl(var(--border-strong))' }}
+                cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '3 3' }}
                 content={
                   <ChartTooltip formatter={(v) => (valueKey === 'cents' ? fmt(v) : fmt(v))} />
                 }
@@ -161,18 +177,20 @@ export function TrendChart({
                 dataKey={valueKey}
                 name={unitLabel}
                 stroke={stroke}
-                strokeWidth={2}
+                strokeWidth={1.75}
                 fill={`url(#${gradId})`}
                 dot={false}
-                activeDot={{ r: 4, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+                animationDuration={900}
+                animationEasing="ease-out"
+                activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--card)' }}
               />
             </AreaChart>
           </ResponsiveContainer>
           {footer && <div className="mt-3">{footer}</div>}
           {compareSuffix && (
-            <p className="mt-2 text-center text-2xs text-muted-foreground">{compareSuffix}</p>
+            <p className="mt-2 text-center text-xs text-muted-foreground">{compareSuffix}</p>
           )}
-        </>
+        </m.div>
       )}
     </PanelCard>
   );
@@ -213,11 +231,11 @@ export function RankedListItem({
     <>
       <span
         className={cn(
-          'flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold tabular-nums',
+          'flex size-8 shrink-0 items-center justify-center rounded-full font-display text-sm font-medium tabular-nums',
           rank === 1
-            ? 'bg-warning/15 text-warning'
+            ? 'bg-primary/10 text-primary'
             : rank === 2
-              ? 'bg-muted-foreground/15 text-muted-foreground'
+              ? 'bg-secondary/10 text-secondary dark:bg-foreground/10 dark:text-foreground'
               : 'bg-muted text-muted-foreground',
         )}
       >
@@ -227,22 +245,24 @@ export function RankedListItem({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{title}</p>
         {typeof progress === 'number' && (
-          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn('h-full rounded-full transition-all', barColor)}
-              style={{ width: `${Math.min(100, Math.max(2, progress))}%` }}
+          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+            <m.div
+              className={cn('h-full rounded-full opacity-70', barColor)}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, Math.max(2, progress))}%` }}
+              transition={{ duration: 0.7, delay: Math.min(rank * 0.05, 0.4), ease: ease.emerge }}
             />
           </div>
         )}
-        {sub && <p className="mt-1 truncate text-2xs text-muted-foreground">{sub}</p>}
+        {sub && <p className="mt-1 truncate text-xs text-muted-foreground">{sub}</p>}
       </div>
       <div className="shrink-0 text-end">
-        <p className="text-sm font-bold tabular-nums text-foreground">{value}</p>
+        <p className="text-sm font-medium tabular-nums text-foreground">{value}</p>
       </div>
     </>
   );
   const cls =
-    'group flex items-center gap-3 rounded-xl border border-transparent p-3 transition hover:border-border hover:bg-muted/50 focus-visible:border-primary focus-visible:outline-none';
+    'group flex items-center gap-3 rounded-lg border border-transparent p-3 transition-colors duration-150 hover:border-border/70 hover:bg-muted/40 focus-visible:border-primary/50 focus-visible:outline-none';
   return href ? (
     <li>
       <a href={href} className={cls}>

@@ -12,6 +12,7 @@ import { ProfileStat } from '@/components/profile/profile-hero';
 import { formatDate, formatNumber } from '@/lib/format';
 import { getImageSrc } from '@/lib/images';
 import type { Profile, ProfileCertificate, ProfileCourse } from '@/lib/api/types';
+import { HoverLift, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 
 export function ProfileOverview({ profile }: { profile: Profile }) {
   const t = useTranslations('profile');
@@ -20,46 +21,50 @@ export function ProfileOverview({ profile }: { profile: Profile }) {
   return (
     <div className="space-y-10">
       <section>
-        <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+        <h2 className="font-display text-2xl font-medium tracking-[-0.018em] text-foreground">
           {t('trackRecord')}
         </h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ProfileStat icon={BookOpen} label={t('statEnrolled')} value={learning.enrollments} />
-          <ProfileStat icon={CheckCircle2} label={t('statCompleted')} value={learning.completed} tone="accent" />
-          <ProfileStat icon={Award} label={t('statCertificates')} value={learning.certificates} />
-          <ProfileStat
-            icon={PlayCircle}
-            label={t('statHours')}
-            value={learning.watchTimeSeconds > 0 ? (learning.watchTimeSeconds / 3600).toFixed(1) : '0'}
-          />
-          <ProfileStat icon={FileText} label={t('statLessons')} value={learning.lessonsCompleted} tone="muted" />
-          <ProfileStat icon={ThumbsUp} label={t('statLikes')} value={stats.likes} tone="muted" />
-          <ProfileStat icon={MessageSquare} label={t('statComments')} value={stats.comments} tone="muted" />
-          <ProfileStat icon={FileText} label={t('statPosts')} value={stats.posts} tone="muted" />
-        </div>
+        <Stagger className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { icon: BookOpen, label: t('statEnrolled'), value: learning.enrollments },
+            { icon: CheckCircle2, label: t('statCompleted'), value: learning.completed, tone: 'accent' as const },
+            { icon: Award, label: t('statCertificates'), value: learning.certificates },
+            {
+              icon: PlayCircle,
+              label: t('statHours'),
+              value: learning.watchTimeSeconds > 0 ? (learning.watchTimeSeconds / 3600).toFixed(1) : '0',
+            },
+            { icon: FileText, label: t('statLessons'), value: learning.lessonsCompleted, tone: 'muted' as const },
+            { icon: ThumbsUp, label: t('statLikes'), value: stats.likes, tone: 'muted' as const },
+            { icon: MessageSquare, label: t('statComments'), value: stats.comments, tone: 'muted' as const },
+            { icon: FileText, label: t('statPosts'), value: stats.posts, tone: 'muted' as const },
+          ].map((stat, i) => (
+            <StaggerItem key={stat.label} index={i}>
+              <ProfileStat icon={stat.icon} label={stat.label} value={stat.value} tone={stat.tone} />
+            </StaggerItem>
+          ))}
+        </Stagger>
       </section>
 
       {(profile.bio || profile.headline) && (
-        <section>
-          <p className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-primary">
-            {t('about')}
-          </p>
+        <Reveal as="section">
+          <p className="eyebrow">{t('about')}</p>
           {profile.headline && (
-            <p className="mt-3 font-display text-xl font-semibold leading-snug tracking-tight text-foreground">
+            <p className="mt-3 text-balance font-display text-2xl font-medium leading-snug tracking-[-0.018em] text-foreground">
               {profile.headline}
             </p>
           )}
           {profile.bio && (
-            <p className="mt-3 whitespace-pre-line text-base leading-8 text-muted-foreground">
+            <p className="mt-4 max-w-prose whitespace-pre-line text-base leading-8 text-muted-foreground">
               {profile.bio}
             </p>
           )}
-        </section>
+        </Reveal>
       )}
 
       {profile.skills.length > 0 && (
         <section>
-          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
             {t('skillsAndFocus')}
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -75,18 +80,19 @@ export function ProfileOverview({ profile }: { profile: Profile }) {
       {profile.portfolioItems.length > 0 && (
         <section>
           <div className="flex items-end justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+            <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
               {t('portfolio')}
             </h2>
             <Button variant="link" size="sm" asChild>
               <Link href="#portfolio">{t('viewAll')}</Link>
             </Button>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {profile.portfolioItems.slice(0, 4).map((item) => (
-              <Card key={item.id} className="overflow-hidden">
+          <Stagger inViewOnly className="mt-4 grid gap-4 sm:grid-cols-2">
+            {profile.portfolioItems.slice(0, 4).map((item, i) => (
+              <StaggerItem key={item.id} index={i}>
+              <Card className="h-full overflow-hidden rounded-xl border-border/70 shadow-xs">
                 {item.imageUrl && (
-                  <div className="aspect-video overflow-hidden border-b border-border bg-surface-sunken">
+                  <div className="aspect-video overflow-hidden border-b border-border/60 bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={getImageSrc(item.imageUrl, 'portfolio')}
@@ -97,7 +103,7 @@ export function ProfileOverview({ profile }: { profile: Profile }) {
                   </div>
                 )}
                 <div className="p-4">
-                  <h3 className="font-display text-base font-semibold text-foreground">{item.title}</h3>
+                  <h3 className="font-display text-lg font-medium tracking-[-0.01em] text-foreground">{item.title}</h3>
                   {item.description && (
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {item.description}
@@ -105,8 +111,9 @@ export function ProfileOverview({ profile }: { profile: Profile }) {
                   )}
                 </div>
               </Card>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </section>
       )}
 
@@ -138,23 +145,24 @@ export function ProfileCourseCard({ enrollment }: { enrollment: ProfileCourse })
     : null;
 
   return (
-    <Card className="group flex h-full flex-col overflow-hidden transition duration-200 hover:border-border-strong hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none">
+    <HoverLift className="h-full">
+    <Card className="group flex h-full flex-col overflow-hidden rounded-xl border-border/70 shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-border hover:shadow-lg motion-reduce:transition-none">
       {/* Media header: the cover carries the status so the eye finds it first. */}
-      <Link href={href} className="relative block aspect-[16/9] overflow-hidden border-b border-border bg-surface-sunken">
+      <Link href={href} className="relative block aspect-[16/9] overflow-hidden border-b border-border/60 bg-muted">
         {course.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={getImageSrc(course.thumbnailUrl, 'course')}
             alt=""
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
           />
         ) : (
-          <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-secondary to-foreground font-mono text-2xs uppercase tracking-[0.2em] text-background/60">
+          <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 via-muted to-accent/10 text-xs font-medium text-muted-foreground">
             {t('noCover')}
           </span>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/75 via-foreground/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-foreground/5 to-transparent" />
 
         <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
           <span className="flex flex-wrap items-center gap-1.5">
@@ -175,7 +183,7 @@ export function ProfileCourseCard({ enrollment }: { enrollment: ProfileCourse })
             )}
           </span>
           {completed && (
-            <span className="font-mono text-2xs font-semibold uppercase tracking-[0.1em] text-background/80">
+            <span className="text-xs font-medium text-background/90">
               {t('certifiedOn', { date: formatDate(enrollment.completedAt ?? enrollment.startedAt, locale) })}
             </span>
           )}
@@ -183,7 +191,7 @@ export function ProfileCourseCard({ enrollment }: { enrollment: ProfileCourse })
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {course.difficulty ? <span>{t('difficulty', { level: course.difficulty })}</span> : null}
           {course.estimatedHours ? <span>{t('hours', { count: course.estimatedHours })}</span> : null}
           {enrollment.totalLessons > 0 && (
@@ -196,7 +204,7 @@ export function ProfileCourseCard({ enrollment }: { enrollment: ProfileCourse })
           )}
         </div>
 
-        <h3 className="mt-2 font-display text-base font-semibold leading-snug tracking-tight text-foreground">
+        <h3 className="mt-2 font-display text-lg font-medium leading-snug tracking-[-0.01em] text-foreground">
           <Link href={href} className="transition-colors hover:text-primary">
             {course.title}
           </Link>
@@ -217,7 +225,7 @@ export function ProfileCourseCard({ enrollment }: { enrollment: ProfileCourse })
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3 font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
+              <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                 <span>{t('progress')}</span>
                 <span className="font-semibold text-foreground tabular-nums">
                   {enrollment.progressPercent}%
@@ -228,13 +236,14 @@ export function ProfileCourseCard({ enrollment }: { enrollment: ProfileCourse })
           )}
 
           {hours && (
-            <p className="mt-3 font-mono text-2xs text-muted-foreground">
+            <p className="mt-3 text-xs text-muted-foreground">
               <bdi>{hours}</bdi>
             </p>
           )}
         </div>
       </div>
     </Card>
+    </HoverLift>
   );
 }
 
@@ -303,40 +312,45 @@ export function ProfileLearning({
     <div className="space-y-12">
       {active.length > 0 && (
         <section>
-          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
             {t('inProgressCourses')}
           </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {active.map((enrollment) => (
-              <ProfileCourseCard key={enrollment.id} enrollment={enrollment} />
+          <Stagger className="mt-4 grid gap-4 sm:grid-cols-2">
+            {active.map((enrollment, i) => (
+              <StaggerItem key={enrollment.id} index={i}>
+                <ProfileCourseCard enrollment={enrollment} />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </section>
       )}
 
       {finished.length > 0 && (
         <section>
-          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
             {t('completedCourses')}
           </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {finished.map((enrollment) => (
-              <ProfileCourseCard key={enrollment.id} enrollment={enrollment} />
+          <Stagger className="mt-4 grid gap-4 sm:grid-cols-2">
+            {finished.map((enrollment, i) => (
+              <StaggerItem key={enrollment.id} index={i}>
+                <ProfileCourseCard enrollment={enrollment} />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </section>
       )}
 
       {certificates.length > 0 && (
         <section>
-          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">
             {t('certificates')}
           </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {certificates.map((certificate) => (
-              <Card key={certificate.id} className="p-5">
+          <Stagger inViewOnly className="mt-4 grid gap-4 sm:grid-cols-2">
+            {certificates.map((certificate, i) => (
+              <StaggerItem key={certificate.id} index={i}>
+              <Card className="h-full rounded-xl border-border/70 p-5 shadow-xs">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Award className="size-5" />
                   </span>
                   {certificate.revokedAt ? (
@@ -345,13 +359,13 @@ export function ProfileLearning({
                     <Badge variant="success">{t('valid')}</Badge>
                   )}
                 </div>
-                <h3 className="mt-4 font-display text-base font-semibold leading-snug text-foreground">
+                <h3 className="mt-4 font-display text-lg font-medium leading-snug tracking-[-0.01em] text-foreground">
                   {certificate.course?.title ?? t('certificate')}
                 </h3>
-                <p className="mt-1 font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
+                <p className="mt-1 font-mono text-2xs text-muted-foreground">
                   {certificate.certificateNumber}
                 </p>
-                <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3 font-mono text-2xs text-muted-foreground">
+                <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
                   <span>
                     <bdi>{t('issuedOn', { date: formatDate(certificate.issuedAt, locale) })}</bdi>
                   </span>
@@ -367,8 +381,9 @@ export function ProfileLearning({
                   </Button>
                 </div>
               </Card>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </section>
       )}
     </div>
@@ -381,38 +396,39 @@ export function ProfilePortfolio({ profile }: { profile: Profile }) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-card/60 px-6 py-16 text-center">
-        <p className="font-display text-lg font-semibold text-foreground">{t('noPortfolio')}</p>
+      <div className="rounded-xl border border-dashed border-border bg-card/60 px-6 py-16 text-center">
+        <p className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">{t('noPortfolio')}</p>
         <p className="mt-1 text-sm text-muted-foreground">{t('noPortfolioHint')}</p>
       </div>
     );
   }
 
   return (
-    <div id="portfolio" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) => {
+    <Stagger id="portfolio" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      {items.map((item, i) => {
         const Wrapper = item.projectUrl ? 'a' : 'div';
         return (
+          <StaggerItem key={item.id} index={i}>
+          <HoverLift className="h-full">
           <Wrapper
-            key={item.id}
             {...(item.projectUrl
               ? { href: item.projectUrl, target: '_blank', rel: 'noreferrer noopener' }
               : {})}
-            className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-xs transition duration-200 hover:border-border-strong hover:shadow-md motion-reduce:transition-none"
+            className="group flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-border hover:shadow-lg motion-reduce:transition-none"
           >
             {item.imageUrl && (
-              <div className="aspect-video overflow-hidden border-b border-border bg-surface-sunken">
+              <div className="aspect-video overflow-hidden border-b border-border/60 bg-muted">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={getImageSrc(item.imageUrl, 'portfolio')}
                   alt={item.title}
                   loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none"
+                  className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
                 />
               </div>
             )}
             <div className="flex flex-1 flex-col p-5">
-              <h3 className="font-display text-base font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+              <h3 className="font-display text-lg font-medium leading-snug tracking-[-0.01em] text-foreground transition-colors group-hover:text-primary">
                 {item.title}
               </h3>
               {item.description && (
@@ -431,8 +447,10 @@ export function ProfilePortfolio({ profile }: { profile: Profile }) {
               )}
             </div>
           </Wrapper>
+          </HoverLift>
+          </StaggerItem>
         );
       })}
-    </div>
+    </Stagger>
   );
 }

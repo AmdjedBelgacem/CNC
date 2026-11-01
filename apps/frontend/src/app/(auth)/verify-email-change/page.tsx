@@ -3,10 +3,15 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { XCircle, Loader2 } from 'lucide-react';
+import {
+  AuthStatus,
+  AuthStatusIcon,
+  AuthSteps,
+  AuthSubmit,
+  DrawnCheck,
+} from '@/components/auth/auth-kit';
 function VerifyEmailChangeInner() {
   const t = useTranslations('auth');
   const searchParams = useSearchParams();
@@ -45,66 +50,53 @@ function VerifyEmailChangeInner() {
       });
   }, [token]);
   return (
-    <Card className="w-full max-w-md border-border bg-card">
-      {' '}
-      <CardHeader className="text-center">
-        {' '}
-        <CardTitle className="text-xl text-white">{t('emailChange.title')}</CardTitle>{' '}
-        <CardDescription>{t('emailChange.description')}</CardDescription>{' '}
-      </CardHeader>{' '}
-      <CardContent className="flex flex-col items-center gap-4 pb-8 text-center">
-        {' '}
-        {status === 'loading' && (
-          <>
-            {' '}
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />{' '}
-            <p className="text-sm text-muted-foreground">{t('emailChange.verifying')}</p>{' '}
-          </>
-        )}{' '}
+    <AuthSteps step={status}>
+      <AuthStatus
+        icon={
+          status === 'loading' ? (
+            <AuthStatusIcon tone="primary">
+              <Loader2 className="size-6 animate-spin" aria-hidden />
+            </AuthStatusIcon>
+          ) : status === 'success' ? (
+            <AuthStatusIcon tone="success">
+              <DrawnCheck />
+            </AuthStatusIcon>
+          ) : (
+            <AuthStatusIcon tone="error">
+              <XCircle className="size-6" strokeWidth={1.75} aria-hidden />
+            </AuthStatusIcon>
+          )
+        }
+        title={t('emailChange.title')}
+      >
+        <p className="mt-2 text-sm text-muted-foreground">{t('emailChange.description')}</p>
+        <p className="mb-7 mt-5 text-[15px] leading-relaxed text-foreground/80">
+          {status === 'loading' ? t('emailChange.verifying') : message}
+        </p>
         {status === 'success' && (
-          <>
-            {' '}
-            <CheckCircle2 className="h-12 w-12 text-success" />{' '}
-            <p className="text-sm text-muted-foreground">{message}</p>{' '}
-            <Button asChild className="mt-2 bg-primary text-black hover:bg-primary/90">
-              {' '}
-              <Link href="/login">{t('signIn')}</Link>{' '}
-            </Button>{' '}
-          </>
-        )}{' '}
+          <AuthSubmit asChild>
+            <Link href="/login">{t('signIn')}</Link>
+          </AuthSubmit>
+        )}
         {status === 'error' && (
-          <>
-            {' '}
-            <XCircle className="h-12 w-12 text-red-500" />{' '}
-            <p className="text-sm text-muted-foreground">{message}</p>{' '}
-            <Button asChild variant="outline" className="mt-2">
-              {' '}
-              <Link href="/settings/account/security">{t('emailChange.backToSecurity')}</Link>{' '}
-            </Button>{' '}
-          </>
-        )}{' '}
-      </CardContent>{' '}
-    </Card>
+          <AuthSubmit asChild variant="outline">
+            <Link href="/settings/account/security">{t('emailChange.backToSecurity')}</Link>
+          </AuthSubmit>
+        )}
+      </AuthStatus>
+    </AuthSteps>
   );
 }
 export default function VerifyEmailChangePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      {' '}
-      <Suspense
-        fallback={
-          <Card className="w-full max-w-md border-border bg-card">
-            {' '}
-            <CardContent className="flex items-center justify-center py-12">
-              {' '}
-              <Loader2 className="size-8 animate-spin text-primary" />{' '}
-            </CardContent>{' '}
-          </Card>
-        }
-      >
-        {' '}
-        <VerifyEmailChangeInner />{' '}
-      </Suspense>{' '}
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex h-full flex-1 items-center justify-center py-12">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <VerifyEmailChangeInner />
+    </Suspense>
   );
 }

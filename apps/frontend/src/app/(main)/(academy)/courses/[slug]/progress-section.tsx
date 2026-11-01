@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronDown, ChevronUp, ListChecks } from 'lucide-react';
+import { ChevronUp, ListChecks } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCourseProgress, useMyEnrollments } from '@/hooks/use-learning';
 import { Progress, ProgressRing } from '@/components/ui/progress';
@@ -25,29 +27,39 @@ export function ProgressSection({ courseId, courseSlug }: { courseId: string; co
 
   return (
     <div className="fixed bottom-5 end-5 z-40 w-[min(calc(100vw-2rem),22rem)]">
-      {expanded && (
-        <div id={panelId} className="mb-3 rounded-2xl border border-border bg-card p-4 text-start shadow-xl shadow-black/10">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">{t('progressDetails')}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('completedLessons', { completed, total })}
-              </p>
-            </div>
-            <ListChecks className="size-5 text-primary" />
-          </div>
-          <div className="mt-4">
-            <Progress value={percent} label={t('progress')} />
-          </div>
-          <Link
-            href={`/courses/${courseSlug}`}
-            onClick={() => setExpanded(false)}
-            className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+      <AnimatePresence>
+        {expanded && (
+          <m.div
+            id={panelId}
+            initial={{ opacity: 0, y: 10, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: spring.gentle }}
+            exit={{ opacity: 0, y: 6, scale: 0.98, transition: { duration: 0.14 } }}
+            className="mb-3 origin-bottom-right rounded-2xl border border-border/80 bg-card p-5 text-start shadow-xl rtl:origin-bottom-left"
           >
-            {t('continueWatching')}
-          </Link>
-        </div>
-      )}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-display text-lg font-medium text-foreground">{t('progressDetails')}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('completedLessons', { completed, total })}
+                </p>
+              </div>
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <ListChecks className="size-4" />
+              </span>
+            </div>
+            <div className="mt-4">
+              <Progress value={percent} label={t('progress')} />
+            </div>
+            <Link
+              href={`/courses/${courseSlug}`}
+              onClick={() => setExpanded(false)}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            >
+              {t('continueWatching')}
+            </Link>
+          </m.div>
+        )}
+      </AnimatePresence>
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
@@ -55,10 +67,12 @@ export function ProgressSection({ courseId, courseSlug }: { courseId: string; co
         aria-controls={panelId}
         aria-label={expanded ? t('closeProgress') : t('openProgress')}
         title={expanded ? t('closeProgress') : t('openProgress')}
-        className="ms-auto flex items-center gap-2 rounded-full border border-border bg-card p-2.5 text-foreground shadow-lg shadow-black/10 transition hover:border-primary/50 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="ms-auto flex items-center gap-2 rounded-full border border-border/80 bg-card p-2 text-foreground shadow-lg transition hover:border-border-strong hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <ProgressRing value={percent} size={60} strokeWidth={5} />
-        {expanded ? <ChevronDown className="me-1 size-4 text-muted-foreground" /> : <ChevronUp className="me-1 size-4 text-muted-foreground" />}
+        <m.span animate={{ rotate: expanded ? 180 : 0 }} transition={spring.smooth} className="me-1 flex text-muted-foreground">
+          <ChevronUp className="size-4" />
+        </m.span>
       </button>
     </div>
   );

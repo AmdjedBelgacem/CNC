@@ -12,7 +12,7 @@ export function FooterBlock({ props, puck }: BlockComponentProps<FooterProps>) {
   } = props;
   return (
     <footer
-      className={cn('bg-surface-container-lowest border-t border-glass-border', className)}
+      className={cn('border-t border-border/70 bg-surface-sunken/50', className)}
       style={layoutStyle(props)}
     >
       {' '}
@@ -29,7 +29,7 @@ export function FooterBlock({ props, puck }: BlockComponentProps<FooterProps>) {
       </div>{' '}
       <div
         className={cn(
-          'border-t border-glass-border px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center',
+          'border-t border-border/70 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center',
           bottomGap,
         )}
       >

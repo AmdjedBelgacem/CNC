@@ -19,7 +19,10 @@ import {
 import { AdminCommandBar, AdminPageHeader, BarButton, BarPrimaryButton } from '@/components/admin/admin-chrome';
 import { EmptyState, ErrorBanner, SkeletonRows, StatusPill, type Tone } from '@/components/admin/admin-ui';
 import { PillTabs, Toolbar } from '@/components/admin/admin-ui';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
+import { AnimatedNumber } from '@/components/ui/motion';
 import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
 
@@ -189,48 +192,52 @@ export default function PlatformAlertsPage() {
         )}
 
         {/* Severity strip: what needs attention, and how urgently. */}
-        <div className="grid gap-3 sm:grid-cols-3">
-          {(['critical', 'warning', 'info'] as PlatformSeverity[]).map((level) => {
+        <div className="grid gap-4 sm:grid-cols-3">
+          {(['critical', 'warning', 'info'] as PlatformSeverity[]).map((level, index) => {
             const total = overview?.severity?.[level] ?? 0;
             const unread = overview?.unreadBySeverity?.[level] ?? 0;
             const selected = severity === level;
             return (
-              <button
+              <m.button
                 key={level}
                 type="button"
                 onClick={() => setSeverity(selected ? '' : level)}
                 aria-pressed={selected}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.35, ease: ease.emerge, delay: index * 0.05 } }}
+                whileHover={{ y: -2, transition: spring.smooth }}
+                whileTap={{ scale: 0.99, transition: spring.snappy }}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl border p-4 text-start shadow-xs transition',
+                  'flex items-center gap-3 rounded-xl border p-4 text-start shadow-xs transition-[border-color,background-color,box-shadow] duration-200 hover:shadow-md',
                   selected
-                    ? 'border-primary/50 bg-primary/8'
-                    : 'border-border bg-card hover:border-border-strong',
+                    ? 'border-primary/30 bg-primary/[0.06] ring-1 ring-primary/15'
+                    : 'border-border/70 bg-card hover:border-border',
                 )}
               >
                 <span
                   className={cn(
                     'flex size-10 shrink-0 items-center justify-center rounded-lg',
                     level === 'critical' && unread > 0
-                      ? 'bg-destructive/12 text-destructive'
+                      ? 'bg-destructive/10 text-destructive'
                       : level === 'warning' && unread > 0
-                        ? 'bg-warning/12 text-warning'
+                        ? 'bg-warning/10 text-warning'
                         : 'bg-muted text-muted-foreground',
                   )}
                 >
-                  <AlertTriangle className="size-5" />
+                  <AlertTriangle className="size-[18px]" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block font-display text-2xl font-semibold leading-none text-foreground">
-                    {unread}
-                    <span className="ms-1.5 text-sm font-normal text-muted-foreground">
+                  <span className="block font-display text-[28px] font-medium leading-none tracking-[-0.022em] text-foreground">
+                    <AnimatedNumber value={unread} animateOnChange />
+                    <span className="ms-1.5 font-sans text-sm font-normal tabular-nums text-muted-foreground">
                       / {total}
                     </span>
                   </span>
-                  <span className="mt-1.5 block text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="mt-1.5 block text-xs font-medium capitalize text-muted-foreground">
                     {t(`severity.${level}`, { default: level })}
                   </span>
                 </span>
-              </button>
+              </m.button>
             );
           })}
         </div>
@@ -265,10 +272,10 @@ export default function PlatformAlertsPage() {
             onClick={() => setUnreadOnly((v) => !v)}
             aria-pressed={unreadOnly}
             className={cn(
-              'ml-auto inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition',
+              'ms-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors active:scale-[0.98]',
               unreadOnly
-                ? 'border-primary/40 bg-primary/10 text-primary'
-                : 'border-border bg-card text-muted-foreground hover:text-foreground',
+                ? 'border-primary/20 bg-primary/10 text-primary'
+                : 'border-border/80 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
             )}
           >
             <Check className="size-3.5" />
@@ -277,7 +284,9 @@ export default function PlatformAlertsPage() {
         </Toolbar>
 
         {loading ? (
-          <SkeletonRows rows={5} columns={3} />
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+            <SkeletonRows rows={5} columns={3} />
+          </div>
         ) : (items?.length ?? 0) === 0 ? (
           <EmptyState
             icon={Activity}
@@ -300,31 +309,32 @@ export default function PlatformAlertsPage() {
           />
         ) : (
           <ul className="space-y-2.5">
-            {items!.map((alert) => {
+            <AnimatePresence initial={false}>
+            {items!.map((alert, index) => {
               const Icon = GROUP_ICON[alert.group ?? ''] ?? Activity;
               const body = (
                 <>
                   <span
                     className={cn(
-                      'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                      'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300',
                       alert.isRead
                         ? 'bg-muted text-muted-foreground'
                         : alert.severity === 'critical'
-                          ? 'bg-destructive/12 text-destructive'
+                          ? 'bg-destructive/10 text-destructive'
                           : alert.severity === 'warning'
-                            ? 'bg-warning/12 text-warning'
-                            : 'bg-info/12 text-info',
+                            ? 'bg-warning/10 text-warning'
+                            : 'bg-info/10 text-info',
                     )}
                   >
-                    <Icon className="size-5" />
+                    <Icon className="size-[18px]" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span
                         dir="auto"
                         className={cn(
-                          'text-13',
-                          alert.isRead ? 'text-foreground/80' : 'font-semibold text-foreground',
+                          'text-sm',
+                          alert.isRead ? 'text-foreground/75' : 'font-medium text-foreground',
                         )}
                       >
                         {alert.title}
@@ -342,7 +352,7 @@ export default function PlatformAlertsPage() {
                         />
                       )}
                       {alert.tenantName && (
-                        <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           <Building2 className="size-3" />
                           <span dir="auto">{alert.tenantName}</span>
                         </span>
@@ -356,7 +366,7 @@ export default function PlatformAlertsPage() {
                         {alert.body}
                       </span>
                     )}
-                    <span className="mt-1 block text-2xs text-muted-foreground/80">
+                    <span className="mt-1.5 block text-xs text-muted-foreground/80">
                       <code dir="ltr" className="font-mono">
                         {alert.type}
                       </code>{' '}
@@ -366,15 +376,30 @@ export default function PlatformAlertsPage() {
                 </>
               );
               return (
-                <li
+                <m.li
                   key={alert.id}
+                  layout="position"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0, transition: { duration: 0.32, ease: ease.emerge, delay: Math.min(index * 0.035, 0.42) } }}
+                  exit={{ opacity: 0, x: -8, transition: { duration: 0.16, ease: ease.exit } }}
                   className={cn(
-                    'flex items-start gap-3.5 rounded-xl border bg-card p-4 shadow-xs transition',
-                    alert.isRead
-                      ? 'border-border'
-                      : 'border-border-strong hover:border-primary/40',
+                    'relative flex items-start gap-3.5 overflow-hidden rounded-xl border bg-card p-4 shadow-xs transition-[border-color,box-shadow] duration-200 hover:shadow-md',
+                    alert.isRead ? 'border-border/60' : 'border-border hover:border-border-strong',
                   )}
                 >
+                  {!alert.isRead && (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'absolute inset-y-3 start-0 w-[3px] rounded-e-full',
+                        alert.severity === 'critical'
+                          ? 'bg-destructive'
+                          : alert.severity === 'warning'
+                            ? 'bg-warning'
+                            : 'bg-info',
+                      )}
+                    />
+                  )}
                   {body}
                   <span className="flex shrink-0 items-center gap-1.5">
                     {!alert.isRead && (
@@ -383,7 +408,7 @@ export default function PlatformAlertsPage() {
                         onClick={() => void markRead(alert.id)}
                         aria-label={t('markRead', { default: 'Mark read' })}
                         title={t('markRead', { default: 'Mark read' })}
-                        className="rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                       >
                         <Check className="size-4" />
                       </button>
@@ -391,7 +416,7 @@ export default function PlatformAlertsPage() {
                     {alert.href && (
                       <a
                         href={alert.href}
-                        className="rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                         aria-label={t('investigate', { default: 'Investigate' })}
                         title={t('investigate', { default: 'Investigate' })}
                       >
@@ -399,9 +424,10 @@ export default function PlatformAlertsPage() {
                       </a>
                     )}
                   </span>
-                </li>
+                </m.li>
               );
             })}
+            </AnimatePresence>
           </ul>
         )}
       </div>

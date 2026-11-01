@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { getImageSrc } from '@/lib/images';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
+import { Reveal } from '@/components/ui/motion';
+import { ease, spring, transition } from '@/lib/motion';
 interface EventDetail {
   id: string;
   title: string;
@@ -90,18 +93,18 @@ export default function EventDetailPage() {
   };
   if (loading) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-12">
-        {' '}
-        <Skeleton className="h-64 rounded-xl mb-8" /> <Skeleton className="h-8 w-2/3 mb-4" />{' '}
-        <Skeleton className="h-4 w-1/3 mb-2" /> <Skeleton className="h-24 w-full" />{' '}
+      <div className="container mx-auto max-w-5xl px-4 py-12">
+        <Skeleton className="mb-8 h-72 rounded-2xl" />
+        <Skeleton className="mb-4 h-9 w-2/3" />
+        <Skeleton className="mb-2 h-4 w-1/3" />
+        <Skeleton className="h-24 w-full" />
       </div>
     );
   }
   if (!event) {
     return (
-      <div className="container mx-auto px-4 py-24 text-center text-muted-foreground">
-        {' '}
-        {td('notFound')}{' '}
+      <div className="container mx-auto px-4 py-24 text-center">
+        <p className="font-display text-2xl font-medium tracking-[-0.015em] text-foreground">{td('notFound')}</p>
       </div>
     );
   }
@@ -116,167 +119,212 @@ export default function EventDetailPage() {
     });
   const formatTime = (d: string) =>
     formatDateInLocale(d, locale, { hour: 'numeric', minute: '2-digit' });
+  const start = new Date(event.startDate);
+  const hasStart = !Number.isNaN(start.getTime());
+  const fill = event.maxAttendees
+    ? Math.min(100, (event.registeredCount / event.maxAttendees) * 100)
+    : 0;
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-12">
-      {' '}
-      <Button variant="ghost" size="sm" className="mb-6" asChild>
-        {' '}
+    <div className="container mx-auto max-w-5xl px-4 py-10 md:py-14">
+      <Button variant="ghost" size="sm" className="mb-6 -ms-2 text-muted-foreground hover:text-foreground" asChild>
         <Link href="/events">
-          <ArrowLeft className="flip-rtl size-4 me-1" /> {t('all')}
-        </Link>{' '}
-      </Button>{' '}
-      <div className="grid gap-8 lg:grid-cols-3">
-        {' '}
-        <div className="lg:col-span-2 space-y-6">
-          {' '}
-          <div className="aspect-video rounded-xl bg-muted blueprint-grid overflow-hidden">
-            {' '}
+          <ArrowLeft className="flip-rtl me-1 size-4" /> {t('all')}
+        </Link>
+      </Button>
+      <div className="grid gap-10 lg:grid-cols-3 lg:gap-12">
+        <div className="space-y-8 lg:col-span-2">
+          <div className="relative aspect-video overflow-hidden rounded-2xl border border-border/70 bg-muted shadow-xs">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getImageSrc(event.thumbnailUrl, 'event')}
               alt={event.title}
               className="h-full w-full object-cover"
-            />{' '}
-          </div>{' '}
-          <div>
-            {' '}
-            <div className="flex items-center gap-2 mb-2">
-              {' '}
-              <Badge className="capitalize">{event.eventType}</Badge>{' '}
-              {event.isVirtual && <Badge variant="secondary">{td('virtual')}</Badge>}{' '}
-              {event.isFull && <Badge variant="destructive">{td('full')}</Badge>}{' '}
-              {isRegistered && (
-                <Badge variant="outline" className="text-green-600 border-green-400">
-                  <CheckCircle className="size-3.5 me-1" />
-                  {t('registered')}
-                </Badge>
-              )}{' '}
-            </div>{' '}
-            <h1 className="text-3xl font-bold">{event.title}</h1>{' '}
-          </div>{' '}
-          {event.description && (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              {' '}
-              <p className="text-muted-foreground whitespace-pre-line">{event.description}</p>{' '}
+            />
+          </div>
+          <div className="flex items-start gap-5">
+            {hasStart && (
+              <div
+                aria-hidden
+                className="hidden w-20 shrink-0 flex-col items-center overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm sm:flex"
+              >
+                <span className="w-full bg-primary/10 py-1.5 text-center text-xs font-medium text-primary">
+                  {formatDateInLocale(start, locale, { month: 'short' })}
+                </span>
+                <span className="pt-2 font-display text-4xl font-medium leading-none tracking-[-0.02em] tabular-nums text-foreground">
+                  {formatDateInLocale(start, locale, { day: 'numeric' })}
+                </span>
+                <span className="pb-2 pt-1 text-xs text-muted-foreground">
+                  {formatDateInLocale(start, locale, { weekday: 'short' })}
+                </span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <Badge variant="soft-muted" className="capitalize">{event.eventType}</Badge>
+                {event.isVirtual && <Badge variant="outline">{td('virtual')}</Badge>}
+                {event.isFull && (
+                  <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive">
+                    {td('full')}
+                  </Badge>
+                )}
+                <AnimatePresence initial={false}>
+                  {isRegistered && (
+                    <m.span
+                      key="registered"
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1, transition: spring.snappy }}
+                      exit={{ opacity: 0, scale: 0.9, transition: transition.leave }}
+                      className="inline-flex"
+                    >
+                      <Badge variant="outline" className="border-success/30 bg-success/10 text-success">
+                        <CheckCircle className="me-1 size-3.5" />
+                        {t('registered')}
+                      </Badge>
+                    </m.span>
+                  )}
+                </AnimatePresence>
+              </div>
+              <h1 className="text-balance font-display text-3xl font-medium leading-tight tracking-[-0.022em] text-foreground md:text-4xl">
+                {event.title}
+              </h1>
             </div>
-          )}{' '}
-        </div>{' '}
-        <div className="space-y-4">
-          {' '}
-          <div className="rounded-xl border bg-card p-5 space-y-4">
-            {' '}
-            <h2 className="font-semibold">{td('details')}</h2>{' '}
-            <div className="space-y-3 text-sm">
-              {' '}
+          </div>
+          {event.description && (
+            <Reveal className="max-w-prose border-t border-border/60 pt-8">
+              <p className="whitespace-pre-line text-[15px] leading-[1.75] text-muted-foreground">{event.description}</p>
+            </Reveal>
+          )}
+        </div>
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <div className="space-y-5 rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
+            <h2 className="font-display text-xl font-medium tracking-[-0.015em] text-foreground">{td('details')}</h2>
+            <div className="space-y-4 text-sm">
               <div className="flex items-start gap-3">
-                {' '}
-                <Calendar className="size-4 text-primary mt-0.5 shrink-0" />{' '}
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <Calendar className="size-4" />
+                </span>
                 <div>
-                  {' '}
-                  <p className="font-medium">{formatDate(event.startDate)}</p>{' '}
+                  <p className="font-medium text-foreground">{formatDate(event.startDate)}</p>
                   <p className="text-muted-foreground">
-                    {' '}
-                    {formatTime(event.startDate)}{' '}
+                    {formatTime(event.startDate)}
                     {event.endDate &&
-                      ` — ${formatDate(event.endDate) !== formatDate(event.startDate) ? formatDate(event.endDate) : formatTime(event.endDate)}`}{' '}
-                  </p>{' '}
-                </div>{' '}
-              </div>{' '}
+                      ` — ${formatDate(event.endDate) !== formatDate(event.startDate) ? formatDate(event.endDate) : formatTime(event.endDate)}`}
+                  </p>
+                </div>
+              </div>
               <div className="flex items-start gap-3">
-                {' '}
-                <MapPin className="size-4 text-primary mt-0.5 shrink-0" />{' '}
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <MapPin className="size-4" />
+                </span>
                 <div>
-                  {' '}
-                  <p className="font-medium">
-                    {' '}
-                    {event.isVirtual ? t('online') : loc?.venue || loc?.city || td('tbd')}{' '}
-                  </p>{' '}
-                  {loc?.address && <p className="text-muted-foreground">{loc.address}</p>}{' '}
+                  <p className="font-medium text-foreground">
+                    {event.isVirtual ? t('online') : loc?.venue || loc?.city || td('tbd')}
+                  </p>
+                  {loc?.address && <p className="text-muted-foreground">{loc.address}</p>}
                   {loc?.city && (
                     <p className="text-muted-foreground">
                       {loc.city}
                       {loc?.state ? `, ${loc.state}` : ''}
                     </p>
-                  )}{' '}
-                </div>{' '}
-              </div>{' '}
+                  )}
+                </div>
+              </div>
               {event.maxAttendees && (
                 <div className="flex items-center gap-3">
-                  {' '}
-                  <Users className="size-4 text-primary shrink-0" />{' '}
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                    <Users className="size-4" />
+                  </span>
                   <div className="flex-1">
-                    {' '}
-                    <div className="flex justify-between text-sm mb-1">
-                      {' '}
-                      <span className="font-medium">
+                    <div className="mb-1.5 flex justify-between text-sm">
+                      <span className="font-medium tabular-nums text-foreground">
                         {td('registeredCount', { count: event.registeredCount })}
-                      </span>{' '}
-                      <span className="text-muted-foreground">
+                      </span>
+                      <span className="tabular-nums text-muted-foreground">
                         {td('ofCapacity', { max: event.maxAttendees })}
-                      </span>{' '}
-                    </div>{' '}
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      {' '}
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{
-                          width: `${Math.min(100, (event.registeredCount / event.maxAttendees) * 100)}%`,
-                        }}
-                      />{' '}
-                    </div>{' '}
-                  </div>{' '}
+                      </span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                      <m.div
+                        className="h-full rounded-full bg-primary"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${fill}%` }}
+                        transition={{ duration: 0.9, ease: ease.emerge, delay: 0.15 }}
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}{' '}
+              )}
               {event.price && event.price > 0 && (
                 <div className="flex items-center gap-3">
-                  {' '}
-                  <DollarSign className="size-4 text-primary shrink-0" />{' '}
-                  <span className="font-medium">${(event.price / 100).toFixed(2)}</span>{' '}
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                    <DollarSign className="size-4" />
+                  </span>
+                  <span className="font-display text-xl font-medium tabular-nums text-foreground">
+                    ${(event.price / 100).toFixed(2)}
+                  </span>
                 </div>
-              )}{' '}
+              )}
               {event.isVirtual && (
                 <div className="flex items-center gap-3">
-                  {' '}
-                  <Monitor className="size-4 text-primary shrink-0" />{' '}
-                  <span className="text-muted-foreground">
-                    {td('linkAfterRegistration')}
-                  </span>{' '}
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                    <Monitor className="size-4" />
+                  </span>
+                  <span className="text-muted-foreground">{td('linkAfterRegistration')}</span>
                 </div>
-              )}{' '}
-            </div>{' '}
-          </div>{' '}
-          <Button
-            className="w-full"
-            size="lg"
-            disabled={(!isRegistered && event.isFull) || registering}
-            variant={isRegistered ? 'outline' : 'default'}
-            onClick={handleRegister}
-          >
-            {' '}
-            {registering ? (
-              <Loader2 className="size-4 animate-spin me-2" />
-            ) : isRegistered ? (
-              <>
-                <XCircle className="size-4 me-2" /> {td('cancelRegistration')}
-              </>
-            ) : event.isFull ? (
-              td('eventFull')
-            ) : (
-              <>
-                <CheckCircle className="size-4 me-2" /> {td('registerNow')}
-              </>
-            )}{' '}
-          </Button>{' '}
-          {isRegistered && event.isVirtual && (
-            <div className="rounded-lg border bg-primary/5 p-4 text-sm">
-              {' '}
-              <p className="font-medium mb-1">{td('virtualAccess')}</p>{' '}
-              <p className="text-muted-foreground">
-                {td('virtualAccessHint')}
-              </p>{' '}
+              )}
             </div>
-          )}{' '}
-        </div>{' '}
-      </div>{' '}
+            <div className="border-t border-border/60 pt-5">
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={(!isRegistered && event.isFull) || registering}
+                variant={isRegistered ? 'outline' : 'default'}
+                onClick={handleRegister}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <m.span
+                    key={registering ? 'busy' : isRegistered ? 'cancel' : event.isFull ? 'full' : 'register'}
+                    className="inline-flex items-center"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0, transition: transition.enter }}
+                    exit={{ opacity: 0, y: -4, transition: transition.leave }}
+                  >
+                    {registering ? (
+                      <Loader2 className="me-2 size-4 animate-spin" />
+                    ) : isRegistered ? (
+                      <>
+                        <XCircle className="me-2 size-4" /> {td('cancelRegistration')}
+                      </>
+                    ) : event.isFull ? (
+                      td('eventFull')
+                    ) : (
+                      <>
+                        <CheckCircle className="me-2 size-4" /> {td('registerNow')}
+                      </>
+                    )}
+                  </m.span>
+                </AnimatePresence>
+              </Button>
+            </div>
+          </div>
+          <AnimatePresence initial={false}>
+            {isRegistered && event.isVirtual && (
+              <m.div
+                key="virtual-access"
+                initial={{ opacity: 0, y: -6, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto', transition: spring.layout }}
+                exit={{ opacity: 0, height: 0, transition: transition.leave }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm">
+                  <p className="mb-1 font-medium text-foreground">{td('virtualAccess')}</p>
+                  <p className="text-muted-foreground">{td('virtualAccessHint')}</p>
+                </div>
+              </m.div>
+            )}
+          </AnimatePresence>
+        </aside>
+      </div>
     </div>
   );
 }

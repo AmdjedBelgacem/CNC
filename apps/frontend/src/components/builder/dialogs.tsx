@@ -33,9 +33,9 @@ export function BuilderDialogs() {
           {' '}
           <DialogHeader>
             {' '}
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-3">
               {' '}
-              <Rocket className="size-4 text-primary" />{' '}
+              <span className="flex size-8 items-center justify-center rounded-xl bg-primary/10"><Rocket className="size-4 text-primary" /></span>{' '}
               {tb('dialogs.publishTitle', { default: 'Publish this page' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
@@ -49,7 +49,7 @@ export function BuilderDialogs() {
             </p>{' '}
             <label className="block">
               {' '}
-              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+              <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 {tb('dialogs.releaseNoteLabel', { default: 'Release note (optional)' })}
               </span>{' '}
               <textarea
@@ -58,7 +58,7 @@ export function BuilderDialogs() {
                 placeholder={tb('dialogs.releaseNotePlaceholder', {
                   default: 'What changed in this version?',
                 })}
-                className="h-20 w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-24 w-full resize-none rounded-xl border border-border/80 bg-background px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
               />{' '}
             </label>{' '}
           </DialogBody>{' '}
@@ -91,9 +91,9 @@ export function BuilderDialogs() {
           {' '}
           <DialogHeader>
             {' '}
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-3">
               {' '}
-              <RotateCcw className="size-4 text-destructive" />{' '}
+              <span className="flex size-8 items-center justify-center rounded-xl bg-destructive/10"><RotateCcw className="size-4 text-destructive" /></span>{' '}
               {tb('dialogs.resetTitle', { default: 'Reset page?' })}{' '}
             </DialogTitle>{' '}
           </DialogHeader>{' '}
@@ -197,15 +197,23 @@ function SectionDialog() {
         {' '}
         <DialogHeader>
           {' '}
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-3">
             {' '}
-            {dialog.mode === 'delete' ? (
-              <Trash2 className="size-4 text-destructive" />
-            ) : dialog.mode === 'rename' ? (
-              <Pencil className="size-4 text-primary" />
-            ) : (
-              <FolderPlus className="size-4 text-primary" />
-            )}{' '}
+            <span
+              className={
+                dialog.mode === 'delete'
+                  ? 'flex size-8 items-center justify-center rounded-xl bg-destructive/10'
+                  : 'flex size-8 items-center justify-center rounded-xl bg-primary/10'
+              }
+            >
+              {dialog.mode === 'delete' ? (
+                <Trash2 className="size-4 text-destructive" />
+              ) : dialog.mode === 'rename' ? (
+                <Pencil className="size-4 text-primary" />
+              ) : (
+                <FolderPlus className="size-4 text-primary" />
+              )}
+            </span>{' '}
             {title}{' '}
           </DialogTitle>{' '}
         </DialogHeader>{' '}
@@ -238,7 +246,7 @@ function SectionDialog() {
                   if (e.key === 'Enter' && name.trim()) void confirm();
                 }}
                 placeholder={tb('dialogs.sectionNamePlaceholder', { default: 'Section name' })}
-                className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-10 w-full rounded-xl border border-border/80 bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
               />{' '}
             </div>
           )}{' '}

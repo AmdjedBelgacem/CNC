@@ -31,20 +31,20 @@ export function LessonRow({ lesson, courseSlug, courseId, index }: LessonRowProp
     <Link
       href={`/courses/${courseSlug}/lessons/${lesson.slug}`}
       dir={locale === 'ar' ? 'rtl' : 'ltr'}
-      className="flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-muted/50 sm:px-5"
+      className="group flex items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-muted/40 sm:px-5"
     >
       {/* Accurate per-lesson thumbnail, with a play/lock affordance on top. */}
-      <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-md border border-border bg-surface-sunken sm:w-24">
+      <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg bg-surface-sunken ring-1 ring-inset ring-foreground/5 sm:w-24">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={getImageSrc(lesson.thumbnailUrl, 'lesson')}
           alt=""
-          className="size-full object-cover"
+          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
         />
-        <span className="absolute inset-0 flex items-center justify-center bg-overlay/30">
+        <span className="absolute inset-0 flex items-center justify-center bg-overlay/25 transition-colors group-hover:bg-overlay/35">
           {unlocked ? (
-            <Play className="size-3.5 text-white" />
+            <span className="flex size-6 items-center justify-center rounded-full bg-white/90 text-foreground shadow-sm transition-transform group-hover:scale-110"><Play className="size-3 fill-current" /></span>
           ) : (
             <Lock className="size-3.5 text-white" />
           )}
@@ -52,7 +52,7 @@ export function LessonRow({ lesson, courseSlug, courseId, index }: LessonRowProp
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">
+        <p className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
           {typeof index === 'number' && (
             <span className="me-2 tabular-nums text-muted-foreground">{index}.</span>
           )}

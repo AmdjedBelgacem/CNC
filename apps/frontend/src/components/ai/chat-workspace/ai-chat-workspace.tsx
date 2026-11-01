@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { coerceLocale, LOCALE_COOKIE } from '@/i18n/config';
+import { AnimatePresence, m } from 'framer-motion';
 import {
   Archive,
+  ArrowUp,
+  ArrowUpRight,
   Bot,
   Check,
   History,
@@ -15,7 +18,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Send,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -47,8 +49,11 @@ import {
 import { useAiAssistantContext } from '@/components/ai/ai-assistant-context';
 import { ArabicDialectMenu, useArabicDialectPreference } from '@/components/ai/arabic-dialect-menu';
 import {
+  AI_COMPOSER_CLASS,
+  AI_COMPOSER_TEXTAREA_CLASS,
   AiReferenceCard,
   AiSourceBadge,
+  AssistantMark,
   AiTranscript,
   groupConversationsByTime,
   relativeTime,
@@ -56,6 +61,9 @@ import {
 } from '@/components/ai/ai-chat-parts';
 import type { AiChatCitation } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
+import { ease, spring, transition } from '@/lib/motion';
+import { dialogMotion } from '@/components/ui/dialog';
+import { Stagger, StaggerItem } from '@/components/ui/motion';
 
 const MAX_MESSAGES = 200;
 
@@ -98,6 +106,19 @@ export function AiChatWorkspace({
   const [error, setError] = useState('');
   const [failedTurn, setFailedTurn] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // The rail docks at the inline-start edge, so it slides in from there — which
+  // is the right-hand side under `dir=rtl`.
+  const drawerOffset =
+    typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? '100%' : '-100%';
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
 
   const list = useAiConversations({ search: debounced || undefined, limit: 50 }, isAuthenticated);
   const rate = useRateAiMessage();
@@ -319,19 +340,17 @@ export function AiChatWorkspace({
     );
   }
 
-  const historyPanel = (
+  const renderHistory = (variant: 'rail' | 'drawer') => (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border p-4">
+      <div className="space-y-3 p-4 pb-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-foreground">
-            {t('history')}
-          </h2>
-          <Button size="sm" onClick={startNewChat} aria-label={t('newChat')}>
-            <Plus className="size-4" />
+          <h2 className="text-sm font-medium text-foreground">{t('history')}</h2>
+          <Button size="sm" variant="outline" onClick={startNewChat} aria-label={t('newChat')} className="rounded-full">
+            <Plus className="size-4 text-primary" />
             {t('newChat')}
           </Button>
         </div>
-        <div className="relative mt-3">
+        <div className="relative">
           <Search
             className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4 text-muted-foreground"
             aria-hidden
@@ -341,76 +360,102 @@ export function AiChatWorkspace({
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t('searchPlaceholder')}
             aria-label={t('searchPlaceholder')}
-            className="ps-9"
+            className="h-9 rounded-full bg-background ps-9 shadow-none"
           />
         </div>
       </div>
 
-      {manageError && (
-        <p role="alert" className="border-b border-destructive/25 bg-destructive/5 px-4 py-2 text-xs text-destructive">
-          {manageError}
-        </p>
-      )}
+      <AnimatePresence initial={false}>
+        {manageError && (
+          <m.p
+            role="alert"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto', transition: transition.enter }}
+            exit={{ opacity: 0, height: 0, transition: transition.leave }}
+            className="mx-4 mb-2 overflow-hidden rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive"
+          >
+            {manageError}
+          </m.p>
+        )}
+      </AnimatePresence>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4">
         {historyLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2 px-1.5 pt-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              <Skeleton key={i} className="h-14 w-full rounded-lg" />
             ))}
           </div>
         ) : list.isError ? (
           <ErrorState title={t('loadFailed')} onRetry={() => void list.refetch()} compact />
         ) : (list.data?.data.length ?? 0) === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <History className="mx-auto size-6 text-muted-foreground" aria-hidden />
-            <p className="mt-3 text-sm font-semibold text-foreground">
+          <div className="mx-1.5 mt-2 rounded-xl border border-dashed border-border px-5 py-8 text-center">
+            <span className="mx-auto grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
+              <History className="size-4.5" aria-hidden />
+            </span>
+            <p className="mt-3 font-display text-base font-medium text-foreground">
               {search ? t('noResults') : t('emptyTitle')}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               {search ? t('noResultsHint') : t('emptyHint')}
             </p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-5 pt-1">
             {groups.map((group) => (
               <section key={group.group}>
-                <p className="px-2 pb-1.5 font-mono text-2xs uppercase tracking-[0.12em] text-muted-foreground">
+                <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">
                   {t(`groups.${group.group}`)}
                 </p>
-                <ul className="space-y-1">
+                <ul className="space-y-0.5">
                   {group.items.map((item) => {
                     const selected = item.id === activeId;
                     return (
-                      <li key={item.id}>
+                      <m.li key={item.id} layout="position" transition={spring.layout}>
                         <div className="group relative">
+                        {selected && (
+                          <m.span
+                            layoutId={`ai-history-active-${variant}`}
+                            transition={spring.smooth}
+                            className="absolute inset-0 rounded-lg border border-border/70 bg-card shadow-xs"
+                            aria-hidden
+                          />
+                        )}
                         <Link
                           href={`/ai/chat/${item.id}`}
                           onClick={() => setDrawerOpen(false)}
                           aria-current={selected ? 'page' : undefined}
                           className={cn(
-                            'block rounded-lg border px-3 py-2 pe-9 transition-colors',
-                            selected
-                              ? 'border-primary/40 bg-primary/5'
-                              : 'border-transparent hover:bg-muted',
+                            'relative block rounded-lg px-3 py-2 pe-10 transition-colors',
+                            selected ? '' : 'hover:bg-foreground/[0.04]',
                           )}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="line-clamp-2 min-w-0 flex-1 text-sm font-medium text-foreground">
+                            <span
+                              className={cn(
+                                'line-clamp-1 min-w-0 flex-1 text-sm',
+                                selected ? 'font-medium text-foreground' : 'text-foreground/85',
+                              )}
+                            >
                               {item.title}
                             </span>
                             {item.source !== 'general' && <AiSourceBadge source={item.source} />}
                           </div>
-                          <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                             {item.lastMessage || t('noPreview')}
                           </p>
-                          <p className="mt-1 font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground/80">
+                          <p className="mt-0.5 text-2xs tabular-nums text-muted-foreground/80">
                             {relativeTime(item.lastMessageAt, locale)} · {t('messageCount', { count: item.messageCount })}
                           </p>
                         </Link>
+                        <AnimatePresence initial={false} mode="popLayout">
                         {editingId === item.id ? (
-                          <form
-                            className="mt-2 flex items-center gap-1"
+                          <m.form
+                            key="rename"
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0, transition: transition.enter }}
+                            exit={{ opacity: 0, transition: transition.leave }}
+                            className="relative mt-1.5 flex items-center gap-1 px-1 pb-1"
                             onSubmit={(event) => {
                               event.preventDefault();
                               void commitRename();
@@ -439,14 +484,14 @@ export function AiChatWorkspace({
                             >
                               <X />
                             </Button>
-                          </form>
+                          </m.form>
                         ) : (
-                          <DropdownMenu>
+                          <DropdownMenu key="menu">
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon-xs"
-                                className="absolute end-2 top-2 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                                className="absolute end-1.5 top-1.5 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
                                 aria-label={t('manageThread')}
                               >
                                 <Pencil className="size-3.5" />
@@ -464,8 +509,9 @@ export function AiChatWorkspace({
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
+                        </AnimatePresence>
                         </div>
-                      </li>
+                      </m.li>
                     );
                   })}
                 </ul>
@@ -477,31 +523,44 @@ export function AiChatWorkspace({
     </div>
   );
 
+  const prompts = ['factCheckPost', 'courseQuestion', 'lessonQuestion', 'productQuestion'] as const;
+
   return (
-    <div className="mx-auto flex h-[calc(100dvh-4rem)] w-full max-w-container-max gap-0">
+    <div className="mx-auto flex h-[calc(100dvh-4rem)] w-full max-w-container-max gap-0 bg-background">
       {/* History rail: persistent on desktop, a drawer on small screens. */}
-      <aside className="hidden w-80 shrink-0 border-e border-border lg:block">
-        {historyPanel}
+      <aside className="hidden w-72 shrink-0 border-e border-border/70 bg-muted/30 lg:block xl:w-80">
+        {renderHistory('rail')}
       </aside>
 
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            aria-label={t('closeHistory')}
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-foreground/40"
-          />
-          <div className="absolute inset-y-0 start-0 w-[85vw] max-w-sm border-e border-border bg-background shadow-xl">
-            <div className="flex justify-end p-2">
-              <Button variant="ghost" size="icon-sm" onClick={() => setDrawerOpen(false)} aria-label={t('closeHistory')}>
-                <X />
-              </Button>
-            </div>
-            <div className="h-[calc(100%-3rem)]">{historyPanel}</div>
+      <AnimatePresence>
+        {drawerOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden" key="ai-history-drawer">
+            <m.button
+              type="button"
+              aria-label={t('closeHistory')}
+              onClick={() => setDrawerOpen(false)}
+              className="absolute inset-0 bg-overlay/45 backdrop-blur-[3px]"
+              {...dialogMotion.overlay}
+            />
+            <m.div
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('history')}
+              initial={{ x: drawerOffset }}
+              animate={{ x: 0, transition: spring.gentle }}
+              exit={{ x: drawerOffset, transition: { duration: 0.22, ease: ease.exit } }}
+              className="absolute inset-y-0 start-0 flex w-[85vw] max-w-sm flex-col border-e border-border/70 bg-background shadow-xl"
+            >
+              <div className="flex justify-end p-2 pb-0">
+                <Button variant="ghost" size="icon-sm" onClick={() => setDrawerOpen(false)} aria-label={t('closeHistory')}>
+                  <X />
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1">{renderHistory('drawer')}</div>
+            </m.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Transcript + composer */}
       <section className="flex min-w-0 flex-1 flex-col">
@@ -511,10 +570,10 @@ export function AiChatWorkspace({
           the desktop equivalent, shown only when the mobile one is not, so exactly one h1
           exists at any breakpoint.
         */}
-        <h1 className="sr-only lg:not-sr-only lg:px-4 lg:pt-3 lg:font-display lg:text-base lg:font-semibold lg:text-foreground">
+        <h1 className="lg:truncate lg:px-6 lg:pt-4 lg:font-display lg:text-lg lg:font-medium lg:tracking-[-0.015em] lg:text-foreground sr-only lg:not-sr-only">
           {activeId ? active.data?.title || t('loading') : t('newChatTitle')}
         </h1>
-        <header className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <header className="flex items-center gap-2.5 border-b border-border/60 px-4 py-2.5 lg:px-6">
           <Button
             variant="ghost"
             size="icon-sm"
@@ -524,20 +583,22 @@ export function AiChatWorkspace({
           >
             <Menu />
           </Button>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="size-4" />
-          </span>
+          <AssistantMark className="mt-0 lg:hidden" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-base font-semibold text-foreground">
+            <h2 className="truncate font-display text-base font-medium text-foreground lg:sr-only">
               {activeId ? active.data?.title || t('loading') : t('newChatTitle')}
             </h2>
-            <p className="truncate font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground">
+            <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+              <span
+                className={cn('size-1.5 shrink-0 rounded-full', activeId ? 'bg-success' : 'bg-muted-foreground/40')}
+                aria-hidden
+              />
               {activeId ? t('savedBadge') : t('unsavedHint')}
             </p>
           </div>
           {activeId && (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => openAssistant({ conversationId: activeId })}
               aria-label={t('openInModal')}
@@ -548,28 +609,34 @@ export function AiChatWorkspace({
           )}
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
-          {activeReference && !activeId && (
-            <AiReferenceCard sourceRef={activeReference} className="mb-5 max-w-3xl" />
-          )}
-          {activeId && active.data?.sourceRef && (
-            <AiReferenceCard sourceRef={active.data.sourceRef} className="mb-5 max-w-3xl" />
-          )}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 sm:px-6">
+          <div className="mx-auto w-full max-w-3xl">
+            {activeReference && !activeId && (
+              <AiReferenceCard sourceRef={activeReference} className="mb-6" />
+            )}
+            {activeId && active.data?.sourceRef && (
+              <AiReferenceCard sourceRef={active.data.sourceRef} className="mb-6" />
+            )}
 
-          {activeId && active.isPending && active.isFetching ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full max-w-2xl rounded-lg" />
-              ))}
-            </div>
-          ) : active.isError ? (
-            <ErrorState
-              title={t('loadFailed')}
-              onRetry={() => void active.refetch()}
-              className="max-w-2xl"
-            />
-          ) : (
-            <div className="mx-auto w-full max-w-3xl">
+            {activeId && active.isPending && active.isFetching ? (
+              <div className="space-y-6">
+                <Skeleton className="ms-auto h-12 w-2/3 rounded-2xl" />
+                <div className="flex gap-3">
+                  <Skeleton className="size-7 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-11/12" />
+                    <Skeleton className="h-4 w-3/5" />
+                  </div>
+                </div>
+              </div>
+            ) : active.isError ? (
+              <ErrorState
+                title={t('loadFailed')}
+                onRetry={() => void active.refetch()}
+                className="max-w-2xl"
+              />
+            ) : (
               <AiTranscript
                 messages={messages}
                 isPending={chat.isPending}
@@ -578,53 +645,78 @@ export function AiChatWorkspace({
                   if (failedTurn) void send();
                 }}
                 emptyState={
-                  <div className="rounded-lg border border-border bg-muted/30 p-5">
-                    <p className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
-                      <Sparkles className="size-4 text-primary" />
+                  <div className="flex min-h-[44dvh] flex-col items-center justify-center py-6 text-center">
+                    <m.span
+                      initial={{ opacity: 0, scale: 0.8, rotate: -20 }}
+                      animate={{ opacity: 1, scale: 1, rotate: 0, transition: spring.gentle }}
+                      className="grid size-12 place-items-center rounded-full bg-primary/10 text-primary"
+                      aria-hidden
+                    >
+                      <Sparkles className="size-5" />
+                    </m.span>
+                    <m.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0, transition: { ...transition.reveal, delay: 0.05 } }}
+                      className="mt-5 max-w-xl text-balance font-display text-3xl font-medium leading-tight tracking-[-0.022em] text-foreground sm:text-[2.5rem]"
+                    >
                       {activeReference ? t('groundedTitle') : t('welcomeTitle')}
-                    </p>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    </m.p>
+                    <m.p
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0, transition: { ...transition.reveal, delay: 0.12 } }}
+                      className="mt-3 max-w-lg text-pretty text-[0.9375rem] leading-relaxed text-muted-foreground"
+                    >
                       {activeReference ? t('groundedHint') : t('welcomeHint')}
-                    </p>
-                    <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                      {(['factCheckPost', 'courseQuestion', 'lessonQuestion', 'productQuestion'] as const).map(
-                        (key) => (
-                          <li key={key}>
-                            <button
-                              type="button"
-                              onClick={() => setInput(t(`prompts.${key}`))}
-                              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-start text-xs text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
-                            >
-                              {t(`promptLabels.${key}`)}
-                            </button>
-                          </li>
-                        ),
-                      )}
-                    </ul>
+                    </m.p>
+                    <Stagger as="ul" delay={0.18} gap={0.06} className="mt-8 grid w-full max-w-2xl gap-2.5 sm:grid-cols-2">
+                      {prompts.map((key, index) => (
+                        <StaggerItem as="li" key={key} index={index}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInput(t(`prompts.${key}`));
+                              requestAnimationFrame(() => composerRef.current?.focus());
+                            }}
+                            className="card-hover group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 text-start text-sm text-muted-foreground shadow-xs transition-colors hover:border-border-strong hover:text-foreground"
+                          >
+                            <span className="min-w-0 flex-1">{t(`promptLabels.${key}`)}</span>
+                            <ArrowUpRight
+                              className="size-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary rtl:-scale-x-100"
+                              aria-hidden
+                            />
+                          </button>
+                        </StaggerItem>
+                      ))}
+                    </Stagger>
                   </div>
                 }
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="border-t border-border p-4">
+        <div className="px-4 pb-4 pt-2 sm:px-6">
           <div className="mx-auto w-full max-w-3xl">
-            {error && (
-              <div
-                role="alert"
-                className="mb-3 flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive"
-              >
-                <X className="mt-0.5 size-3.5 shrink-0" />
-                <span className="min-w-0 flex-1 break-words">{error}</span>
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {error && (
+                <m.div
+                  role="alert"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0, transition: transition.enter }}
+                  exit={{ opacity: 0, y: 4, transition: transition.leave }}
+                  className="mb-3 flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive"
+                >
+                  <X className="mt-0.5 size-3.5 shrink-0" />
+                  <span className="min-w-0 flex-1 break-words">{error}</span>
+                </m.div>
+              )}
+            </AnimatePresence>
             <form
               onSubmit={(event) => {
                 event.preventDefault();
                 void send();
               }}
-              className="space-y-2"
+              className={AI_COMPOSER_CLASS}
             >
               <Textarea
                 ref={composerRef}
@@ -641,20 +733,26 @@ export function AiChatWorkspace({
                 placeholder={available ? t('placeholder') : ta('unavailable')}
                 disabled={!available || chat.isPending}
                 aria-label={ta('inputLabel')}
+                className={AI_COMPOSER_TEXTAREA_CLASS}
               />
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 px-2.5 pb-2.5">
                 <div className="flex min-w-0 items-center gap-2">
                   <ArabicDialectMenu value={arabicDialect} onChange={setArabicDialect} />
-                  <p className="hidden truncate font-mono text-2xs uppercase tracking-[0.1em] text-muted-foreground sm:block">
-                    {t('groundedNote')}
-                  </p>
                 </div>
-                <Button type="submit" size="sm" disabled={!input.trim() || chat.isPending || !available}>
-                  {chat.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-                  {t('send')}
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!input.trim() || chat.isPending || !available}
+                  className="rounded-xl"
+                >
+                  {chat.isPending ? <Loader2 className="animate-spin" /> : <ArrowUp />}
+                  <span className="sr-only sm:not-sr-only">{t('send')}</span>
                 </Button>
               </div>
             </form>
+            <p className="mt-2.5 hidden truncate text-center text-xs text-muted-foreground sm:block">
+              {t('groundedNote')}
+            </p>
           </div>
         </div>
       </section>

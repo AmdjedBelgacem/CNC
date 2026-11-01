@@ -22,6 +22,9 @@ import {
 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { getImageSrc } from '@/lib/images';
+import { m } from 'framer-motion';
+import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
+import { spring } from '@/lib/motion';
 interface ProfileProject {
   id: string;
   title: string;
@@ -71,9 +74,9 @@ function getInitials(name: string): string {
 function CoverImage({ coverUrl }: { coverUrl: string | null }) {
   const tp = useTranslations('pages.publicProfile');
   return (
-    <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden bg-card">
-      <img src={getImageSrc(coverUrl, 'user')} alt={tp('coverAlt')} className="w-full h-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+    <div className="relative h-48 w-full overflow-hidden bg-muted sm:h-56 md:h-72">
+      <img src={getImageSrc(coverUrl, 'user')} alt={tp('coverAlt')} className="h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
     </div>
   );
 }
@@ -92,63 +95,57 @@ function StatsBar({ stats }: { stats: ProfileStats }) {
     { label: tProfile('statPosts'), value: stats.posts ?? stats.postsCount ?? 0, icon: MessageSquare },
   ];
   return (
-    <div className="flex flex-wrap gap-1">
-      {' '}
-      {items.map((item) => (
-        <div
-          key={item.label}
-          className="flex items-center gap-2 rounded-lg bg-card px-4 py-2.5"
-        >
-          {' '}
-          <item.icon className="size-4 text-warning" />{' '}
-          <span className="text-sm font-semibold text-white">{item.value}</span>{' '}
-          <span className="text-xs text-muted-foreground">{item.label}</span>{' '}
-        </div>
-      ))}{' '}
-    </div>
+    <Stagger className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/70 bg-border/70 shadow-xs sm:grid-cols-5">
+      {items.map((item, index) => (
+        <StaggerItem key={item.label} index={index} className="bg-card px-4 py-4">
+          <p className="font-display text-2xl font-medium tracking-[-0.02em] text-foreground">
+            <AnimatedNumber value={item.value} />
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <item.icon className="size-3.5" />
+            {item.label}
+          </p>
+        </StaggerItem>
+      ))}
+    </Stagger>
   );
 }
 function ProjectCard({ project }: { project: ProfileProject }) {
   const tp = useTranslations('pages.publicProfile');
   return (
-    <Card className="overflow-hidden border-border bg-card hover:border-warning/40 transition-colors">
-      {' '}
-      <div className="aspect-video bg-muted relative overflow-hidden">
-        <img src={getImageSrc(project.imageUrl, 'product')} alt={project.title} className="w-full h-full object-cover" />
-      </div>{' '}
-      <CardContent className="p-4">
-        {' '}
-        <h3 className="font-semibold text-white text-sm mb-1 truncate"> {project.title} </h3>{' '}
+    <Card className="card-hover group h-full overflow-hidden rounded-2xl border-border/70 bg-card shadow-xs transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-lg">
+      <div className="relative aspect-video overflow-hidden bg-muted">
+        <img
+          src={getImageSrc(project.imageUrl, 'product')}
+          alt={project.title}
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+        />
+      </div>
+      <CardContent className="p-5">
+        <h3 className="mb-1 truncate font-display text-lg font-medium text-foreground">{project.title}</h3>
         {project.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-3"> {project.description} </p>
-        )}{' '}
+          <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{project.description}</p>
+        )}
         {project.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {' '}
+          <div className="mb-3 flex flex-wrap gap-1.5">
             {project.tags.map((tag) => (
-              <Badge
-                key={tag}
-                variant="outline"
-                className="border-warning/25 text-warning/80 text-2xs"
-              >
-                {' '}
-                {tag}{' '}
+              <Badge key={tag} variant="soft-muted" className="text-2xs">
+                {tag}
               </Badge>
-            ))}{' '}
+            ))}
           </div>
-        )}{' '}
+        )}
         {(project.projectUrl || project.url) && (
           <a
             href={project.projectUrl || project.url!}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-warning hover:text-warning"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
           >
-            {' '}
-            <ExternalLink className="size-3.5" /> {tp('viewProject')}{' '}
+            <ExternalLink className="size-3.5" /> {tp('viewProject')}
           </a>
-        )}{' '}
-      </CardContent>{' '}
+        )}
+      </CardContent>
     </Card>
   );
 }
@@ -156,20 +153,22 @@ function PortfolioGrid({ projects }: { projects: ProfileProject[] }) {
   const tp = useTranslations('pages.publicProfile');
   if (projects.length === 0) {
     return (
-      <div className="text-center py-16">
-        {' '}
-        <Grid className="mx-auto h-12 w-12 text-muted-foreground mb-3" />{' '}
-        <p className="text-muted-foreground text-sm">{tp('noPortfolioItems')}</p>{' '}
+      <div className="rounded-2xl border border-dashed border-border py-16 text-center">
+        <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <Grid className="size-5" />
+        </span>
+        <p className="text-sm text-muted-foreground">{tp('noPortfolioItems')}</p>
       </div>
     );
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-12">
-      {' '}
-      {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} />
-      ))}{' '}
-    </div>
+    <Stagger className="grid grid-cols-1 gap-6 pb-12 sm:grid-cols-2 lg:grid-cols-3">
+      {projects.map((project, index) => (
+        <StaggerItem key={project.id} index={index}>
+          <ProjectCard project={project} />
+        </StaggerItem>
+      ))}
+    </Stagger>
   );
 }
 function ActivityTabPlaceholder() {
@@ -192,10 +191,10 @@ function LoadingSkeleton() {
   // swept.
   return (
     <div className="min-h-screen bg-background">
-      <Skeleton className="h-48 w-full rounded-none sm:h-56 md:h-64" />
-      <div className="relative z-10 mx-auto -mt-12 max-w-5xl px-4">
+      <Skeleton className="h-48 w-full rounded-none sm:h-56 md:h-72" />
+      <div className="relative z-10 mx-auto -mt-14 max-w-5xl px-4">
         <div className="mb-6 flex items-end gap-4">
-          <SkeletonCircle className="size-24 border-4 border-card" />
+          <SkeletonCircle className="size-28 border-4 border-background" />
           <div className="flex-1 space-y-2 pb-1">
             <Skeleton className="h-6 w-48" />
             <Skeleton className="h-4 w-32" />
@@ -295,109 +294,105 @@ export default function ProfilePage() {
   if (loading) return <LoadingSkeleton />;
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        {' '}
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="text-center">
-          {' '}
-          <h1 className="text-2xl font-bold text-white mb-2">{tProfile('notFoundTitle')}</h1>{' '}
-          <p className="text-muted-foreground">{tp('notFoundHint', { username })}</p>{' '}
-        </div>{' '}
+          <h1 className="mb-2 font-display text-3xl font-medium tracking-[-0.02em] text-foreground">
+            {tProfile('notFoundTitle')}
+          </h1>
+          <p className="text-muted-foreground">{tp('notFoundHint', { username })}</p>
+        </div>
       </div>
     );
   }
   const initials = getInitials(profile.name || profile.username);
+  const tabs = [
+    { id: 'portfolio' as const, label: tProfile('tabPortfolio'), icon: Grid },
+    { id: 'activity' as const, label: tProfile('tabActivity'), icon: Activity },
+  ];
   return (
     <div className="min-h-screen bg-background">
-      {' '}
-      <CoverImage coverUrl={profile.coverImageUrl} />{' '}
-      <div className="max-w-5xl mx-auto px-4 -mt-12 relative z-10">
-        {' '}
-        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 mb-6">
-          {' '}
-          <div className="w-24 h-24 rounded-full border-4 border-card overflow-hidden flex-shrink-0 bg-card">
-            {' '}
-            <Avatar className="w-full h-full">
-              {' '}
+      <CoverImage coverUrl={profile.coverImageUrl} />
+      <div className="relative z-10 mx-auto -mt-14 max-w-5xl px-4">
+        <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-end">
+          <div className="size-28 flex-shrink-0 overflow-hidden rounded-full border-4 border-background bg-card shadow-lg">
+            <Avatar className="h-full w-full">
               {profile.avatarUrl ? (
                 <AvatarImage src={profile.avatarUrl} alt={profile.name} className="object-cover" />
-              ) : null}{' '}
-              <AvatarFallback className="bg-warning/10 text-warning text-2xl font-bold">
-                {' '}
-                {initials}{' '}
-              </AvatarFallback>{' '}
-            </Avatar>{' '}
-          </div>{' '}
-          <div className="flex-1 min-w-0">
-            {' '}
-            <h1 className="text-2xl font-bold text-white truncate"> {profile.name} </h1>{' '}
-            {profile.headline && <p className="text-muted-foreground mt-0.5">{profile.headline}</p>}{' '}
-            <div className="flex flex-wrap items-center gap-3 mt-2">
-              {' '}
-              <span className="text-sm text-muted-foreground">@{profile.username}</span>{' '}
+              ) : null}
+              <AvatarFallback className="bg-primary/10 font-display text-3xl font-medium text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl">
+              {profile.name}
+            </h1>
+            {profile.headline && <p className="mt-1 text-muted-foreground">{profile.headline}</p>}
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <span className="text-sm text-muted-foreground">@{profile.username}</span>
               {profile.location && (
                 <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                  {' '}
-                  <MapPin className="w-3.5 h-3.5" /> {profile.location}{' '}
+                  <MapPin className="size-3.5" /> {profile.location}
                 </span>
-              )}{' '}
-            </div>{' '}
-          </div>{' '}
+              )}
+            </div>
+          </div>
           {!isOwnProfile && (
-            <div className="flex items-center gap-2 mt-4 sm:mt-0">
-              {' '}
+            <div className="mt-4 flex items-center gap-2 sm:mt-0">
               {isAuthenticated && followStatus && (
                 <Button
                   onClick={handleFollowToggle}
                   disabled={followLoading}
                   variant={followStatus.isFollowing ? 'outline' : 'default'}
-                  className={
-                    followStatus.isFollowing
-                      ? 'border-warning/40 text-warning hover:bg-warning/10'
-                      : 'bg-warning hover:bg-warning text-black font-medium'
-                  }
+                  className="rounded-full px-5"
                 >
-                  {' '}
-                  {followLoading && <Loader2 className="size-4 animate-spin me-1" />}{' '}
-                  {followStatus.isFollowing ? tProfile('following') : tProfile('follow')}{' '}
+                  {followLoading && <Loader2 className="me-1 size-4 animate-spin" />}
+                  {followStatus.isFollowing ? tProfile('following') : tProfile('follow')}
                 </Button>
-              )}{' '}
-              <Button
-                variant="outline"
-                className="border-border-strong text-muted-foreground hover:bg-muted"
-              >
-                {' '}
-                <MessageSquare className="size-4 me-1" /> {tp('message')}{' '}
-              </Button>{' '}
+              )}
+              <Button variant="outline" className="rounded-full">
+                <MessageSquare className="me-1 size-4" /> {tp('message')}
+              </Button>
             </div>
-          )}{' '}
-        </div>{' '}
+          )}
+        </div>
         {profile.bio && (
-          <p className="text-muted-foreground max-w-2xl mb-6 leading-relaxed"> {profile.bio} </p>
-        )}{' '}
-        <StatsBar stats={profile.stats} />{' '}
-        <div className="flex border-b border-border mt-8 mb-6">
-          {' '}
-          <button
-            onClick={() => setActiveTab('portfolio')}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'portfolio' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-muted-foreground'}`}
-          >
-            {' '}
-            <Grid className="size-4" /> {tProfile('tabPortfolio')}{' '}
-          </button>{' '}
-          <button
-            onClick={() => setActiveTab('activity')}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-muted-foreground'}`}
-          >
-            {' '}
-            <Activity className="size-4" /> {tProfile('tabActivity')}{' '}
-          </button>{' '}
-        </div>{' '}
-        {activeTab === 'portfolio' ? (
-          <PortfolioGrid projects={profile.portfolioItems ?? []} />
-        ) : (
-          <ActivityTabPlaceholder />
-        )}{' '}
-      </div>{' '}
+          <p className="mb-8 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">{profile.bio}</p>
+        )}
+        <StatsBar stats={profile.stats} />
+        <div className="mb-8 mt-10 flex gap-1 border-b border-border/70" role="tablist">
+          {tabs.map((tab) => {
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                <tab.icon className="size-4" /> {tab.label}
+                {active && (
+                  <m.span
+                    layoutId="public-profile-tab"
+                    transition={spring.smooth}
+                    className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary"
+                    aria-hidden
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <Crossfade value={activeTab}>
+          {activeTab === 'portfolio' ? (
+            <PortfolioGrid projects={profile.portfolioItems ?? []} />
+          ) : (
+            <ActivityTabPlaceholder />
+          )}
+        </Crossfade>
+      </div>
     </div>
   );
 }

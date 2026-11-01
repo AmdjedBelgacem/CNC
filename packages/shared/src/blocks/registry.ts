@@ -72,6 +72,7 @@ export const headingPropsSchema = layoutPropsSchema.extend({
       'sm',
       'label',
       'logo',
+      'section',
     ])
     .optional(),
   /** Letter-spacing override (em). */
@@ -92,8 +93,8 @@ export const textPropsSchema = layoutPropsSchema.extend({
   text: z.string().max(2000).default('Body text'),
   align: z.enum(['left', 'center', 'right']).optional(),
   color: z.string().max(100).optional(),
-  /** 2xs = 10px, xs = 11px, sm = 12px, md = 16px, lg = 18px (mockup labels/body). */
-  size: z.enum(['2xs', 'xs', 'sm', 'md', 'lg']).optional(),
+  /** 2xs = 10px, xs = 11px, sm = 12px, md = 16px, lg = 18px (mockup labels/body); eyebrow = sans label with a clay dot. */
+  size: z.enum(['2xs', 'xs', 'sm', 'md', 'lg', 'eyebrow', 'plain']).optional(),
   /** All-caps (label treatment). */
   uppercase: z.boolean().optional(),
   tracking: z.enum(['none', '0.025em', '0.05em', '0.1em', '0.15em', '0.2em']).optional(),
@@ -139,6 +140,8 @@ export const linkPropsSchema = layoutPropsSchema.extend({
   href: z.string().max(600).optional(),
   /** When set (and no label), renders an icon-only circle anchor (social links). */
   icon: iconKeySchema.optional(),
+  /** Trailing arrow (flips in RTL) for pill / call-to-action links. */
+  arrow: z.boolean().optional(),
 });
 export type LinkProps = z.infer<typeof linkPropsSchema>;
 
@@ -631,7 +634,7 @@ export type CtaBannerProps = z.infer<typeof ctaBannerPropsSchema>;
 
 export const ctaBannerDefaults: CtaBannerProps = {
   imageUrl: '',
-  overlayColor: '#C2410C',
+  overlayColor: '#B65433',
   overlayOpacity: 90,
   radialVeil: true,
   padding: 'p-12 md:p-24',

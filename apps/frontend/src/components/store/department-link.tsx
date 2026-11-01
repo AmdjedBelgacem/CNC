@@ -30,19 +30,17 @@ export function DepartmentLink({
       onClick={() => {
         window.dispatchEvent(new CustomEvent('catalog:category', { detail: name }));
       }}
-      className="group flex items-center justify-between gap-4 rounded-lg border border-border bg-card px-5 py-4 shadow-xs transition-colors hover:border-primary/40"
+      className="card-hover group flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card px-5 py-4 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="font-mono text-xs font-semibold text-border-strong tabular-nums">
+      <div className="flex min-w-0 items-center gap-4">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-xs font-medium tabular-nums text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
           {String(index).padStart(2, '0')}
         </span>
         <div className="min-w-0">
-          <p className="truncate font-display text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
+          <p className="truncate font-display text-[17px] font-medium tracking-[-0.01em] text-foreground transition-colors group-hover:text-primary">
             {name}
           </p>
-          <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-            {count}
-          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{count}</p>
         </div>
       </div>
       {children}

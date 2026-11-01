@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { Crossfade } from '@/components/ui/motion';
 
 const MAX_HOTSPOTS = 20;
 
@@ -190,7 +191,7 @@ export function HotspotStudio({
             {/* ---------------------------------------------------------- stage */}
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-2xs uppercase tracking-wider text-muted-foreground">
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
                   {draft.length}/{MAX_HOTSPOTS}
                 </span>
                 <Button
@@ -211,8 +212,8 @@ export function HotspotStudio({
                 ref={stageRef}
                 onClick={addAt}
                 className={cn(
-                  'relative flex max-h-[52vh] min-h-[18rem] items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40',
-                  placing && 'cursor-crosshair ring-2 ring-primary',
+                  'relative flex max-h-[52vh] min-h-[18rem] items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted/40 transition-shadow duration-200',
+                  placing && 'cursor-crosshair ring-2 ring-primary ring-offset-2 ring-offset-card',
                 )}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -236,7 +237,7 @@ export function HotspotStudio({
                     onPointerDown={(e) => drag(e, h.id)}
                     style={{ left: `${h.x}%`, top: `${h.y}%` }}
                     className={cn(
-                      'absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full border-2 border-white text-[11px] font-bold shadow-lg transition active:cursor-grabbing',
+                      'absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 animate-fade-in cursor-grab items-center justify-center rounded-full border-2 border-white text-[11px] font-semibold tabular-nums shadow-lg transition active:cursor-grabbing',
                       selectedId === h.id
                         ? 'bg-primary text-primary-foreground ring-4 ring-primary/30'
                         : 'bg-primary/90 text-primary-foreground hover:scale-110',
@@ -255,12 +256,12 @@ export function HotspotStudio({
             </div>
 
             {/* ---------------------------------------------------------- panel */}
-            <div className="space-y-4">
+            <Crossfade value={selected ? selected.id : 'none'} className="space-y-4">
               {selected ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold">
-                      <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    <span className="inline-flex items-center gap-2 font-display text-base font-medium">
+                      <span className="flex size-6 items-center justify-center rounded-full bg-primary font-sans text-[11px] font-semibold text-primary-foreground">
                         {selectedIndex + 1}
                       </span>
                       {t('selected', { default: 'Selected marker' })}
@@ -306,21 +307,21 @@ export function HotspotStudio({
                         rows={4}
                         value={selected.detail ?? ''}
                         onChange={(e) => update(selected.id, { detail: e.target.value || null })}
-                        className="flex w-full resize-y rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="flex w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-xs transition-[border-color,box-shadow] hover:border-border-strong focus:border-ring/60 focus:outline-none focus:ring-4 focus:ring-ring/15"
                       />
                     </div>
                   </div>
 
                   {/* Mirrors the storefront popover so the copy can be judged in place. */}
-                  <div className="rounded-xl border border-dashed border-border bg-muted/20 p-3">
-                    <p className="mb-2 font-mono text-2xs uppercase tracking-wider text-muted-foreground">
+                  <div className="rounded-xl border border-dashed border-border bg-muted/30 p-3">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
                       {t('preview', { default: 'Storefront preview' })}
                     </p>
-                    <div className="rounded-lg border border-primary/25 bg-card p-3">
-                      <p className="text-2xs font-bold uppercase tracking-wider text-primary">
+                    <div className="rounded-lg border border-border/70 bg-card p-3 shadow-sm">
+                      <p className="text-xs font-medium tabular-nums text-primary">
                         {selectedIndex + 1}
                       </p>
-                      <p className="mt-0.5 text-sm font-semibold text-foreground">
+                      <p className="mt-0.5 font-display text-base font-medium text-foreground">
                         {selected.label || '—'}
                       </p>
                       {selected.tooltip ? (
@@ -348,9 +349,9 @@ export function HotspotStudio({
                           <button
                             type="button"
                             onClick={() => setSelectedId(h.id)}
-                            className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-start text-xs transition hover:border-primary/40"
+                            className="flex w-full items-center gap-2 rounded-lg border border-border/70 bg-card px-3 py-2 text-start text-xs transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-sm"
                           >
-                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
                               {index + 1}
                             </span>
                             <span className="min-w-0 flex-1 truncate">{h.label || '—'}</span>
@@ -364,7 +365,7 @@ export function HotspotStudio({
                   ) : null}
                 </div>
               )}
-            </div>
+            </Crossfade>
           </div>
         </DialogBody>
 

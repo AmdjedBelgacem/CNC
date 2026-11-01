@@ -4,7 +4,9 @@ import { useTranslations } from 'next-intl';
 import { getBlockDefinition } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import { ChevronDown, ChevronUp, MousePointerClick, Plus, Settings2, Trash2 } from 'lucide-react';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring, transition } from '@/lib/motion';
 import { JsonInspectorSection } from '../node-inspector';
 import { BLOCK_INSPECTOR } from './fields';
 import { DynamicContentNotice } from './dynamic-content-notice';
@@ -63,28 +65,38 @@ export function SmartInspector() {
   }; // Selected block without an inspector definition (chrome blocks etc.) gets a // lightweight fallback panel so the sidebar never looks broken.
   if (!def) {
     return (
-      <div key={selected.props.id} className="flex min-h-0 flex-1 flex-col">
+      <m.div
+        key={selected.props.id}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0, transition: transition.enter }}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         {' '}
         <InspectorHeader type={selected.type} label={selected.type} />{' '}
         <DynamicContentNotice type={selected.type} props={selected.props} />{' '}
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center">
           {' '}
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-surface-sunken text-muted-foreground">
             {' '}
             <Settings2 className="size-4" />{' '}
           </span>{' '}
-          <p className="text-sm font-medium text-foreground">{t('noProperties')}</p>{' '}
+          <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">{t('noProperties')}</p>{' '}
           <p className="max-w-[220px] text-xs leading-relaxed text-muted-foreground">
             {' '}
             {t('noPropertiesHint')}{' '}
           </p>{' '}
         </div>{' '}
         <JsonInspectorSection />{' '}
-      </div>
+      </m.div>
     );
   }
   return (
-    <div key={selected.props.id} className="flex min-h-0 flex-1 flex-col">
+    <m.div
+      key={selected.props.id}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0, transition: transition.enter }}
+      className="flex min-h-0 flex-1 flex-col"
+    >
       {' '}
       <InspectorHeader
         type={selected.type}
@@ -105,7 +117,7 @@ export function SmartInspector() {
         <BlockTranslationFields selected={selected} />
       </div>{' '}
       <JsonInspectorSection />{' '}
-    </div>
+    </m.div>
   );
 } /** Rendered in the sidebar when nothing is selected yet. */
 export function EmptyInspectorState() {
@@ -113,34 +125,40 @@ export function EmptyInspectorState() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {' '}
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/60 px-3.5">
         {' '}
         <Settings2 className="size-3.5 text-muted-foreground" />{' '}
-        <span className="text-2xs font-bold uppercase tracking-wide text-muted-foreground">
+        <span className="font-display text-sm font-medium tracking-[-0.01em] text-foreground">
           {t('inspector')}
         </span>{' '}
       </div>{' '}
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
-        {' '}
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-          {' '}
-          <MousePointerClick className="size-5" />{' '}
-        </span>{' '}
-        <p className="text-sm font-bold text-foreground">{t('selectComponent')}</p>{' '}
+      <m.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0, transition: transition.reveal }}
+        className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-5 text-center"
+      >
+        <m.span
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+          animate={{ y: [0, -3, 0] }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <MousePointerClick className="size-5" />
+        </m.span>
+        <p className="text-balance font-display text-lg font-medium tracking-[-0.015em] text-foreground">{t('selectComponent')}</p>{' '}
         <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground">
           {' '}
           {t('selectComponentHint')}{' '}
-        </p>{' '}
-      </div>{' '}
+        </p>
+      </m.div>
     </div>
   );
 }
 function InspectorHeader({ type, label }: { type: string; label: string }) {
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+    <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3.5">
       {' '}
-      <p className="truncate text-sm font-bold text-foreground">{label}</p>{' '}
-      <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-2xs font-bold uppercase text-primary">
+      <p className="truncate font-display text-base font-medium tracking-[-0.015em] text-foreground">{label}</p>{' '}
+      <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-2xs font-medium text-primary">
         {' '}
         {type}{' '}
       </span>{' '}
@@ -164,25 +182,29 @@ function InspectorGroupSection({
   const visible = group.fields.filter((field) => !field.showWhen || field.showWhen(props));
   if (visible.length === 0) return null;
   return (
-    <div className="border-b border-border last:border-b-0">
+    <div className="border-b border-border/60 last:border-b-0">
       {' '}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-3 py-2 text-left text-2xs font-bold uppercase tracking-wide text-muted-foreground transition hover:bg-muted"
+        className="sticky top-0 z-10 flex w-full items-center gap-2 bg-card/95 px-3.5 py-2.5 text-left text-xs font-medium text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground"
       >
         {' '}
-        <span className={cn('transition-transform duration-200', open ? 'rotate-0' : '-rotate-90')}>
-          {' '}
-          <ChevronDown className="size-3.5" />{' '}
-        </span>{' '}
+        <m.span
+          className="inline-flex"
+          initial={false}
+          animate={{ rotate: open ? 0 : -90 }}
+          transition={spring.snappy}
+        >
+          <ChevronDown className="size-3.5" />
+        </m.span>{' '}
         {Icon && <Icon className="size-3.5" />} {groupText.group(group.titleKey, group.title)}{' '}
       </button>{' '}
       <div
         className={cn(
-          'grid transition-[grid-template-rows] duration-200',
-          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+          'grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
         )}
       >
         {' '}
@@ -341,10 +363,10 @@ function RepeaterControl({
       {items.map((item, index) => (
         <div
           key={index}
-          className="overflow-hidden rounded-md border border-border bg-background"
+          className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-xs"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/30 px-2 py-1.5">
-            <span className="truncate text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-surface-sunken/50 px-2.5 py-1.5">
+            <span className="truncate text-xs font-medium text-foreground/80">
               {field.getItemSummary?.(item) || `${itemLabel} ${index + 1}`}
             </span>
             <div className="flex items-center gap-0.5">
@@ -353,7 +375,7 @@ function RepeaterControl({
                 onClick={() => moveItem(index, -1)}
                 disabled={index === 0}
                 title="Move up"
-                className="flex size-6 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90 disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronUp className="size-3.5" />
               </button>
@@ -362,7 +384,7 @@ function RepeaterControl({
                 onClick={() => moveItem(index, 1)}
                 disabled={index === items.length - 1}
                 title="Move down"
-                className="flex size-6 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90 disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronDown className="size-3.5" />
               </button>
@@ -370,13 +392,13 @@ function RepeaterControl({
                 type="button"
                 onClick={() => removeItem(index)}
                 title={`Remove ${itemLabel}`}
-                className="flex size-6 items-center justify-center rounded text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive active:scale-90"
               >
                 <Trash2 className="size-3.5" />
               </button>
             </div>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border/60">
             {itemFields.map((itemField) => (
               <FieldControl
                 key={itemField.key}
@@ -393,7 +415,7 @@ function RepeaterControl({
         type="button"
         onClick={addItem}
         disabled={items.length >= maxItems}
-        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-2 py-2 text-xs font-semibold text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong px-2 py-2.5 text-xs font-medium text-muted-foreground transition active:scale-[0.98] hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
       >
         <Plus className="size-3.5" /> Add {itemLabel}
       </button>
@@ -417,8 +439,8 @@ function ObjectControl({
       : {};
   const objectFields = field.objectFields ?? [];
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-background">
-      <div className="divide-y divide-border">
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-background">
+      <div className="divide-y divide-border/60">
         {objectFields.map((objectField) => (
           <FieldControl
             key={objectField.key}

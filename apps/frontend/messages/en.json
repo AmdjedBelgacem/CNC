@@ -435,7 +435,7 @@
       "inviteMember": "Invite member",
       "title": "Staff & Access Control",
       "description": "Manage precision CNC cell operators, lead instructors, telemetry admins, and guest sponsor credentials across five-axis facilities.",
-      "zeroTrustBadge": "Zero-Trust Protocol Active (2FA Enforced)",
+      "zeroTrustBadge": "Role-based access",
       "totalActiveStaff": "Total Active Staff",
       "percentActive": "{value}% active",
       "capacity": "capacity",
@@ -444,8 +444,8 @@
       "rolesCount": "{count, plural, one {# Role} other {# Roles}}",
       "configured": "Configured",
       "roleListPreview": "Super Admin, Admin, Instructor...",
-      "securityCompliance": "Security Compliance",
-      "compliant": "Compliant",
+      "securityCompliance": "Active accounts",
+      "compliant": "Share of listed staff that are active",
       "hardware2fa": "{active} of {shown} shown with hardware 2FA",
       "activityIndex": "Activity Index",
       "past24h": "Past 24h",
@@ -575,7 +575,8 @@
       "closePanel": "Close panel",
       "staffMember": "Staff member",
       "couldNotLoadStaff": "Could not load staff member",
-      "loadingStaffMember": "Loading staff member…"
+      "loadingStaffMember": "Loading staff member…",
+      "dangerZone": "Danger zone"
     },
     "live": "Live",
     "tabs": {
@@ -862,7 +863,11 @@
         "arabicSubtitle": "Arabic subtitle",
         "arabicDescription": "Arabic description",
         "arabicSeoTitle": "Arabic SEO title",
-        "arabicSeoDescription": "Arabic SEO description"
+        "arabicSeoDescription": "Arabic SEO description",
+        "slugInvalid": "Use lowercase letters, numbers and single hyphens.",
+        "fixErrors": "Fix the highlighted fields to save.",
+        "brandingDesc": "Accent colour and the images that dress the academy page.",
+        "imagesLiveNote": "Images upload and save as soon as you add them; they do not wait for Save changes."
       }
     },
     "certificateDetail": {
@@ -928,6 +933,7 @@
       "title": "Issue certificate"
     },
     "certificateTemplates": {
+      "discardConfirm": "Discard your unsaved changes to this template?",
       "activate": "Activate",
       "addVariable": "Add variable",
       "allLayouts": "All layouts",
@@ -959,7 +965,7 @@
       "fieldLayout": "Layout",
       "fieldLinkedCourse": "Linked course",
       "fieldLogoUrl": "Logo URL",
-      "fieldTemplateName": "Template name *",
+      "fieldTemplateName": "Template name",
       "fieldTypeface": "Typeface",
       "fieldWeight": "Weight",
       "filterByLayout": "Filter by layout",
@@ -1351,11 +1357,11 @@
       }
     },
     "roleSecurity": {
-      "super_admin": "Root Key + TOTP",
-      "admin": "FIDO2 / 2FA",
-      "instructor": "Hardware Key",
-      "moderator": "Hardware Key",
-      "sponsor": "SSO Bound"
+      "super_admin": "Full access",
+      "admin": "Admin access",
+      "instructor": "Instructor access",
+      "moderator": "Moderator access",
+      "sponsor": "Sponsor access"
     },
     "navigation": {
       "title": "Navigation",
@@ -1409,7 +1415,31 @@
       "newTab": "Open in a new tab",
       "visible": "Visible on the site",
       "saveLink": "Save link",
-      "errorFallback": "Could not update navigation"
+      "errorFallback": "Could not update navigation",
+      "builderTitle": "Menu structure",
+      "builderHint": "Drag the grip to reorder. Select an item to edit its label and destination.",
+      "previewTitle": "Live preview",
+      "previewHint": "How the menu reads on the site. Hidden and disabled items are left out.",
+      "previewEmpty": "Add an item to see the menu.",
+      "emptyTitle": "Build your menu",
+      "addLinkHint": "One link to a page or an address.",
+      "addDropdownHint": "A heading that opens a list of links.",
+      "dragToReorder": "Drag to reorder, or use the arrow keys",
+      "editItem": "Edit",
+      "hiddenBadge": "hidden",
+      "needsAttention": "needs attention",
+      "itemsInGroup": "{count, plural, one {# link} other {# links}}",
+      "addLinkToEmptyGroup": "Add the first link",
+      "urlInternal": "Internal path — stays on this site.",
+      "urlExternal": "External address — leaves this site.",
+      "urlHint": "A path like /academy, or a full https:// address.",
+      "urlRequired": "Enter a URL.",
+      "urlInvalid": "Use a path like /academy or an address like https://example.com.",
+      "pageRequired": "Choose a page.",
+      "labelRequired": "Enter a label.",
+      "labelDuplicate": "Another item here already uses this label.",
+      "fixErrors": "Fix the highlighted items before saving.",
+      "errorCount": "{count, plural, one {# problem} other {# problems}}"
     },
     "productForm": {
       "actionFailed": "Action failed",
@@ -1555,7 +1585,18 @@
       "arabicTitle": "Arabic title",
       "arabicTagline": "Arabic tagline",
       "arabicDescription": "Arabic description",
-      "arabicFeatures": "Arabic bullet points (one per line)"
+      "arabicFeatures": "Arabic bullet points (one per line)",
+      "sectionPricingOnly": "Pricing",
+      "sectionPricingOnlyDesc": "What customers pay and how it is shown on the storefront.",
+      "sectionInventory": "Inventory & visibility",
+      "sectionInventoryDesc": "Stock behaviour, shipping and where this product is featured.",
+      "sectionMediaGroup": "Media",
+      "sectionMediaGroupDesc": "Thumbnail, gallery images and pinpoints on the product photo.",
+      "sectionDetails": "Details & documents",
+      "sectionDetailsDesc": "Link the product to an academy or course and attach manuals.",
+      "galleryAfterCreate": "Gallery images can be added once the product is created.",
+      "readinessFix": "Still needed to publish:",
+      "waitForUploads": "Wait for uploads to finish before saving."
     },
     "productsPage": {
       "action": {
@@ -1769,6 +1810,7 @@
     },
     "alerts": "Platform alerts",
     "platformAlerts": {
+      "appliesImmediately": "Applies immediately",
       "title": "Platform alerts",
       "subtitle": "Operational signals from every tenant: money, security, signups and system health. Your personal notifications are separate.",
       "unreadCount": "{count, plural, one {# unread} other {# unread}}",
@@ -1918,7 +1960,38 @@
       "variables": "Variables",
       "widthDesktop": "Desktop",
       "widthMobile": "Mobile",
-      "widthTablet": "Tablet"
+      "widthTablet": "Tablet",
+      "forbiddenTitle": "You don't have access to email templates",
+      "forbiddenBody": "Your role is missing the email permission. Ask a super admin to grant it, then reload this page.",
+      "backToTemplates": "Back to templates",
+      "paneEdit": "Edit",
+      "detailsTitle": "Details",
+      "detailsHint": "What recipients see in their inbox, and which event triggers this email.",
+      "blocksHint": "Drag the handle to reorder. Select a block to edit it.",
+      "blockCount": "{count, plural, one {# block} other {# blocks}}",
+      "emptyBlocksTitle": "This email is empty",
+      "emptyBlocksHint": "Start with a heading, some text or a button. You can reorder everything later.",
+      "dragToReorder": "Drag to reorder, or use the arrow keys",
+      "blockEmpty": "Empty",
+      "variablesHint": "Select a block, then click a variable to insert it.",
+      "rendering": "Rendering…",
+      "previewWidth": "Preview width",
+      "noSubject": "(no subject)",
+      "noPreheader": "(no preheader)",
+      "previewFrameTitle": "Email preview",
+      "systemReadOnly": "System templates are read-only.",
+      "alignLeft": "Align left",
+      "alignCenter": "Align center",
+      "alignRight": "Align right",
+      "labelLevel": "Level",
+      "labelColor": "Color",
+      "labelMode": "Layout",
+      "columnKey": "Key",
+      "columnLabel": "Heading",
+      "addColumn": "Add column",
+      "emptyTitle": "No templates yet",
+      "createHint": "Pick a name and category. You will design the layout next.",
+      "slugHint": "Used in the template URL."
     },
     "productGallery": {
       "title": "Gallery",
@@ -1986,8 +2059,14 @@
     },
     "academiesNew": {
       "description": "Create a branded destination — images are upload-only, no URL pasting.",
+      "branding": "Branding",
+      "seoSharing": "Search & sharing",
+      "basicsHint": "The name and address people will see.",
+      "subtitleHint": "One line under the title, on the academy card.",
+      "brandingHint": "Images are uploaded as files; pasting a URL is disabled.",
+      "seoHint": "How the academy appears in search results and link previews.",
       "uploadOnlyMedia": "Upload-only media",
-      "titleLabel": "Title *",
+      "titleLabel": "Title",
       "titlePlaceholder": "e.g. CNC Milling Academy",
       "titleRequired": "Title required",
       "slugHint": "Auto-generated from title — /academy/{slug}",
@@ -2018,6 +2097,9 @@
       }
     },
     "coursesNew": {
+      "basicsTitle": "Basics",
+      "basicsHint": "Name the course and choose where it lives.",
+      "startHint": "You can change the structure any time in the studio.",
       "createTitle": "Create a course",
       "subtitle": "Start with the essentials. You can shape the curriculum, media, pricing, and publishing checklist in the studio.",
       "titleLabel": "Course title",
@@ -2080,7 +2162,13 @@
       "markContacted": "Mark contacted",
       "markClosed": "Close",
       "updated": "Request updated",
-      "updateFailed": "Could not update"
+      "updateFailed": "Could not update",
+      "close": "Close",
+      "received": "Received",
+      "statusSection": "Status",
+      "details": "Details",
+      "optional": "Optional",
+      "priceInvalid": "Enter a whole number, 0 or more."
     },
     "translate": {
       "button": "Translate to Arabic",
@@ -2133,9 +2221,26 @@
       "groupPeople": "People",
       "groupCommerce": "Commerce",
       "groupPlatform": "Platform"
+    },
+    "partnerReview": {
+      "rejectTitle": "Reject application",
+      "rejectHint": "The reason is recorded with the decision.",
+      "reasonLabel": "Reason",
+      "rejectAction": "Reject application",
+      "infoTitle": "Request more information",
+      "infoHint": "This message is sent to the applicant.",
+      "messageLabel": "Message",
+      "sendRequest": "Send request",
+      "required": "This field is required."
     }
   },
   "aiAssistant": {
+    "rangeError": "Enter a number between {min} and {max}.",
+    "requiredError": "This field is required.",
+    "showKey": "Show key",
+    "hideKey": "Hide key",
+    "apiKeyWillClear": "The key will be removed when you save",
+    "undoClear": "Undo",
     "title": "AI Assistant",
     "description": "Configure a tenant-scoped assistant that answers from verified workspace content.",
     "dialect": {
@@ -2271,6 +2376,26 @@
     "settings": "Assistant settings"
   },
   "theme": {
+    "aaPass": "AA pass",
+    "aaFail": "AA fail",
+    "contrastOnToken": "on {token}",
+    "saveDraftBtn": "Save draft",
+    "tokBackground": "Background",
+    "tokForeground": "Foreground",
+    "tokCard": "Card",
+    "tokCardForeground": "Card text",
+    "tokMuted": "Muted",
+    "tokMutedForeground": "Muted text",
+    "tokBorder": "Border",
+    "tokPrimary": "Primary",
+    "tokSecondary": "Secondary",
+    "tokAccent": "Accent",
+    "tokRing": "Focus ring",
+    "kindSans": "Sans",
+    "kindGrotesk": "Grotesk",
+    "kindMono": "Mono",
+    "kindSerif": "Serif",
+    "loadingEditor": "Loading theme editor…",
     "title": "Theme Editor",
     "subtitle": "Colors, typography and shape for the customer experience",
     "colors": "Colors",
@@ -2793,12 +2918,17 @@
           "save": "Save changes",
           "discard": "Discard"
         },
+"blockVideo": "Video",
+"blockRichText": "Rich text",
+"blockInteractiveImage": "Interactive image",
+"blockQuiz": "Quiz",
 "steps": {
         "basics": "Basics",
         "curriculum": "Curriculum",
         "media": "Media",
         "pricing": "Pricing",
         "localization": "Localization",
+        "live": "Live sessions",
         "publish": "Publish",
         "hintTitle": "Add a course title",
         "hintCurriculum": "Add a section with at least one lesson",
@@ -2873,7 +3003,14 @@
       },
       "translateHint": "Seeds the Arabic tab from English. Review before saving.",
       "lessonsTranslation": "Lessons and content",
-      "lessonsTranslationHint": "Fills Arabic for every section, lesson and content block in one pass."
+      "lessonsTranslationHint": "Fills Arabic for every section, lesson and content block in one pass.",
+      "drawerTabDetails": "Details",
+      "drawerTabMedia": "Media",
+      "drawerTabContent": "Content",
+      "statusPublished": "Published",
+      "statusDraft": "Draft",
+      "statusArchived": "Archived",
+      "confirmDelete": "Confirm delete"
     }
   },
   "lesson": {
@@ -4581,7 +4718,29 @@
     "adminForm": {
       "unsavedChanges": "Unsaved changes",
       "allChangesSaved": "All changes saved",
-      "discard": "Discard"
+      "discard": "Discard",
+      "onThisPage": "On this page",
+      "hasErrors": "Has errors",
+      "actions": "Form actions",
+      "savedJustNow": "Saved",
+      "readyToCreate": "Ready to create",
+      "fillRequired": "Fill in the required fields",
+      "slugLocked": "Locked — changing the URL of a published page breaks existing links.",
+      "slugWarning": "Changing this breaks links that point to the old address.",
+      "slugFollowsTitle": "Follows the title until you edit it.",
+      "slugUnlock": "Unlock to edit",
+      "slugLock": "Lock",
+      "colorInvalid": "Use a 6-digit hex colour, like #B65433.",
+      "pickColor": "Pick a colour",
+      "presets": "Colour presets",
+      "statusNew": "New",
+      "statusDraft": "Draft",
+      "required": "Required",
+      "optional": "Optional",
+      "discardTitle": "Discard unsaved changes?",
+      "discardBody": "Your edits have not been saved. If you leave now they will be lost.",
+      "discardConfirm": "Discard changes",
+      "keepEditing": "Keep editing"
     },
     "emailTemplateEditor": {
       "allowedHtmlHint": "'<b> <i> <u> <a> <span> <br>' only — anything else is stripped.",

@@ -4,27 +4,28 @@ import { Icon } from '@/components/ui/icon';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Mockup pill treatments: glow (hero eyebrow), primary, secondary (with icon), neutral, card (level pill). */
 const BADGE_VARIANTS: Record<string, string> = {
-  glow: 'inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary font-label-sm text-xs font-bold uppercase tracking-[0.15em]',
+  // Hero eyebrow: a paper pill with a clay dot — quiet, sentence-case, editorial.
+  glow: 'inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3.5 py-1.5 text-[13px] font-medium text-foreground/80 shadow-xs backdrop-blur-sm',
   primary:
-    'inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-2xs font-bold uppercase tracking-wider',
+    'inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary',
   secondary:
-    'px-3 py-1 rounded-full bg-secondary/10 text-secondary text-2xs font-bold flex items-center gap-1',
+    'inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary',
   neutral:
-    'inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-high text-text-muted text-2xs font-bold uppercase tracking-wider',
-  card: 'inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-2xs font-bold rounded uppercase tracking-[0.1em]',
+    'inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground',
+  card: 'inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary',
 };
 export function BadgeBlock({ props }: BlockComponentProps<BadgeProps>) {
   const { text = '', variant = 'glow', uppercase, icon, iconSize = 12, pulse, className } = props;
   return (
     <span
-      className={cn(BADGE_VARIANTS[variant] ?? BADGE_VARIANTS.glow, pulse && 'inline-flex items-center gap-2.5', uppercase && 'uppercase', className)}
+      className={cn(BADGE_VARIANTS[variant] ?? BADGE_VARIANTS.glow, pulse && 'inline-flex items-center gap-2', uppercase && 'uppercase', className)}
       style={layoutStyle(props)}
     >
       {' '}
       {pulse ? (
-        <span className="relative flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+        <span className="relative flex size-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-40 [animation-duration:2.4s]"></span>
+          <span className="relative inline-flex size-2 rounded-full bg-primary"></span>
         </span>
       ) : null}{' '}
       {/* Guarded on the raw prop: resolveIconName() returns 'help' for undefined,

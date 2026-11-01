@@ -27,13 +27,18 @@ import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnimatedNumber, Crossfade } from '@/components/ui/motion';
 import { toast } from '@/components/ui/toast';
-import { Modal, GLASS_SUB } from '@/components/ui/modal';
+import { PresenceContext } from 'framer-motion';
+import { Modal, ModalTabs, GLASS_SUB } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { SelectField } from '@/components/admin/admin-form';
+import { StatusChip } from '@/components/admin/form-page';
+import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/admin/drawer-kit';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCan, useCanAny, useIsSuper } from '@/lib/use-permissions';
 import { userInitials, type AdminUserRow } from '../users/users-shared';
@@ -126,7 +131,7 @@ const roleGrad: Record<string, string> = {
 function SectionLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-3">
-      <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h3 className="font-display text-base font-medium tracking-[-0.01em] text-foreground">
         {children}
       </h3>
       {hint && <span className="font-sans text-2xs text-muted-foreground/70">{hint}</span>}
@@ -151,7 +156,7 @@ function StatTile({
         className={cn(
           'flex size-8 shrink-0 items-center justify-center rounded-lg',
           tone === 'success' && 'bg-success/10 text-success',
-          tone === 'warning' && 'bg-warning/15 text-warning',
+          tone === 'warning' && 'bg-warning/10 text-warning',
           tone === 'danger' && 'bg-destructive/10 text-destructive',
           tone === 'info' && 'bg-info/10 text-info',
           tone === 'default' && 'bg-muted text-muted-foreground',
@@ -160,8 +165,8 @@ function StatTile({
         <Icon className="size-4" />
       </span>
       <div className="min-w-0">
-        <p className="font-sans text-lg font-semibold tabular-nums leading-tight text-foreground">
-          {value}
+        <p className="font-display text-xl font-medium tabular-nums leading-tight tracking-[-0.015em] text-foreground">
+          {typeof value === 'number' ? <AnimatedNumber value={value} animateOnChange /> : value}
         </p>
         <p className="truncate font-sans text-2xs text-muted-foreground">{label}</p>
       </div>
@@ -202,18 +207,18 @@ function ActionButton({
         }
       }}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 font-sans text-sm font-medium transition-all duration-200',
+        'flex w-full items-center gap-2.5 rounded-lg border px-3.5 py-2.5 font-sans text-sm font-medium shadow-xs transition-[background-color,border-color,color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] disabled:opacity-60',
         confirm
           ? variant === 'danger'
-            ? 'border-red-500 bg-destructive text-destructive-foreground'
-            : 'border-accent bg-accent text-accent-foreground'
+            ? 'border-destructive bg-destructive text-destructive-foreground'
+            : 'border-foreground bg-foreground text-background'
           : variant === 'danger'
-            ? 'border-destructive/70 text-destructive hover:bg-destructive/70 dark:border-red-900/40 dark:text-destructive dark:hover:bg-red-950/30'
+            ? 'border-destructive/30 bg-card text-destructive hover:bg-destructive/10'
             : variant === 'success'
-              ? 'border-success/70 text-success hover:bg-success/70 dark:border-success/40 dark:text-success dark:hover:bg-success/30'
+              ? 'border-success/30 bg-card text-success hover:bg-success/10'
               : variant === 'info'
-                ? 'border-primary/40 text-primary hover:bg-primary/10'
-                : 'border-border text-foreground hover:bg-muted',
+                ? 'border-primary/30 bg-card text-primary hover:bg-primary/10'
+                : 'border-border bg-card text-foreground hover:border-border-strong hover:bg-muted/60',
       )}
     >
       {busy ? <Loader2 className="size-4 animate-spin" /> : <Icon className="size-4" />}
@@ -262,7 +267,12 @@ export function StaffDrawer({
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const myId = me?.id ?? '';
-  const canSuspend = useCanAny(['staff:suspend', 'users:suspend', 'staff:unsuspend', 'users:unsuspend']);
+  const canSuspend = useCanAny([
+    'staff:suspend',
+    'users:suspend',
+    'staff:unsuspend',
+    'users:unsuspend',
+  ]);
   const canForcePw = useCan('users:force_password_reset');
   const canImpersonate = useCanAny(['staff:impersonate', 'users:impersonate']);
   const canRevoke = useCanAny(['staff:impersonate', 'users:manage', 'staff:assign_roles']);
@@ -287,12 +297,9 @@ export function StaffDrawer({
   const [permCatalog, setPermCatalog] = useState<PermissionGroup[]>([]);
   const [permsLoading, setPermsLoading] = useState(false);
   const [pendingRole, setPendingRole] = useState('');
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  /** Roles as last loaded / saved — the baseline the dirty check compares against. */
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -351,7 +358,9 @@ export function StaffDrawer({
         if (!cancelled && rolesRes.ok) setAllRoles(await rolesRes.json());
         if (!cancelled && assignedRes.ok) {
           const assigned = await assignedRes.json();
-          setAssignedIds(Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : []);
+          const ids = Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : [];
+          setAssignedIds(ids);
+          setSavedIds(ids);
         }
       } catch {
       } finally {
@@ -407,7 +416,11 @@ export function StaffDrawer({
     const method = (init.method ?? 'POST').toUpperCase();
     let body: unknown;
     if (typeof init.body === 'string') {
-      try { body = JSON.parse(init.body); } catch { body = undefined; }
+      try {
+        body = JSON.parse(init.body);
+      } catch {
+        body = undefined;
+      }
     }
     try {
       if (method === 'PUT') await api.put(url, body ?? {});
@@ -416,10 +429,13 @@ export function StaffDrawer({
       else await api.post(url, body ?? {});
     } catch (error) {
       const detail = error as { status?: number; body?: { message?: string }; message?: string };
-      const msg = detail?.body?.message ?? detail?.message ?? tAdmin('drawer.requestFailed', {
-        status: detail?.status ?? '',
-        default: 'Request failed ({status})',
-      });
+      const msg =
+        detail?.body?.message ??
+        detail?.message ??
+        tAdmin('drawer.requestFailed', {
+          status: detail?.status ?? '',
+          default: 'Request failed ({status})',
+        });
       toast({
         type: 'err',
         title: tAdmin('drawer.actionFailed', { default: 'Action failed' }),
@@ -475,7 +491,7 @@ export function StaffDrawer({
         },
         tAdmin('drawer.rolesUpdated', { default: 'Roles updated' }),
       );
-      if (activeTab === 'permissions') setActiveTab('permissions');
+      setSavedIds(assignedIds);
     } finally {
       setSavingRoles(false);
     }
@@ -499,6 +515,32 @@ export function StaffDrawer({
       setSavingRoles(false);
     }
   };
+
+  const sameSet = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((id) => b.includes(id));
+  const rolesDirty = canAssignRoles && editableRoles && !sameSet(assignedIds, savedIds);
+  const primaryDirty =
+    canChangeRole && !isSelf && !!user && !!pendingRole && pendingRole !== user.role;
+  const dirty = rolesDirty || primaryDirty;
+  const canEdit = (canAssignRoles && editableRoles) || (canChangeRole && !isSelf);
+
+  /** Footer Save: applies whichever of the two independent edits changed. */
+  const saveAll = async () => {
+    setSaveFailed(false);
+    try {
+      if (rolesDirty) await saveRoles();
+      if (primaryDirty) await changePrimaryRole();
+    } catch {
+      // `mutate` already toasted the server's message.
+      setSaveFailed(true);
+    }
+  };
+  const discardEdits = () => {
+    setAssignedIds(savedIds);
+    setPendingRole(user?.role ?? '');
+    setSaveFailed(false);
+  };
+  const guard = useDirtyClose(dirty, onClose);
 
   const toggleSuspend = async (suspend: boolean) => {
     if (!canSuspend) return;
@@ -616,9 +658,7 @@ export function StaffDrawer({
           <section>
             <SectionLabel
               hint={
-                canSuspend
-                  ? undefined
-                  : tAdmin('drawer.noPermission', { default: 'No permission' })
+                canSuspend ? undefined : tAdmin('drawer.noPermission', { default: 'No permission' })
               }
             >
               {tAdmin('drawer.statusControls', { default: 'Status & controls' })}
@@ -640,9 +680,7 @@ export function StaffDrawer({
                   </p>
                 </div>
                 <Switch
-                  checked={
-                    user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'
-                  }
+                  checked={user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'}
                   disabled={
                     !canSuspend || togglingStatus || isSelf || user.accountStatus === 'deleted'
                   }
@@ -711,46 +749,56 @@ export function StaffDrawer({
                     }
                   />
                 )}
-                {canSuspend &&
-                  user.accountStatus !== 'suspended' &&
-                  user.accountStatus !== 'deleted' && (
-                    <ActionButton
-                      label={tAdmin('drawer.suspendStaff', { default: 'Suspend staff' })}
-                      icon={UserX}
-                      variant="danger"
-                      onConfirm={() =>
-                        mutate(
-                          `/api/proxy/admin/users/${userId}/suspend`,
-                          {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ reason: suspendReason }),
-                          },
-                          tAdmin('drawer.staffSuspended', { default: 'Staff suspended' }),
-                        ).then(() => loadAll())
-                      }
-                    />
-                  )}
-                {canDelete && !isSelf && (
-                  <ActionButton
-                    label={tAdmin('drawer.deleteStaffMember', {
-                      default: 'Delete staff member',
-                    })}
-                    icon={Trash2}
-                    variant="danger"
-                    onConfirm={async () => {
-                      await mutate(
-                        `/api/proxy/admin/users/${userId}`,
-                        { method: 'DELETE' },
-                        tAdmin('drawer.staffMemberDeleted', {
-                          default: 'Staff member deleted',
-                        }),
-                      );
-                      onClose();
-                    }}
-                  />
-                )}
               </div>
+              {(canSuspend &&
+                user.accountStatus !== 'suspended' &&
+                user.accountStatus !== 'deleted') ||
+                (canDelete && !isSelf && (
+                  <div className="space-y-2 rounded-lg border border-destructive/25 bg-destructive/[0.04] p-3">
+                    <p className="font-sans text-xs font-medium text-destructive">
+                      {tAdmin('drawer.dangerZone', { default: 'Danger zone' })}
+                    </p>
+                    {canSuspend &&
+                      user.accountStatus !== 'suspended' &&
+                      user.accountStatus !== 'deleted' && (
+                        <ActionButton
+                          label={tAdmin('drawer.suspendStaff', { default: 'Suspend staff' })}
+                          icon={UserX}
+                          variant="danger"
+                          onConfirm={() =>
+                            mutate(
+                              `/api/proxy/admin/users/${userId}/suspend`,
+                              {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reason: suspendReason }),
+                              },
+                              tAdmin('drawer.staffSuspended', { default: 'Staff suspended' }),
+                            ).then(() => loadAll())
+                          }
+                        />
+                      )}
+                    {canDelete && !isSelf && (
+                      <ActionButton
+                        label={tAdmin('drawer.deleteStaffMember', {
+                          default: 'Delete staff member',
+                        })}
+                        icon={Trash2}
+                        variant="danger"
+                        onConfirm={async () => {
+                          await mutate(
+                            `/api/proxy/admin/users/${userId}`,
+                            { method: 'DELETE' },
+                            tAdmin('drawer.staffMemberDeleted', {
+                              default: 'Staff member deleted',
+                            }),
+                          );
+                          onClose();
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
             </div>
           </section>
         </div>
@@ -819,9 +867,7 @@ export function StaffDrawer({
                         disabled={!editableRoles}
                         onChange={(e) =>
                           setAssignedIds((prev) =>
-                            e.target.checked
-                              ? [...prev, r.id]
-                              : prev.filter((id) => id !== r.id),
+                            e.target.checked ? [...prev, r.id] : prev.filter((id) => id !== r.id),
                           )
                         }
                         className="size-4 rounded border-border accent-primary"
@@ -848,24 +894,10 @@ export function StaffDrawer({
                   );
                 })
               )}
-              {canAssignRoles && editableRoles && (
-                <Button
-                  type="button"
-                  className="mt-2 w-full"
-                  disabled={savingRoles || rolesLoading}
-                  loading={savingRoles}
-                  onClick={saveRoles}
-                >
-                  {savingRoles
-                    ? tCommon('saving')
-                    : tAdmin('drawer.saveRoles', { default: 'Save roles' })}
-                </Button>
-              )}
               {canAssignRoles && !editableRoles && (
                 <p className="px-1 pt-1 font-sans text-xs text-muted-foreground">
                   {tAdmin('drawer.superAdminRolesLocked', {
-                    default:
-                      'A super admin’s roles can only be changed by another super admin.',
+                    default: 'A super admin’s roles can only be changed by another super admin.',
                   })}
                 </p>
               )}
@@ -901,37 +933,20 @@ export function StaffDrawer({
               {canChangeRole && (
                 <>
                   <Separator />
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <label className="min-w-0 flex-1 space-y-1.5">
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        {tAdmin('drawer.changePrimaryRole', { default: 'Change primary role' })}
-                      </span>
-                      <select
-                        value={pendingRole}
-                        onChange={(e) => setPendingRole(e.target.value)}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 font-sans text-sm text-foreground outline-none focus:border-primary"
-                      >
-                        {['super_admin', 'admin', 'instructor', 'moderator', 'sponsor', 'learner'].map(
-                          (r) => (
-                            <option key={r} value={r}>
-                              {tAdmin(`role.${r}`, { default: roleLabel[r] ?? r.replace('_', ' ') })}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={
-                        savingRoles || !pendingRole || pendingRole === user.role || isSelf
-                      }
-                      loading={savingRoles}
-                      onClick={changePrimaryRole}
-                    >
-                      {tAdmin('drawer.updateRole', { default: 'Update role' })}
-                    </Button>
-                  </div>
+                  <SelectField
+                    label={tAdmin('drawer.changePrimaryRole', { default: 'Change primary role' })}
+                    value={pendingRole}
+                    disabled={isSelf}
+                    onChange={(e) => setPendingRole(e.target.value)}
+                  >
+                    {['super_admin', 'admin', 'instructor', 'moderator', 'sponsor', 'learner'].map(
+                      (r) => (
+                        <option key={r} value={r}>
+                          {tAdmin(`role.${r}`, { default: roleLabel[r] ?? r.replace('_', ' ') })}
+                        </option>
+                      ),
+                    )}
+                  </SelectField>
                   {isSelf && (
                     <p className="font-sans text-xs text-muted-foreground">
                       {tAdmin('drawer.cannotChangeOwnRole', {
@@ -954,8 +969,7 @@ export function StaffDrawer({
             icon={Key}
             title={tAdmin('drawer.noAccessToPermissions', { default: 'No access to permissions' })}
             description={tAdmin('drawer.needManageRoles', {
-              default:
-                'You need the staff:manage_roles permission to inspect granted permissions.',
+              default: 'You need the staff:manage_roles permission to inspect granted permissions.',
             })}
             compact
           />
@@ -1077,9 +1091,7 @@ export function StaffDrawer({
           <section>
             <SectionLabel
               hint={
-                canSuspend
-                  ? undefined
-                  : tAdmin('drawer.noPermission', { default: 'No permission' })
+                canSuspend ? undefined : tAdmin('drawer.noPermission', { default: 'No permission' })
               }
             >
               {tAdmin('drawer.sessionControls', { default: 'Session controls' })}
@@ -1101,9 +1113,7 @@ export function StaffDrawer({
                   </p>
                 </div>
                 <Switch
-                  checked={
-                    user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'
-                  }
+                  checked={user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'}
                   disabled={
                     !canSuspend || togglingStatus || isSelf || user.accountStatus === 'deleted'
                   }
@@ -1240,7 +1250,7 @@ export function StaffDrawer({
                             tAdmin('drawer.sessionRevoked', { default: 'Session revoked' }),
                           ).then(() => loadAll())
                         }
-                        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive dark:hover:bg-red-950/30 dark:hover:text-destructive"
+                        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                       >
                         <ShieldX className="size-4" />
                       </button>
@@ -1306,101 +1316,119 @@ export function StaffDrawer({
 
   return (
     <Modal
-      onClose={onClose}
+      onClose={guard.requestClose}
       width="max-w-4xl"
-      tabs={TABS.map((tab) => ({
-        ...tab,
-        label: tAdmin(`tabs.${tab.key}`, { default: tab.label }),
-      }))}
-      activeTab={activeTab}
-      onTabChange={(k) => setActiveTab(k as TabKey)}
       title={
-        user?.name ||
-        user?.email ||
-        tAdmin('drawer.staffDetails', { default: 'Staff details' })
+        user?.name || user?.email || tAdmin('drawer.staffDetails', { default: 'Staff details' })
       }
       header={
-        <div className="border-b border-border bg-card px-4 py-4 sm:px-6 sm:py-5">
-          {loading ? (
-            <div className="flex items-center gap-3 sm:gap-4">
-              <Skeleton className="size-12 rounded-xl sm:size-14" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-40 rounded" />
-                <Skeleton className="h-3 w-56 rounded" />
-              </div>
-            </div>
-          ) : user ? (
-            <div className="flex items-start gap-3 sm:gap-4">
-              <span
-                className={cn(
-                  'flex size-12 shrink-0 items-center justify-center rounded-xl font-sans text-lg font-semibold sm:size-14 sm:text-xl',
-                  roleGrad[user.role] ??
-                    (user.accountStatus === 'suspended'
-                      ? 'bg-destructive text-destructive-foreground'
-                      : 'bg-foreground text-background'),
-                )}
-              >
-                {userInitials(user.name, user.email)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-display text-xl font-semibold leading-tight text-foreground sm:text-[26px]">
-                    {user.name || user.email.split('@')[0] || user.email}
-                  </p>
-                  {statusMeta && (
-                    <Badge variant={statusMeta.variant}>
-                      {tAdmin(`status.${user.accountStatus}`, { default: statusMeta.label })}
-                    </Badge>
-                  )}
-                  <Badge variant={roleBadge[user.role] ?? 'secondary'}>
-                    {tAdmin(`role.${user.role}`, { default: roleLabel[user.role] ?? user.role })}
-                  </Badge>
-                  {isSelf && (
-                    <Badge variant="soft">{tAdmin('drawer.you', { default: 'You' })}</Badge>
-                  )}
+        <>
+          <div className="border-b border-border/70 bg-card px-4 py-4 sm:px-6 sm:py-5">
+            {loading ? (
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Skeleton className="size-12 rounded-full sm:size-14" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40 rounded" />
+                  <Skeleton className="h-3 w-56 rounded" />
                 </div>
-                <p className="mt-0.5 truncate font-sans text-sm text-muted-foreground">
-                  {user.email}
-                  {user.username ? ` · @${user.username}` : ''}
-                </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  title={tCommon('refresh')}
-                  aria-label={tCommon('refresh')}
-                  onClick={() => loadAll()}
+            ) : user ? (
+              <div className="flex items-start gap-3 sm:gap-4">
+                <span
+                  className={cn(
+                    'flex size-12 shrink-0 items-center justify-center rounded-full font-display text-lg font-medium shadow-xs sm:size-14 sm:text-xl',
+                    roleGrad[user.role] ??
+                      (user.accountStatus === 'suspended'
+                        ? 'bg-destructive text-destructive-foreground'
+                        : 'bg-foreground text-background'),
+                  )}
                 >
-                  <RefreshCw className="size-4" />
-                </Button>
-                <button
-                  type="button"
-                  aria-label={tAdmin('drawer.closePanel', { default: 'Close panel' })}
-                  onClick={onClose}
-                  className="rounded-xl p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
-                >
-                  <X className="size-5" />
-                </button>
+                  {userInitials(user.name, user.email)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-display text-xl font-medium leading-tight tracking-[-0.018em] text-foreground sm:text-[26px]">
+                      {user.name || user.email.split('@')[0] || user.email}
+                    </p>
+                    {statusMeta && (
+                      <StatusChip
+                        tone={
+                          user.accountStatus === 'active'
+                            ? 'live'
+                            : user.accountStatus.startsWith('pending')
+                              ? 'draft'
+                              : 'archived'
+                        }
+                        className={cn(
+                          user.accountStatus === 'suspended' &&
+                            'bg-destructive/10 text-destructive',
+                        )}
+                      >
+                        {tAdmin(`status.${user.accountStatus}`, { default: statusMeta.label })}
+                      </StatusChip>
+                    )}
+                    <Badge variant={roleBadge[user.role] ?? 'secondary'}>
+                      {tAdmin(`role.${user.role}`, { default: roleLabel[user.role] ?? user.role })}
+                    </Badge>
+                    {isSelf && (
+                      <Badge variant="soft">{tAdmin('drawer.you', { default: 'You' })}</Badge>
+                    )}
+                  </div>
+                  <p className="mt-0.5 truncate font-sans text-sm text-muted-foreground">
+                    {user.email}
+                    {user.username ? ` · @${user.username}` : ''}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    title={tCommon('refresh')}
+                    aria-label={tCommon('refresh')}
+                    onClick={() => loadAll()}
+                  >
+                    <RefreshCw className="size-4" />
+                  </Button>
+                  <button
+                    type="button"
+                    aria-label={tAdmin('drawer.closePanel', { default: 'Close panel' })}
+                    onClick={guard.requestClose}
+                    className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
+                  >
+                    <X className="size-5" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <p className="font-sans text-sm text-muted-foreground">
-              {tAdmin('drawer.staffMember', { default: 'Staff member' })}
-            </p>
-          )}
-        </div>
+            ) : (
+              <p className="font-sans text-sm text-muted-foreground">
+                {tAdmin('drawer.staffMember', { default: 'Staff member' })}
+              </p>
+            )}
+          </div>
+          {/* The tab pill is a shared-layout element; inside the parent's AnimatePresence it
+            kept the closing drawer mounted (and the page blocked) after a tab switch. */}
+          <PresenceContext.Provider value={null}>
+            <ModalTabs
+              tabs={TABS.map((tab) => ({
+                ...tab,
+                label: tAdmin(`tabs.${tab.key}`, { default: tab.label }),
+              }))}
+              active={activeTab}
+              onChange={(k) => setActiveTab(k as TabKey)}
+            />
+          </PresenceContext.Provider>
+        </>
       }
     >
-      <div className="flex-1 space-y-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
         {loadError && (
           <ErrorState
             title={tAdmin('drawer.couldNotLoadStaff', { default: 'Could not load staff member' })}
             description={loadError}
             onRetry={loadAll}
             compact
-            className="mb-4 rounded-xl border border-destructive/40 bg-destructive/5"
+            className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10"
           />
         )}
         {loading && !user ? (
@@ -1409,9 +1437,19 @@ export function StaffDrawer({
             rows={4}
           />
         ) : (
-          renderTab()
+          <Crossfade value={activeTab}>{renderTab() ?? <span />}</Crossfade>
         )}
       </div>
+      <DrawerFooter
+        editable={canEdit && !!user}
+        dirty={dirty}
+        saving={savingRoles}
+        failed={saveFailed}
+        onSave={saveAll}
+        onDiscard={discardEdits}
+        onClose={guard.requestClose}
+      />
+      <DiscardChangesDialog guard={guard} />
     </Modal>
   );
 }

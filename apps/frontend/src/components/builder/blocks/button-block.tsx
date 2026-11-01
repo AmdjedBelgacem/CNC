@@ -17,19 +17,19 @@ type ButtonVariant =
   | 'enroll'; /** Mockup button treatments, verbatim. Inline-flex roots so the buttons participate fully in * parent layout (line-box height, transforms, min-width) — matching how browsers blockify them * inside production flex containers, and how Puck's editor wrappers wrap them. */
 const BTN_VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'inline-flex items-center justify-center bg-primary text-on-primary px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:scale-[1.02] transition-transform shadow-lg min-w-[160px] sm:min-w-[200px]',
+    'group inline-flex items-center justify-center rounded-lg bg-primary px-10 py-4 text-sm font-medium text-primary-foreground shadow-sm transition-[background-color,box-shadow,transform] duration-200 hover:bg-primary/90 hover:shadow-md active:scale-[0.98] min-w-[150px] sm:min-w-[180px]',
   glass:
-    'inline-flex items-center justify-center bg-card border border-border text-primary px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:scale-[1.02] transition-transform min-w-[160px] sm:min-w-[200px]',
+    'group inline-flex items-center justify-center rounded-lg border border-border bg-card px-10 py-4 text-sm font-medium text-foreground shadow-xs transition-[background-color,border-color,transform] duration-200 hover:border-border-strong hover:bg-muted/50 active:scale-[0.98] min-w-[150px] sm:min-w-[180px]',
   white:
-    'inline-flex items-center justify-center bg-card text-primary px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:scale-[1.02] transition-transform shadow-sm min-w-[160px] sm:min-w-[200px]',
+    'group inline-flex items-center justify-center rounded-lg bg-card px-10 py-4 text-sm font-medium text-foreground shadow-sm transition-[background-color,transform] duration-200 hover:bg-card/90 active:scale-[0.98] min-w-[150px] sm:min-w-[180px]',
   'white-outline':
-    'inline-flex items-center justify-center bg-card text-card-foreground border border-border px-10 py-4 rounded-xl font-label-sm text-sm font-bold hover:bg-card transition-colors min-w-[160px] sm:min-w-[200px]',
-  pill: 'group flex items-center text-primary font-label-sm text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-full border border-primary/20 hover:bg-primary/5 transition-all',
+    'group inline-flex items-center justify-center rounded-lg border border-border bg-card px-10 py-4 text-sm font-medium text-card-foreground transition-colors duration-200 hover:bg-muted/50 min-w-[150px] sm:min-w-[180px]',
+  pill: 'group flex items-center rounded-full border border-primary/25 px-5 py-2.5 text-sm font-medium text-primary transition-colors duration-200 hover:bg-primary/[0.06]',
   'nav-cta':
-    'inline-flex items-center bg-primary text-on-primary px-6 py-2 rounded-full font-label-sm text-13 font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95',
-  link: 'inline-flex items-center text-primary font-bold font-label-sm uppercase tracking-wider hover:underline',
+    'inline-flex items-center rounded-lg bg-primary px-4 py-2 text-13 font-medium text-primary-foreground shadow-xs transition-[background-color,transform] duration-200 hover:bg-primary/90 active:scale-[0.97]',
+  link: 'group inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline',
   enroll:
-    'inline-flex items-center gap-1 text-primary font-bold font-label-sm text-xs uppercase tracking-[0.2em] group-hover:translate-x-1 transition-transform',
+    'inline-flex items-center gap-1 text-sm font-medium text-primary transition-transform duration-200 group-hover:translate-x-0.5',
 }; /** Compact inline labels (enroll/link) drop the margin and shrink the icon, matching the mockup. */
 const COMPACT = new Set([
   'enroll',
@@ -42,9 +42,9 @@ const SIZED = new Set([
   'white-outline',
 ]); /** Size → padding treatment for the standard variants. */
 const SIZES: Record<'sm' | 'md' | 'lg', string> = {
-  sm: 'px-6 py-3',
-  md: 'px-10 py-4',
-  lg: 'px-12 py-5',
+  sm: 'px-4 py-2.5',
+  md: 'px-6 py-3',
+  lg: 'px-8 py-3.5',
 };
 export function ButtonBlock({ props }: BlockComponentProps<ButtonProps>) {
   const {
@@ -70,7 +70,9 @@ export function ButtonBlock({ props }: BlockComponentProps<ButtonProps>) {
       className={cn(
         COMPACT.has(variant) ? 'size-3.5' : 'size-4',
         COMPACT.has(variant) ? '' : iconPosition === 'left' ? 'me-2' : 'ms-2',
-        variant === 'pill' && 'transition-transform group-hover:translate-x-1',
+        // Trailing arrows nudge toward the destination on hover.
+        iconPosition !== 'left' &&
+          'transition-transform duration-200 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5',
       )}
     />
   ) : null;

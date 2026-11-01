@@ -28,6 +28,9 @@ import { PageTranslationPanel } from '@/components/builder/page-translation';
 import { BuilderTranslationProvider } from '@/components/builder/translation-context';
 import { BuilderLivePreviewProvider } from '@/components/builder/live-preview-context';
 import { Languages, Loader2 } from 'lucide-react';
+import { AnimatePresence, m } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { spring, transition } from '@/lib/motion';
 import { BuilderHeader, VIEWPORTS } from '@/components/builder/editor-header';
 import { BuilderDialogs } from '@/components/builder/dialogs';
 import { toast } from '@/components/ui/toast';
@@ -96,26 +99,48 @@ async function fetchCatalogProductsForBuilder(): Promise<CatalogProduct[] | null
   }
 }
 /**
- * Canvas chrome — injected INTO the iframe document (the override's children * are portaled into the frame). Recolours Puck's outline scale to the app * blue and adds smooth hover/selection rings, rounded dropzones, and a glassy * hover label chip. Class names are version-pinned to @measured/puck 0.20.2. */
+ * Canvas chrome — injected INTO the iframe document (the override's children * are portaled into the frame). Recolours Puck's outline scale to the app * clay and adds smooth hover/selection rings, rounded dropzones, and a glassy * hover label chip. Class names are version-pinned to @measured/puck 0.20.2. */
+/**
+ * Rules that address a container's DIRECT children cannot see slot content in the
+ * canvas: Puck renders every block inside a DropZone and its own wrapper, so the
+ * children of `.space-y-6` are one DropZone, not the blocks. Production has no such
+ * layer. These repeat the same spacing one level down, from the same scale.
+ */
+const SPACE_Y_STEPS = [1, 2, 3, 4, 5, 6, 8, 10, 12] as const;
+const SLOT_SIBLING_CSS = [
+  ...SPACE_Y_STEPS.map(
+    (n) =>
+      `.space-y-${n}>[data-puck-dropzone]>[data-puck-component]~[data-puck-component]{margin-top:${n * 0.25}rem;}`,
+  ),
+  // `.logo-row > *` dims and greys each logo; the logos are slot blocks here.
+  '.logo-row>[data-puck-dropzone]>[data-puck-component]>*{opacity:.5;filter:grayscale(1);transition:opacity 300ms ease,filter 300ms ease,transform 300ms ease;}',
+  '.logo-row>[data-puck-dropzone]>[data-puck-component]>*:hover{opacity:1;filter:grayscale(0);transform:scale(1.1);}',
+  // A pill link is a flex item (so block-level) when a stack lays it out in production,
+  // but sits inline inside Puck's wrapper, where the line box adds a strut.
+  '[data-puck-component]>.link-pill{display:flex;width:fit-content;}',
+].join('\n');
 const CANVAS_CSS = `
+/* A block that renders nothing (a product card outside the current page, a hidden node) still gets a Puck wrapper, which would otherwise occupy a grid cell and push the page taller than production. */
+[data-puck-component]:empty{display:none;}
+${SLOT_SIBLING_CSS}
 :root{
---puck-color-azure-01:#f2f7ff;
---puck-color-azure-02:#e3edff;
---puck-color-azure-03:#c9dcff;
---puck-color-azure-04:#a7c4ff;
---puck-color-azure-05:#7da6ff;
---puck-color-azure-06:#3b82f6;
---puck-color-azure-07:#1B4DB1;
---puck-color-azure-08:#1d4ed8;
---puck-color-azure-09:#1e40af;
---puck-color-azure-10:#17367f;
---puck-color-azure-11:#11285e;
---puck-color-azure-12:#0b1b40;
+--puck-color-azure-01:#fdf8f5;
+--puck-color-azure-02:#fbf0ea;
+--puck-color-azure-03:#f6dfd4;
+--puck-color-azure-04:#efc6b5;
+--puck-color-azure-05:#e3a389;
+--puck-color-azure-06:#c96442;
+--puck-color-azure-07:#b65433;
+--puck-color-azure-08:#9e4628;
+--puck-color-azure-09:#863b22;
+--puck-color-azure-10:#6e301c;
+--puck-color-azure-11:#562516;
+--puck-color-azure-12:#3d1a10;
 }
 [data-puck-dropzone]:has([data-puck-component]){display:contents;}
 [data-puck-component]{transition:outline-color .15s ease,background-color .15s ease;}
 [data-puck-overlay]{transition:box-shadow .18s ease;}
-[data-puck-overlay][class*="--hover"],[data-puck-overlay][class*="--selected"]{box-shadow:0 0 0 4px rgba(37,99,235,.16),0 16px 32px -12px rgba(37,99,235,.35);}
+[data-puck-overlay][class*="--hover"],[data-puck-overlay][class*="--selected"]{box-shadow:0 0 0 4px rgba(201,100,66,.16),0 16px 32px -12px rgba(182,84,51,.32);}
 ._DraggableComponent-overlay_1vaqy_12{border-radius:10px;transition:outline-color .15s ease,background-color .15s ease;}
 /* Empty dropzones must not add production-unlike min-heights (the public page
  * collapses them to zero). The dashed affordance and a 48px hit target appear
@@ -127,7 +152,7 @@ const CANVAS_CSS = `
 [data-puck-dragging] [data-puck-dropzone]:not(:has([data-puck-component])){min-height:48px;}
 [data-puck-dropzone][class*="DropZone--isAreaSelected"]{outline:1px dashed var(--puck-color-azure-05);min-height:0;}
 ._DropZone_1i2sv_1:empty{border-radius:12px;}
-._DraggableComponent-actions_1vaqy_71{background:rgba(15,23,42,.92);color:#fff;border-radius:9999px;padding:2px 4px;box-shadow:0 8px 24px -8px rgba(0,0,0,.45);backdrop-filter:blur(8px);font-size:11px;}
+._DraggableComponent-actions_1vaqy_71{background:rgba(20,20,19,.92);color:#faf9f5;border-radius:9999px;padding:2px 4px;box-shadow:0 8px 24px -8px rgba(0,0,0,.45);backdrop-filter:blur(8px);font-size:11px;}
 ._DraggableComponent-actions_1vaqy_71 button{background:transparent;color:rgba(255,255,255,.92);border-radius:9999px;}
 ._DraggableComponent-actions_1vaqy_71 button:hover{background:rgba(255,255,255,.16);}
 `;
@@ -139,7 +164,7 @@ const HOST_CSS = `
 ._PuckLayout_1yxlw_38{height:100%;min-height:0;}
 ._PuckLayout-inner_1yxlw_38{height:100%;min-height:0;}
 ._PuckCanvas_18jay_1{background-color:var(--color-background);background-image:radial-gradient(var(--color-border) 1px,transparent 1px);background-size:22px 22px;min-height:0;}
-._PuckCanvas-root_18jay_30{border:1px solid var(--color-border);border-radius:16px;box-shadow:0 24px 64px -24px rgba(0,0,0,.4),0 4px 16px -8px rgba(0,0,0,.15);}
+._PuckCanvas-root_18jay_30{border:1px solid var(--color-border);border-radius:16px;box-shadow:0 28px 56px -32px rgba(0,0,0,.22),0 2px 10px -6px rgba(0,0,0,.08);}
 /* The embedded canvas shares horizontal space with the Layers/Inspector
  * sidebars, so Puck's 358/321px minimums must not force overflow — the
  * zoom machinery (autoZoom) scales the viewport width down instead. */
@@ -229,16 +254,22 @@ function BuilderPuckShell({
   return (
     <>
       <BuilderShortcuts />
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {/* Floating panels on a sunken ivory stage: the header, layers, canvas and inspector are
+          each their own rounded surface with a 8px gutter, rather than one slab split by rules. */}
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface-sunken">
         <PuckDispatchBridge onDispatch={onDispatch} onPuck={onPuck} />
         <BuilderHeader />
-        <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          {structureOpen && <StructureSidebar />}
-          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden p-2 max-lg:gap-0">
+          <AnimatePresence initial={false}>
+            {structureOpen && <StructureSidebar key="structure" />}
+          </AnimatePresence>
+          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-2xl border border-border/70 bg-background shadow-xs">
             {children}
             <CanvasControls />
           </div>
-          {inspectorOpen && <InspectorPanel />}
+          <AnimatePresence initial={false}>
+            {inspectorOpen && <InspectorPanel key="inspector" />}
+          </AnimatePresence>
         </div>
       </div>
     </>
@@ -962,12 +993,12 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       englishLayout={(data as PageLayout | null | undefined) ?? page?.layout ?? null}
       onPersist={persistArabic}
     >
-      <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-background sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
+      <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-surface-sunken sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
         {' '}
         <style>{HOST_CSS}</style>
         <style>{CANVAS_CSS}</style>{' '}
         {!data ? (
-          <div className="flex h-full items-center justify-center gap-3 text-muted-foreground">
+          <div className="flex h-full items-center justify-center gap-3 bg-surface-sunken text-muted-foreground">
             {' '}
             {loading && <Loader2 className="size-5 animate-spin" />}
             {loading ? (
@@ -1010,18 +1041,36 @@ Stable registration callback (unstable identity would re-run the bridge effect o
               // the viewport, and the review dialog on top of that landed off-screen entirely.
               // `max-h` + scroll keeps every control reachable regardless of how many fields are
               // still untranslated.
-              <div className="absolute bottom-4 end-4 z-30 max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-lg bg-background/95 p-1 backdrop-blur-sm">
-                <button
+              <div
+                className={cn(
+                  'absolute bottom-4 end-4 z-30 flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] flex-col items-end overflow-y-auto overscroll-contain transition-[background-color,box-shadow,border-color,padding] duration-300',
+                  showTranslation
+                    ? 'rounded-2xl border border-border/70 bg-card/95 p-1.5 shadow-xl backdrop-blur-md'
+                    : 'pointer-events-none border border-transparent',
+                )}
+              >
+                <m.button
                   type="button"
                   onClick={() => setShowTranslation((open) => !open)}
                   aria-expanded={showTranslation}
-                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium shadow-lg"
+                  whileTap={{ scale: 0.97 }}
+                  className={cn(
+                    'pointer-events-auto flex items-center gap-2 rounded-full border border-border/70 bg-card px-3.5 py-2 text-xs font-medium text-foreground shadow-lg transition-colors hover:bg-muted',
+                    showTranslation && 'border-primary/30 text-primary shadow-none',
+                  )}
                 >
                   <Languages className="size-3.5" aria-hidden="true" />
                   {tb('editor.translatePage', { default: 'Arabic version' })}
-                </button>
+                </m.button>
+                <AnimatePresence initial={false}>
                 {showTranslation && (
-                  <div className="mt-2">
+                  <m.div
+                    key="translation"
+                    className="mt-2 w-full"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0, transition: spring.gentle }}
+                    exit={{ opacity: 0, y: 6, transition: transition.leave }}
+                  >
                     <PageTranslationPanel
                       slug={page.slug}
                       layout={(data as PageLayout | null) ?? page.layout}
@@ -1041,14 +1090,17 @@ Stable registration callback (unstable identity would re-run the bridge effect o
                         if (translation.layout) setArabicLayout(translation.layout);
                       }}
                     />
-                  </div>
+                  </m.div>
                 )}
+                </AnimatePresence>
               </div>
             )}
           </div>
         )}
+        <AnimatePresence>
         {showVersions && (
           <VersionDrawer
+            key="versions"
             versions={versions}
             saving={saving}
             onClose={() => {
@@ -1058,6 +1110,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
             onRevert={(version) => void revert(version)}
           />
         )}
+        </AnimatePresence>
         <BuilderDialogs />{' '}
       </div>
     </BuilderTranslationProvider>

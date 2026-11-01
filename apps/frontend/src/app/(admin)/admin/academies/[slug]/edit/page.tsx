@@ -4,16 +4,14 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   Globe,
   GlobeLock,
-  Save,
   BookOpen,
   Plus,
   Search,
   X,
   Upload,
   Loader2,
-  Image as ImageIcon,
   Trash2,
-  Store,
+  Type,
   Palette,
   GraduationCap,
   Clock,
@@ -30,20 +28,32 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
-  AdminCommandBar,
-  BarButton,
-  BarPrimaryButton,
-  AdminPageHeader,
-} from '@/components/admin/admin-chrome';
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
+import { Reveal } from '@/components/ui/motion';
+import { AdminCommandBar, BarButton, AdminPageHeader } from '@/components/admin/admin-chrome';
 import { StatusPill, EmptyState, ErrorBanner } from '@/components/admin/admin-ui';
 import {
-  Field,
   FormSection,
   FormSkeleton,
-  TextInput,
   TextField,
   TextAreaField,
 } from '@/components/admin/admin-form';
+import {
+  ColorField,
+  FormLayout,
+  SaveDock,
+  SectionNav,
+  SlugField,
+  StatusChip,
+} from '@/components/admin/form-page';
 import {
   TranslateAction,
   TranslationCoveragePanel,
@@ -98,9 +108,12 @@ interface CourseOption {
 }
 
 type EditableField =
-  'title' | 'subtitle' | 'description' | 'accentColor' | 'seoTitle' | 'seoDescription';
+  'slug' | 'title' | 'subtitle' | 'description' | 'accentColor' | 'seoTitle' | 'seoDescription';
 
 type ArabicField = 'title' | 'subtitle' | 'description' | 'seoTitle' | 'seoDescription';
+
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const BRAND_CLAY = '#B65433';
 
 const ARABIC_FIELDS: ArabicField[] = ['title', 'subtitle', 'description', 'seoTitle', 'seoDescription'];
 
@@ -124,6 +137,8 @@ export default function AcademyEditorPage() {
   const t = useTranslations('admin.academiesPage.editor');
   const tAdmin = useTranslations('admin');
   const tEditor = useTranslations('admin.academiesEditor');
+  const tNew = useTranslations('admin.academiesNew');
+  const tForm = useTranslations('ui.adminForm');
   const tTranslate = useTranslations('admin.translate');
   const tCommon = useTranslations('common');
   const tDifficulty = useTranslations('admin');
@@ -132,6 +147,9 @@ export default function AcademyEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  // Errors only appear after the first attempt to save.
+  const [attempted, setAttempted] = useState(false);
   const [form, setForm] = useState<Partial<Record<EditableField, string>>>({});
   const [formAr, setFormAr] = useState<Record<ArabicField, string>>(() =>
     Object.fromEntries(ARABIC_FIELDS.map((field) => [field, ''])) as Record<ArabicField, string>,
@@ -192,15 +210,22 @@ export default function AcademyEditorPage() {
   const [pickerSelected, setPickerSelected] = useState<string[]>([]);
   const [assigning, setAssigning] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  /**
+   * `silent` keeps the page on screen (no skeleton) for refreshes after an action.
+   * `keepForm` refreshes the record without touching in-progress edits — an image upload or a
+   * roster change must not wipe unsaved text.
+   */
+  const load = useCallback(async (opts?: { silent?: boolean; keepForm?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/proxy/admin/academies/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error(tAdmin('drawer.requestFailed', { status: res.status }));
       const data: AcademyDetail = await res.json();
       setAcademy(data);
+      if (opts?.keepForm) return;
       setForm({
+        slug: data.slug ?? '',
         title: data.title ?? '',
         subtitle: data.subtitle ?? '',
         description: data.description ?? '',
@@ -222,6 +247,31 @@ export default function AcademyEditorPage() {
     void load();
   }, [load]);
 
+  const discard = () => {
+    if (!academy) return;
+    setForm({
+      slug: academy.slug ?? '',
+      title: academy.title ?? '',
+      subtitle: academy.subtitle ?? '',
+      description: academy.description ?? '',
+      accentColor: academy.accentColor ?? '',
+      seoTitle: academy.seoTitle ?? '',
+      seoDescription: academy.seoDescription ?? '',
+    });
+    setFormAr(Object.fromEntries(
+      ARABIC_FIELDS.map((field) => [field, academy.translations?.ar?.[field] ?? '']),
+    ) as Record<ArabicField, string>);
+    setAttempted(false);
+  };
+
+  const titleMissing = !(form.title ?? '').trim();
+  const slugValue = form.slug ?? '';
+  const slugMissing = !slugValue;
+  const slugInvalid = !!slugValue && !SLUG_RE.test(slugValue);
+  const accentValue = form.accentColor ?? '';
+  const accentInvalid = !!accentValue && !HEX.test(accentValue);
+  const basicsInvalid = titleMissing || slugMissing || slugInvalid;
+
   useEffect(() => {
     if (pickerOpen && courseOptions === null) {
       void (async () => {
@@ -240,7 +290,16 @@ export default function AcademyEditorPage() {
 
   const save = async () => {
     if (!academy || !dirty) return;
+    setAttempted(true);
+    if (basicsInvalid || accentInvalid) {
+      document
+        .getElementById(basicsInvalid ? 'basics' : 'branding')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast({ type: 'err', title: t('fixErrors') });
+      return;
+    }
     setSaving(true);
+    setSaveFailed(false);
     try {
       const patch: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(form)) {
@@ -258,13 +317,15 @@ export default function AcademyEditorPage() {
       }
       const updated = await api.patch<{ slug?: string }>(`/admin/academies/${academy.slug}`, patch);
       toast({ type: 'ok', title: t('saved', { default: 'Academy saved' }) });
+      setAttempted(false);
       // Slug may have been edited — stay on the (possibly new) slug.
       if (updated.slug && updated.slug !== academy.slug) {
         router.replace(`/admin/academies/${updated.slug}/edit`);
       } else {
-        void load();
+        await load({ silent: true });
       }
     } catch (e: any) {
+      setSaveFailed(true);
       toast({ type: 'err', title: t('saveFailed', { default: 'Save failed' }), description: e?.message });
     } finally {
       setSaving(false);
@@ -332,7 +393,7 @@ export default function AcademyEditorPage() {
       }
       // `publishedData` holds the fresh academy row but `load()` refreshes roster + counts.
       void publishedData;
-      await load();
+      await load({ silent: true, keepForm: true });
     } catch (e: any) {
       toast({ type: 'err', title: t('actionFailed', { default: 'Action failed' }), description: e?.message });
     } finally {
@@ -356,7 +417,7 @@ export default function AcademyEditorPage() {
       });
       setPickerOpen(false);
       setPickerSelected([]);
-      void load();
+      void load({ silent: true, keepForm: true });
     } catch (e: any) {
       toast({ type: 'err', title: t('assignFailed', { default: 'Assign failed' }), description: e?.message });
     } finally {
@@ -369,40 +430,26 @@ export default function AcademyEditorPage() {
     try {
       await api.patch(`/admin/courses/${courseSlug}`, { academyId: null });
       toast({ type: 'ok', title: t('courseRemoved', { default: 'Course removed from academy' }) });
-      void load();
+      void load({ silent: true, keepForm: true });
     } catch (e: any) {
       toast({ type: 'err', title: t('courseRemoveFailed', { default: 'Remove failed' }), description: e?.message });
     }
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        void save();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }); // re-bound every render so `save` closure stays fresh
-
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
-        <Skeleton className="h-8 w-64 rounded-lg" />
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
-            <FormSkeleton fields={4} />
-          </div>
-          <div className="space-y-5">
-            <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
-              <FormSkeleton fields={1} />
+      <div className="mx-auto w-full max-w-6xl space-y-6 pt-6">
+        <Skeleton className="h-9 w-72 rounded-lg" />
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17rem] xl:gap-8">
+          <div className="space-y-6">
+            <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+              <FormSkeleton fields={4} />
             </div>
-            <Skeleton className="h-56 rounded-xl border border-border" />
+            <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+              <FormSkeleton fields={2} />
+            </div>
           </div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
-          <FormSkeleton fields={3} />
+          <Skeleton className="hidden h-64 rounded-xl xl:block" />
         </div>
       </div>
     );
@@ -410,11 +457,11 @@ export default function AcademyEditorPage() {
   if (error || !academy) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <p className="text-base text-foreground">{error || tEditor('notFound')}</p>
+        <p className="text-balance font-display text-xl font-medium tracking-[-0.015em] text-foreground">{error || tEditor('notFound')}</p>
         <button
           type="button"
           onClick={() => router.push('/admin/academies')}
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
         >
           {tEditor('backToAcademies')}
         </button>
@@ -431,19 +478,31 @@ export default function AcademyEditorPage() {
       c.slug.toLowerCase().includes(pickerQuery.toLowerCase())
     );
   });
+  const previewAccent = HEX.test(accentValue) ? accentValue : BRAND_CLAY;
+  const preview = (
+    <AcademyPreview
+      title={form.title || t('previewPlaceholderName', { default: 'Untitled academy' })}
+      subtitle={form.subtitle ?? null}
+      description={form.description ?? null}
+      logoUrl={academy.logoUrl}
+      heroImageUrl={academy.heroImageUrl}
+      accent={previewAccent}
+      courseCount={academy.courseCount}
+    />
+  );
+  const statusTone = academy.isArchived ? 'archived' : academy.isPublished ? 'live' : 'draft';
+  const statusLabel = academy.isArchived
+    ? t('statusArchived', { default: 'Archived' })
+    : academy.isPublished
+      ? t('statusPublished', { default: 'Published' })
+      : t('statusDraft', { default: 'Draft' });
+
   return (
     <div className="w-full">
       <AdminCommandBar
         trail={[{ label: tAdmin('academies'), href: '/admin/academies' }, { label: academy.title }]}
-        live={
-          dirty ? (
-            t('unsaved', { default: 'Unsaved changes' })
-          ) : academy.isPublished ? (
-            t('live', { default: 'Live' })
-          ) : (
-            t('draft', { default: 'Draft' })
-          )
-        }
+        // Status lives in the page header chip and unsaved state in the dock.
+        live={false}
         actions={
           <BarButton
             icon={academy.isPublished ? <GlobeLock className="size-4" /> : <Globe className="size-4" />}
@@ -457,443 +516,432 @@ export default function AcademyEditorPage() {
                 : t('publish', { default: 'Publish' })}
           </BarButton>
         }
-        primary={
-          <BarPrimaryButton
-            icon={<Save className="size-4" strokeWidth={2.5} />}
-            disabled={!dirty || saving}
-            onClick={() => void save()}
-          >
-            {saving ? t('saving', { default: 'Saving…' }) : t('saveChanges', { default: 'Save changes' })}
-          </BarPrimaryButton>
-        }
       />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
-        <AdminPageHeader
-          title={academy.title}
-          description={
-            <span className="flex flex-wrap items-center gap-x-2">
-              <bdi dir="ltr" className="font-mono text-xs">
-                /academy/{academy.slug}
-              </bdi>
-              <span aria-hidden className="text-border-strong">
-                ·
+      <div className="space-y-6 pt-6">
+        <div className="mx-auto w-full max-w-6xl space-y-4">
+          <AdminPageHeader
+            title={academy.title}
+            description={
+              <span className="flex flex-wrap items-center gap-x-2">
+                <bdi dir="ltr" className="font-mono text-xs">
+                  /academy/{academy.slug}
+                </bdi>
+                <span aria-hidden className="text-border-strong">
+                  ·
+                </span>
+                <span>
+                  {t('courseCount', {
+                    count: academy.courseCount,
+                    default: '{count, plural, one {# course} other {# courses}}',
+                  })}
+                </span>
               </span>
-              <span>
-                {t('courseCount', {
-                  count: academy.courseCount,
-                  default: '{count, plural, one {# course} other {# courses}}',
-                })}
-              </span>
-            </span>
-          }
-          badge={
-            <StatusPill
-              label={
-                academy.isArchived
-                  ? t('statusArchived', { default: 'Archived' })
-                  : academy.isPublished
-                    ? t('statusPublished', { default: 'Published' })
-                    : t('statusDraft', { default: 'Draft' })
-              }
-              tone={academy.isArchived ? 'slate' : academy.isPublished ? 'emerald' : 'amber'}
-              pulse={academy.isPublished}
-              className="self-start md:self-auto"
-            />
-          }
-        />
+            }
+            badge={<StatusChip tone={statusTone}>{statusLabel}</StatusChip>}
+          />
 
-        {error && <ErrorBanner message={error} onRetry={() => void load()} retryLabel={tCommon('retry')} />}
+          {error && <ErrorBanner message={error} onRetry={() => void load()} retryLabel={tCommon('retry')} />}
 
-        {/* Publishing is blocked or warned by the server; say which, and why. */}
-        {publishReasons.length > 0 && (
-          <div
-            role="alert"
-            className="rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-3"
-          >
-            <p className="flex items-center gap-2 text-13 font-semibold text-destructive">
-              <AlertCircle className="size-4" />
-              {t('cannotPublish', { default: 'This academy cannot be published yet' })}
-            </p>
-            <ul className="mt-1.5 list-disc space-y-0.5 ps-6 text-xs text-destructive/90">
-              {publishReasons.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {publishReasons.length === 0 && publishWarnings.length > 0 && (
-          <div className="rounded-xl border border-warning/30 bg-warning/8 px-4 py-3">
-            <p className="flex items-center gap-2 text-13 font-semibold text-warning">
-              <AlertTriangle className="size-4" />
-              {t('publishedWithWarnings', { default: 'Published with warnings' })}
-            </p>
-            <ul className="mt-1.5 list-disc space-y-0.5 ps-6 text-xs text-warning/90">
-              {publishWarnings.map((w) => (
-                <li key={w}>{w}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Basics and the live preview sit together, so a title or accent change
-            is visible while it is being typed. */}
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <FormSection
-            title={t('basics', { default: 'Basics' })}
-            icon={Store}
-            description={t('basicsDesc', {
-              default: 'How this academy is named and described.',
-            })}
-          >
-            <div className="space-y-4">
-              <TextField
-                label={t('title', { default: 'Title' })}
-                required
-                dir="auto"
-                value={form.title ?? ''}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-              <Field
-                label={t('slug', { default: 'Slug' })}
-                hint={t('slugHint', { default: 'The public address. External URLs are disabled.' })}
+          {/* Publishing is blocked or warned by the server; say which, and why. */}
+          <AnimatePresence initial={false}>
+            {publishReasons.length > 0 && (
+              <m.div
+                key="reasons"
+                role="alert"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+                exit={{ opacity: 0, y: -4, transition: transition.leave }}
+                className="rounded-xl border border-destructive/20 bg-destructive/8 px-5 py-3.5"
               >
-                {(a) => (
-                  <TextInput {...a} value={academy.slug} readOnly dir="ltr" className="font-mono" />
-                )}
-              </Field>
-              <TextField
-                label={t('subtitle', { default: 'Subtitle' })}
-                dir="auto"
-                value={form.subtitle ?? ''}
-                onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
-              />
-              <TextAreaField
-                label={t('description', { default: 'Description' })}
-                dir="auto"
-                rows={5}
-                value={form.description ?? ''}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-          </FormSection>
-
-          <div className="space-y-5 lg:sticky lg:top-24">
-            <FormSection
-              title={t('accent', { default: 'Accent colour' })}
-              icon={Palette}
-              description={t('accentDesc', {
-                default: 'Used across this academy and its course cards.',
-              })}
-            >
-              <Field
-                label={t('accentLabel', { default: 'Hex value' })}
-                error={
-                  form.accentColor && !/^#[0-9a-fA-F]{6}$/.test(form.accentColor)
-                    ? t('accentInvalid', { default: 'Use a 6-digit hex value.' })
-                    : undefined
-                }
+                <p className="flex items-center gap-2 text-13 font-medium text-destructive">
+                  <AlertCircle className="size-4" />
+                  {t('cannotPublish', { default: 'This academy cannot be published yet' })}
+                </p>
+                <ul className="mt-1.5 list-disc space-y-0.5 ps-6 text-xs text-destructive/90">
+                  {publishReasons.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+              </m.div>
+            )}
+            {publishReasons.length === 0 && publishWarnings.length > 0 && (
+              <m.div
+                key="warnings"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+                exit={{ opacity: 0, y: -4, transition: transition.leave }}
+                className="rounded-xl border border-warning/25 bg-warning/8 px-5 py-3.5"
               >
-                {(a) => (
-                  <div className="flex items-center gap-2">
-                    <span className="relative shrink-0">
-                      <input
-                        type="color"
-                        value={HEX.test(form.accentColor ?? '') ? (form.accentColor as string) : '#1E40AF'}
-                        onChange={(e) => setForm({ ...form, accentColor: e.target.value })}
-                        aria-label={t('accentLabel', { default: 'Hex value' })}
-                        className="size-10 cursor-pointer rounded-xl border border-border bg-transparent p-1"
-                      />
-                    </span>
-                    <TextInput
-                      {...a}
-                      dir="ltr"
-                      value={form.accentColor ?? ''}
-                      onChange={(e) => setForm({ ...form, accentColor: e.target.value })}
-                      spellCheck={false}
-                      className="font-mono"
-                    />
-                  </div>
-                )}
-              </Field>
-            </FormSection>
-
-            <AcademyPreview
-              title={form.title || t('previewPlaceholderName', { default: 'Untitled academy' })}
-              subtitle={form.subtitle ?? null}
-              description={form.description ?? null}
-              logoUrl={academy.logoUrl}
-              heroImageUrl={academy.heroImageUrl}
-              accent={HEX.test(form.accentColor ?? '') ? (form.accentColor as string) : '#1E40AF'}
-              courseCount={academy.courseCount}
-            />
-          </div>
+                <p className="flex items-center gap-2 text-13 font-medium text-warning">
+                  <AlertTriangle className="size-4" />
+                  {t('publishedWithWarnings', { default: 'Published with warnings' })}
+                </p>
+                <ul className="mt-1.5 list-disc space-y-0.5 ps-6 text-xs text-warning/90">
+                  {publishWarnings.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              </m.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Images share a row because they are the same kind of control. */}
-        <FormSection
-          title={t('images', { default: 'Images' })}
-          icon={ImageIcon}
-          description={t('imagesDesc', {
-            default: 'Upload only — external URLs are disabled.',
-          })}
-          bodyClassName="p-5"
-        >
-          <div className="grid gap-5 lg:grid-cols-3">
-            <AcademyImageField
-              label={t('heroBanner', { default: 'Hero banner' })}
-              hint={t('heroHint', {
-                default: 'Branding · 1920×1080 recommended · JPG/PNG/WebP/AVIF · ≤5 MB.',
-              })}
-              kind="hero"
-              slug={academy.slug}
-              currentUrl={academy.heroImageUrl}
-              onChanged={() => void load()}
-            />
-            <AcademyImageField
-              label={t('logo', { default: 'Logo / mark' })}
-              hint={t('logoHint', {
-                default: 'Square PNG/WebP with a transparent background · ≤5 MB.',
-              })}
-              kind="logo"
-              slug={academy.slug}
-              currentUrl={academy.logoUrl}
-              onChanged={() => void load()}
-            />
-            <AcademyImageField
-              label={t('socialImage', { default: 'Social preview image' })}
-              hint={t('socialHint', {
-                default: 'og:image · 1200×630 recommended · JPG/PNG/WebP · ≤5 MB.',
-              })}
-              kind="seo"
-              slug={academy.slug}
-              currentUrl={academy.seoImageUrl}
-              onChanged={() => void load()}
-            />
-          </div>
-        </FormSection>
-
-        <FormSection
-          title={t('seo', { default: 'SEO' })}
-          icon={Search}
-          description={t('seoDesc', {
-            default: 'Overrides for search results. Blank falls back to the title and description above.',
-          })}
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label={t('seoTitle', { default: 'SEO title' })}
-              dir="auto"
-              value={form.seoTitle ?? ''}
-              onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
-              placeholder={t('seoTitlePlaceholder', {
-                default: 'Custom page title (meta title) for search results',
-              })}
-            />
-            <TextAreaField
-              label={t('seoDescription', { default: 'SEO description' })}
-              dir="auto"
-              rows={2}
-              value={form.seoDescription ?? ''}
-              onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
-              placeholder={t('seoDescriptionPlaceholder', {
-                default: 'Meta description for search & social unfurls',
-              })}
-            />
-          </div>
-        </FormSection>
-
-        {/* Arabic used to be impossible to save here at all: the column existed, the form read it,
-            and the API rejected any payload containing it. */}
-        <FormSection
-          title={t('arabicSection', { default: 'Arabic copy' })}
-          icon={Languages}
-          description={t('arabicSectionDesc', {
-            default: 'Shown to Arabic visitors. Translate from English, then review before saving.',
-          })}
-          actions={
-            academyCoverage && (
-              <TranslateAction
-                coverage={academyCoverage}
-                busy={translateBusy}
-                onTranslate={(scope) => void runTranslate(scope)}
+        <FormLayout
+          aside={
+            <>
+              <SectionNav
+                items={[
+                  { id: 'basics', label: t('basics', { default: 'Basics' }), icon: Type, invalid: attempted && basicsInvalid },
+                  { id: 'branding', label: tNew('branding'), icon: Palette, invalid: attempted && accentInvalid },
+                  { id: 'seo', label: tNew('seoSharing'), icon: Search },
+                  { id: 'arabic', label: t('arabicSection', { default: 'Arabic copy' }), icon: Languages },
+                  {
+                    id: 'courses',
+                    label: t('roster', { default: 'Courses in this academy' }),
+                    icon: BookOpen,
+                    badge: academy.courseCount,
+                  },
+                ]}
               />
-            )
+              {preview}
+            </>
           }
         >
-          {academyCoverage && <TranslationCoveragePanel coverage={academyCoverage} className="mb-4" />}
-          <div dir="rtl" className="grid gap-4">
-            <TextField
-              label={t('arabicTitle', { default: 'Arabic title' })}
-              value={formAr.title}
-              onChange={(e) => setFormAr({ ...formAr, title: e.target.value })}
-            />
-            <TextField
-              label={t('arabicSubtitle', { default: 'Arabic subtitle' })}
-              value={formAr.subtitle}
-              onChange={(e) => setFormAr({ ...formAr, subtitle: e.target.value })}
-            />
-            <TextAreaField
-              label={t('arabicDescription', { default: 'Arabic description' })}
-              value={formAr.description}
-              onChange={(e) => setFormAr({ ...formAr, description: e.target.value })}
-            />
-            <TextField
-              label={t('arabicSeoTitle', { default: 'Arabic SEO title' })}
-              value={formAr.seoTitle}
-              onChange={(e) => setFormAr({ ...formAr, seoTitle: e.target.value })}
-            />
-            <TextAreaField
-              label={t('arabicSeoDescription', { default: 'Arabic SEO description' })}
-              value={formAr.seoDescription}
-              onChange={(e) => setFormAr({ ...formAr, seoDescription: e.target.value })}
-            />
-          </div>
-        </FormSection>
+          <Reveal>
+            <FormSection
+              id="basics"
+              icon={Type}
+              title={t('basics', { default: 'Basics' })}
+              description={t('basicsDesc', { default: 'How this academy is named and described.' })}
+            >
+              <div className="space-y-5">
+                <TextField
+                  label={t('title', { default: 'Title' })}
+                  required
+                  dir="auto"
+                  value={form.title ?? ''}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  error={attempted && titleMissing ? tNew('titleRequired') : undefined}
+                />
+                <SlugField
+                  label={t('slug', { default: 'Slug' })}
+                  mode="edit"
+                  prefix="/academy/"
+                  value={slugValue}
+                  onChange={(next) => setForm((f) => ({ ...f, slug: next }))}
+                  error={
+                    attempted && (slugMissing || slugInvalid) ? t('slugInvalid') : undefined
+                  }
+                />
+                <TextField
+                  label={t('subtitle', { default: 'Subtitle' })}
+                  hint={tNew('subtitleHint')}
+                  dir="auto"
+                  value={form.subtitle ?? ''}
+                  onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+                />
+                <TextAreaField
+                  label={t('description', { default: 'Description' })}
+                  dir="auto"
+                  rows={5}
+                  value={form.description ?? ''}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+            </FormSection>
+          </Reveal>
 
-        <FormSection
-          title={t('roster', { default: 'Courses in this academy' })}
-          icon={BookOpen}
-          description={t('rosterDesc', {
-            default: 'Courses placed here are grouped into this destination.',
-          })}
-          actions={
-            <Button size="sm" onClick={() => { setPickerSelected([]); setPickerOpen(true); }} disabled={assigning}>
-              <Plus className="size-4" />
-              {t('assignCourses', { default: 'Assign courses' })}
-            </Button>
-          }
-          bodyClassName="p-0"
-        >
-          {academy.courses.length === 0 ? (
-            <EmptyState
-              icon={BookOpen}
-              tone="blue"
-              title={t('rosterEmpty', { default: 'No courses in this academy yet' })}
-              body={t('rosterEmptyHint', {
-                default:
-                  'Assign courses to group them into a single branded destination for learners.',
+          <Reveal delay={0.04}>
+            <FormSection
+              id="branding"
+              icon={Palette}
+              title={tNew('branding')}
+              description={t('brandingDesc')}
+              badge={tForm('optional')}
+            >
+              <div className="flex flex-col gap-6">
+                {/* The preview follows the form in the rail on wide screens only. */}
+                <div className="xl:hidden">{preview}</div>
+                <ColorField
+                  label={t('accent', { default: 'Accent colour' })}
+                  hint={t('accentDesc', { default: 'Used across this academy and its course cards.' })}
+                  value={accentValue}
+                  onChange={(next) => setForm((f) => ({ ...f, accentColor: next }))}
+                />
+                <div className="grid gap-5 md:grid-cols-2">
+                  <AcademyImageField
+                    label={t('heroBanner', { default: 'Hero banner' })}
+                    hint={t('heroHint', {
+                      default: 'Branding · 1920×1080 recommended · JPG/PNG/WebP/AVIF · ≤5 MB.',
+                    })}
+                    kind="hero"
+                    slug={academy.slug}
+                    currentUrl={academy.heroImageUrl}
+                    onChanged={() => load({ silent: true, keepForm: true })}
+                  />
+                  <AcademyImageField
+                    label={t('logo', { default: 'Logo / mark' })}
+                    hint={t('logoHint', {
+                      default: 'Square PNG/WebP with a transparent background · ≤5 MB.',
+                    })}
+                    kind="logo"
+                    slug={academy.slug}
+                    currentUrl={academy.logoUrl}
+                    onChanged={() => load({ silent: true, keepForm: true })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">{t('imagesLiveNote')}</p>
+              </div>
+            </FormSection>
+          </Reveal>
+
+          <Reveal>
+            <FormSection
+              id="seo"
+              icon={Search}
+              title={tNew('seoSharing')}
+              description={t('seoDesc', {
+                default: 'Overrides for search results. Blank falls back to the title and description above.',
               })}
-              action={
-                <button
-                  type="button"
-                  onClick={() => { setPickerSelected([]); setPickerOpen(true); }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary"
-                >
-                  <Plus className="size-4" />
-                  {t('assignFirst', { default: 'Assign the first course' })}
-                </button>
+              badge={tForm('optional')}
+            >
+              <div className="space-y-5">
+                <TextField
+                  label={t('seoTitle', { default: 'SEO title' })}
+                  dir="auto"
+                  value={form.seoTitle ?? ''}
+                  onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
+                  placeholder={t('seoTitlePlaceholder', {
+                    default: 'Custom page title (meta title) for search results',
+                  })}
+                />
+                <TextAreaField
+                  label={t('seoDescription', { default: 'SEO description' })}
+                  dir="auto"
+                  rows={3}
+                  value={form.seoDescription ?? ''}
+                  onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
+                  placeholder={t('seoDescriptionPlaceholder', {
+                    default: 'Meta description for search & social unfurls',
+                  })}
+                />
+                <div className="max-w-md">
+                  <AcademyImageField
+                    label={t('socialImage', { default: 'Social preview image' })}
+                    hint={t('socialHint', {
+                      default: 'og:image · 1200×630 recommended · JPG/PNG/WebP · ≤5 MB.',
+                    })}
+                    kind="seo"
+                    slug={academy.slug}
+                    currentUrl={academy.seoImageUrl}
+                    onChanged={() => load({ silent: true, keepForm: true })}
+                  />
+                </div>
+              </div>
+            </FormSection>
+          </Reveal>
+
+          {/* Arabic used to be impossible to save here at all: the column existed, the form read it,
+              and the API rejected any payload containing it. */}
+          <Reveal>
+            <FormSection
+              id="arabic"
+              title={t('arabicSection', { default: 'Arabic copy' })}
+              icon={Languages}
+              description={t('arabicSectionDesc', {
+                default: 'Shown to Arabic visitors. Translate from English, then review before saving.',
+              })}
+              badge={tForm('optional')}
+              actions={
+                academyCoverage && (
+                  <TranslateAction
+                    coverage={academyCoverage}
+                    busy={translateBusy}
+                    onTranslate={(scope) => void runTranslate(scope)}
+                  />
+                )
               }
-            />
-          ) : (
-            <ul className="divide-y divide-border">
-              {academy.courses.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-muted/40"
-                >
-                  <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
-                    {c.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.thumbnailUrl} alt="" className="size-full object-cover" />
-                    ) : (
-                      <GraduationCap className="size-4 text-muted-foreground" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p dir="auto" className="truncate text-13 font-semibold text-foreground">
-                      {c.title}
-                    </p>
-                      <StatusPill
-                        label={
-                          c.isArchived
-                            ? t('statusArchived', { default: 'Archived' })
-                            : c.isPublished
-                              ? t('statusPublished', { default: 'Published' })
-                              : t('statusDraft', { default: 'Draft' })
-                        }
-                        tone={c.isArchived ? 'slate' : c.isPublished ? 'emerald' : 'amber'}
-                      />
-                      {typeof c.difficulty === 'number' && (
+            >
+              {academyCoverage && <TranslationCoveragePanel coverage={academyCoverage} className="mb-4" />}
+              <div dir="rtl" className="grid gap-5">
+                <TextField
+                  label={t('arabicTitle', { default: 'Arabic title' })}
+                  value={formAr.title}
+                  onChange={(e) => setFormAr({ ...formAr, title: e.target.value })}
+                />
+                <TextField
+                  label={t('arabicSubtitle', { default: 'Arabic subtitle' })}
+                  value={formAr.subtitle}
+                  onChange={(e) => setFormAr({ ...formAr, subtitle: e.target.value })}
+                />
+                <TextAreaField
+                  label={t('arabicDescription', { default: 'Arabic description' })}
+                  value={formAr.description}
+                  onChange={(e) => setFormAr({ ...formAr, description: e.target.value })}
+                />
+                <TextField
+                  label={t('arabicSeoTitle', { default: 'Arabic SEO title' })}
+                  value={formAr.seoTitle}
+                  onChange={(e) => setFormAr({ ...formAr, seoTitle: e.target.value })}
+                />
+                <TextAreaField
+                  label={t('arabicSeoDescription', { default: 'Arabic SEO description' })}
+                  value={formAr.seoDescription}
+                  onChange={(e) => setFormAr({ ...formAr, seoDescription: e.target.value })}
+                />
+              </div>
+            </FormSection>
+          </Reveal>
+
+          <Reveal>
+          <FormSection
+            id="courses"
+            title={t('roster', { default: 'Courses in this academy' })}
+            icon={BookOpen}
+            description={t('rosterDesc', {
+              default: 'Courses placed here are grouped into this destination.',
+            })}
+            actions={
+              <Button size="sm" onClick={() => { setPickerSelected([]); setPickerOpen(true); }} disabled={assigning}>
+                <Plus className="size-4" />
+                {t('assignCourses', { default: 'Assign courses' })}
+              </Button>
+            }
+            bodyClassName="p-0"
+          >
+            {academy.courses.length === 0 ? (
+              <EmptyState
+                icon={BookOpen}
+                tone="blue"
+                title={t('rosterEmpty', { default: 'No courses in this academy yet' })}
+                body={t('rosterEmptyHint', {
+                  default:
+                    'Assign courses to group them into a single branded destination for learners.',
+                })}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => { setPickerSelected([]); setPickerOpen(true); }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
+                  >
+                    <Plus className="size-4" />
+                    {t('assignFirst', { default: 'Assign the first course' })}
+                  </button>
+                }
+              />
+            ) : (
+              <ul className="divide-y divide-border/60">
+                <AnimatePresence initial={false}>
+                {academy.courses.map((c) => (
+                  <m.li
+                    key={c.id}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+                    exit={{ opacity: 0, x: -8, transition: transition.leave }}
+                    className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-muted/40"
+                  >
+                    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-surface-sunken">
+                      {c.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.thumbnailUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        <GraduationCap className="size-4 text-muted-foreground" />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p dir="auto" className="truncate text-13 font-medium text-foreground">
+                        {c.title}
+                      </p>
                         <StatusPill
-                          label={tDifficulty(difficultyKey(c.difficulty), {
-                            default: difficultyFallback(c.difficulty),
-                          })}
-                          tone={difficultyTone(c.difficulty)}
-                          dot={false}
+                          label={
+                            c.isArchived
+                              ? t('statusArchived', { default: 'Archived' })
+                              : c.isPublished
+                                ? t('statusPublished', { default: 'Published' })
+                                : t('statusDraft', { default: 'Draft' })
+                          }
+                          tone={c.isArchived ? 'slate' : c.isPublished ? 'emerald' : 'amber'}
                         />
+                        {typeof c.difficulty === 'number' && (
+                          <StatusPill
+                            label={tDifficulty(difficultyKey(c.difficulty), {
+                              default: difficultyFallback(c.difficulty),
+                            })}
+                            tone={difficultyTone(c.difficulty)}
+                            dot={false}
+                          />
+                        )}
+                      </div>
+                      {c.subtitle && (
+                        <p dir="auto" className="truncate text-xs text-muted-foreground">
+                          {c.subtitle}
+                        </p>
+                      )}
+                      <p className="truncate font-mono text-2xs text-muted-foreground" dir="ltr">
+                        /{c.slug}
+                      </p>
+                    </div>
+                    <div className="hidden shrink-0 items-center gap-3 text-2xs text-muted-foreground sm:flex">
+                      {typeof c.estimatedHours === 'number' && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="size-3" />
+                          {t('hoursShort', { count: c.estimatedHours, default: '{count}h' })}
+                        </span>
                       )}
                     </div>
-                    {c.subtitle && (
-                      <p dir="auto" className="truncate text-xs text-muted-foreground">
-                        {c.subtitle}
-                      </p>
-                    )}
-                    <p className="truncate font-mono text-2xs text-muted-foreground" dir="ltr">
-                      /{c.slug}
-                    </p>
-                  </div>
-                  <div className="hidden shrink-0 items-center gap-3 text-2xs text-muted-foreground sm:flex">
-                    {typeof c.estimatedHours === 'number' && (
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="size-3" />
-                        {t('hoursShort', { count: c.estimatedHours, default: '{count}h' })}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <a
-                      href={`/admin/courses/${c.slug}/edit`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted"
-                    >
-                      <ExternalLink className="size-3.5" />
-                      {t('openStudio', { default: 'Open Studio' })}
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => void removeCourse(c.slug)}
-                      aria-label={t('removeCourse', { title: c.title, default: 'Remove {title} from this academy' })}
-                      title={t('removeCourse', { title: c.title, default: 'Remove {title} from this academy' })}
-                      className="flex size-8 items-center justify-center rounded-lg border border-border text-destructive transition hover:bg-destructive/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </FormSection>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <a
+                        href={`/admin/courses/${c.slug}/edit`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted"
+                      >
+                        <ExternalLink className="size-3.5" />
+                        {t('openStudio', { default: 'Open Studio' })}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => void removeCourse(c.slug)}
+                        aria-label={t('removeCourse', { title: c.title, default: 'Remove {title} from this academy' })}
+                        title={t('removeCourse', { title: c.title, default: 'Remove {title} from this academy' })}
+                        className="flex size-8 items-center justify-center rounded-lg border border-border/70 text-destructive transition hover:border-destructive/30 hover:bg-destructive/8 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                  </m.li>
+                ))}
+                </AnimatePresence>
+              </ul>
+            )}
+          </FormSection>
+          </Reveal>
+        </FormLayout>
       </div>
 
+      <SaveDock
+        mode="edit"
+        dirty={dirty}
+        saving={saving}
+        failed={saveFailed}
+        onSave={() => void save()}
+        onDiscard={discard}
+      />
+
       {/* Course picker */}
-      {pickerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent
+          size="md"
           aria-label={t('pickerTitle', { title: academy.title, default: 'Assign courses to {title}' })}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPickerOpen(false);
-          }}
         >
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-            <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-              <h3 className="text-sm font-bold text-foreground">
+            <DialogHeader>
+              <DialogTitle>
                 {t('pickerTitle', { title: academy.title, default: 'Assign courses to {title}' })}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(false)}
-                aria-label={tCommon('close', { default: 'Close' })}
-                className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="border-b border-border px-5 py-3">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2 transition focus-within:border-primary/60 focus-within:bg-background focus-within:ring-4 focus-within:ring-primary/10">
+              </DialogTitle>
+            </DialogHeader>
+            <div className="shrink-0 px-5 pb-3 sm:px-7">
+              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-sunken/60 px-3 py-2 transition focus-within:border-primary/50 focus-within:bg-background focus-within:ring-4 focus-within:ring-primary/10">
                 <Search className="size-4 shrink-0 text-muted-foreground" />
                 <input
                   autoFocus
@@ -904,7 +952,7 @@ export default function AcademyEditorPage() {
                 />
               </div>
             </div>
-            <div className="max-h-80 overflow-y-auto">
+            <DialogBody className="max-h-80 border-t border-border/70 p-0 sm:p-0">
               {courseOptions === null ? (
                 <div className="px-5 py-8 text-center text-sm text-muted-foreground">
                   {t('pickerLoading', { default: 'Loading courses…' })}
@@ -920,8 +968,9 @@ export default function AcademyEditorPage() {
                     <label
                       key={c.id}
                       className={cn(
-                        'flex cursor-pointer items-center gap-3 border-b border-border px-5 py-3 transition last:border-0',
-                        already ? 'opacity-50' : 'hover:bg-muted/50',
+                        'flex cursor-pointer items-center gap-3 border-b border-border/60 px-5 py-3 transition-colors last:border-0 sm:px-7',
+                        already ? 'opacity-50' : 'hover:bg-muted/40',
+                        pickerSelected.includes(c.slug) && !already && 'bg-primary/5',
                       )}
                     >
                       <input
@@ -954,12 +1003,12 @@ export default function AcademyEditorPage() {
                   );
                 })
               )}
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-5 py-3">
+            </DialogBody>
+            <DialogFooter>
               <button
                 type="button"
                 onClick={() => setPickerOpen(false)}
-                className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+                className="rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-medium text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98]"
               >
                 {tCommon('cancel')}
               </button>
@@ -970,14 +1019,13 @@ export default function AcademyEditorPage() {
                   else setPickerOpen(false);
                 }}
                 disabled={assigning || pickerSelected.length === 0}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary disabled:opacity-50"
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
               >
                 {assigning ? t('assigning', { default: 'Assigning…' }) : t('assign', { default: 'Assign' })}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1012,18 +1060,24 @@ function AcademyPreview({
 }) {
   const t = useTranslations('admin.academiesPage.editor');
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-      <header className="flex items-center gap-2 border-b border-border bg-muted/30 px-5 py-3.5">
+    <section className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+      <header className="flex items-center gap-2 border-b border-border/70 px-5 py-3.5">
         <Palette className="size-4 shrink-0 text-primary" />
-        <h2 className="text-13 font-semibold text-foreground">
+        <h2 className="font-display text-base font-medium tracking-[-0.015em] text-foreground">
           {t('preview', { default: 'Live preview' })}
         </h2>
-        <span className="ms-auto font-mono text-2xs uppercase tracking-wide text-muted-foreground">
+        <span dir="ltr" className="ms-auto inline-flex items-center gap-1.5 font-mono text-2xs text-muted-foreground">
+          <m.span
+            aria-hidden
+            className="size-2.5 rounded-full"
+            animate={{ backgroundColor: accent }}
+            transition={transition.crossfade}
+          />
           {accent}
         </span>
       </header>
       <div className="p-5">
-        <div className="relative overflow-hidden rounded-xl border border-border">
+        <div className="relative overflow-hidden rounded-xl border border-border/70">
           {/* Hero image when uploaded, otherwise an accent wash so the colour
               choice is still legible. */}
           {heroImageUrl ? (
@@ -1031,7 +1085,7 @@ function AcademyPreview({
             <img src={heroImageUrl} alt="" className="h-36 w-full object-cover" />
           ) : (
             <div
-              className="h-36 w-full"
+              className="h-36 w-full transition-[background] duration-500"
               style={{
                 background: `linear-gradient(135deg, ${accent} 0%, ${accent}b3 55%, ${accent}40 100%)`,
               }}
@@ -1055,7 +1109,7 @@ function AcademyPreview({
               </span>
             )}
             <div className="min-w-0">
-              <p dir="auto" className="truncate text-sm font-bold text-white">
+              <p dir="auto" className="truncate font-display text-base font-medium tracking-[-0.01em] text-white">
                 {title}
               </p>
               {subtitle && (
@@ -1186,7 +1240,7 @@ function AcademyImageField({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold text-foreground">{label}</span>
+      <span className="text-13 font-medium text-foreground">{label}</span>
       <div
         onClick={() => {
           if (!busy) inputRef.current?.click();
@@ -1212,10 +1266,10 @@ function AcademyImageField({
           }
         }}
         className={cn(
-          'group relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border-strong bg-muted/30 px-3 py-4 text-center transition',
-          'hover:border-primary/50 hover:bg-primary/5',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-          drag && 'border-primary bg-primary/10',
+          'group relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border-strong bg-surface-sunken/50 px-3 py-4 text-center transition-[background-color,border-color] duration-300',
+          'hover:border-primary/40 hover:bg-primary/5',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          drag && 'border-primary/60 bg-primary/10',
           busy && 'pointer-events-none opacity-60',
         )}
       >
@@ -1240,7 +1294,7 @@ function AcademyImageField({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-5">
-            <span className="flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition group-hover:border-primary/40 group-hover:text-primary">
+            <span className="flex size-9 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-xs transition group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:text-primary">
               <Upload className="size-4" />
             </span>
             <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">
@@ -1268,7 +1322,7 @@ function AcademyImageField({
             disabled={busy}
             aria-label={t('removeLabel', { label, default: 'Remove {label}' })}
             title={t('removeLabel', { label, default: 'Remove {label}' })}
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/8 hover:text-destructive disabled:opacity-50"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 text-muted-foreground transition hover:border-destructive/40 hover:bg-destructive/8 hover:text-destructive disabled:opacity-50"
           >
             {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
           </button>

@@ -4,7 +4,9 @@ import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, Languages, Link2, Loader2, Search, Share2, Upload } from 'lucide-react';
 import { COURSE_SEO_FIELDS, type ContentLocale } from '@titan/shared';
+import { AnimatePresence, m } from 'framer-motion';
 import { FormSection, TextField, TextAreaField } from '@/components/admin/admin-form';
+import { spring } from '@/lib/motion';
 import type { CourseStudioData } from './types';
 import { toast } from '@/components/ui/toast';
 import {
@@ -121,10 +123,10 @@ export function StepLocalization({
 
   return (
     <div className="space-y-6" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-xl border border-border/70 bg-muted/30 p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-foreground">
+            <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">
               {t('studio.languageAvailability', { default: 'Language availability' })}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -145,7 +147,7 @@ export function StepLocalization({
               return (
                 <span
                   key={item}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${active ? 'border-primary bg-primary/10 text-primary' : available ? 'border-success/30 bg-success/10 text-success' : 'border-border bg-muted text-muted-foreground'}`}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${active ? 'border-primary/40 bg-primary/10 text-primary' : available ? 'border-success/25 bg-success/10 text-success' : 'border-border/80 bg-card text-muted-foreground'}`}
                 >
                   {available && <Check className="size-3.5" />}
                   {item === 'ar' ? 'العربية' : 'English'}
@@ -156,7 +158,7 @@ export function StepLocalization({
           </div>
         </div>
         {locale === 'en' ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/70 pt-4">
             {seoCoverage && (
               <TranslateAction
                 coverage={seoCoverage}
@@ -173,7 +175,7 @@ export function StepLocalization({
           </div>
         ) : null}
 
-        <div className="mt-4 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
+        <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground">
           <Languages className="size-4 text-primary" />
           {locale === 'ar'
             ? t('studio.arabicFieldsNote', {
@@ -247,7 +249,7 @@ export function StepLocalization({
         })}
       >
         <div className="space-y-1.5">
-          <span className="text-xs font-semibold text-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             {t('studio.ogImage', { default: 'Social preview image (OG)' })}
           </span>
           <div
@@ -262,7 +264,7 @@ export function StepLocalization({
               setOgDrag(false);
               void handleOgFile(event.dataTransfer.files?.[0]);
             }}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center text-xs transition ${ogDrag ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/50'}`}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center text-xs transition-colors ${ogDrag ? 'border-primary/60 bg-primary/5' : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40'}`}
           >
             {ogUploading ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -286,12 +288,13 @@ export function StepLocalization({
               event.target.value = '';
             }}
           />
+          <AnimatePresence initial={false}>
           {course.ogImageUrl && (
-            <div className="mt-3 flex items-center justify-between gap-2">
+            <m.div key="og" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.15 } }} transition={spring.smooth} className="mt-3 flex items-center justify-between gap-2">
               <img
                 src={course.ogImageUrl}
                 alt=""
-                className="h-28 w-44 rounded-xl object-cover shadow-sm"
+                className="h-28 w-48 rounded-lg border border-border/70 object-cover shadow-xs"
               />
               <button
                 type="button"
@@ -300,11 +303,12 @@ export function StepLocalization({
               >
                 {tMedia('remove', { default: 'Remove' })}
               </button>
-            </div>
+            </m.div>
           )}
+          </AnimatePresence>
         </div>
       </FormSection>
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-xs">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
         <Link2 className="size-4 shrink-0 text-primary" />
         {t('studio.finalUrl', { default: 'Final URL' })}
         <bdi dir="ltr" className="font-mono text-foreground">

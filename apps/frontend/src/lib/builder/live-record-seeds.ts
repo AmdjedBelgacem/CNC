@@ -23,7 +23,16 @@ export function seedProductInventoryRecords(
     if (node.type === 'live-island' && node.props?.variant === 'products-inventory') {
       const existing = node.props?.records;
       if (!isNodeArray(existing) || existing.length === 0) {
-        const records: PuckNode[] = products.map((product) => ({
+        // Seed in the storefront's default ("featured") order. The grid orders cards with CSS
+        // `order` on an inner element, which the canvas's per-block wrappers defeat, so the
+        // layout order is what the author actually sees.
+        const ordered = [...products].sort((a, b) => {
+          if (Boolean(a.featured) !== Boolean(b.featured)) return a.featured ? -1 : 1;
+          const bySort = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+          if (bySort !== 0) return bySort;
+          return a.title.trim().toLowerCase().localeCompare(b.title.trim().toLowerCase());
+        });
+        const records: PuckNode[] = ordered.map((product) => ({
           type: 'product-card',
           props: {
             // Stable ids keep re-seeding, Arabic merges and zone lookups on the

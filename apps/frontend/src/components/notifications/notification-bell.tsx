@@ -2,6 +2,8 @@
 
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   Bell,
@@ -147,34 +149,44 @@ export function NotificationBell({ className }: { className?: string }) {
           className={cn('relative', className)}
         >
           <Bell aria-hidden />
-          {unreadCount > 0 && (
-            <span
-              aria-live="polite"
-              aria-label={`${formattedUnreadCount} ${t('unread')}`}
-              className="absolute -end-0.5 -top-0.5 flex size-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-bold leading-none text-destructive-foreground ring-2 ring-background"
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
+          <AnimatePresence initial={false}>
+            {unreadCount > 0 && (
+              <m.span
+                key="unread-badge"
+                aria-live="polite"
+                aria-label={`${formattedUnreadCount} ${t('unread')}`}
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1, transition: spring.snappy }}
+                exit={{ scale: 0.4, opacity: 0, transition: { duration: 0.12 } }}
+                className="absolute -end-0.5 -top-0.5 flex size-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-2xs font-semibold leading-none text-primary-foreground ring-2 ring-background"
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </m.span>
+            )}
+          </AnimatePresence>
         </Button>
       </DialogTrigger>
       <DialogContent
         hideClose
         title={t('title')}
         className={cn(
-          'p-0 data-[state=open]:animate-fade-in-up',
+          'origin-top p-0',
           // Single measured layout for every viewport. The previous mobile fallback used a
           // separate full-bleed CSS branch (`w-full` + `left-0 right-0`), which rendered
           // off-screen at some widths and diverged from the desktop behaviour.
           '!left-[var(--panel-left)] !top-[var(--panel-top)] !h-[var(--panel-height)] !w-[var(--panel-width)] !max-h-none !max-w-none'
         )}
         style={panelStyle}
-        overlayClassName="!bg-black/35 !backdrop-blur-0"
+        overlayClassName="!bg-overlay/25 !backdrop-blur-0"
       >
-        <DialogHeader className="shrink-0 gap-3 border-b border-border bg-card px-4 py-4 pe-14 sm:px-5">
+        <DialogHeader className="shrink-0 gap-3 border-b border-border/70 bg-card px-4 py-4 pe-14 sm:px-5">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
-              {t('title')} / {liveLabel}
+            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span
+                aria-hidden
+                className={cn('size-1.5 rounded-full', connected ? 'bg-success' : 'bg-border-strong')}
+              />
+              {t('title')} · {liveLabel}
             </p>
             {isFetching && !isLoading && (
               <Loader2
@@ -185,7 +197,7 @@ export function NotificationBell({ className }: { className?: string }) {
           </div>
           <div className="flex items-end justify-between gap-3">
             <div>
-              <DialogTitle className="font-display text-xl font-semibold tracking-tight">
+              <DialogTitle className="font-display text-xl font-medium tracking-[-0.015em]">
                 {t('title')}
               </DialogTitle>
               <DialogDescription className="mt-1 text-xs">
@@ -211,13 +223,13 @@ export function NotificationBell({ className }: { className?: string }) {
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-surface-sunken/25">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-card">
           {isLoading ? (
             <div className="space-y-3 p-4" role="status" aria-busy aria-label={tc('loading')}>
               {[0, 1, 2, 3].map((item) => (
-                <div key={item} className="space-y-3 border-b border-border bg-card p-4">
+                <div key={item} className="space-y-3 rounded-xl border border-border/60 bg-card p-4">
                   <div className="flex items-center gap-3">
-                    <Skeleton className="size-9 rounded-sm" />
+                    <Skeleton className="size-9 rounded-full" />
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-3.5 w-4/5" />
                       <Skeleton className="h-3 w-3/5" />
@@ -232,10 +244,10 @@ export function NotificationBell({ className }: { className?: string }) {
               className="flex min-h-80 flex-col items-center justify-center px-6 text-center"
               role="alert"
             >
-              <span className="flex size-12 items-center justify-center rounded-sm border border-destructive/25 bg-destructive/10 text-destructive">
+              <span className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
                 <TriangleAlert className="size-5" aria-hidden />
               </span>
-              <p className="mt-4 text-sm font-semibold">{t('loadFailed')}</p>
+              <p className="mt-4 font-display text-lg font-medium">{t('loadFailed')}</p>
               <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
                 {error instanceof Error ? error.message : tc('error')}
               </p>
@@ -252,16 +264,21 @@ export function NotificationBell({ className }: { className?: string }) {
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex min-h-80 flex-col items-center justify-center px-6 text-center">
-              <span className="flex size-12 items-center justify-center rounded-sm border border-border bg-card text-muted-foreground shadow-xs">
+              <m.span
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1, transition: spring.smooth }}
+                className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground"
+              >
                 <BellOff className="size-5" aria-hidden />
-              </span>
-              <p className="mt-4 text-sm font-semibold">{t('empty')}</p>
+              </m.span>
+              <p className="mt-4 font-display text-lg font-medium">{t('empty')}</p>
               <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
                 {t('emptyHint')}
               </p>
             </div>
           ) : (
             <ul aria-label={t('title')}>
+              <AnimatePresence initial={false}>
               {notifications.map((notification) => (
                 <NotificationItem
                   key={notification.id}
@@ -272,15 +289,16 @@ export function NotificationBell({ className }: { className?: string }) {
                   compact
                 />
               ))}
+              </AnimatePresence>
             </ul>
           )}
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 border-t border-border bg-card">
+        <div className="grid shrink-0 grid-cols-2 border-t border-border/70 bg-card">
           <Button
             asChild
             variant="ghost"
-            className="rounded-none border-e border-border py-3"
+            className="rounded-none border-e border-border/70 py-3 text-muted-foreground hover:text-foreground"
             onClick={() => setOpen(false)}
           >
             <Link href="/notifications">
@@ -291,7 +309,7 @@ export function NotificationBell({ className }: { className?: string }) {
           <Button
             asChild
             variant="ghost"
-            className="rounded-none py-3"
+            className="rounded-none py-3 text-muted-foreground hover:text-foreground"
             onClick={() => setOpen(false)}
           >
             <Link href="/settings/preferences/notifications">

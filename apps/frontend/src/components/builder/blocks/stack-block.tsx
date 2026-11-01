@@ -50,10 +50,12 @@ export function StackBlock({ props, puck }: BlockComponentProps<StackProps>) {
     flexWrap: wrap ? 'wrap' : undefined,
     ...(bg === 'glass'
       ? {
-          background: 'rgba(255, 255, 255, 0.7)',
+          // Token-driven so the panel follows the tenant theme and dark mode.
+          background: 'rgb(var(--c-card) / 0.75)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(0, 0, 0, 0.08)',
+          border: '1px solid rgb(var(--c-border) / 0.7)',
+          boxShadow: 'var(--shadow-xs)',
           borderRadius: 24,
         }
       : {}),

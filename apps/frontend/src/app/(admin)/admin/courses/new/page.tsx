@@ -4,18 +4,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  ArrowLeft,
   ArrowRight,
-  BookOpen,
   Check,
   GraduationCap,
   LayoutTemplate,
-  Loader2,
   Sparkles,
+  Type,
   Wrench,
 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/motion';
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { AdminCommandBar, AdminPageHeader } from '@/components/admin/admin-chrome';
+import { FormSection, SelectField, TextField } from '@/components/admin/admin-form';
+import { FormLayout, SaveDock, SlugField, StatusChip } from '@/components/admin/form-page';
 import * as api from '../studio/api';
 import { slugify } from '../studio/slugify';
 
@@ -31,39 +35,81 @@ const templates = [
     nameKey: 'templates.blank.name',
     descriptionKey: 'templates.blank.description',
     icon: Sparkles,
-    tone: 'from-primary/20 to-primary/5 text-primary',
+    tone: 'bg-primary/10 text-primary',
   },
   {
     id: 'workshop',
     nameKey: 'templates.workshop.name',
     descriptionKey: 'templates.workshop.description',
     icon: Wrench,
-    tone: 'from-warning/20 to-warning/5 text-warning',
+    tone: 'bg-warning/10 text-warning',
   },
   {
     id: 'academy',
     nameKey: 'templates.academy.name',
     descriptionKey: 'templates.academy.description',
     icon: GraduationCap,
-    tone: 'from-info/20 to-info/5 text-info',
+    tone: 'bg-info/10 text-info',
   },
 ] as const;
+
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** The "what happens next" rail: the three stages a new course moves through. */
+function NextSteps() {
+  const t = useTranslations('admin.coursesNew');
+  const tStudio = useTranslations('courses.studio');
+  const steps = [
+    ['01', tStudio('steps.basics'), t('steps.basics.body')],
+    ['02', tStudio('steps.curriculum'), t('steps.curriculum.body')],
+    ['03', tStudio('steps.publish'), t('steps.publish.body')],
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+        <p className="font-display text-base font-medium tracking-[-0.012em] text-foreground">
+          {t('nextTitle')}
+        </p>
+        <ol className="mt-4 space-y-4">
+          {steps.map(([number, titleText, body]) => (
+            <li key={number} className="flex gap-3">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-2xs font-medium text-primary">
+                {number}
+              </span>
+              <div>
+                <p className="text-13 font-medium text-foreground">{titleText}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="rounded-xl border border-border/70 bg-muted/40 p-4">
+        <p className="text-13 font-medium text-foreground">{t('guidedTitle')}</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t('guidedBody')}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function NewCoursePage() {
   const router = useRouter();
   const t = useTranslations('admin.coursesNew');
-  const tCommon = useTranslations('common');
+  const tAdmin = useTranslations('admin');
   const tCourses = useTranslations('admin.coursesPage');
+  const tForm = useTranslations('ui.adminForm');
   const tStudio = useTranslations('courses.studio');
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
   const [academyId, setAcademyId] = useState('');
   const [template, setTemplate] = useState<(typeof templates)[number]['id']>('blank');
   const [academies, setAcademies] = useState<AcademyOption[]>([]);
   const [loadingAcademies, setLoadingAcademies] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Errors only appear after the first attempt, so the form is not red on arrival.
+  const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,20 +141,20 @@ export default function NewCoursePage() {
   }, []);
 
   const normalizedSlug = useMemo(() => slugify(slug || title), [slug, title]);
-  const canSubmit = title.trim().length > 1 && normalizedSlug.length > 1 && !submitting;
+  const titleMissing = !title.trim();
+  const slugInvalid = !SLUG_RE.test(normalizedSlug);
+  const canSave = title.trim().length > 1 && normalizedSlug.length > 1;
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submit = async () => {
+    if (submitting) return;
+    setAttempted(true);
     setError(null);
-    if (!title.trim()) {
-      setError(t('errTitleRequired'));
-      return;
-    }
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedSlug)) {
-      setError(t('errInvalidSlug'));
+    if (titleMissing || slugInvalid) {
+      document.getElementById('basics')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     setSubmitting(true);
+    setFailed(false);
     try {
       const created = await api.createDraft({
         title: title.trim(),
@@ -120,6 +166,7 @@ export default function NewCoursePage() {
       router.push(`/admin/courses/${created.slug}/edit?step=basics`);
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : t('createFailedFallback');
+      setFailed(true);
       setError(message);
       toast({ type: 'err', title: t('createFailed'), description: message });
     } finally {
@@ -128,155 +175,196 @@ export default function NewCoursePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-        <button
-          type="button"
-          onClick={() => router.push('/admin/courses')}
-          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-        >
-          <ArrowLeft className="size-4 rtl:rotate-180" />
-          {tStudio('backToCourses')}
-        </button>
+    <form
+      className="w-full"
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      {/* Gives Enter in a text field something to submit; Save itself lives in the dock. */}
+      <button type="submit" tabIndex={-1} aria-hidden="true" className="sr-only" />
+      <AdminCommandBar
+        trail={[
+          { label: tAdmin('courses'), href: '/admin/courses' },
+          { label: t('createTitle') },
+        ]}
+        // A course that does not exist yet is not "Live"; the header carries a `New` chip.
+        live={false}
+      />
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-          <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8">
-            <div className="flex items-start gap-4">
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <BookOpen className="size-6" />
-              </span>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{tStudio('title')}</p>
-                <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">{t('createTitle')}</h1>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  {t('subtitle')}
-                </p>
-              </div>
-            </div>
+      <div className="space-y-6 pt-6">
+        <div className="mx-auto w-full max-w-6xl">
+          <AdminPageHeader
+            title={t('createTitle')}
+            description={t('subtitle')}
+            badge={<StatusChip tone="new">{tForm('statusNew')}</StatusChip>}
+          />
+        </div>
 
-            <div className="mt-8 space-y-6">
-              <div className="space-y-2">
-                <label htmlFor="course-title" className="text-sm font-semibold text-foreground">{t('titleLabel')} <span className="text-destructive">*</span></label>
-                <input
-                  id="course-title"
+        <FormLayout aside={<NextSteps />}>
+          <Reveal>
+            <FormSection id="basics" icon={Type} title={t('basicsTitle')} description={t('basicsHint')}>
+              <div className="space-y-5">
+                <TextField
+                  label={t('titleLabel')}
+                  required
                   autoFocus
                   value={title}
-                  onChange={(event) => {
-                    setTitle(event.target.value);
-                    if (!slugTouched) setSlug(slugify(event.target.value));
-                  }}
+                  onChange={(event) => setTitle(event.target.value)}
                   placeholder={tStudio('titlePlaceholder')}
-                  className="h-12 w-full rounded-xl border border-input bg-background px-4 text-base text-foreground outline-none transition placeholder:text-muted-foreground/60 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  hint={t('titleHint')}
+                  error={attempted && titleMissing ? t('errTitleRequired') : undefined}
                 />
-                <p className="text-xs text-muted-foreground">{t('titleHint')}</p>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="course-slug" className="text-sm font-semibold text-foreground">{t('slugLabel')} <span className="text-destructive">*</span></label>
-                <div className="flex h-12 items-center rounded-xl border border-input bg-background px-4 transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
-                  <span className="shrink-0 text-sm text-muted-foreground">/courses/</span>
-                  <input
-                    id="course-slug"
-                    value={slugTouched ? slug : normalizedSlug}
-                    onChange={(event) => {
-                      setSlugTouched(true);
-                      setSlug(slugify(event.target.value));
-                    }}
-                    className="min-w-0 flex-1 bg-transparent ps-1 font-mono text-sm text-foreground outline-none"
-                    placeholder="cnc-milling-fundamentals"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">{t('slugHint')}</p>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="course-academy" className="text-sm font-semibold text-foreground">{tCourses('academyLabel')}</label>
-                <select
-                  id="course-academy"
+                <SlugField
+                  label={t('slugLabel')}
+                  value={slug}
+                  onChange={setSlug}
+                  prefix="/courses/"
+                  source={title}
+                  mode="create"
+                  hint={t('slugHint')}
+                  error={attempted && !titleMissing && slugInvalid ? t('errInvalidSlug') : undefined}
+                />
+                <SelectField
+                  label={tCourses('academyLabel')}
+                  hint={t('academyHint')}
                   value={academyId}
                   onChange={(event) => setAcademyId(event.target.value)}
                   disabled={loadingAcademies}
-                  className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:opacity-60"
                 >
-                  <option value="">{loadingAcademies ? t('loadingAcademies') : t('noAcademyOption')}</option>
+                  <option value="">
+                    {loadingAcademies ? t('loadingAcademies') : t('noAcademyOption')}
+                  </option>
                   {academies.map((academy) => (
-                    <option key={academy.id} value={academy.id}>{academy.title}</option>
+                    <option key={academy.id} value={academy.id}>
+                      {academy.title}
+                    </option>
                   ))}
-                </select>
-                <p className="text-xs text-muted-foreground">{t('academyHint')}</p>
+                </SelectField>
               </div>
+            </FormSection>
+          </Reveal>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <LayoutTemplate className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{t('chooseTemplate')}</span>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {templates.map((item) => {
-                    const Icon = item.icon;
-                    const active = template === item.id;
-                    return (
+          <Reveal delay={0.04}>
+            <FormSection
+              id="start"
+              icon={LayoutTemplate}
+              title={t('chooseTemplate')}
+              description={t('startHint')}
+              badge={tForm('optional')}
+            >
+              <Stagger className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={t('chooseTemplate')}>
+                {templates.map((item, index) => {
+                  const Icon = item.icon;
+                  const active = template === item.id;
+                  return (
+                    <StaggerItem key={item.id} index={index}>
                       <button
-                        key={item.id}
                         type="button"
+                        role="radio"
+                        aria-checked={active}
                         onClick={() => setTemplate(item.id)}
                         className={cn(
-                          'relative rounded-xl border p-4 text-start transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                          active ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background hover:border-primary/40 hover:bg-muted/40',
+                          'pressable relative h-full w-full rounded-xl border bg-card p-4 text-start transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                          active
+                            ? 'border-primary/40 shadow-sm'
+                            : 'border-border/80 hover:border-border-strong hover:shadow-sm',
                         )}
                       >
-                        {active && <span className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3.5" /></span>}
-                        <span className={cn('mb-3 flex size-9 items-center justify-center rounded-lg bg-gradient-to-br', item.tone)}><Icon className="size-4" /></span>
-                        <span className="block text-sm font-semibold text-foreground">{t(item.nameKey)}</span>
-                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{t(item.descriptionKey)}</span>
+                        {active && (
+                          <m.span
+                            layoutId="new-course-template"
+                            transition={spring.smooth}
+                            className="absolute inset-0 rounded-xl bg-primary/5 ring-1 ring-primary/30"
+                            aria-hidden
+                          />
+                        )}
+                        <AnimatePresence>
+                          {active && (
+                            <m.span
+                              key="check"
+                              initial={{ scale: 0.4, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0.4, opacity: 0 }}
+                              transition={spring.snappy}
+                              className="absolute end-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                            >
+                              <Check className="size-3.5" />
+                            </m.span>
+                          )}
+                        </AnimatePresence>
+                        <span
+                          className={cn(
+                            'relative mb-3 flex size-9 items-center justify-center rounded-full',
+                            item.tone,
+                          )}
+                        >
+                          <Icon className="size-4" />
+                        </span>
+                        <span className="relative block font-display text-base font-medium tracking-[-0.01em] text-foreground">
+                          {t(item.nameKey)}
+                        </span>
+                        <span className="relative mt-1 block text-xs leading-relaxed text-muted-foreground">
+                          {t(item.descriptionKey)}
+                        </span>
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+                    </StaggerItem>
+                  );
+                })}
+              </Stagger>
+            </FormSection>
+          </Reveal>
 
+          <AnimatePresence initial={false}>
             {error && (
-              <div role="alert" className="mt-6 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
-                {error}
-              </div>
+              <m.div
+                key="error"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={spring.smooth}
+                className="overflow-hidden"
+              >
+                <div
+                  role="alert"
+                  className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive"
+                >
+                  {error}
+                </div>
+              </m.div>
             )}
+          </AnimatePresence>
 
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => router.push('/admin/courses')} className="h-11 rounded-xl px-5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">{tCommon('cancel')}</button>
-              <button type="submit" disabled={!canSubmit} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
-                {submitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4 rtl:rotate-180" />}
-                {submitting ? t('creating') : t('submitLabel')}
-              </button>
-            </div>
-          </form>
-
-          <aside className="space-y-4 lg:sticky lg:top-8">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('nextTitle')}</p>
-              <ol className="mt-5 space-y-5">
-                {[
-                  ['01', tStudio('steps.basics'), t('steps.basics.body')],
-                  ['02', tStudio('steps.curriculum'), t('steps.curriculum.body')],
-                  ['03', tStudio('steps.publish'), t('steps.publish.body')],
-                ].map(([number, titleText, body]) => (
-                  <li key={number} className="flex gap-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted font-mono text-xs font-semibold text-primary">{number}</span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{titleText}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm text-primary">
-              <p className="font-semibold">{t('guidedTitle')}</p>
-              <p className="mt-1 text-xs leading-relaxed text-primary/80">{t('guidedBody')}</p>
-            </div>
-          </aside>
-        </div>
+          {/* Below xl the rail is hidden, so the same guidance follows the form. */}
+          <div className="xl:hidden">
+            <Reveal delay={0.08}>
+              <NextSteps />
+            </Reveal>
+          </div>
+        </FormLayout>
       </div>
-    </div>
+
+      <SaveDock
+        mode="create"
+        saving={submitting}
+        failed={failed}
+        canSave={canSave}
+        onSave={() => void submit()}
+        onCancel={() => router.push('/admin/courses')}
+        saveLabel={
+          submitting ? (
+            t('creating')
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              {t('submitLabel')}
+              <ArrowRight className="size-4 rtl:rotate-180" />
+            </span>
+          )
+        }
+        savingLabel={t('creating')}
+      />
+    </form>
   );
 }

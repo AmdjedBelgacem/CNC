@@ -5,6 +5,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Reveal } from '@/components/ui/motion';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring, transition } from '@/lib/motion';
+import { SettingsBanner, SettingsHeader } from '../_components/settings-ui';
 import { toast } from '@/components/ui/toast';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -269,127 +273,111 @@ export default function EditProfilePage() {
   };
   return (
     <div className="space-y-6">
-      {' '}
-      <div className="flex gap-4">
-        {' '}
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          {' '}
-          <User className="size-5" />{' '}
-        </div>{' '}
-        <div>
-          {' '}
-          <h1 className="text-xl font-semibold tracking-tight">{t('profile.pageTitle')}</h1>{' '}
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {t('profile.pageSubtitle')}
-          </p>{' '}
-        </div>{' '}
-      </div>{' '}
-      {error && (
-        <div className="flex gap-3 rounded-2xl border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive dark:border-red-900/30 dark:bg-destructive/10 dark:text-red-300">
-          <AlertCircle className="size-4 shrink-0 mt-0.5" /> {error}
-        </div>
-      )}{' '}
-      {saved && (
-        <div className="flex gap-3 rounded-2xl border border-success bg-success/10 px-4 py-3 text-sm text-success dark:border-success/30 dark:bg-success/10 dark:text-success">
-          <Check className="size-4 shrink-0 mt-0.5" /> {t('profile.savedToast')}
-        </div>
-      )}{' '}
-      {/* Cover & Avatar */}{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
+      <SettingsHeader
+        icon={User}
+        title={t('profile.pageTitle')}
+        subtitle={t('profile.pageSubtitle')}
+      />
+      <SettingsBanner show={!!error} tone="error" icon={AlertCircle} role="alert">
+        {error}
+      </SettingsBanner>
+      <SettingsBanner show={!!saved} tone="success" icon={Check} role="status">
+        {t('profile.savedToast')}
+      </SettingsBanner>
+      {/* Cover & Avatar */}
+      <Reveal
+        as="section"
+        className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs"
+      >
         <div className="relative h-40 sm:h-48 bg-muted">
-          {' '}
           {coverPreview ? (
-            <img src={coverPreview} alt={t('profile.coverAlt')} className="h-full w-full object-cover" />
+            <img
+              src={coverPreview}
+              alt={t('profile.coverAlt')}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-primary/10">
-              {' '}
-              <ImageIcon className="size-8 text-muted-foreground/40" />{' '}
+              <ImageIcon className="size-8 text-muted-foreground/40" />
             </div>
-          )}{' '}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />{' '}
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/15 to-transparent" />
           <button
             onClick={() => coverInputRef.current?.click()}
-            className="absolute bottom-3 end-3 flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-medium shadow-md hover:bg-card transition"
+            className="absolute bottom-3 end-3 flex items-center gap-1.5 rounded-full bg-card/90 px-3 py-1.5 text-xs font-medium shadow-md backdrop-blur transition hover:bg-card"
           >
-            {' '}
-            <Camera className="size-3.5" /> {t('profile.changeCover')}{' '}
-          </button>{' '}
+            <Camera className="size-3.5" /> {t('profile.changeCover')}
+          </button>
           <input
             ref={coverInputRef}
             type="file"
             accept="image/*"
             className="hidden"
             onChange={handleCoverChange}
-          />{' '}
+          />
           <div className="absolute -bottom-10 start-6 flex items-end gap-3">
-            {' '}
             <div className="relative">
-              {' '}
               <Avatar className="h-20 w-20 border-4 border-card shadow-lg">
-                {' '}
-                <AvatarImage src={avatarPreview || undefined} />{' '}
-                <AvatarFallback className="bg-primary text-lg font-bold text-white">
+                <AvatarImage src={avatarPreview || undefined} />
+                <AvatarFallback className="bg-primary/10 font-display text-lg font-medium text-primary">
                   {user?.name?.charAt(0) || '?'}
-                </AvatarFallback>{' '}
-              </Avatar>{' '}
+                </AvatarFallback>
+              </Avatar>
               <button
                 onClick={() => avatarInputRef.current?.click()}
                 className="absolute -bottom-1 -end-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md ring-2 ring-card hover:bg-primary/90 transition"
                 disabled={uploading}
               >
-                {' '}
-                <Camera className="size-3.5" />{' '}
-              </button>{' '}
+                <Camera className="size-3.5" />
+              </button>
               <input
                 ref={avatarInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={handleAvatarChange}
-              />{' '}
-            </div>{' '}
-          </div>{' '}
-        </div>{' '}
+              />
+            </div>
+          </div>
+        </div>
         <div className="px-6 pb-6 pt-12">
-          {' '}
-          <h3 className="font-semibold">{user?.name || t('profile.yourName')}</h3>{' '}
+          <h3 className="font-display text-xl font-medium tracking-[-0.015em]">
+            {user?.name || t('profile.yourName')}
+          </h3>
           <p className="text-sm text-muted-foreground">
             {user?.headline || t('profile.addHeadline')}
-          </p>{' '}
-        </div>{' '}
-      </div>{' '}
-      {/* Profile Info */}{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+          </p>
+        </div>
+      </Reveal>
+      {/* Profile Info */}
+      <Reveal
+        as="section"
+        className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs"
+      >
+        <div className="border-b border-border/60 px-6 pb-4 pt-5">
+          <h2 className="flex items-center gap-2.5 font-display text-lg font-medium tracking-[-0.012em] text-foreground">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <FileText className="size-3.5" />
-            </span>{' '}
+            </span>
             {t('profile.infoTitle')}
-          </h2>{' '}
-          <p className="mt-1 text-xs text-muted-foreground">{t('profile.infoDesc')}</p>{' '}
-        </div>{' '}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">{t('profile.infoDesc')}</p>
+        </div>
         <div className="p-6">
-          {' '}
           <form onSubmit={handleSaveProfile} className="space-y-5">
-            {' '}
             <div className="grid gap-5 sm:grid-cols-2">
-              {' '}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <label className="text-sm font-medium text-foreground">
                   {t('profile.displayName')}
                 </label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="h-10 rounded-xl bg-muted/20"
+                  className="h-10"
                 />
-              </div>{' '}
+              </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <label className="text-sm font-medium text-foreground">
                   {t('profile.username')}
                 </label>
                 <div className="relative">
@@ -399,72 +387,68 @@ export default function EditProfilePage() {
                   <Input
                     value={form.username}
                     onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    className="h-10 rounded-xl bg-muted/20 ps-7"
+                    className="h-10 ps-7"
                   />
                 </div>
-              </div>{' '}
-            </div>{' '}
+              </div>
+            </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t('profile.headline')}
-              </label>
+              <label className="text-sm font-medium text-foreground">{t('profile.headline')}</label>
               <Input
                 value={form.headline}
                 onChange={(e) => setForm({ ...form, headline: e.target.value })}
                 placeholder={t('profile.headlinePlaceholder')}
-                className="h-10 rounded-xl bg-muted/20"
+                className="h-10"
               />
-            </div>{' '}
+            </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t('profile.bio')}
-              </label>
+              <label className="text-sm font-medium text-foreground">{t('profile.bio')}</label>
               <textarea
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 rows={4}
-                className="flex w-full rounded-xl border border-input bg-muted/20 px-3 py-2 text-sm focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
+                className="flex w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-xs transition-[border-color,box-shadow] hover:border-border-strong focus:border-ring/60 focus:outline-none focus:ring-4 focus:ring-ring/15"
                 placeholder={t('profile.bioPlaceholder')}
               />
-            </div>{' '}
+            </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                 <MapPin className="size-3.5" /> {t('profile.location')}
               </label>
               <Input
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
                 placeholder={t('profile.locationPlaceholder')}
-                className="h-10 rounded-xl bg-muted/20"
+                className="h-10"
               />
-            </div>{' '}
+            </div>
             <div className="flex justify-end">
               <Button
                 type="submit"
                 disabled={saving || uploading}
-                className="h-9 rounded-full px-6 shadow-md"
+                className="h-9 rounded-full px-6"
               >
                 {saving ? t('saving') : t('saveChanges')}
               </Button>
-            </div>{' '}
-          </form>{' '}
-        </div>{' '}
-      </div>{' '}
-      {/* Portfolio */}{' '}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {' '}
-        <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-6 py-4">
-          {' '}
+            </div>
+          </form>
+        </div>
+      </Reveal>
+      {/* Portfolio */}
+      <Reveal
+        as="section"
+        className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs"
+      >
+        <div className="flex items-center justify-between border-b border-border/60 px-6 pb-4 pt-5">
           <div>
-            {' '}
-            <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <span className="flex size-6 items-center justify-center rounded-lg bg-card shadow-sm ring-1 ring-border">
+            <h2 className="flex items-center gap-2.5 font-display text-lg font-medium tracking-[-0.012em] text-foreground">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 <Briefcase className="size-3.5" />
-              </span>{' '}
+              </span>
               {t('profile.portfolio')}
-            </h2>{' '}
-            <p className="mt-1 text-xs text-muted-foreground">{t('profile.portfolioDesc')}</p>{' '}
-          </div>{' '}
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t('profile.portfolioDesc')}</p>
+          </div>
           <Button
             size="sm"
             onClick={() => {
@@ -475,154 +459,166 @@ export default function EditProfilePage() {
             className="h-8 rounded-full gap-1.5"
           >
             <Plus className="size-3.5" /> {t('profile.portfolioAdd')}
-          </Button>{' '}
-        </div>{' '}
+          </Button>
+        </div>
         <div className="p-6 space-y-4">
-          {' '}
-          {showPortfolioForm && (
-            <form
-              onSubmit={handlePortfolioSubmit}
-              className="space-y-4 rounded-2xl border border-primary/20 bg-primary/[0.02] p-4"
-            >
-              {' '}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('profile.titleRequired')}
-                </label>
-                <Input
-                  value={pfForm.title}
-                  onChange={(e) => setPfForm({ ...pfForm, title: e.target.value })}
-                  required
-                  className="h-10 rounded-xl bg-card"
-                />
-              </div>{' '}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('profile.description')}
-                </label>
-                <textarea
-                  value={pfForm.description}
-                  onChange={(e) => setPfForm({ ...pfForm, description: e.target.value })}
-                  rows={3}
-                  className="flex w-full rounded-xl border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y"
-                />
-              </div>{' '}
-              <div className="grid gap-4 sm:grid-cols-2">
-                {' '}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t('profile.projectUrl')}
-                  </label>
-                  <div className="relative">
-                    <Link2 className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <AnimatePresence initial={false}>
+            {showPortfolioForm && (
+              <m.form
+                key="portfolio-form"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto', transition: transition.enter }}
+                exit={{ opacity: 0, height: 0, transition: transition.leave }}
+                onSubmit={handlePortfolioSubmit}
+                className="overflow-hidden"
+              >
+                <div className="space-y-4 rounded-xl border border-border/70 bg-muted/30 p-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">
+                      {t('profile.titleRequired')}
+                    </label>
                     <Input
-                      value={pfForm.projectUrl}
-                      onChange={(e) => setPfForm({ ...pfForm, projectUrl: e.target.value })}
-                      placeholder="https://..."
-                      className="h-10 rounded-xl bg-card ps-8"
+                      value={pfForm.title}
+                      onChange={(e) => setPfForm({ ...pfForm, title: e.target.value })}
+                      required
+                      className="h-10"
                     />
                   </div>
-                </div>{' '}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t('profile.tags')}
-                  </label>
-                  <Input
-                    value={pfForm.tags}
-                    onChange={(e) => setPfForm({ ...pfForm, tags: e.target.value })}
-                    placeholder="CNC, CAD"
-                    className="h-10 rounded-xl bg-card"
-                  />
-                </div>{' '}
-              </div>{' '}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('profile.image')}
-                </label>
-                {pfForm.image ? (
-                  <div className="relative inline-block">
-                    <img
-                      src={pfForm.image}
-                      alt={t('profile.imageAlt')}
-                      className="h-24 w-36 rounded-xl object-cover border shadow-sm"
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">
+                      {t('profile.description')}
+                    </label>
+                    <textarea
+                      value={pfForm.description}
+                      onChange={(e) => setPfForm({ ...pfForm, description: e.target.value })}
+                      rows={3}
+                      className="flex w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-xs transition-[border-color,box-shadow] hover:border-border-strong focus:border-ring/60 focus:outline-none focus:ring-4 focus:ring-ring/15"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setPfForm({ ...pfForm, image: '' })}
-                      className="absolute -end-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground"
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">
+                        {t('profile.projectUrl')}
+                      </label>
+                      <div className="relative">
+                        <Link2 className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={pfForm.projectUrl}
+                          onChange={(e) => setPfForm({ ...pfForm, projectUrl: e.target.value })}
+                          placeholder="https://..."
+                          className="h-10 ps-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">
+                        {t('profile.tags')}
+                      </label>
+                      <Input
+                        value={pfForm.tags}
+                        onChange={(e) => setPfForm({ ...pfForm, tags: e.target.value })}
+                        placeholder="CNC, CAD"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">
+                      {t('profile.image')}
+                    </label>
+                    {pfForm.image ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={pfForm.image}
+                          alt={t('profile.imageAlt')}
+                          className="h-24 w-36 rounded-lg border border-border/70 object-cover shadow-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPfForm({ ...pfForm, image: '' })}
+                          className="absolute -end-2 -top-2 rounded-full bg-destructive p-1 text-destructive-foreground"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex h-24 w-36 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-muted/30 transition-colors hover:bg-muted/60">
+                        <ImageIcon className="size-5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {t('profile.uploadImage')}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handlePortfolioImage}
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      disabled={pfSaving || !pfForm.title.trim()}
+                      className="rounded-full"
                     >
-                      <X className="size-3.5" />
-                    </button>
+                      {pfSaving
+                        ? t('saving')
+                        : editingPortfolioId
+                          ? t('profile.update')
+                          : t('profile.addProject')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setPfForm({
+                          title: '',
+                          description: '',
+                          projectUrl: '',
+                          image: '',
+                          tags: '',
+                        });
+                        setEditingPortfolioId(null);
+                        setShowPortfolioForm(false);
+                      }}
+                      className="rounded-full"
+                    >
+                      {t('cancel')}
+                    </Button>
                   </div>
-                ) : (
-                  <label className="flex h-24 w-36 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed bg-muted/20 hover:bg-muted/40 transition">
-                    <ImageIcon className="size-5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{t('profile.uploadImage')}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePortfolioImage}
-                    />
-                  </label>
-                )}
-              </div>{' '}
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  disabled={pfSaving || !pfForm.title.trim()}
-                  className="rounded-full"
-                >
-                  {pfSaving
-                    ? t('saving')
-                    : editingPortfolioId
-                      ? t('profile.update')
-                      : t('profile.addProject')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setPfForm({ title: '', description: '', projectUrl: '', image: '', tags: '' });
-                    setEditingPortfolioId(null);
-                    setShowPortfolioForm(false);
-                  }}
-                  className="rounded-full"
-                >
-                  {t('cancel')}
-                </Button>
-              </div>{' '}
-            </form>
-          )}{' '}
+                </div>
+              </m.form>
+            )}
+          </AnimatePresence>
           {portfolioLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               {t('profile.loadingPortfolio')}
             </p>
           ) : portfolio.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed bg-muted/10 px-8 py-12 text-center">
-              {' '}
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                <ImageIcon className="size-6 text-muted-foreground" />
-              </div>{' '}
-              <p className="mt-3 text-sm font-medium">{t('profile.noPortfolioItems')}</p>{' '}
-              <p className="text-xs text-muted-foreground">
-                {t('profile.noPortfolioItemsHint')}
-              </p>{' '}
+            <div className="rounded-xl border border-dashed border-border px-8 py-12 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
+                <ImageIcon className="size-5 text-muted-foreground" />
+              </div>
+              <p className="mt-3 font-display text-base font-medium">
+                {t('profile.noPortfolioItems')}
+              </p>
+              <p className="text-xs text-muted-foreground">{t('profile.noPortfolioItemsHint')}</p>
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {' '}
               {portfolio.map((item, idx) => (
-                <div
+                <m.div
                   key={item.id}
-                  className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:shadow-md hover:border-primary/20"
+                  layout
+                  transition={spring.layout}
+                  className="group relative overflow-hidden rounded-xl border border-border/70 bg-card p-4 shadow-xs transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-lg"
                 >
-                  {' '}
                   <div className="flex items-start justify-between gap-2">
-                    {' '}
-                    <h3 className="pe-2 text-sm font-semibold leading-tight">{item.title}</h3>{' '}
+                    <h3 className="pe-2 font-display text-base font-medium leading-tight">
+                      {item.title}
+                    </h3>
                     <div className="flex shrink-0 gap-1 opacity-0 transition group-hover:opacity-100">
-                      {' '}
                       <button
                         type="button"
                         onClick={() => handleMovePortfolio(item.id, 'up')}
@@ -630,33 +626,33 @@ export default function EditProfilePage() {
                         className="rounded-lg p-1 hover:bg-muted disabled:opacity-30"
                       >
                         <GripVertical className="size-3.5" />
-                      </button>{' '}
+                      </button>
                       <button
                         onClick={() => handleEditPortfolio(item)}
                         className="rounded-lg p-1 hover:bg-muted"
                       >
                         <span className="text-xs">✎</span>
-                      </button>{' '}
+                      </button>
                       <button
                         onClick={() => handleDeletePortfolio(item.id)}
                         className="rounded-lg p-1 text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="size-3.5" />
-                      </button>{' '}
-                    </div>{' '}
-                  </div>{' '}
+                      </button>
+                    </div>
+                  </div>
                   {item.imageUrl && (
                     <img
                       src={item.imageUrl}
                       alt=""
-                      className="mt-3 h-28 w-full rounded-xl object-cover"
+                      className="mt-3 h-28 w-full rounded-lg object-cover"
                     />
-                  )}{' '}
+                  )}
                   {item.description && (
                     <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                       {item.description}
                     </p>
-                  )}{' '}
+                  )}
                   {item.tags && item.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {item.tags.filter(Boolean).map((tag) => (
@@ -665,7 +661,7 @@ export default function EditProfilePage() {
                         </Badge>
                       ))}
                     </div>
-                  )}{' '}
+                  )}
                   {item.projectUrl && (
                     <a
                       href={item.projectUrl}
@@ -675,13 +671,13 @@ export default function EditProfilePage() {
                     >
                       <ExternalLink className="size-3.5" /> {t('profile.viewProject')}
                     </a>
-                  )}{' '}
-                </div>
-              ))}{' '}
+                  )}
+                </m.div>
+              ))}
             </div>
-          )}{' '}
-        </div>{' '}
-      </div>{' '}
+          )}
+        </div>
+      </Reveal>
     </div>
   );
 }

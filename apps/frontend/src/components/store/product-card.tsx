@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, m } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -7,7 +8,8 @@ import { DEFAULT_CURRENCY } from '@titan/shared';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, AlertTriangle, Mail } from 'lucide-react';
+import { ShoppingCart, AlertTriangle, Mail, Check } from 'lucide-react';
+import { spring } from '@/lib/motion';
 import { useCartStore } from '@/stores/cart-store';
 import { useCurrencyStore } from '@/stores/currency-store';
 import { useFxRates } from '@/hooks/use-fx-rates';
@@ -35,6 +37,13 @@ export function ProductCard({ product }: { product: Product }) {
   const displayCurrency = useCurrencyStore((s) => s.code);
   const { rates } = useFxRates();
   const [quoteOpen, setQuoteOpen] = useState(false);
+  // Purely visual acknowledgement after adding to cart: the icon flips to a check.
+  const [justAdded, setJustAdded] = useState(false);
+  useEffect(() => {
+    if (!justAdded) return;
+    const id = window.setTimeout(() => setJustAdded(false), 1400);
+    return () => window.clearTimeout(id);
+  }, [justAdded]);
 
   const pricingMode = pricingModeOf(product);
   const quoteOnly = isQuoteOnly(product);
@@ -72,11 +81,11 @@ export function ProductCard({ product }: { product: Product }) {
   const href = `/products/${product.slug}`;
 
   return (
-    <Card className="group flex h-full flex-col transition-colors hover:border-border-strong">
-      <div className="p-3 pb-0">
+    <Card className="card-hover group flex h-full flex-col rounded-2xl border-border/70 shadow-xs">
+      <div className="p-2.5 pb-0">
         <Link
           href={href}
-          className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+          className="relative block aspect-square overflow-hidden rounded-xl bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {/*
            * Optimized rather than a raw <img>: a card is displayed around 200-400 px, but
@@ -88,7 +97,7 @@ export function ProductCard({ product }: { product: Product }) {
             alt={product.title}
             fill
             sizes="(min-width: 1280px) 20vw, (min-width: 768px) 30vw, 50vw"
-            className="object-cover"
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
           />
           <div className="absolute start-3 top-3 flex flex-col items-start gap-1.5">
             {product.featured && <Badge>{t('featured')}</Badge>}
@@ -102,8 +111,8 @@ export function ProductCard({ product }: { product: Product }) {
             {hasSale && <Badge variant="destructive">{t('sale')}</Badge>}
           </div>
           {outOfStock && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-              <Badge variant="outline" className="bg-card px-3 py-1">
+            <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[2px]">
+              <Badge variant="outline" className="bg-card px-3 py-1 shadow-xs">
                 {t('outOfStock')}
               </Badge>
             </div>
@@ -111,13 +120,13 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
       </div>
 
-      <CardHeader className="flex-1">
+      <CardHeader className="flex-1 gap-1.5 px-4 pb-4 pt-4">
         {(product.category || product.productType) && (
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {[product.category, product.productType].filter(Boolean).join(' · ')}
           </p>
         )}
-        <CardTitle className="font-display text-base leading-snug">
+        <CardTitle className="text-pretty font-display text-[17px] font-medium leading-snug tracking-[-0.012em]">
           <Link href={href} className="transition-colors hover:text-primary">
             {product.title}
           </Link>
@@ -129,7 +138,7 @@ export function ProductCard({ product }: { product: Product }) {
         )}
       </CardHeader>
 
-      <CardFooter className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-4">
+      <CardFooter className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border/60 px-4 pb-4 pt-3.5">
         {quoteOnly ? (
           /**
            * The cart is replaced, not disabled. A greyed-out "Add to cart" on a
@@ -137,7 +146,7 @@ export function ProductCard({ product }: { product: Product }) {
            * form is the intended path and it notifies the tenant's admins.
            */
           <div className="flex w-full flex-col gap-2">
-            <span className="font-mono text-sm font-semibold text-muted-foreground">
+            <span className="text-sm font-medium text-muted-foreground">
               {t('priceOnRequest')}
             </span>
             <Button
@@ -155,14 +164,14 @@ export function ProductCard({ product }: { product: Product }) {
             <div className="min-w-0">
               <span
                 className={cn(
-                  'font-mono text-lg font-semibold tabular-nums',
+                  'text-lg font-semibold tabular-nums tracking-[-0.01em]',
                   pending ? 'text-muted-foreground' : 'text-foreground',
                 )}
               >
                 {price}
               </span>
               {hasSale && product.compareAtPrice ? (
-                <span className="ms-2 font-mono text-sm tabular-nums text-muted-foreground line-through">
+                <span className="ms-2 text-sm tabular-nums text-muted-foreground line-through">
                   {format(product.compareAtPrice)}
                 </span>
               ) : null}
@@ -174,7 +183,7 @@ export function ProductCard({ product }: { product: Product }) {
                 aria-label={`${backorder ? t('backorder') : t('addToCart')}: ${product.title}`}
                 disabled={unitMinor == null}
                 title={unitMinor == null ? t('priceNotSet') : undefined}
-                onClick={() =>
+                onClick={() => {
                   addItem({
                     productId: product.id,
                     slug: product.slug,
@@ -182,10 +191,24 @@ export function ProductCard({ product }: { product: Product }) {
                     price: product.variants?.[0]?.price ?? product.price ?? 0,
                     currency: sourceCurrency ?? DEFAULT_CURRENCY,
                     thumbnailUrl: product.thumbnailUrl ?? undefined,
-                  })
-                }
+                  });
+                  setJustAdded(true);
+                }}
               >
-                <ShoppingCart className="size-4" />
+                <span className="relative inline-flex size-4 items-center justify-center" aria-hidden>
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <m.span
+                      key={justAdded ? 'added' : 'cart'}
+                      className="absolute inset-0 inline-flex items-center justify-center"
+                      initial={{ scale: 0.4, opacity: 0, rotate: justAdded ? -30 : 0 }}
+                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                      exit={{ scale: 0.4, opacity: 0 }}
+                      transition={spring.snappy}
+                    >
+                      {justAdded ? <Check className="size-4" /> : <ShoppingCart className="size-4" />}
+                    </m.span>
+                  </AnimatePresence>
+                </span>
                 {/* Below `lg` the card is narrow (or beside the filter rail), so the
                     label is dropped and the button stays icon-only on one line. */}
                 <span className="hidden lg:inline">

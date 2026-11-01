@@ -2,7 +2,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ZoomIn, ZoomOut } from 'lucide-react';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/motion';
 import { useMediaQuery, IS_DESKTOP_QUERY } from '@/lib/use-media-query';
 import { VIEWPORTS } from './editor-header';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck'; /**
@@ -103,8 +105,11 @@ export function CanvasControls() {
   const isAuto = autoZoom != null && Math.abs(zoom - autoZoom) < 0.005;
   return (
     <div className="absolute left-1/2 top-3 z-20 -translate-x-1/2">
-      {' '}
-      <div className="flex items-center gap-1 rounded-full border border-border bg-card/85 p-1 shadow-sm dark:shadow-black/40">
+      <m.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0, transition: spring.gentle }}
+        className="flex items-center gap-1 rounded-full border border-border/70 bg-card/90 p-1 shadow-md backdrop-blur-md"
+      >
         {' '}
         <div className="flex items-center gap-0.5">
           {' '}
@@ -122,26 +127,32 @@ export function CanvasControls() {
                   default: `${vp.label} (${vp.width}px)`,
                 })}
                 onClick={() => setViewport(vp.width)}
+                aria-pressed={active}
                 className={cn(
-                  'flex h-7 w-8 items-center justify-center rounded-full transition',
-                  active
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  'relative flex h-7 w-8 items-center justify-center rounded-full transition-colors active:scale-[0.94]',
+                  active ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
-                {' '}
-                <Icon className="size-3.5" />{' '}
+                {active && (
+                  <m.span
+                    layoutId="builder-canvas-viewport-pill"
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                    transition={spring.snappy}
+                  />
+                )}
+                <Icon className="relative size-3.5" />
               </button>
             );
           })}{' '}
         </div>{' '}
-        <div className="mx-0.5 h-4 w-px bg-border" />{' '}
+        <div className="mx-0.5 h-4 w-px bg-border/80" />
         <button
           type="button"
           title={tb('canvas.zoomOut', { default: 'Zoom out' })}
           disabled={!canZoomOut}
           onClick={zoomOut}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90 disabled:pointer-events-none disabled:opacity-35"
         >
           {' '}
           <ZoomOut className="size-3.5" />{' '}
@@ -151,7 +162,7 @@ export function CanvasControls() {
           title={tb('canvas.zoomToFit', { default: 'Zoom to fit' })}
           onClick={fitToScreen}
           className={cn(
-            'h-7 min-w-[3.25rem] rounded-full px-2 text-2xs font-bold tabular-nums transition',
+            'h-7 min-w-[3.25rem] rounded-full px-2 font-mono text-2xs font-medium tabular-nums transition-colors',
             isAuto ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
           )}
         >
@@ -165,12 +176,12 @@ export function CanvasControls() {
           title={tb('canvas.zoomIn', { default: 'Zoom in' })}
           disabled={!canZoomIn}
           onClick={zoomIn}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90 disabled:pointer-events-none disabled:opacity-35"
         >
           {' '}
           <ZoomIn className="size-3.5" />{' '}
-        </button>{' '}
-      </div>{' '}
+        </button>
+      </m.div>
     </div>
   );
 }

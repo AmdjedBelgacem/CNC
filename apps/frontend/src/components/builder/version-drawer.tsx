@@ -3,7 +3,10 @@
 import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { History, RotateCcw, X } from 'lucide-react';
+import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { ease, spring } from '@/lib/motion';
+import { dialogMotion } from '@/components/ui/dialog';
 
 export interface VersionRow {
   id: string;
@@ -40,6 +43,9 @@ export function VersionDrawer({
   const tb = useTranslations('builder');
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  // The drawer lives at the inline end, so it slides in from that edge in either direction.
+  const offscreen =
+    typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? '-104%' : '104%';
 
   // Escape to dismiss, and move focus in so keyboard users are not stranded
   // behind the canvas once it opens.
@@ -53,27 +59,31 @@ export function VersionDrawer({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[70] flex justify-end">
-      <button
+    <div className="fixed inset-0 z-[70] flex justify-end p-0 sm:p-2">
+      <m.button
         type="button"
         aria-label={tb('shortcut.close')}
         onClick={onClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
+        {...dialogMotion.overlay}
+        className="absolute inset-0 bg-overlay/45 backdrop-blur-[3px]"
       />
-      <div
+      <m.div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={tb('history.title')}
-        className="relative flex h-full w-full max-w-md flex-col border-s border-border bg-card shadow-2xl"
+        initial={{ x: offscreen, opacity: 0.6 }}
+        animate={{ x: 0, opacity: 1, transition: spring.gentle }}
+        exit={{ x: offscreen, opacity: 0.6, transition: { duration: 0.22, ease: ease.exit } }}
+        className="relative flex h-full w-full max-w-md flex-col overflow-hidden border-border/70 bg-card shadow-xl sm:rounded-2xl sm:border"
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/70 px-5 py-4">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-13 font-semibold text-foreground">
+            <h2 className="flex items-center gap-2 font-display text-lg font-medium tracking-[-0.015em] text-foreground">
               <History className="size-4 text-muted-foreground" aria-hidden="true" />
               {tb('history.title')}
             </h2>
-            <p className="mt-0.5 text-2xs text-muted-foreground">{tb('history.subtitle')}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{tb('history.subtitle')}</p>
           </div>
           <button
             ref={closeRef}
@@ -81,7 +91,7 @@ export function VersionDrawer({
             onClick={onClose}
             title={tb('shortcut.close')}
             aria-label={tb('shortcut.close')}
-            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-95"
           >
             <X className="size-4" aria-hidden="true" />
           </button>
@@ -93,22 +103,28 @@ export function VersionDrawer({
               {tb('history.empty')}
             </p>
           ) : (
-            <ol className="space-y-1">
-              {versions.map((version) => {
+            <ol className="space-y-0.5">
+              {versions.map((version, index) => {
                 const published = version.status === 'published';
                 return (
-                  <li
+                  <m.li
                     key={version.id}
-                    className="group flex items-start gap-3 rounded-lg px-2.5 py-2.5 transition hover:bg-muted"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                      transition: { ...spring.smooth, delay: 0.08 + Math.min(index, 10) * 0.03 },
+                    }}
+                    className="group flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/60"
                   >
-                    <span className="mt-0.5 shrink-0 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-2xs tabular-nums text-muted-foreground">
+                    <span className="mt-0.5 shrink-0 rounded-md border border-border/70 bg-surface-sunken px-1.5 py-0.5 font-mono text-2xs tabular-nums text-muted-foreground">
                       v{version.version}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
                         <span
                           className={cn(
-                            'text-2xs font-semibold uppercase tracking-wide',
+                            'inline-flex items-center gap-1 text-xs font-medium',
                             published ? 'text-success' : 'text-muted-foreground',
                           )}
                         >
@@ -139,21 +155,21 @@ export function VersionDrawer({
                         }
                       }}
                       className={cn(
-                        'flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1',
-                        'text-2xs font-semibold text-foreground transition hover:bg-muted',
+                        'flex shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-card px-2 py-1 shadow-xs',
+                        'text-2xs font-medium text-foreground transition hover:border-border-strong hover:bg-muted active:scale-95',
                         'disabled:cursor-not-allowed disabled:opacity-50',
                       )}
                     >
                       <RotateCcw className="size-3" aria-hidden="true" />
                       {tb('history.revert')}
                     </button>
-                  </li>
+                  </m.li>
                 );
               })}
             </ol>
           )}
         </div>
-      </div>
+      </m.div>
     </div>
   );
 }

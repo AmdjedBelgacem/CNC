@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, m } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -19,10 +20,30 @@ import {
   Settings,
   Sparkles,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { dialogMotion } from '@/components/ui/dialog';
+import { Crossfade } from '@/components/ui/motion';
+import { ease, spring } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations('account');
   const pathname = usePathname();
+  const tCommon = useTranslations('common');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // The drawer docks at the inline-end edge (next to its trigger) and slides in
+  // from there — the left-hand side under `dir=rtl`.
+  const drawerOffset =
+    typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? '-100%' : '100%';
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sidebarOpen]);
   const sidebarSections = [
     {
       label: t('nav.accountSection'),
@@ -100,176 +121,169 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     },
   ];
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
-  const activeSection = sidebarSections.flatMap((s) => s.items).find((i) => isActive(i.href));
+  // `/settings/account` is a prefix of its own sub-pages, so pick the longest
+  // matching href — otherwise two items would both claim the indicator.
+  const activeSection = sidebarSections
+    .flatMap((s) => s.items)
+    .filter((i) => isActive(i.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+
+  const renderNav = (variant: 'rail' | 'drawer') => (
+    <nav className="space-y-6" aria-label={t('nav.settingsTitle')}>
+      {sidebarSections.map((section) => (
+        <div key={section.label}>
+          <p className="mb-1.5 px-3 text-xs font-medium text-muted-foreground">{section.label}</p>
+          <div className="space-y-0.5">
+            {section.items.map((item) => {
+              const active = activeSection?.href === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={variant === 'drawer' ? () => setSidebarOpen(false) : undefined}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'group relative flex items-center gap-3 rounded-lg px-3 py-2 transition-colors',
+                    active
+                      ? 'text-foreground'
+                      : 'text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground',
+                  )}
+                >
+                  {active && (
+                    <m.span
+                      layoutId={`settings-nav-active-${variant}`}
+                      transition={spring.smooth}
+                      className="absolute inset-0 rounded-lg border border-border/70 bg-card shadow-xs"
+                      aria-hidden
+                    />
+                  )}
+                  <span
+                    className={cn(
+                      'relative flex size-7 shrink-0 items-center justify-center rounded-md transition-colors',
+                      active
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground group-hover:text-foreground',
+                    )}
+                  >
+                    <item.icon className="size-4" />
+                  </span>
+                  <span className="relative min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium leading-tight">
+                      {item.label}
+                    </span>
+                    <span className="block truncate text-xs leading-snug text-muted-foreground">
+                      {item.desc}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      {' '}
-      {/* Top bar — floating, same width as content, stays under global navbar */}{' '}
-      <div className="sticky top-[76px] z-20 mx-auto max-w-[1600px] px-4 sm:px-6">
-        {' '}
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-          {' '}
-          <Link
-            href="/account"
-            className="hidden items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-card hover:text-foreground hover:shadow-sm sm:flex"
-          >
-            {' '}
-            <ChevronLeft className="flip-rtl size-3.5" /> {t('nav.dashboard')}{' '}
-          </Link>{' '}
-          <div className="flex items-center gap-2.5">
-            {' '}
-            <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white shadow-md">
-              {' '}
-              <Settings className="size-4" />{' '}
-            </div>{' '}
-            <div>
-              {' '}
-              <h1 className="text-sm font-semibold leading-none tracking-tight">
-                {t('nav.settingsTitle')}
-              </h1>{' '}
-              <p className="hidden text-xs text-muted-foreground sm:block">
+      <div className="mx-auto max-w-[1400px] px-4 pt-8 sm:px-6 lg:pt-12">
+        <header className="flex items-end gap-4 border-b border-border/70 pb-6">
+          <div className="min-w-0 flex-1">
+            <Link
+              href="/account"
+              className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ChevronLeft className="flip-rtl size-3.5" /> {t('nav.dashboard')}
+            </Link>
+            <h1 className="font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl">
+              {t('nav.settingsTitle')}
+            </h1>
+            <Crossfade value={activeSection?.href ?? 'none'} className="mt-1.5">
+              <p className="truncate text-sm text-muted-foreground">
                 {activeSection
                   ? activeSection.label + ' · ' + activeSection.desc
                   : t('nav.subtitleFallback')}
-              </p>{' '}
-            </div>{' '}
-          </div>{' '}
-          <button
+              </p>
+            </Crossfade>
+          </div>
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={() => setSidebarOpen(true)}
-            className="ms-auto flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-muted lg:hidden"
+            className="shrink-0 rounded-full lg:hidden"
+            aria-label={t('nav.settingsTitle')}
+            aria-expanded={sidebarOpen}
           >
-            {' '}
-            <Menu className="size-4" />{' '}
-          </button>{' '}
-        </div>{' '}
-      </div>{' '}
-      <div className="mx-auto flex max-w-[1600px] gap-6 px-4 py-6 sm:px-6">
-        {' '}
-        {/* Desktop sidebar */}{' '}
-        <aside className="hidden w-[280px] shrink-0 lg:block">
-          {' '}
-          <div className="sticky top-[148px] space-y-3">
-            {' '}
-            <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-              {' '}
-              <nav className="space-y-5">
-                {' '}
-                {sidebarSections.map((section) => (
-                  <div key={section.label}>
-                    {' '}
-                    <p className="mb-2 flex items-center gap-2 px-2 text-2xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
-                      {' '}
-                      <span className="h-px w-3 bg-border" /> {section.label}{' '}
-                    </p>{' '}
-                    <div className="space-y-1">
-                      {' '}
-                      {section.items.map((item) => {
-                        const active = isActive(item.href);
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${active ? 'bg-primary/10 text-primary ring-1 ring-primary/15' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                          >
-                            {' '}
-                            <span
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${active ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-muted-foreground group-hover:bg-card group-hover:text-foreground group-hover:shadow-sm'}`}
-                            >
-                              {' '}
-                              <item.icon className="size-3.5" />{' '}
-                            </span>{' '}
-                            <span className="min-w-0 flex-1">
-                              {' '}
-                              <span className="block truncate text-sm font-medium leading-none">
-                                {item.label}
-                              </span>{' '}
-                              <span className="truncate text-2xs leading-none text-muted-foreground">
-                                {item.desc}
-                              </span>{' '}
-                            </span>{' '}
-                          </Link>
-                        );
-                      })}{' '}
-                    </div>{' '}
-                  </div>
-                ))}{' '}
-              </nav>{' '}
-            </div>{' '}
-            <div className="rounded-2xl border border-primary/10 bg-primary p-4 text-white shadow-lg">
-              {' '}
-              <div className="flex size-8 items-center justify-center rounded-xl bg-card">
-                {' '}
-                <Sparkles className="size-4" />{' '}
-              </div>{' '}
-              <p className="mt-3 text-sm font-semibold leading-tight">{t('nav.needHelp')}</p>{' '}
-              <p className="mt-1 text-xs leading-relaxed text-white/70">
+            <Menu className="size-4" />
+          </Button>
+        </header>
+      </div>
+      <div className="mx-auto flex max-w-[1400px] gap-10 px-4 py-8 sm:px-6 xl:gap-14">
+        {/* Desktop sidebar */}
+        <aside className="hidden w-[260px] shrink-0 lg:block">
+          <div className="sticky top-[96px] space-y-6">
+            {renderNav('rail')}
+            <div className="rounded-xl border border-border/70 bg-muted/40 p-4">
+              <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Sparkles className="size-4" />
+              </div>
+              <p className="mt-3 font-display text-base font-medium leading-tight text-foreground">
+                {t('nav.needHelp')}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {t('nav.helpHint')}
-              </p>{' '}
+              </p>
               <Link
                 href="/feed"
-                className="mt-3 inline-flex rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-card"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
               >
-                {' '}
-                {t('nav.visitHelpCenter')}{' '}
-              </Link>{' '}
-            </div>{' '}
-          </div>{' '}
-        </aside>{' '}
-        {/* Mobile overlay */}{' '}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-overlay lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}{' '}
-        {/* Mobile drawer */}{' '}
-        <aside
-          className={`fixed inset-y-0 start-0 z-50 flex w-[300px] flex-col border-r bg-card shadow-sm transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        >
-          {' '}
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            {' '}
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <Settings className="size-4 text-primary" /> {t('nav.settingsTitle')}
-            </span>{' '}
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="rounded-full p-2 hover:bg-muted"
-            >
-              <X className="size-4" />
-            </button>{' '}
-          </div>{' '}
-          <nav className="flex-1 space-y-5 overflow-auto p-4">
-            {' '}
-            {sidebarSections.map((section) => (
-              <div key={section.label}>
-                {' '}
-                <p className="mb-2 px-2 text-2xs font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
-                  {section.label}
-                </p>{' '}
-                <div className="space-y-1">
-                  {' '}
-                  {section.items.map((item) => {
-                    const active = isActive(item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active ? 'bg-primary/10 text-primary ring-1 ring-primary/15' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                      >
-                        {' '}
-                        <item.icon className="size-4" /> {item.label}{' '}
-                      </Link>
-                    );
-                  })}{' '}
-                </div>{' '}
-              </div>
-            ))}{' '}
-          </nav>{' '}
-        </aside>{' '}
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">{children}</main>{' '}
-      </div>{' '}
+                {t('nav.visitHelpCenter')}
+              </Link>
+            </div>
+          </div>
+        </aside>
+        {/* Mobile drawer */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden" key="settings-drawer">
+              <m.div
+                className="absolute inset-0 bg-overlay/45 backdrop-blur-[3px]"
+                onClick={() => setSidebarOpen(false)}
+                aria-hidden
+                {...dialogMotion.overlay}
+              />
+              <m.aside
+                role="dialog"
+                aria-modal="true"
+                aria-label={t('nav.settingsTitle')}
+                initial={{ x: drawerOffset }}
+                animate={{ x: 0, transition: spring.gentle }}
+                exit={{ x: drawerOffset, transition: { duration: 0.22, ease: ease.exit } }}
+                className="absolute inset-y-0 end-0 flex w-[min(320px,88vw)] flex-col border-s border-border/70 bg-background shadow-xl"
+              >
+                <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
+                  <span className="flex items-center gap-2 font-display text-lg font-medium text-foreground">
+                    <Settings className="size-4 text-primary" /> {t('nav.settingsTitle')}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setSidebarOpen(false)}
+                    className="rounded-full"
+                    aria-label={tCommon('close')}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-auto p-3">{renderNav('drawer')}</div>
+              </m.aside>
+            </div>
+          )}
+        </AnimatePresence>
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -6,9 +6,10 @@ import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
+import { ConsoleFloat } from './console-motion';
 
-/** Dark glass telemetry panel treatment (console mockup overlays). */
-const DARK_GLASS = 'bg-overlay/85 backdrop-blur-md border border-white/10 shadow-lg text-white';
+/** Paper-glass telemetry panel treatment (console mockup overlays). */
+const DARK_GLASS = 'bg-card/85 backdrop-blur-md border border-border/70 shadow-sm text-foreground';
 
 /**
  * Asymmetric editorial hero: left column is the builder `content` slot
@@ -53,10 +54,19 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
       className={cn('relative overflow-hidden', className)}
       style={layoutStyle(props)}
     >
-      <div className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      {/* Warm ambient wash + a whisper-faint dot field behind the hero. */}
+      <div className="pointer-events-none absolute inset-0 ambient-wash" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 blueprint-grid opacity-60 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]"
+        aria-hidden
+      />
+      <div className="relative px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-10 items-center">
           {/* Left: value proposition column */}
-          <div className="lg:col-span-6 flex flex-col items-start text-left">
+          {/* `maxWidth` on a builder text block also centres it (margin-inline:
+              auto). In this start-aligned column that read as a stray indent,
+              so copy is anchored back to the column's start edge. */}
+          <div className="lg:col-span-6 flex flex-col items-start text-start [&_p]:!ms-0 [&_p]:!me-0">
             {puck.renderSlot('content')}
           </div>
           {/* Right: simulator console card */}
@@ -67,30 +77,30 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
               puck.renderSlot('console')
             ) : (
               <>
-                <div className="relative rounded-2xl p-2 liquid-glass shadow-xl" dir="ltr">
+                <div className="relative rounded-2xl p-2 ring-1 ring-black/[0.03] dark:ring-white/[0.04] motion-safe:animate-fade-in-up motion-safe:[animation-delay:120ms] motion-safe:[animation-duration:900ms] motion-safe:[animation-fill-mode:both] liquid-glass shadow-xl" dir="ltr">
                   {/* Console header bar */}
-                  <div className="bg-card rounded-lg p-3 mb-2 flex items-center justify-between border-b border-glass-border">
+                  <div className="mb-2 flex items-center justify-between rounded-xl bg-card px-3.5 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="flex gap-1.5 shrink-0">
-                        <span className="size-2.5 rounded-full bg-destructive/70"></span>
-                        <span className="size-2.5 rounded-full bg-warning/70"></span>
-                        <span className="size-2.5 rounded-full bg-success/70"></span>
+                        <span className="size-2.5 rounded-full bg-destructive/45"></span>
+                        <span className="size-2.5 rounded-full bg-warning/45"></span>
+                        <span className="size-2.5 rounded-full bg-success/45"></span>
                       </div>
                       {fileName ? (
-                        <span className="text-xs font-mono text-text-muted ms-2 truncate">
+                        <span className="ms-2 truncate font-mono text-[11px] text-muted-foreground">
                           {fileName}
                         </span>
                       ) : null}
                     </div>
                     {syncLabel ? (
-                      <span className="inline-flex items-center gap-1 text-2xs font-mono px-2 py-0.5 rounded bg-success/15 text-success font-semibold shrink-0">
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 font-mono text-2xs font-medium text-success">
                         <span className="size-1.5 rounded-full bg-success animate-pulse"></span>
                         {syncLabel}
                       </span>
                     ) : null}
                   </div>
                   {/* Viewport */}
-                  <div className="relative h-[380px] sm:h-[440px] rounded-lg overflow-hidden group bg-surface-sunken">
+                  <div className="relative h-[380px] sm:h-[440px] overflow-hidden rounded-xl bg-surface-sunken ring-1 ring-inset ring-border/60 group">
                     {/* Intentional blueprint backdrop: visible if the remote image fails. */}
                     <div className="absolute inset-0 blueprint-grid" aria-hidden="true"></div>
                     {imageUrl && !imageFailed ? (
@@ -104,7 +114,7 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                       />
                     ) : null}
                     {puck?.isEditing && (!imageUrl || imageFailed) ? (
-                      <span className="absolute start-1/2 top-4 z-30 -translate-x-1/2 rounded bg-background/90 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shadow-sm">
+                      <span className="absolute start-1/2 top-4 z-30 -translate-x-1/2 rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
                         {imageFailed ? 'Image failed' : 'Add console image'}
                       </span>
                     ) : null}
@@ -118,10 +128,10 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                             'flex min-w-0 max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg px-2.5 py-1.5 font-mono text-[10px] sm:gap-3 sm:px-3 sm:py-2 sm:text-xs',
                           )}
                         >
-                          <span className="shrink-0 text-white/60">{feedLabel}</span>
-                          <span className="text-xs font-bold sm:text-sm">{feedValue}</span>
+                          <span className="shrink-0 text-muted-foreground">{feedLabel}</span>
+                          <span className="text-xs font-semibold tabular-nums sm:text-sm">{feedValue}</span>
                           {feedTag ? (
-                            <span className="rounded bg-success/40 px-1.5 py-0.5 text-[9px] text-white sm:text-[10px]">
+                            <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-medium text-success sm:text-[10px]">
                               {feedTag}
                             </span>
                           ) : null}
@@ -134,10 +144,10 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                             'flex min-w-0 max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg px-2.5 py-1.5 font-mono text-[10px] sm:gap-3 sm:px-3 sm:py-2 sm:text-xs',
                           )}
                         >
-                          <span className="shrink-0 text-white/60">{spindleLabel}</span>
-                          <span className="text-xs font-bold sm:text-sm">{spindleValue}</span>
+                          <span className="shrink-0 text-muted-foreground">{spindleLabel}</span>
+                          <span className="text-xs font-semibold tabular-nums sm:text-sm">{spindleValue}</span>
                           {spindleTag ? (
-                            <span className="text-[9px] text-white/70 sm:text-[10px]">
+                            <span className="text-[9px] text-muted-foreground sm:text-[10px]">
                               {spindleTag}
                             </span>
                           ) : null}
@@ -158,10 +168,10 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                             className="mt-0.5 size-3.5 shrink-0 text-success sm:mt-0 sm:size-4"
                           />
                           <div className="min-w-0 text-left">
-                            <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-success sm:text-[10px]">
+                            <div className="text-[10px] font-medium leading-tight text-success sm:text-[11px]">
                               {auditTitle}
                             </div>
-                            <div className="break-words text-[10px] font-mono font-bold leading-tight sm:text-xs">
+                            <div className="break-words text-[10px] font-mono font-semibold leading-tight tabular-nums sm:text-xs">
                               {auditValue}
                             </div>
                           </div>
@@ -173,18 +183,18 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                       <div
                         className={cn(
                           DARK_GLASS,
-                          'absolute bottom-4 inset-x-4 rounded-xl p-2.5 z-20 sm:p-3.5',
+                          'absolute bottom-4 inset-x-4 z-20 rounded-2xl p-2.5 sm:p-3.5',
                         )}
                       >
                         <div className="flex items-center justify-between mb-2 gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <Icon name="tune" className="size-3.5 text-white/70 shrink-0" />
-                            <span className="text-[10px] font-mono font-medium text-white/90 truncate sm:text-xs">
+                            <Icon name="tune" className="size-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-[11px] font-medium text-foreground/90 truncate sm:text-xs">
                               {axesTitle}
                             </span>
                           </div>
                           {vibration ? (
-                            <span className="text-[11px] font-mono text-success shrink-0 hidden sm:inline">
+                            <span className="text-[11px] font-mono text-success/90 shrink-0 hidden sm:inline">
                               {vibration}
                             </span>
                           ) : null}
@@ -197,19 +207,19 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                             <div
                               key={i}
                               className={cn(
-                                'rounded border bg-white/10 p-1 sm:p-1.5',
-                                axis.tone === 'accent' ? 'border-primary/50' : 'border-white/10',
+                                'rounded-md border bg-background/70 p-1 sm:p-1.5',
+                                axis.tone === 'accent' ? 'border-primary/40 bg-primary/[0.06]' : 'border-border/70',
                               )}
                             >
                               <span
                                 className={cn(
                                   'block text-[9px] sm:text-[10px]',
-                                  axis.tone === 'accent' ? 'text-white' : 'text-white/60',
+                                  axis.tone === 'accent' ? 'text-primary' : 'text-muted-foreground',
                                 )}
                               >
                                 {axis.label}
                               </span>
-                              <span className="text-[11px] font-bold text-white sm:text-xs">
+                              <span className="text-[11px] font-semibold text-foreground tabular-nums sm:text-xs">
                                 {axis.value}
                               </span>
                             </div>
@@ -220,16 +230,16 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                   </div>
                   {/* Mode selector bar */}
                   {modes.length > 0 ? (
-                    <div className="p-2 flex items-center justify-between gap-2 text-xs text-text-secondary">
+                    <div className="flex items-center justify-between gap-2 px-1.5 pb-1 pt-2.5 text-xs text-muted-foreground">
                       <div className="flex items-center gap-2 flex-wrap">
                         {modes.map((mode, i) => (
                           <span
                             key={i}
                             className={cn(
-                              'px-2.5 py-1 rounded font-medium transition',
+                              'rounded-full px-3 py-1 font-medium transition-colors duration-200',
                               i === 0
-                                ? 'bg-primary text-on-primary'
-                                : 'bg-surface-container-low text-text-primary hover:bg-surface-container-high',
+                                ? 'bg-primary/10 text-primary ring-1 ring-inset ring-primary/20'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                               i >= 2 ? 'hidden sm:inline-block' : undefined,
                             )}
                           >
@@ -238,7 +248,7 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                         ))}
                       </div>
                       {controllerLabel ? (
-                        <span className="text-[11px] text-text-muted hidden sm:inline-block shrink-0">
+                        <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline-block">
                           {controllerLabel}
                         </span>
                       ) : null}
@@ -247,21 +257,26 @@ export function HeroConsoleBlock({ props, puck }: BlockComponentProps<HeroConsol
                 </div>
                 {/* Floating metric badge */}
                 {floatValue ? (
-                  <div className="absolute -bottom-6 -start-6 liquid-glass p-4 rounded-xl shadow-xl hidden md:flex items-center gap-3 z-30">
-                    <div className="size-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
-                      <Icon name={floatIcon ?? 'speed'} className="size-5" />
-                    </div>
-                    <div dir="ltr">
-                      <div className="text-xs text-text-muted font-medium">{floatLabel}</div>
-                      <div className="text-lg font-bold text-text-primary font-mono">
-                        {floatValue}
-                        {floatTag ? (
-                          <span className="text-success text-xs font-sans font-semibold ms-1">
-                            {floatTag}
-                          </span>
-                        ) : null}
+                  <div className="absolute -bottom-6 -start-6 z-30 hidden md:block">
+                    <ConsoleFloat
+                      delay={0.6}
+                      className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card/90 p-3.5 pe-5 shadow-lg backdrop-blur-md"
+                    >
+                      <div className="flex size-10 items-center justify-center rounded-xl bg-success/10 text-success">
+                        <Icon name={floatIcon ?? 'speed'} className="size-5" />
                       </div>
-                    </div>
+                      <div dir="ltr">
+                        <div className="text-xs font-medium text-muted-foreground">{floatLabel}</div>
+                        <div className="font-mono text-lg font-semibold tabular-nums text-foreground">
+                          {floatValue}
+                          {floatTag ? (
+                            <span className="ms-1.5 font-sans text-xs font-medium text-success">
+                              {floatTag}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </ConsoleFloat>
                   </div>
                 ) : null}
               </>

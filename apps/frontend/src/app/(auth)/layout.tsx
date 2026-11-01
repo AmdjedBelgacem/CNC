@@ -33,7 +33,9 @@ const HIGHLIGHTS: [string, string][] = [
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
-      <div className="pointer-events-none fixed inset-0 blueprint-grid opacity-60" aria-hidden />
+      {/* Paper: a faint dot field under a warm clay/sage bloom. Purely decorative. */}
+      <div className="pointer-events-none fixed inset-0 blueprint-grid opacity-50" aria-hidden />
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[70vh] ambient-wash" aria-hidden />
       {/* Same skip link as the main layout: this group has no site navigation, but the
           brand, back link and highlights panel still precede the form in the tab order. */}
       <a
@@ -42,76 +44,67 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       >
         Skip to main content
       </a>
-      <div className="relative mx-auto flex min-h-screen max-w-[1400px] flex-col px-6 py-6">
+      <div className="relative mx-auto flex min-h-screen max-w-[1200px] flex-col px-4 py-5 sm:px-6 sm:py-6">
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground transition-colors hover:text-primary"
+            className="group inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
           >
             &larr; Back
           </Link>
           <BrandMark compact />
         </div>
 
-        <div className="flex flex-1 items-center justify-center py-8">
-          <div className="corner-ticks relative w-full overflow-hidden rounded-lg border border-border bg-card shadow-md">
-            <div className="flex">
-              {/*
-                `main` and `footer` landmarks were missing from every screen in this group,
-                so a screen-reader user had no way to skip past the panel and reach the form:
-                these routes rendered a bare div tree with no landmark structure at all.
-                The aside is complementary, so it sits outside `main` rather than inside it.
-              */}
-              <main id="main" tabIndex={-1} className="min-h-[520px] flex-1 p-8 sm:p-10 focus:outline-none">
-                {children}
-              </main>
-
-              <div className="hidden w-px shrink-0 bg-border lg:block" aria-hidden />
-
-              <aside
-                aria-label="About Baroot CNC Solutions"
-                className="hidden w-[420px] shrink-0 lg:flex lg:flex-col"
-              >
-                <div className="relative flex flex-1 flex-col items-center justify-center px-10 py-14">
-                  <BrandMark />
-                  <p className="mt-6 text-center font-display text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-foreground">
-                    Baroot <br /> CNC Solutions
-                  </p>
-                  <div className="mt-5 h-0.5 w-14 bg-primary" aria-hidden />
-                  <p className="mt-5 text-center text-sm leading-relaxed text-muted-foreground">
-                    Expert-led CNC manufacturing education, professional certifications, and a
-                    community of modern machinists.
-                  </p>
+        <div className="flex flex-1 items-center justify-center py-10 sm:py-14">
+          <div className="grid w-full items-center gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-20 xl:gap-28">
+            {/*
+              `main` and `footer` landmarks were missing from every screen in this group,
+              so a screen-reader user had no way to skip past the panel and reach the form:
+              these routes rendered a bare div tree with no landmark structure at all.
+              The aside is complementary, so it sits outside `main` rather than inside it.
+            */}
+            <aside
+              aria-label="About Baroot CNC Solutions"
+              className="hidden animate-fade-in-up lg:order-none lg:block"
+            >
+              <div className="max-w-md">
+                <p id="platform-highlights" className="eyebrow">Platform Highlights</p>
+                <p className="mt-5 text-balance font-display text-[44px] font-medium leading-[1.04] tracking-[-0.025em] text-foreground xl:text-[52px]">
+                  Baroot <br /> CNC Solutions
+                </p>
+                <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-muted-foreground">
+                  Expert-led CNC manufacturing education, professional certifications, and a
+                  community of modern machinists.
+                </p>
+                <div className="hairline mt-9 max-w-sm" aria-hidden />
+                <div className="mt-8">
+                <ul className="space-y-3" aria-labelledby="platform-highlights">
+                  {HIGHLIGHTS.map(([title, desc]) => (
+                    <li key={title} className="group flex gap-3.5 py-1">
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/15 transition-colors group-hover:bg-primary/15">
+                        <Check className="size-3.5" strokeWidth={2.5} />
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{title}</p>
+                        <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
+                          {desc}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
                 </div>
+              </div>
+            </aside>
 
-                <div className="relative mx-10 border-t border-border" />
-
-                <div className="relative flex flex-1 flex-col items-center justify-center px-10 py-14">
-                  <div className="space-y-4">
-                    <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
-                      Platform Highlights
-                    </p>
-                    <ul className="space-y-3" aria-labelledby="platform-highlights">
-                      {HIGHLIGHTS.map(([title, desc]) => (
-                        <li key={title} className="group flex gap-3">
-                          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-                            <Check className="size-3" strokeWidth={3} />
-                          </span>
-                          <div>
-                            <p className="text-13 font-semibold text-foreground">{title}</p>
-                            <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </aside>
-            </div>
+            <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[440px] rounded-2xl border border-border/70 bg-card p-7 shadow-sm ring-1 ring-black/[0.015] focus:outline-none dark:ring-white/[0.03] sm:p-10 lg:mx-0"
+            >
+              <div className="flex min-h-[420px] flex-col">{children}</div>
+            </main>
           </div>
         </div>
 
-        <footer className="text-center font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+        <footer className="pb-1 text-center text-xs text-muted-foreground">
           &copy; {new Date().getFullYear()} Baroot CNC Solutions
         </footer>
       </div>

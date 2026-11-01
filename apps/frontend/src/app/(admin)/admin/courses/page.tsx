@@ -47,6 +47,9 @@ import {
   Toolbar,
   type Tone,
 } from '@/components/admin/admin-ui';
+import { AnimatePresence, m } from 'framer-motion';
+import { spring } from '@/lib/motion';
+import { AnimatedNumber, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { CourseRowMenu, type CourseAction } from './course-row-menu';
 
 /* Courses carry a thumbnail, a subtitle, a difficulty level and live enrollment
@@ -161,8 +164,8 @@ function CourseCard({
         }
       }}
       className={cn(
-        'card-hover group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs',
-        'hover:border-border-strong',
+        'card-hover group flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs',
+        'hover:border-border-strong hover:shadow-lg',
         'focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10',
         st === 'archived' && 'opacity-80',
       )}
@@ -170,7 +173,7 @@ function CourseCard({
       <div className="flex gap-4 p-4">
         {/* Thumbnail, or a compact branded placeholder. Keeping this small means a
             missing image no longer dominates the whole card. */}
-        <div className="relative size-24 shrink-0 overflow-hidden rounded-xl border border-border sm:size-28">
+        <div className="relative size-24 shrink-0 overflow-hidden rounded-lg border border-border/70 sm:size-28">
           {course.thumbnailUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -182,15 +185,15 @@ function CourseCard({
             <div
               className="flex size-full items-center justify-center"
               style={{
-                backgroundImage: `linear-gradient(135deg, hsl(${hue} 55% 26%) 0%, hsl(${(hue + 45) % 360} 50% 16%) 100%)`,
+                backgroundImage: `linear-gradient(135deg, hsl(${hue} 24% 48%) 0%, hsl(${(hue + 45) % 360} 20% 34%) 100%)`,
               }}
             >
-              <GraduationCap className="size-7 text-white/35" />
+              <GraduationCap className="size-7 text-white/50" />
             </div>
           )}
           {st !== 'archived' && (
             <span
-              className="absolute bottom-1.5 end-1.5 flex size-6 items-center justify-center rounded-md bg-black/60 backdrop-blur-sm"
+              className="absolute bottom-1.5 end-1.5 flex size-6 items-center justify-center rounded-full bg-black/45 opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100"
               title={t('editCourse', { default: 'Edit course' })}
             >
               <PlayCircle className="size-3.5 text-white/85" />
@@ -200,7 +203,7 @@ function CourseCard({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-start justify-between gap-2">
-            <span className="line-clamp-2 text-sm font-bold leading-snug tracking-tight text-foreground transition group-hover:text-primary">
+            <span className="line-clamp-2 text-balance font-display text-base font-medium leading-snug tracking-[-0.012em] text-foreground transition-colors group-hover:text-primary">
               {course.title}
             </span>
             <div onClick={(e) => e.stopPropagation()}>
@@ -249,7 +252,7 @@ function CourseCard({
           <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-2xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <Users className="size-3" />
-              <span className={cn('tabular-nums', noEnrollments && 'font-semibold text-warning')}>
+              <span className={cn('tabular-nums', noEnrollments && 'font-medium text-warning')}>
                 {course.enrollments}
               </span>
               {t('enrolledShort', { default: 'enrolled' })}
@@ -270,11 +273,11 @@ function CourseCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 border-t border-border bg-muted/20 px-4 py-2.5">
+      <div className="flex items-center gap-2 border-t border-border/70 bg-muted/20 px-4 py-2">
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted active:scale-[0.98]"
+          className="inline-flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted active:scale-[0.98]"
         >
           <Pencil className="size-3.5 text-muted-foreground" />
           {t('edit', { default: 'Edit' })}
@@ -296,8 +299,8 @@ function CourseCard({
 
 function CourseCardSkeleton() {
   return (
-    <div className="flex gap-4 rounded-2xl border border-border bg-card p-4 shadow-xs">
-      <Skeleton className="size-24 shrink-0 rounded-xl sm:size-28" />
+    <div className="flex gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-xs">
+      <Skeleton className="size-24 shrink-0 rounded-lg sm:size-28" />
       <div className="flex-1 space-y-3">
         <Skeleton className="h-3.5 w-2/3" />
         <Skeleton className="h-3 w-1/3" />
@@ -487,19 +490,23 @@ export default function AdminCoursesPage() {
               'Create, publish and organize your catalog — every course with live enrollment and lesson counts.',
           })}
           badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success md:self-auto">
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-success/25 bg-success/10 px-3 py-1 text-xs font-medium text-success md:self-auto">
               <BadgeCheck className="size-4" />
               {t('tenantSafeBadge', { default: 'Tenant-safe · Instant publish' })}
             </span>
           }
         />
 
-        {error && (
-          <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry', { default: 'Retry' })} />
-        )}
+        <AnimatePresence initial={false}>
+          {error && (
+            <m.div key="error" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={spring.smooth} className="overflow-hidden">
+              <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry', { default: 'Retry' })} />
+            </m.div>
+          )}
+        </AnimatePresence>
 
-        <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-          <dl className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
+        <Reveal as="section" className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+          <dl className="grid grid-cols-2 divide-border/70 sm:grid-cols-4 sm:divide-x rtl:sm:divide-x-reverse [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-border/70 sm:[&>*:nth-child(-n+2)]:border-b-0">
             {[
               {
                 key: 'total',
@@ -530,22 +537,22 @@ export default function AdminCoursesPage() {
                 tone: 'text-foreground' as const,
               },
             ].map((s) => (
-              <div key={s.key} className="flex items-center gap-3 px-5 py-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/60 text-muted-foreground">
+              <div key={s.key} className="flex items-center gap-3 px-5 py-5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
                   <s.icon className="size-4" />
                 </span>
-                <div className="min-w-0">
-                  <dd className={cn('font-display text-xl font-bold leading-none tabular-nums', s.tone)}>
-                    {s.value}
+                <div className="flex min-w-0 flex-col-reverse">
+                  <dd className={cn('font-display text-2xl font-medium leading-none tracking-[-0.02em] tabular-nums', s.tone)}>
+                    {typeof s.value === 'number' ? <AnimatedNumber value={s.value} animateOnChange durationSeconds={0.8} /> : s.value}
                   </dd>
-                  <dt className="mt-1 truncate text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <dt className="mb-1.5 truncate text-xs font-medium text-muted-foreground">
                     {s.label}
                   </dt>
                 </div>
               </div>
             ))}
           </dl>
-        </section>
+        </Reveal>
 
         <Toolbar>
           <PillTabs
@@ -572,10 +579,10 @@ export default function AdminCoursesPage() {
             aria-pressed={zeroEnrollments}
             onClick={() => setParam({ enrollments: zeroEnrollments ? null : '0' })}
             className={cn(
-              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition active:scale-[0.98]',
+              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition active:scale-[0.98]',
               zeroEnrollments
-                ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                : 'border-border bg-card text-muted-foreground shadow-xs hover:text-foreground',
+                ? 'border-warning/30 bg-warning/10 text-warning'
+                : 'border-border/80 bg-card text-muted-foreground shadow-xs hover:border-border-strong hover:text-foreground',
             )}
           >
             <Signal className="size-3.5" />
@@ -638,7 +645,7 @@ export default function AdminCoursesPage() {
                   setQInput('');
                   router.replace('/admin/courses');
                 }}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-xs font-bold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-[0.98]"
               >
                 <X className="size-3.5" />
                 {tCommon('clear', { default: 'Clear' })}
@@ -656,6 +663,7 @@ export default function AdminCoursesPage() {
           </div>
         </Toolbar>
 
+        <Crossfade value={loading ? 'loading' : !rows || rows.length === 0 ? 'empty' : view} distance={6}>
         {loading ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -663,7 +671,7 @@ export default function AdminCoursesPage() {
             ))}
           </div>
         ) : !rows || rows.length === 0 ? (
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
             <EmptyState
               icon={hasFilters ? GraduationCap : BookOpen}
               tone={hasFilters ? 'amber' : 'blue'}
@@ -688,7 +696,7 @@ export default function AdminCoursesPage() {
                       setQInput('');
                       router.replace('/admin/courses');
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold shadow-xs transition hover:bg-muted"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-4 py-2 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
                   >
                     <X className="size-4" />
                     {t('clearFilters', { default: 'Clear filters' })}
@@ -697,7 +705,7 @@ export default function AdminCoursesPage() {
                   <button
                     type="button"
                     onClick={() => router.push('/admin/courses/new')}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-xs transition hover:bg-primary active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
                   >
                     <Plus className="size-4" />
                     {t('newCourse', { default: 'New course' })}
@@ -707,45 +715,46 @@ export default function AdminCoursesPage() {
             />
           </div>
         ) : view === 'grid' ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {rows.map((c) => (
-              <CourseCard
-                key={c.id}
-                course={c}
-                onOpen={() => router.push(`/admin/courses/${c.slug}/edit`)}
-                onAction={(slug, action) => void act(slug, action)}
-                labels={menuLabels}
-                tCommon={tCommon}
-              />
+          <Stagger className="grid gap-4 lg:grid-cols-2">
+            {rows.map((c, index) => (
+              <StaggerItem key={c.id} index={index} className="min-w-0">
+                <CourseCard
+                  course={c}
+                  onOpen={() => router.push(`/admin/courses/${c.slug}/edit`)}
+                  onAction={(slug, action) => void act(slug, action)}
+                  labels={menuLabels}
+                  tCommon={tCommon}
+                />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-start">
                 <thead>
-                  <tr className="border-b border-border bg-muted/40 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th scope="col" className="px-6 py-3.5 text-start font-semibold">
+                  <tr className="border-b border-border/70 bg-muted/40 text-xs font-medium text-muted-foreground">
+                    <th scope="col" className="px-6 py-3 text-start font-medium">
                       {t('colCourse', { default: 'Course' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3 text-start font-medium">
                       {t('colStatus', { default: 'Status' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-end font-semibold">
+                    <th scope="col" className="px-4 py-3 text-end font-medium">
                       {t('colLessons', { default: 'Lessons' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-end font-semibold">
+                    <th scope="col" className="px-4 py-3 text-end font-medium">
                       {t('colEnrollments', { default: 'Enrolled' })}
                     </th>
-                    <th scope="col" className="px-4 py-3.5 text-start font-semibold">
+                    <th scope="col" className="px-4 py-3 text-start font-medium">
                       {t('colUpdated', { default: 'Updated' })}
                     </th>
-                    <th scope="col" className="py-3.5 pe-6 ps-4 text-end font-semibold">
+                    <th scope="col" className="py-3 pe-6 ps-4 text-end font-medium">
                       {t('colActions', { default: 'Actions' })}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-13">
+                <tbody className="divide-y divide-border/70 text-13">
                   {rows.map((c) => {
                     const st = statusOf(c);
                     return (
@@ -763,7 +772,7 @@ export default function AdminCoursesPage() {
                       >
                         <td className="px-6 py-3.5">
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border">
+                            <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 bg-muted/50">
                               {c.thumbnailUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={c.thumbnailUrl} alt="" className="size-full object-cover" />
@@ -772,7 +781,7 @@ export default function AdminCoursesPage() {
                               )}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-foreground transition group-hover:text-primary">
+                              <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
                                 {c.title}
                               </p>
                               <p className="truncate font-mono text-2xs text-muted-foreground">
@@ -801,7 +810,7 @@ export default function AdminCoursesPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 text-end font-semibold tabular-nums text-foreground">
+                        <td className="px-4 py-3.5 text-end font-medium tabular-nums text-foreground">
                           {c.lessonsCount}
                         </td>
                         <td className="px-4 py-3.5 text-end">
@@ -809,7 +818,7 @@ export default function AdminCoursesPage() {
                             className={cn(
                               'tabular-nums',
                               c.enrollments === 0
-                                ? 'font-semibold text-warning'
+                                ? 'font-medium text-warning'
                                 : 'text-foreground',
                             )}
                           >
@@ -829,7 +838,7 @@ export default function AdminCoursesPage() {
                             <button
                               type="button"
                               onClick={() => router.push(`/admin/courses/${c.slug}/edit`)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs transition hover:bg-muted active:scale-[0.98]"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
                             >
                               <Pencil className="size-3.5" />
                               {t('edit', { default: 'Edit' })}
@@ -844,9 +853,10 @@ export default function AdminCoursesPage() {
             </div>
           </div>
         )}
+        </Crossfade>
 
         {!loading && rows && rows.length > 0 && (
-          <div className="rounded-xl border border-border bg-card px-5 py-3 shadow-xs">
+          <div className="rounded-xl border border-border/70 bg-card px-5 py-3 shadow-xs">
             <Pagination
               page={page}
               totalPages={totalPages}
