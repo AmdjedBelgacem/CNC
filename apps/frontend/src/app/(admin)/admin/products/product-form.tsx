@@ -1,19 +1,48 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { ImageIcon, Link2, Package, Search, Store, Upload, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Boxes,
+  Check,
+  FileText,
+  ImageIcon,
+  Languages,
+  Package,
+  Search,
+  Tag,
+  Upload,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, m } from 'framer-motion';
 import { spring, transition } from '@/lib/motion';
-import { DEFAULT_CURRENCY, isCurrencyCode, type CurrencyCode, type InteractiveHotspot } from '@titan/shared';
 import {
-  Field,
+  DEFAULT_CURRENCY,
+  HOTSPOT_FIELDS,
+  PRODUCT_FIELDS,
+  coverageOf,
+  isCurrencyCode,
+  type CurrencyCode,
+  type InteractiveHotspot,
+  type TranslationCoverage,
+} from '@titan/shared';
+import { Reveal } from '@/components/ui/motion';
+import { SlugField, type SectionNavItem } from '@/components/admin/form-page';
+import {
+  TranslateAction,
+  TranslationCoveragePanel,
+  useTranslateDraft,
+} from '@/components/admin/translation';
+import {
   FieldGrid,
   FormSection,
   SelectField,
   SwitchField,
+  TextArea,
   TextAreaField,
   TextField,
+  TextInput,
 } from '@/components/admin/admin-form';
 import { ErrorBanner } from '@/components/admin/admin-ui';
 import { makeId } from '@/lib/lesson-blocks';
@@ -276,6 +305,7 @@ function useRelations() {
  * upload fields would have had both writing to the same file input.
  */
 export function ImageUploadField({
+  id,
   label,
   hint,
   previewUrl,
@@ -283,6 +313,7 @@ export function ImageUploadField({
   onClear,
   maxBytes = 25 * 1024 * 1024,
 }: {
+  id?: string;
   label: string;
   hint: string;
   previewUrl: string | null;
@@ -317,6 +348,7 @@ export function ImageUploadField({
     <div className="space-y-2">
       <span className="block text-xs font-medium text-foreground">{label}</span>
       <div
+        id={id}
         role="button"
         tabIndex={0}
         onClick={() => inputRef.current?.click()}
@@ -388,361 +420,580 @@ export function ImageUploadField({
   );
 }
 
-export function ProductFormSections({
-  value,
-  set,
-  columns = 1,
-}: {
-  value: ProductFormValue;
-  set: <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) => void;
-  /**
-   * Two columns on wide screens, for the create page.
-   *
-   * These seven sections vary a lot in height, so they are flowed with CSS columns and
-   * `break-inside-avoid` rather than a grid: a grid forces every row to the height of its
-   * tallest cell, which left the short SEO card next to a tall pricing card and read as a
-   * layout mistake. Flowing keeps the natural order top-to-bottom and packs the cards.
-   */
-  columns?: 1 | 2;
-}) {
-  const t = useTranslations('admin.productForm');
-  const { academies, courses } = useRelations();
-  const digits = fractionDigits(value.currency);
-  const unit = digits === 0 ? t('minorUnitWhole', { default: 'minor units' }) : t('minorUnit', { default: 'cents' });
+/** Anchors the form sections expose to `SectionNav` and to the readiness summary. */
+export type ProductSectionId = 'basics' | 'pricing' | 'inventory' | 'media' | 'details' | 'arabic' | 'seo';
 
-  const sectionClass = columns === 2 ? 'mb-4 break-inside-avoid' : undefined;
+export interface ProductFormErrors {
+  title?: string;
+  price?: string;
+}
 
+/**
+ * The same validation rules the create screen always had: a title, and a price that is a
+ * non-negative number when one is given. Returned as messages so the form can show them
+ * inline once a save has been attempted.
+ */
+export function validateProduct(
+  value: ProductFormValue,
+  t: (key: string) => string,
+): ProductFormErrors {
+  const errors: ProductFormErrors = {};
+  if (!value.title.trim()) errors.title = t('titleRequired');
+  const priceText = value.priceCents.trim();
+  if (priceText !== '' && (!Number.isFinite(Number(priceText)) || Number(priceText) < 0)) {
+    errors.price = t('priceRequired');
+  }
+  return errors;
+}
+
+/** Which section an error lives in, in page order, so a failed save can scroll to the first. */
+export function firstInvalidSection(errors: ProductFormErrors): ProductSectionId | null {
+  if (errors.title) return 'basics';
+  if (errors.price) return 'pricing';
+  return null;
+}
+
+/** Items for the rail's `SectionNav`. */
+export function productSectionItems(
+  t: (key: string) => string,
+  errors: ProductFormErrors = {},
+): SectionNavItem[] {
+  return [
+    { id: 'basics', label: t('sectionBasics'), icon: Package, invalid: !!errors.title },
+    { id: 'pricing', label: t('sectionPricingOnly'), icon: Tag, invalid: !!errors.price },
+    { id: 'inventory', label: t('sectionInventory'), icon: Boxes },
+    { id: 'media', label: t('sectionMediaGroup'), icon: ImageIcon },
+    { id: 'details', label: t('sectionDetails'), icon: FileText },
+    { id: 'arabic', label: t('arabicCopy'), icon: Languages },
+    { id: 'seo', label: t('sectionSeo'), icon: Search },
+  ];
+}
+
+/** Everything needed to publish, each pointing at the control that fixes it. */
+export function productReadinessChecks(
+  t: (key: string) => string,
+  value: ProductFormValue,
+): ReadinessCheck[] {
+  const priced =
+    value.pricingMode === 'request' ||
+    (value.priceCents.trim() !== '' && Number(value.priceCents) > 0);
+  return [
+    { label: t('readinessTitle'), ok: !!value.title.trim(), target: 'pf-title' },
+    { label: t('readinessSlug'), ok: !!value.slug.trim(), target: 'basics' },
+    { label: t('readinessDescription'), ok: !!value.description.trim(), target: 'pf-description' },
+    { label: t('readinessCategory'), ok: !!value.category.trim(), target: 'pf-category' },
+    { label: t('readinessThumbnail'), ok: !!value.thumbnailUrl, target: 'pf-thumbnail' },
+    { label: t('readinessPrice'), ok: priced, target: 'pf-price' },
+  ];
+}
+
+/** Scroll to an element and, when it can take focus, focus it. */
+export function jumpToField(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+  if (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName) || el.tabIndex >= 0) {
+    el.focus({ preventScroll: true });
+  }
+}
+
+function SubHeading({ children, hint }: { children: ReactNode; hint?: ReactNode }) {
   return (
-    <div className={columns === 2 ? 'columns-1 gap-4 lg:columns-2' : 'space-y-5'}>
-      <FormSection
-        className={sectionClass}
-        title={t('sectionBasics', { default: 'Basics' })}
-        icon={Package}
-        description={t('sectionBasicsDesc', { default: 'How this product appears in your catalog.' })}
-      >
-        <FieldGrid>
-          <TextField
-            label={t('fieldTitle', { default: 'Title' })}
-            required
-            value={value.title}
-            onChange={(e) => {
-              set('title', e.target.value);
-              // Keep the slug in step until it is edited deliberately.
-              if (!value.slug || value.slug === slugify(value.title)) set('slug', slugify(e.target.value));
-            }}
-            placeholder={t('titlePlaceholder', { default: 'e.g. Beginner End Mill Kit' })}
-          />
-          <Field
-            label={t('fieldSlug', { default: 'Slug' })}
-            hint={t('fieldSlugHint', { default: 'The public URL segment for this product.' })}
-          >
-            {(a) => (
-              <TextInputMono
-                {...a}
-                value={value.slug || slugify(value.title)}
-                onChange={(e) => set('slug', e.target.value)}
-              />
-            )}
-          </Field>
-        </FieldGrid>
-        <div className="mt-4 space-y-4">
-          <TextField
-            label={t('fieldTagline', { default: 'Tagline' })}
-            value={value.tagline}
-            onChange={(e) => set('tagline', e.target.value)}
-            placeholder={t('taglinePlaceholder', { default: 'Short subtitle' })}
-          />
-          <TextAreaField
-            label={t('fieldDescription', { default: 'Description' })}
-            rows={5}
-            value={value.description}
-            onChange={(e) => set('description', e.target.value)}
-          />
-          <FieldGrid>
-            <TextField
-              label={t('fieldCategory', { default: 'Category' })}
-              value={value.category}
-              onChange={(e) => set('category', e.target.value)}
-              placeholder={t('categoryPlaceholder', { default: 'e.g. Tool Kits, Workholding' })}
-            />
-            <TextField
-              label={t('fieldProductType', { default: 'Product type' })}
-              hint={t('fieldProductTypeHint', {
-                default: 'The kind of product within the category, e.g. Vertical Machining Center.',
-              })}
-              value={value.productType}
-              onChange={(e) => set('productType', e.target.value)}
-              placeholder={t('productTypePlaceholder', {
-                default: 'e.g. Vertical Machining Center, Collet Systems',
-              })}
-            />
-          </FieldGrid>
-          <TextField
-            label={t('fieldTags', { default: 'Tags' })}
-            hint={t('fieldTagsHint', { default: 'Comma separated.' })}
-            value={value.tags}
-            onChange={(e) => set('tags', e.target.value)}
-            placeholder="milling, endmill, starter"
-          />
-          <TextAreaField
-            label={t('fieldFeatures', { default: 'Features' })}
-            hint={t('fieldFeaturesHint', { default: 'One per line.' })}
-            rows={3}
-            value={value.features}
-            onChange={(e) => set('features', e.target.value)}
-          />
-        </div>
-      </FormSection>
-
-      <FormSection
-        className={sectionClass}
-        title={t('sectionPricing', { default: 'Pricing & inventory' })}
-        icon={Store}
-        description={t('sectionPricingDesc', { default: 'Set the price customers pay and how stock behaves.' })}
-      >
-        {/*
-          Pricing mode decides what the storefront shows and whether the cart is even
-          reachable, so it sits above the price field rather than being buried beside it.
-        */}
-        <FieldGrid>
-          <SelectField
-            label={t('fieldPricingMode', { default: 'Pricing' })}
-            value={value.pricingMode}
-            onChange={(e) => set('pricingMode', e.target.value as 'fixed' | 'from' | 'request')}
-            hint={t('pricingModeHint', { default: 'How this product is priced on the storefront.' })}
-          >
-            <option value="fixed">{t('pricingFixed', { default: 'Fixed price' })}</option>
-            <option value="from">{t('pricingFrom', { default: 'From a price' })}</option>
-            <option value="request">{t('pricingRequest', { default: 'Request a quote' })}</option>
-          </SelectField>
-        </FieldGrid>
-
-        {value.pricingMode === 'request' ? (
-          <p className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
-            {t('pricingRequestExplain', {
-              default:
-                'No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.',
-            })}
-          </p>
-        ) : null}
-
-        <FieldGrid>
-          <TextField
-            label={t('fieldPriceOptional')}
-            type="number"
-            min={0}
-            inputMode="numeric"
-            value={value.priceCents}
-            onChange={(e) => set('priceCents', e.target.value)}
-            hint={
-              value.pricingMode === 'from'
-                ? t('fieldPriceHintFrom', {
-                    unit,
-                    default:
-                      'Used as the base. “From” is computed from the lowest option price across variants.',
-                  })
-                : t('fieldPriceHint', { unit, default: 'Stored in {unit}.' })
-            }
-          />
-          <TextField
-            label={t('fieldCompareAt', { default: 'Compare-at price' })}
-            type="number"
-            min={0}
-            inputMode="numeric"
-            value={value.compareAtCents}
-            onChange={(e) => set('compareAtCents', e.target.value)}
-            hint={t('fieldCompareAtHint', { default: 'Shown struck through to signal a discount.' })}
-            error={
-              value.compareAtCents && Number(value.compareAtCents) <= Number(value.priceCents)
-                ? t('compareAtTooLow', { default: 'Must be higher than the price to show a discount.' })
-                : undefined
-            }
-          />
-          <SelectField
-            label={t('fieldCurrency', { default: 'Currency' })}
-            value={value.currency}
-            onChange={(e) => set('currency', e.target.value)}
-          >
-            {CURRENCIES.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </SelectField>
-          <TextField
-            label={t('fieldInventory', { default: 'Inventory' })}
-            type="number"
-            min={0}
-            inputMode="numeric"
-            disabled={!value.trackInventory}
-            value={value.inventory}
-            onChange={(e) => set('inventory', e.target.value)}
-          />
-          <TextField
-            label={t('fieldSortOrder', { default: 'Sort order' })}
-            type="number"
-            inputMode="numeric"
-            value={value.sortOrder}
-            onChange={(e) => set('sortOrder', e.target.value)}
-            hint={t('fieldSortOrderHint', { default: 'Lower numbers appear first.' })}
-          />
-        </FieldGrid>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <SwitchField
-            label={t('trackInventory', { default: 'Track inventory' })}
-            description={t('trackInventoryDesc', { default: 'Decrease stock as orders are placed.' })}
-            checked={value.trackInventory}
-            onCheckedChange={(v) => set('trackInventory', v)}
-          />
-          <SwitchField
-            label={t('allowBackorder', { default: 'Allow backorder' })}
-            description={t('allowBackorderDesc', { default: 'Keep selling when stock reaches zero.' })}
-            checked={value.allowBackorder}
-            onCheckedChange={(v) => set('allowBackorder', v)}
-          />
-          <SwitchField
-            label={t('isDigital', { default: 'Digital product' })}
-            description={t('isDigitalDesc', { default: 'No shipping required after checkout.' })}
-            checked={value.isDigital}
-            onCheckedChange={(v) => set('isDigital', v)}
-          />
-          <SwitchField
-            label={t('featured', { default: 'Featured' })}
-            description={t('featuredDesc', { default: 'Highlight this product in the storefront.' })}
-            checked={value.featured}
-            onCheckedChange={(v) => set('featured', v)}
-          />
-        </div>
-      </FormSection>
-
-      <FormSection
-        className={sectionClass}
-        title={t('sectionRelations', { default: 'Relations' })}
-        icon={Link2}
-        description={t('sectionRelationsDesc', { default: 'Optionally surface this product inside an academy or course.' })}
-      >
-        <FieldGrid>
-          <SelectField
-            label={t('fieldAcademy', { default: 'Academy' })}
-            value={value.academyId}
-            onChange={(e) => set('academyId', e.target.value)}
-          >
-            <option value="">{t('none', { default: 'None' })}</option>
-            {academies.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.title}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            label={t('fieldCourse', { default: 'Course' })}
-            value={value.courseId}
-            onChange={(e) => set('courseId', e.target.value)}
-          >
-            <option value="">{t('none', { default: 'None' })}</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </SelectField>
-        </FieldGrid>
-      </FormSection>
-
-      <FormSection
-        className={sectionClass}
-        title={t('sectionSeo', { default: 'SEO' })}
-        icon={Search}
-        description={t('sectionSeoDesc', { default: 'Overrides for search results. Leave blank to use the title and description above.' })}
-      >
-        <FieldGrid>
-          <TextField
-            label={t('fieldSeoTitle', { default: 'SEO title' })}
-            value={value.seoTitle}
-            onChange={(e) => set('seoTitle', e.target.value)}
-            placeholder={t('seoTitlePlaceholder', { default: 'Custom title for search results' })}
-          />
-          <TextAreaField
-            label={t('fieldSeoDescription', { default: 'SEO description' })}
-            rows={3}
-            value={value.seoDescription}
-            onChange={(e) => set('seoDescription', e.target.value)}
-            placeholder={t('seoDescriptionPlaceholder', { default: 'Meta description for search' })}
-          />
-        </FieldGrid>
-      </FormSection>
-
-      <FormSection
-        className={sectionClass}
-        title={t('sectionMedia', { default: 'Thumbnail' })}
-        icon={ImageIcon}
-        description={t('sectionMediaDesc', { default: 'Shown in catalog listings and the storefront.' })}
-      >
-        <ImageUploadField
-          label={t('fieldThumbnail', { default: 'Product thumbnail' })}
-          hint={t('thumbnailHint', { default: 'Square recommended · JPG, PNG, WebP, AVIF · up to 25 MB' })}
-          previewUrl={value.thumbnailUrl}
-          onSelect={(file) => {
-            uploadImage(file, 'covers')
-              .then(({ url }) => set('thumbnailUrl', url))
-              .catch((e) =>
-                toast({ type: 'err', title: 'Upload failed', description: e instanceof Error ? e.message : undefined }),
-              );
-          }}
-          onClear={() => set('thumbnailUrl', null)}
-        />
-      </FormSection>
-
-      <FormSection
-        className={sectionClass}
-        title={t('sectionHotspots')}
-        icon={ImageIcon}
-        description={t('sectionHotspotsDesc')}
-      >
-        <ProductHotspotsEditor
-          imageUrl={value.thumbnailUrl}
-          pinpoints={value.pinpoints}
-          onChange={(next) => set('pinpoints', next)}
-        />
-      </FormSection>
-
-      <FormSection
-        className={sectionClass}
-        title={t('sectionDocs')}
-        icon={ImageIcon}
-        description={t('sectionDocsDesc')}
-      >
-        <ProductDocumentsField
-          documents={value.documents}
-          onChange={(next) => set('documents', next)}
-        />
-      </FormSection>
+    <div className="mb-3 mt-6 border-t border-border/60 pt-5">
+      <h3 className="font-display text-base font-medium tracking-[-0.01em] text-foreground">{children}</h3>
+      {hint ? <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
 
 /**
- * Monospace variant used for slug inputs. It receives the same props as the
- * other controls, so `invalid` has to be consumed rather than forwarded — it is
- * not a DOM attribute and React warns when it reaches the element.
+ * Arabic copy, plus the translate-from-English helper.
+ *
+ * Lives with the form so the create and edit screens share one implementation: both used to
+ * carry an identical copy of this hook and its coverage maths.
  */
-function TextInputMono({
-  className,
-  invalid: _invalid,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
+function useProductArabic(
+  value: ProductFormValue,
+  set: <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) => void,
+) {
+  const tTranslate = useTranslations('admin.translate');
+
+  const groups = useMemo(() => {
+    const main: Record<string, string> = {
+      Title: value.title,
+      Tagline: value.tagline,
+      Description: value.description,
+      'Bullet points (one per line)': value.features,
+      'SEO title': value.seoTitle,
+      'SEO description': value.seoDescription,
+    };
+    const out: Array<{ key: string; fields: Record<string, string> }> = [{ key: 'product', fields: main }];
+    for (const pin of value.pinpoints) {
+      out.push({
+        key: `pin:${pin.id}`,
+        fields: { Label: pin.label, Tooltip: pin.tooltip ?? '', Detail: pin.detail ?? '' },
+      });
+    }
+    return out;
+  }, [value.title, value.tagline, value.description, value.features, value.seoTitle, value.seoDescription, value.pinpoints]);
+
+  const { busy, run, coverageFor } = useTranslateDraft({
+    entity: 'product copy',
+    descriptors: PRODUCT_FIELDS,
+    groups,
+    onApply: (key, translations) => {
+      if (key.startsWith('pin:')) {
+        const id = key.slice('pin:'.length);
+        const current = value.translationsAr.hotspots[id] ?? { label: '', tooltip: '', detail: '' };
+        set('translationsAr', {
+          ...value.translationsAr,
+          hotspots: {
+            ...value.translationsAr.hotspots,
+            [id]: {
+              label: translations['Label'] ?? current.label,
+              tooltip: translations['Tooltip'] ?? current.tooltip,
+              detail: translations['Detail'] ?? current.detail,
+            },
+          },
+        });
+        return;
+      }
+      set('translationsAr', {
+        ...value.translationsAr,
+        title: translations['Title'] ?? value.translationsAr.title,
+        tagline: translations['Tagline'] ?? value.translationsAr.tagline,
+        description: translations['Description'] ?? value.translationsAr.description,
+        features: translations['Bullet points (one per line)'] ?? value.translationsAr.features,
+        seoTitle: translations['SEO title'] ?? value.translationsAr.seoTitle,
+        seoDescription: translations['SEO description'] ?? value.translationsAr.seoDescription,
+      });
+    },
+    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
+  });
+
+  const productCoverage = coverageFor(value, value.translationsAr);
+  const total = useMemo<TranslationCoverage | undefined>(() => {
+    if (!productCoverage) return undefined;
+    // Fold hotspot strings into the product bar: leaving them out would show a product as fully
+    // translated while its image pins were still English.
+    let translated = productCoverage.translated;
+    let count = productCoverage.total;
+    const missing = [...productCoverage.missing];
+    for (const pin of value.pinpoints) {
+      const c = coverageOf(pin, value.translationsAr.hotspots?.[pin.id] ?? null, HOTSPOT_FIELDS);
+      count += c.total;
+      translated += c.translated;
+      missing.push(...c.missing);
+    }
+    return { total: count, translated, missing, present: [] };
+  }, [productCoverage, value.pinpoints, value.translationsAr.hotspots]);
+
+  return { coverage: total, busy, run };
+}
+
+export function ProductFormSections({
+  value,
+  set,
+  mode = 'create',
+  errors = {},
+  gallery,
+}: {
+  value: ProductFormValue;
+  set: <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) => void;
+  mode?: 'create' | 'edit';
+  /** Inline errors; the page decides when they become visible (after the first attempt). */
+  errors?: ProductFormErrors;
+  /** The gallery manager, which only exists once the product has been saved. */
+  gallery?: ReactNode;
+}) {
+  const t = useTranslations('admin.productForm');
+  const tForm = useTranslations('ui.adminForm');
+  const { academies, courses } = useRelations();
+  const arabic = useProductArabic(value, set);
+  const digits = fractionDigits(value.currency);
+  const unit = digits === 0 ? t('minorUnitWhole', { default: 'minor units' }) : t('minorUnit', { default: 'cents' });
+  const setAr = (patch: Partial<ProductFormValue['translationsAr']>) =>
+    set('translationsAr', { ...value.translationsAr, ...patch });
+
   return (
-    <input
-      {...props}
-      className={cn(
-        'w-full rounded-xl border border-border/80 bg-surface-sunken px-3 py-2 font-mono text-sm text-muted-foreground outline-none transition',
-        'hover:border-border-strong focus:border-primary/60 focus:ring-4 focus:ring-primary/10',
-        _invalid && 'border-destructive',
-        className,
-      )}
-    />
+    <>
+      <Reveal>
+        <FormSection
+          id="basics"
+          title={t('sectionBasics', { default: 'Basics' })}
+          icon={Package}
+          description={t('sectionBasicsDesc', { default: 'How this product appears in your catalog.' })}
+        >
+          <div className="space-y-5">
+            <TextField
+              id="pf-title"
+              label={t('fieldTitle', { default: 'Title' })}
+              required
+              value={value.title}
+              onChange={(e) => set('title', e.target.value)}
+              placeholder={t('titlePlaceholder', { default: 'e.g. Beginner End Mill Kit' })}
+              error={errors.title}
+              autoFocus={mode === 'create'}
+            />
+            <SlugField
+              label={t('fieldSlug', { default: 'Slug' })}
+              value={value.slug}
+              onChange={(next) => set('slug', next)}
+              prefix="/products/"
+              source={mode === 'create' ? value.title : undefined}
+              mode={mode}
+            />
+            <TextField
+              label={t('fieldTagline', { default: 'Tagline' })}
+              value={value.tagline}
+              onChange={(e) => set('tagline', e.target.value)}
+              placeholder={t('taglinePlaceholder', { default: 'Short subtitle' })}
+            />
+            <TextAreaField
+              id="pf-description"
+              label={t('fieldDescription', { default: 'Description' })}
+              rows={5}
+              value={value.description}
+              onChange={(e) => set('description', e.target.value)}
+            />
+            <FieldGrid>
+              <TextField
+                id="pf-category"
+                label={t('fieldCategory', { default: 'Category' })}
+                value={value.category}
+                onChange={(e) => set('category', e.target.value)}
+                placeholder={t('categoryPlaceholder', { default: 'e.g. Tool Kits, Workholding' })}
+              />
+              <TextField
+                label={t('fieldProductType', { default: 'Product type' })}
+                hint={t('fieldProductTypeHint', {
+                  default: 'The kind of product within the category, e.g. Vertical Machining Center.',
+                })}
+                value={value.productType}
+                onChange={(e) => set('productType', e.target.value)}
+                placeholder={t('productTypePlaceholder', {
+                  default: 'e.g. Vertical Machining Center, Collet Systems',
+                })}
+              />
+            </FieldGrid>
+            <TextField
+              label={t('fieldTags', { default: 'Tags' })}
+              hint={t('fieldTagsHint', { default: 'Comma separated.' })}
+              value={value.tags}
+              onChange={(e) => set('tags', e.target.value)}
+              placeholder="milling, endmill, starter"
+            />
+            <TextAreaField
+              label={t('fieldFeatures', { default: 'Features' })}
+              hint={t('fieldFeaturesHint', { default: 'One per line.' })}
+              rows={3}
+              value={value.features}
+              onChange={(e) => set('features', e.target.value)}
+            />
+          </div>
+        </FormSection>
+      </Reveal>
+
+      <Reveal delay={0.03}>
+        <FormSection
+          id="pricing"
+          title={t('sectionPricingOnly')}
+          icon={Tag}
+          description={t('sectionPricingOnlyDesc')}
+        >
+          <div className="space-y-5">
+            {/*
+              Pricing mode decides what the storefront shows and whether the cart is even
+              reachable, so it sits above the price field rather than being buried beside it.
+            */}
+            <SelectField
+              label={t('fieldPricingMode', { default: 'Pricing' })}
+              value={value.pricingMode}
+              onChange={(e) => set('pricingMode', e.target.value as 'fixed' | 'from' | 'request')}
+              hint={t('pricingModeHint', { default: 'How this product is priced on the storefront.' })}
+            >
+              <option value="fixed">{t('pricingFixed', { default: 'Fixed price' })}</option>
+              <option value="from">{t('pricingFrom', { default: 'From a price' })}</option>
+              <option value="request">{t('pricingRequest', { default: 'Request a quote' })}</option>
+            </SelectField>
+
+            {value.pricingMode === 'request' ? (
+              <p className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+                {t('pricingRequestExplain', {
+                  default:
+                    'No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.',
+                })}
+              </p>
+            ) : null}
+
+            <FieldGrid cols={3}>
+              <TextField
+                id="pf-price"
+                label={t('fieldPriceOptional')}
+                type="number"
+                min={0}
+                inputMode="numeric"
+                dir="ltr"
+                value={value.priceCents}
+                onChange={(e) => set('priceCents', e.target.value)}
+                error={errors.price}
+                hint={
+                  value.pricingMode === 'from'
+                    ? t('fieldPriceHintFrom', {
+                        unit,
+                        default:
+                          'Used as the base. “From” is computed from the lowest option price across variants.',
+                      })
+                    : t('fieldPriceHint', { unit, default: 'Stored in {unit}.' })
+                }
+              />
+              <TextField
+                label={t('fieldCompareAt', { default: 'Compare-at price' })}
+                type="number"
+                min={0}
+                inputMode="numeric"
+                dir="ltr"
+                value={value.compareAtCents}
+                onChange={(e) => set('compareAtCents', e.target.value)}
+                hint={t('fieldCompareAtHint', { default: 'Shown struck through to signal a discount.' })}
+                error={
+                  value.compareAtCents && Number(value.compareAtCents) <= Number(value.priceCents)
+                    ? t('compareAtTooLow', { default: 'Must be higher than the price to show a discount.' })
+                    : undefined
+                }
+              />
+              <SelectField
+                label={t('fieldCurrency', { default: 'Currency' })}
+                value={value.currency}
+                onChange={(e) => set('currency', e.target.value)}
+              >
+                {CURRENCIES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </SelectField>
+            </FieldGrid>
+          </div>
+        </FormSection>
+      </Reveal>
+
+      <Reveal delay={0.04}>
+        <FormSection
+          id="inventory"
+          title={t('sectionInventory')}
+          icon={Boxes}
+          description={t('sectionInventoryDesc')}
+        >
+          <div className="space-y-5">
+            <FieldGrid>
+              <TextField
+                label={t('fieldInventory', { default: 'Inventory' })}
+                type="number"
+                min={0}
+                inputMode="numeric"
+                dir="ltr"
+                disabled={!value.trackInventory}
+                value={value.inventory}
+                onChange={(e) => set('inventory', e.target.value)}
+              />
+              <TextField
+                label={t('fieldSortOrder', { default: 'Sort order' })}
+                type="number"
+                inputMode="numeric"
+                dir="ltr"
+                value={value.sortOrder}
+                onChange={(e) => set('sortOrder', e.target.value)}
+                hint={t('fieldSortOrderHint', { default: 'Lower numbers appear first.' })}
+              />
+            </FieldGrid>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SwitchField
+                label={t('trackInventory', { default: 'Track inventory' })}
+                description={t('trackInventoryDesc', { default: 'Decrease stock as orders are placed.' })}
+                checked={value.trackInventory}
+                onCheckedChange={(v) => set('trackInventory', v)}
+              />
+              <SwitchField
+                label={t('allowBackorder', { default: 'Allow backorder' })}
+                description={t('allowBackorderDesc', { default: 'Keep selling when stock reaches zero.' })}
+                checked={value.allowBackorder}
+                onCheckedChange={(v) => set('allowBackorder', v)}
+              />
+              <SwitchField
+                label={t('isDigital', { default: 'Digital product' })}
+                description={t('isDigitalDesc', { default: 'No shipping required after checkout.' })}
+                checked={value.isDigital}
+                onCheckedChange={(v) => set('isDigital', v)}
+              />
+              <SwitchField
+                label={t('featured', { default: 'Featured' })}
+                description={t('featuredDesc', { default: 'Highlight this product in the storefront.' })}
+                checked={value.featured}
+                onCheckedChange={(v) => set('featured', v)}
+              />
+            </div>
+          </div>
+        </FormSection>
+      </Reveal>
+
+      <Reveal delay={0.05}>
+        <FormSection
+          id="media"
+          title={t('sectionMediaGroup')}
+          icon={ImageIcon}
+          description={t('sectionMediaGroupDesc')}
+        >
+          <ImageUploadField
+            id="pf-thumbnail"
+            label={t('fieldThumbnail', { default: 'Product thumbnail' })}
+            hint={t('thumbnailHint', { default: 'Square recommended · JPG, PNG, WebP, AVIF · up to 25 MB' })}
+            previewUrl={value.thumbnailUrl}
+            onSelect={(file) => {
+              uploadImage(file, 'covers')
+                .then(({ url }) => set('thumbnailUrl', url))
+                .catch((e) =>
+                  toast({ type: 'err', title: t('uploadFailed'), description: e instanceof Error ? e.message : undefined }),
+                );
+            }}
+            onClear={() => set('thumbnailUrl', null)}
+          />
+
+          <SubHeading hint={gallery ? t('galleryHint') : t('galleryAfterCreate')}>
+            {t('galleryTitle', { default: 'Gallery' })}
+          </SubHeading>
+          {gallery ?? null}
+
+          <SubHeading hint={t('sectionHotspotsDesc')}>{t('sectionHotspots')}</SubHeading>
+          <ProductHotspotsEditor
+            imageUrl={value.thumbnailUrl}
+            pinpoints={value.pinpoints}
+            onChange={(next) => set('pinpoints', next)}
+          />
+        </FormSection>
+      </Reveal>
+
+      <Reveal delay={0.06}>
+        <FormSection
+          id="details"
+          title={t('sectionDetails')}
+          icon={FileText}
+          description={t('sectionDetailsDesc')}
+        >
+          <div className="space-y-5">
+            <FieldGrid>
+              <SelectField
+                label={t('fieldAcademy', { default: 'Academy' })}
+                value={value.academyId}
+                onChange={(e) => set('academyId', e.target.value)}
+              >
+                <option value="">{t('none', { default: 'None' })}</option>
+                {academies.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title}
+                  </option>
+                ))}
+              </SelectField>
+              <SelectField
+                label={t('fieldCourse', { default: 'Course' })}
+                value={value.courseId}
+                onChange={(e) => set('courseId', e.target.value)}
+              >
+                <option value="">{t('none', { default: 'None' })}</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </SelectField>
+            </FieldGrid>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              {t('sectionRelationsDesc', { default: 'Optionally surface this product inside an academy or course.' })}
+            </p>
+          </div>
+          <SubHeading hint={t('sectionDocsDesc')}>{t('sectionDocs')}</SubHeading>
+          <ProductDocumentsField
+            documents={value.documents}
+            onChange={(next) => set('documents', next)}
+          />
+        </FormSection>
+      </Reveal>
+
+      <Reveal delay={0.07}>
+        <FormSection
+          id="arabic"
+          title={t('arabicCopy', { default: 'Arabic copy' })}
+          icon={Languages}
+          badge={tForm('optional')}
+          description={t('arabicCopyHint', {
+            default: 'Shown to Arabic visitors. Leave blank to fall back to English.',
+          })}
+          actions={
+            <TranslateAction
+              coverage={arabic.coverage}
+              busy={arabic.busy}
+              onTranslate={(scope) => void arabic.run(scope)}
+            />
+          }
+        >
+          {arabic.coverage && <TranslationCoveragePanel coverage={arabic.coverage} className="mb-4" />}
+          <div className="grid gap-4" dir="rtl">
+            <TextField
+              label={t('arabicTitle', { default: 'Arabic title' })}
+              value={value.translationsAr.title}
+              onChange={(e) => setAr({ title: e.target.value })}
+            />
+            <TextField
+              label={t('arabicTagline', { default: 'Arabic tagline' })}
+              value={value.translationsAr.tagline}
+              onChange={(e) => setAr({ tagline: e.target.value })}
+            />
+            <TextAreaField
+              label={t('arabicDescription', { default: 'Arabic description' })}
+              value={value.translationsAr.description}
+              onChange={(e) => setAr({ description: e.target.value })}
+              rows={5}
+            />
+            <TextAreaField
+              label={t('arabicFeatures', { default: 'Arabic bullet points (one per line)' })}
+              value={value.translationsAr.features}
+              onChange={(e) => setAr({ features: e.target.value })}
+              rows={4}
+            />
+          </div>
+        </FormSection>
+      </Reveal>
+
+      <Reveal delay={0.08}>
+        <FormSection
+          id="seo"
+          title={t('sectionSeo', { default: 'SEO' })}
+          icon={Search}
+          badge={tForm('optional')}
+          description={t('sectionSeoDesc', { default: 'Overrides for search results. Leave blank to use the title and description above.' })}
+        >
+          <div className="space-y-5">
+            <TextField
+              label={t('fieldSeoTitle', { default: 'SEO title' })}
+              value={value.seoTitle}
+              onChange={(e) => set('seoTitle', e.target.value)}
+              placeholder={t('seoTitlePlaceholder', { default: 'Custom title for search results' })}
+            />
+            <TextAreaField
+              label={t('fieldSeoDescription', { default: 'SEO description' })}
+              rows={3}
+              value={value.seoDescription}
+              onChange={(e) => set('seoDescription', e.target.value)}
+              placeholder={t('seoDescriptionPlaceholder', { default: 'Meta description for search' })}
+            />
+          </div>
+        </FormSection>
+      </Reveal>
+    </>
   );
 }
+
 
 export { ErrorBanner, isCurrencyCode };
 
@@ -791,7 +1042,7 @@ export function ProductHotspotsEditor({
       </div>
       {imageUrl ? (
         <div className="relative inline-block max-w-full overflow-hidden rounded-xl border border-border/70 bg-surface-sunken align-top">
-          <img src={imageUrl} alt="Product" className="block max-h-96 max-w-full object-contain" />
+          <img src={imageUrl} alt="" className="block max-h-96 max-w-full object-contain" />
           <AnimatePresence>
           {placing && (
             <m.button
@@ -848,34 +1099,31 @@ export function ProductHotspotsEditor({
           >
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-foreground">
-                Point {index + 1} · {Math.round(p.x)}%, {Math.round(p.y)}%
+                {t('hotspotNumber', { number: index + 1 })} · <span dir="ltr">{Math.round(p.x)}%, {Math.round(p.y)}%</span>
               </p>
               <button
                 type="button"
                 onClick={() => onChange(pinpoints.filter((x) => x.id !== p.id))}
                 className="rounded-lg border border-border/70 px-2 py-1 text-xs font-medium text-destructive transition hover:border-destructive/30 hover:bg-destructive/8"
               >
-                Remove
+                {t('removeDocument')}
               </button>
             </div>
-            <input
+            <TextInput
               value={p.label}
               placeholder={t('hotspotLabel')}
               onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, label: e.target.value } : x)))}
-              className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
-            <input
+            <TextInput
               value={p.tooltip ?? ''}
               placeholder={t('hotspotTooltip')}
               onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, tooltip: e.target.value || null } : x)))}
-              className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
-            <textarea
+            <TextArea
               value={p.detail ?? ''}
               placeholder={t('hotspotDetail')}
               rows={2}
               onChange={(e) => onChange(pinpoints.map((x) => (x.id === p.id ? { ...x, detail: e.target.value || null } : x)))}
-              className="w-full rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
             />
           </m.div>
         ))}
@@ -946,11 +1194,11 @@ export function ProductDocumentsField({
             exit={{ opacity: 0, transition: transition.leave }}
             className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-xs"
           >
-            <input
+            <TextInput
               value={doc.title}
               onChange={(e) => onChange(documents.map((d, i) => (i === index ? { ...d, title: e.target.value } : d)))}
               placeholder={t('documentTitle', { default: 'Document title' })}
-              className="min-w-0 flex-1 rounded-lg border border-border/80 bg-background px-3 py-2 text-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
+              className="min-w-0 flex-1"
             />
             <a
               href={doc.url}
@@ -975,24 +1223,34 @@ export function ProductDocumentsField({
   );
 }
 
-export function PublishReadiness({
-  checks,
-}: {
-  checks: { label: string; ok: boolean }[];
-}) {
+export interface ReadinessCheck {
+  label: string;
+  ok: boolean;
+  /** Element id (a field) or section id to jump to when this item is outstanding. */
+  target: string;
+}
+
+/**
+ * Compact publish-readiness summary. Complete items collapse into the count; each missing
+ * item is a button that takes the author straight to the control that fixes it.
+ */
+export function PublishReadiness({ checks, className }: { checks: ReadinessCheck[]; className?: string }) {
   const t = useTranslations('admin.productForm');
   const ready = checks.filter((c) => c.ok).length;
-  const missing = checks.filter((c) => !c.ok).map((c) => c.label);
+  const missing = checks.filter((c) => !c.ok);
   const done = missing.length === 0;
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-xs">
+    <div className={cn('rounded-xl border border-border/70 bg-card p-3.5 shadow-xs', className)}>
       <div className="flex items-center justify-between gap-3">
-        <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">{t('publishReadiness')}</p>
-        <span className={cn(
-          'inline-flex items-center gap-2 font-mono text-xs tabular-nums',
-          done ? 'text-success' : 'text-muted-foreground',
-        )}>
+        <p className="text-13 font-medium text-foreground">{t('publishReadiness')}</p>
+        <span
+          className={cn(
+            'inline-flex items-center gap-2 font-mono text-xs tabular-nums',
+            done ? 'text-success' : 'text-muted-foreground',
+          )}
+          dir="ltr"
+        >
           {/* One segment per check, so an incomplete list shows which requirement is still
               outstanding rather than a bar that only says "somewhere short". */}
           <span className="inline-flex items-center gap-[3px]" aria-hidden>
@@ -1012,19 +1270,30 @@ export function PublishReadiness({
           {ready}/{checks.length}
         </span>
       </div>
-      <AnimatePresence mode="wait" initial={false}>
-        <m.p
-          key={done ? 'done' : missing.join('|')}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0, transition: transition.enter }}
-          exit={{ opacity: 0, transition: transition.leave }}
-          className={cn('mt-2 text-xs', done ? 'text-success' : 'text-muted-foreground')}
-        >
-          {done
-            ? t('readinessReady')
-            : t('readinessMissing', { items: missing.join(' · ') })}
-        </m.p>
-      </AnimatePresence>
+      {done ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-success">
+          <Check className="size-3.5" />
+          {t('readinessReady')}
+        </p>
+      ) : (
+        <>
+          <p className="mt-2 text-xs text-muted-foreground">{t('readinessFix')}</p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {missing.map((check) => (
+              <li key={check.target}>
+                <button
+                  type="button"
+                  onClick={() => jumpToField(check.target)}
+                  className="pressable inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning transition-colors hover:bg-warning/15"
+                >
+                  {check.label}
+                  <ArrowRight className="size-3 rtl:rotate-180" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

@@ -1,38 +1,22 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Globe, GlobeLock, Save, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Globe, GlobeLock, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
-import {
-  PRODUCT_FIELDS,
-  HOTSPOT_FIELDS,
-  coverageOf,
-  type ContentLocale,
-  type ProductContentTranslation,
-  type TranslationCoverage,
-} from '@titan/shared';
-import {
-  TranslateAction,
-  TranslationCoveragePanel,
-  useTranslateDraft,
-} from '@/components/admin/translation';
-import { TextAreaField, TextField } from '@/components/admin/admin-form';
+import type { ContentLocale, ProductContentTranslation } from '@titan/shared';
 import { toast } from '@/components/ui/toast';
 import { formatMoney } from '@/lib/api/normalize';
-import {
-  AdminCommandBar,
-  AdminPageHeader,
-  BarButton,
-  BarPrimaryButton,
-} from '@/components/admin/admin-chrome';
-import { FormActions, FormSkeleton } from '@/components/admin/admin-form';
-import { ErrorBanner, StatusPill } from '@/components/admin/admin-ui';
+import { AdminCommandBar, AdminPageHeader, BarButton } from '@/components/admin/admin-chrome';
+import { FormSkeleton } from '@/components/admin/admin-form';
+import { FormLayout, SaveDock, SectionNav, StatusChip } from '@/components/admin/form-page';
+import { ErrorBanner } from '@/components/admin/admin-ui';
 import {
   ProductFormSections,
   PublishReadiness,
   productFormPayload,
+  productReadinessChecks,
+  productSectionItems,
   useProductForm,
   type ProductFormValue,
 } from '../../product-form';
@@ -159,86 +143,6 @@ export default function ProductEditorPage() {
 
   const { value, set, reset } = useProductForm();
 
-  /**
-   * Product copy and hotspot copy in one pass.
-   *
-   * Hotspots are their own group per product because their labels are keyed by pin id: sending all
-   * of them under one key would make it impossible to tell which pin a returned label belongs to.
-   */
-  const translateGroups = useMemo(() => {
-    const main: Record<string, string> = {
-      Title: value.title,
-      Tagline: value.tagline,
-      Description: value.description,
-      'Bullet points (one per line)': value.features,
-      'SEO title': value.seoTitle,
-      'SEO description': value.seoDescription,
-    };
-    const groups: Array<{ key: string; fields: Record<string, string> }> = [{ key: 'product', fields: main }];
-    for (const pin of value.pinpoints) {
-      groups.push({
-        key: `pin:${pin.id}`,
-        fields: { Label: pin.label, Tooltip: pin.tooltip ?? '', Detail: pin.detail ?? '' },
-      });
-    }
-    return groups;
-  }, [value.title, value.tagline, value.description, value.features, value.seoTitle, value.seoDescription, value.pinpoints]);
-
-  const { busy: translateBusy, run: runTranslate, coverageFor } = useTranslateDraft({
-    entity: 'product copy',
-    descriptors: PRODUCT_FIELDS,
-    groups: translateGroups,
-    onApply: (key, translations) => {
-      if (key.startsWith('pin:')) {
-        const id = key.slice('pin:'.length);
-        const current = value.translationsAr.hotspots[id] ?? { label: '', tooltip: '', detail: '' };
-        set('translationsAr', {
-          ...value.translationsAr,
-          hotspots: {
-            ...value.translationsAr.hotspots,
-            [id]: {
-              label: translations['Label'] ?? current.label,
-              tooltip: translations['Tooltip'] ?? current.tooltip,
-              detail: translations['Detail'] ?? current.detail,
-            },
-          },
-        });
-        return;
-      }
-      set('translationsAr', {
-        ...value.translationsAr,
-        title: translations['Title'] ?? value.translationsAr.title,
-        tagline: translations['Tagline'] ?? value.translationsAr.tagline,
-        description: translations['Description'] ?? value.translationsAr.description,
-        features: translations['Bullet points (one per line)'] ?? value.translationsAr.features,
-        seoTitle: translations['SEO title'] ?? value.translationsAr.seoTitle,
-        seoDescription: translations['SEO description'] ?? value.translationsAr.seoDescription,
-      });
-    },
-    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
-  });
-
-  const tTranslate = useTranslations('admin.translate');
-  const productCoverage = coverageFor(value, value.translationsAr);
-  const hotspotCoverage = value.pinpoints.map((pin) => ({
-    pin,
-    coverage: coverageOf(pin, value.translationsAr.hotspots?.[pin.id] ?? null, HOTSPOT_FIELDS),
-  }));
-  const totalProductCoverage = useMemo<TranslationCoverage | undefined>(() => {
-    if (!productCoverage) return undefined;
-    // Fold hotspot strings into the product bar: leaving them out would show a product as fully
-    // translated while its image pins were still English.
-    let translated = productCoverage.translated;
-    let total = productCoverage.total;
-    const missing = [...productCoverage.missing];
-    for (const entry of hotspotCoverage) {
-      total += entry.coverage.total;
-      translated += entry.coverage.translated;
-      missing.push(...entry.coverage.missing);
-    }
-    return { total, translated, missing, present: [] };
-  }, [productCoverage, hotspotCoverage]);
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -278,7 +182,11 @@ export default function ProductEditorPage() {
     // Guard the in-flight request, not just the button's disabled prop: a double
     // click can dispatch twice before React re-renders, and two concurrent saves of a
     // stale payload is exactly how one clobbers the other.
-    if (!product || !dirty || saving || uploadingCount > 0) return;
+    if (!product || !dirty || saving) return;
+    if (uploadingCount > 0) {
+      toast({ type: 'err', title: t('waitForUploads') });
+      return;
+    }
     setSaving(true);
     try {
       let updated: ProductDetail | undefined;
@@ -331,7 +239,7 @@ export default function ProductEditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [product, dirty, value, slug, router, load, t]);
+  }, [product, dirty, saving, uploadingCount, value, slug, router, load, t, reset]);
 
   const togglePublish = async () => {
     if (!product) return;
@@ -386,22 +294,9 @@ export default function ProductEditorPage() {
     }
   };
 
-  // Cmd/Ctrl+S saves, but never while focus is inside a text field where the
-  // browser's own save shortcut is expected to behave normally.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        void save();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [save]);
-
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[1200px] space-y-6 pt-6">
+      <div className="mx-auto w-full max-w-6xl space-y-6 pt-6">
         <FormSkeleton fields={6} />
       </div>
     );
@@ -424,7 +319,14 @@ export default function ProductEditorPage() {
     );
   }
 
-  const statusKey = product.isArchived ? 'archived' : product.isPublished ? 'published' : 'draft';
+  const statusTone = product.isArchived ? 'archived' : product.isPublished ? 'live' : 'draft';
+  const statusLabel = product.isArchived
+    ? t('status.archived')
+    : product.isPublished
+      ? t('status.published')
+      : t('status.draft');
+  const tt = t as unknown as (key: string) => string;
+  const checks = productReadinessChecks(tt, value);
 
   return (
     <div className="w-full">
@@ -433,17 +335,11 @@ export default function ProductEditorPage() {
           { label: t('productsCrumb', { default: 'Products' }), href: '/admin/products' },
           { label: product.title },
         ]}
-        live={t('live', { default: 'Live' })}
+        live={product.isPublished && !product.isArchived ? t('live', { default: 'Live' }) : false}
         actions={
           <>
             <BarButton
-              icon={
-                product.isPublished ? (
-                  <GlobeLock className="size-4" />
-                ) : (
-                  <Globe className="size-4" />
-                )
-              }
+              icon={product.isPublished ? <GlobeLock className="size-4" /> : <Globe className="size-4" />}
               disabled={publishing}
               onClick={() => void togglePublish()}
             >
@@ -462,147 +358,59 @@ export default function ProductEditorPage() {
             </BarButton>
           </>
         }
-        primary={
-          <BarPrimaryButton
-            icon={<Save className="size-4" strokeWidth={2.5} />}
-            disabled={!dirty || saving || uploadingCount > 0}
-            onClick={() => void save()}
-          >
-            {saving
-              ? t('saving', { default: 'Saving…' })
-              : t('saveChanges', { default: 'Save changes' })}
-          </BarPrimaryButton>
-        }
       />
 
-      <div className="mx-auto w-full max-w-[1200px] space-y-6 pt-6">
-        <AdminPageHeader
-          title={product.title}
-          description={`/${product.slug}${
-            product.category ? ` · ${product.category}` : ''
-          }${product.productType ? ` · ${product.productType}` : ''} · ${
-            product.pricingMode === 'request'
-              ? t('pricingRequest', { default: 'Request a quote' })
-              : formatMoney(product.price, product.currency)
-          }`}
-          badge={
-            <StatusPill
-              label={t(`status.${statusKey}`, { default: statusKey })}
-              tone={
-                statusKey === 'published' ? 'emerald' : statusKey === 'draft' ? 'amber' : 'slate'
-              }
-              pulse={statusKey === 'published'}
-              className={cn('self-start md:self-auto')}
-            />
-          }
-        />
-
-        {error && <ErrorBanner message={error} onRetry={() => load()} />}
-
-        <PublishReadiness
-          checks={[
-            { label: t('readinessTitle'), ok: !!product.title },
-            { label: t('readinessSlug'), ok: !!product.slug },
-            { label: t('readinessDescription'), ok: !!product.description?.trim() },
-            { label: t('readinessCategory'), ok: !!product.category },
-            { label: t('readinessThumbnail'), ok: !!product.thumbnailUrl },
-            { label: t('readinessPrice'), ok: product.pricingMode === 'request' || (product.price != null && product.price > 0) },
-          ]}
-        />
-
-        <div className="space-y-5">
-          <ProductFormSections value={value} set={set} />
-          {/*
-            Arabic copy. The column and storefront search already understood `translations`, but
-            nothing in the admin could set it, so this is where a bilingual product actually gets
-            made. Translation is offered as a starting point and stays editable by hand.
-          */}
-          <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-6" dir="rtl">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
-                  {t('arabicCopy', { default: 'Arabic copy' })}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t('arabicCopyHint', {
-                    default: 'Shown to Arabic visitors. Leave blank to fall back to English.',
-                  })}
-                </p>
-              </div>
-              <TranslateAction
-                coverage={totalProductCoverage}
-                busy={translateBusy}
-                onTranslate={(scope) => void runTranslate(scope)}
-              />
-            </div>
-            {totalProductCoverage && (
-              <TranslationCoveragePanel coverage={totalProductCoverage} className="mt-3" />
-            )}
-            <div className="mt-4 grid gap-4">
-              <TextField
-                label={t('arabicTitle', { default: 'Arabic title' })}
-                value={value.translationsAr.title}
-                onChange={(e) =>
-                  set('translationsAr', { ...value.translationsAr, title: e.target.value })
-                }
-              />
-              <TextField
-                label={t('arabicTagline', { default: 'Arabic tagline' })}
-                value={value.translationsAr.tagline}
-                onChange={(e) =>
-                  set('translationsAr', { ...value.translationsAr, tagline: e.target.value })
-                }
-              />
-              <TextAreaField
-                label={t('arabicDescription', { default: 'Arabic description' })}
-                value={value.translationsAr.description}
-                onChange={(e) =>
-                  set('translationsAr', { ...value.translationsAr, description: e.target.value })
-                }
-                rows={5}
-              />
-              <TextAreaField
-                label={t('arabicFeatures', { default: 'Arabic bullet points (one per line)' })}
-                value={value.translationsAr.features}
-                onChange={(e) =>
-                  set('translationsAr', { ...value.translationsAr, features: e.target.value })
-                }
-                rows={4}
-              />
-            </div>
-          </div>
-
-          <section className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-6">
-            <h2 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
-              {t('galleryTitle', { default: 'Gallery' })}
-            </h2>
-            <p className="mt-1 mb-4 text-xs leading-relaxed text-muted-foreground">
-              {t('galleryHint', {
-                default:
-                  'Images are saved immediately, on their own, so saving the form above can never overwrite them.',
-              })}
-            </p>
-            <ProductGalleryManager
-              slug={product.slug}
-              images={images}
-              onChange={setImages}
-              onUploadStart={beginUpload}
-              onUploadEnd={endUpload}
-            />
-          </section>
+      <div className="space-y-6 pt-6">
+        <div className="mx-auto w-full max-w-6xl space-y-4">
+          <AdminPageHeader
+            title={product.title}
+            description={`/${product.slug}${product.category ? ` · ${product.category}` : ''}${
+              product.productType ? ` · ${product.productType}` : ''
+            } · ${
+              product.pricingMode === 'request'
+                ? t('pricingRequest', { default: 'Request a quote' })
+                : formatMoney(product.price, product.currency)
+            }`}
+            badge={<StatusChip tone={statusTone}>{statusLabel}</StatusChip>}
+          />
+          {error && <ErrorBanner message={error} onRetry={() => load()} />}
         </div>
 
-        <FormActions
-          dirty={dirty}
-          saving={saving}
-          onSave={() => void save()}
-          onReset={baseline ? () => reset(baseline) : undefined}
-          onCancel={() => router.push('/admin/products')}
-          saveLabel={t('saveChanges', { default: 'Save changes' })}
-          resetLabel={t('discard', { default: 'Discard' })}
-          cancelLabel={t('cancel', { default: 'Cancel' })}
-        />
+        <FormLayout
+          aside={
+            <>
+              <SectionNav items={productSectionItems(tt)} />
+              <PublishReadiness checks={checks} />
+            </>
+          }
+        >
+          <PublishReadiness checks={checks} className="xl:hidden" />
+          <ProductFormSections
+            value={value}
+            set={set}
+            mode="edit"
+            gallery={
+              <ProductGalleryManager
+                slug={product.slug}
+                images={images}
+                onChange={setImages}
+                onUploadStart={beginUpload}
+                onUploadEnd={endUpload}
+              />
+            }
+          />
+        </FormLayout>
       </div>
+
+      <SaveDock
+        mode="edit"
+        dirty={dirty}
+        saving={saving}
+        onSave={() => void save()}
+        onDiscard={baseline ? () => reset(baseline) : undefined}
+        saveLabel={t('saveChanges', { default: 'Save changes' })}
+        savingLabel={t('saving', { default: 'Saving…' })}
+      />
     </div>
   );
 }

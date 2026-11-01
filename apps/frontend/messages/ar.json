@@ -435,7 +435,7 @@
       "inviteMember": "دعوة عضو",
       "title": "الموظفون والتحكم بالصلاحيات",
       "description": "أدر مشغلي خلايا CNC الدقيقة والمدرّسين الرئيسيين ومسؤولي القياسات وبيانات الرعاة في مرافق المحاور الخمسة.",
-      "zeroTrustBadge": "بروتوكول الثقة الصفرية مُفعّل (المصادقة الثنائية إلزامية)",
+      "zeroTrustBadge": "وصول قائم على الأدوار",
       "totalActiveStaff": "إجمالي الموظفين النشطين",
       "percentActive": "{value}٪ نشط",
       "capacity": "السعة",
@@ -444,8 +444,8 @@
       "rolesCount": "{count, plural, zero {لا أدوار} one {دور واحد} two {دوران} few {# أدوار} many {# دوراً} other {# دور}}",
       "configured": "مُهيّأ",
       "roleListPreview": "مدير عام، مسؤول، مدرّس…",
-      "securityCompliance": "الامتثال الأمني",
-      "compliant": "ممتثل",
+      "securityCompliance": "الحسابات النشطة",
+      "compliant": "نسبة الموظفين النشطين في القائمة",
       "hardware2fa": "{active} من {shown} مع مصادقة ثنائية عتادية",
       "activityIndex": "مؤشر النشاط",
       "past24h": "آخر ٢٤ ساعة",
@@ -575,7 +575,8 @@
       "closePanel": "إغلاق اللوحة",
       "staffMember": "موظف",
       "couldNotLoadStaff": "تعذر تحميل بيانات الموظف",
-      "loadingStaffMember": "جارٍ تحميل الموظف…"
+      "loadingStaffMember": "جارٍ تحميل الموظف…",
+      "dangerZone": "منطقة الخطر"
     },
     "live": "مباشر",
     "tabs": {
@@ -862,7 +863,11 @@
         "arabicSubtitle": "العنوان الفرعي بالعربية",
         "arabicDescription": "الوصف بالعربية",
         "arabicSeoTitle": "عنوان SEO بالعربية",
-        "arabicSeoDescription": "وصف SEO بالعربية"
+        "arabicSeoDescription": "وصف SEO بالعربية",
+        "slugInvalid": "استخدم أحرفًا إنجليزية صغيرة وأرقامًا وشرطات مفردة.",
+        "fixErrors": "صحّح الحقول المحدّدة لتتمكن من الحفظ.",
+        "brandingDesc": "اللون المميّز والصور التي تزيّن صفحة الأكاديمية.",
+        "imagesLiveNote": "تُرفع الصور وتُحفظ فور إضافتها ولا تنتظر زر حفظ التغييرات."
       }
     },
     "certificateDetail": {
@@ -1351,11 +1356,11 @@
       }
     },
     "roleSecurity": {
-      "super_admin": "المفتاح الجذري + TOTP",
-      "admin": "FIDO2 / 2FA",
-      "instructor": "مفتاح عتادي",
-      "moderator": "مفتاح عتادي",
-      "sponsor": "مرتبط بـ SSO"
+      "super_admin": "وصول كامل",
+      "admin": "وصول المشرف",
+      "instructor": "وصول المدرّب",
+      "moderator": "وصول المنسّق",
+      "sponsor": "وصول الراعي"
     },
     "navigation": {
       "title": "التنقل",
@@ -1555,7 +1560,18 @@
       "arabicTitle": "العنوان بالعربية",
       "arabicTagline": "العنوان الفرعي بالعربية",
       "arabicDescription": "الوصف بالعربية",
-      "arabicFeatures": "النقاط بالعربية (واحدة في كل سطر)"
+      "arabicFeatures": "النقاط بالعربية (واحدة في كل سطر)",
+      "sectionPricingOnly": "التسعير",
+      "sectionPricingOnlyDesc": "ما يدفعه العملاء وكيف يظهر السعر في المتجر.",
+      "sectionInventory": "المخزون والظهور",
+      "sectionInventoryDesc": "سلوك المخزون والشحن ومكان إبراز هذا المنتج.",
+      "sectionMediaGroup": "الوسائط",
+      "sectionMediaGroupDesc": "الصورة المصغّرة وصور المعرض والنقاط التوضيحية على صورة المنتج.",
+      "sectionDetails": "التفاصيل والمستندات",
+      "sectionDetailsDesc": "اربط المنتج بأكاديمية أو دورة وأرفق الأدلة.",
+      "galleryAfterCreate": "يمكن إضافة صور المعرض بعد إنشاء المنتج.",
+      "readinessFix": "ما يزال مطلوبًا للنشر:",
+      "waitForUploads": "انتظر انتهاء الرفع قبل الحفظ."
     },
     "productsPage": {
       "action": {
@@ -1769,6 +1785,7 @@
     },
     "alerts": "تنبيهات المنصة",
     "platformAlerts": {
+      "appliesImmediately": "يُطبَّق فورًا",
       "title": "تنبيهات المنصة",
       "subtitle": "إشارات تشغيلية من جميع المستأجرين: المدفوعات والأمان والتسجيلات وصحة النظام. إشعاراتك الشخصية منفصلة.",
       "unreadCount": "{count, plural, one {غير مقروء واحد} two {غير مقروءان} few {# غير مقروءة} many {# غير مقروءًا} other {# غير مقروء}}",
@@ -1918,7 +1935,38 @@
       "variables": "المتغيرات",
       "widthDesktop": "سطح مكتب",
       "widthMobile": "جوال",
-      "widthTablet": "لوحي"
+      "widthTablet": "لوحي",
+      "forbiddenTitle": "ليس لديك صلاحية الوصول إلى قوالب البريد",
+      "forbiddenBody": "دورك لا يتضمن صلاحية البريد. اطلب من المشرف العام منحها ثم أعد تحميل الصفحة.",
+      "backToTemplates": "العودة إلى القوالب",
+      "paneEdit": "تحرير",
+      "detailsTitle": "التفاصيل",
+      "detailsHint": "ما يراه المستلمون في صندوق الوارد، والحدث الذي يطلق هذه الرسالة.",
+      "blocksHint": "اسحب المقبض لإعادة الترتيب. اختر كتلة لتحريرها.",
+      "blockCount": "{count, plural, zero {لا كتل} one {كتلة واحدة} two {كتلتان} few {# كتل} many {# كتلة} other {# كتلة}}",
+      "emptyBlocksTitle": "هذه الرسالة فارغة",
+      "emptyBlocksHint": "ابدأ بعنوان أو نص أو زر. يمكنك إعادة ترتيب كل شيء لاحقًا.",
+      "dragToReorder": "اسحب لإعادة الترتيب أو استخدم مفاتيح الأسهم",
+      "blockEmpty": "فارغ",
+      "variablesHint": "اختر كتلة ثم انقر على متغير لإدراجه.",
+      "rendering": "جارٍ العرض…",
+      "previewWidth": "عرض المعاينة",
+      "noSubject": "(بلا عنوان)",
+      "noPreheader": "(بلا نص تمهيدي)",
+      "previewFrameTitle": "معاينة البريد",
+      "systemReadOnly": "قوالب النظام للقراءة فقط.",
+      "alignLeft": "محاذاة لليسار",
+      "alignCenter": "توسيط",
+      "alignRight": "محاذاة لليمين",
+      "labelLevel": "المستوى",
+      "labelColor": "اللون",
+      "labelMode": "التخطيط",
+      "columnKey": "المفتاح",
+      "columnLabel": "العنوان",
+      "addColumn": "إضافة عمود",
+      "emptyTitle": "لا توجد قوالب بعد",
+      "createHint": "اختر اسمًا وفئة. ستصمم التخطيط في الخطوة التالية.",
+      "slugHint": "يُستخدم في رابط القالب."
     },
     "productGallery": {
       "title": "معرض الصور",
@@ -2024,6 +2072,9 @@
       }
     },
     "coursesNew": {
+      "basicsTitle": "الأساسيات",
+      "basicsHint": "سمِّ الدورة واختر مكانها.",
+      "startHint": "يمكنك تغيير البنية في أي وقت من الاستوديو.",
       "createTitle": "إنشاء دورة",
       "subtitle": "ابدأ بالأساسيات. يمكنك تشكيل المنهج والوسائط والتسعير وقائمة فحص النشر داخل الاستوديو.",
       "titleLabel": "عنوان الدورة",
@@ -2277,6 +2328,26 @@
     "settings": "إعدادات المساعد"
   },
   "theme": {
+    "aaPass": "اجتاز AA",
+    "aaFail": "لم يجتز AA",
+    "contrastOnToken": "على {token}",
+    "saveDraftBtn": "حفظ المسودة",
+    "tokBackground": "الخلفية",
+    "tokForeground": "النص",
+    "tokCard": "البطاقة",
+    "tokCardForeground": "نص البطاقة",
+    "tokMuted": "الخافت",
+    "tokMutedForeground": "النص الخافت",
+    "tokBorder": "الحدود",
+    "tokPrimary": "الأساسي",
+    "tokSecondary": "الثانوي",
+    "tokAccent": "التمييز",
+    "tokRing": "حلقة التركيز",
+    "kindSans": "بدون زوائد",
+    "kindGrotesk": "جروتيسك",
+    "kindMono": "أحادي المسافة",
+    "kindSerif": "بخطوط زخرفية",
+    "loadingEditor": "جارٍ تحميل محرر السمة…",
     "title": "محرر السمة",
     "subtitle": "الألوان والخطوط والشكل لتجربة العملاء",
     "colors": "الألوان",
@@ -4609,7 +4680,11 @@
       "statusNew": "جديد",
       "statusDraft": "مسودة",
       "required": "مطلوب",
-      "optional": "اختياري"
+      "optional": "اختياري",
+      "discardTitle": "تجاهل التغييرات غير المحفوظة؟",
+      "discardBody": "لم يتم حفظ تعديلاتك. إذا غادرت الآن فستفقدها.",
+      "discardConfirm": "تجاهل التغييرات",
+      "keepEditing": "متابعة التعديل"
     },
     "emailTemplateEditor": {
       "allowedHtmlHint": "الوسوم المسموح بها فقط، ويُحذف أي شيء آخر: '<b> <i> <u> <a> <span> <br>'",

@@ -435,7 +435,7 @@
       "inviteMember": "Invite member",
       "title": "Staff & Access Control",
       "description": "Manage precision CNC cell operators, lead instructors, telemetry admins, and guest sponsor credentials across five-axis facilities.",
-      "zeroTrustBadge": "Zero-Trust Protocol Active (2FA Enforced)",
+      "zeroTrustBadge": "Role-based access",
       "totalActiveStaff": "Total Active Staff",
       "percentActive": "{value}% active",
       "capacity": "capacity",
@@ -444,8 +444,8 @@
       "rolesCount": "{count, plural, one {# Role} other {# Roles}}",
       "configured": "Configured",
       "roleListPreview": "Super Admin, Admin, Instructor...",
-      "securityCompliance": "Security Compliance",
-      "compliant": "Compliant",
+      "securityCompliance": "Active accounts",
+      "compliant": "Share of listed staff that are active",
       "hardware2fa": "{active} of {shown} shown with hardware 2FA",
       "activityIndex": "Activity Index",
       "past24h": "Past 24h",
@@ -575,7 +575,8 @@
       "closePanel": "Close panel",
       "staffMember": "Staff member",
       "couldNotLoadStaff": "Could not load staff member",
-      "loadingStaffMember": "Loading staff member…"
+      "loadingStaffMember": "Loading staff member…",
+      "dangerZone": "Danger zone"
     },
     "live": "Live",
     "tabs": {
@@ -862,7 +863,11 @@
         "arabicSubtitle": "Arabic subtitle",
         "arabicDescription": "Arabic description",
         "arabicSeoTitle": "Arabic SEO title",
-        "arabicSeoDescription": "Arabic SEO description"
+        "arabicSeoDescription": "Arabic SEO description",
+        "slugInvalid": "Use lowercase letters, numbers and single hyphens.",
+        "fixErrors": "Fix the highlighted fields to save.",
+        "brandingDesc": "Accent colour and the images that dress the academy page.",
+        "imagesLiveNote": "Images upload and save as soon as you add them; they do not wait for Save changes."
       }
     },
     "certificateDetail": {
@@ -1351,11 +1356,11 @@
       }
     },
     "roleSecurity": {
-      "super_admin": "Root Key + TOTP",
-      "admin": "FIDO2 / 2FA",
-      "instructor": "Hardware Key",
-      "moderator": "Hardware Key",
-      "sponsor": "SSO Bound"
+      "super_admin": "Full access",
+      "admin": "Admin access",
+      "instructor": "Instructor access",
+      "moderator": "Moderator access",
+      "sponsor": "Sponsor access"
     },
     "navigation": {
       "title": "Navigation",
@@ -1555,7 +1560,18 @@
       "arabicTitle": "Arabic title",
       "arabicTagline": "Arabic tagline",
       "arabicDescription": "Arabic description",
-      "arabicFeatures": "Arabic bullet points (one per line)"
+      "arabicFeatures": "Arabic bullet points (one per line)",
+      "sectionPricingOnly": "Pricing",
+      "sectionPricingOnlyDesc": "What customers pay and how it is shown on the storefront.",
+      "sectionInventory": "Inventory & visibility",
+      "sectionInventoryDesc": "Stock behaviour, shipping and where this product is featured.",
+      "sectionMediaGroup": "Media",
+      "sectionMediaGroupDesc": "Thumbnail, gallery images and pinpoints on the product photo.",
+      "sectionDetails": "Details & documents",
+      "sectionDetailsDesc": "Link the product to an academy or course and attach manuals.",
+      "galleryAfterCreate": "Gallery images can be added once the product is created.",
+      "readinessFix": "Still needed to publish:",
+      "waitForUploads": "Wait for uploads to finish before saving."
     },
     "productsPage": {
       "action": {
@@ -1769,6 +1785,7 @@
     },
     "alerts": "Platform alerts",
     "platformAlerts": {
+      "appliesImmediately": "Applies immediately",
       "title": "Platform alerts",
       "subtitle": "Operational signals from every tenant: money, security, signups and system health. Your personal notifications are separate.",
       "unreadCount": "{count, plural, one {# unread} other {# unread}}",
@@ -1918,7 +1935,38 @@
       "variables": "Variables",
       "widthDesktop": "Desktop",
       "widthMobile": "Mobile",
-      "widthTablet": "Tablet"
+      "widthTablet": "Tablet",
+      "forbiddenTitle": "You don't have access to email templates",
+      "forbiddenBody": "Your role is missing the email permission. Ask a super admin to grant it, then reload this page.",
+      "backToTemplates": "Back to templates",
+      "paneEdit": "Edit",
+      "detailsTitle": "Details",
+      "detailsHint": "What recipients see in their inbox, and which event triggers this email.",
+      "blocksHint": "Drag the handle to reorder. Select a block to edit it.",
+      "blockCount": "{count, plural, one {# block} other {# blocks}}",
+      "emptyBlocksTitle": "This email is empty",
+      "emptyBlocksHint": "Start with a heading, some text or a button. You can reorder everything later.",
+      "dragToReorder": "Drag to reorder, or use the arrow keys",
+      "blockEmpty": "Empty",
+      "variablesHint": "Select a block, then click a variable to insert it.",
+      "rendering": "Rendering…",
+      "previewWidth": "Preview width",
+      "noSubject": "(no subject)",
+      "noPreheader": "(no preheader)",
+      "previewFrameTitle": "Email preview",
+      "systemReadOnly": "System templates are read-only.",
+      "alignLeft": "Align left",
+      "alignCenter": "Align center",
+      "alignRight": "Align right",
+      "labelLevel": "Level",
+      "labelColor": "Color",
+      "labelMode": "Layout",
+      "columnKey": "Key",
+      "columnLabel": "Heading",
+      "addColumn": "Add column",
+      "emptyTitle": "No templates yet",
+      "createHint": "Pick a name and category. You will design the layout next.",
+      "slugHint": "Used in the template URL."
     },
     "productGallery": {
       "title": "Gallery",
@@ -2024,6 +2072,9 @@
       }
     },
     "coursesNew": {
+      "basicsTitle": "Basics",
+      "basicsHint": "Name the course and choose where it lives.",
+      "startHint": "You can change the structure any time in the studio.",
       "createTitle": "Create a course",
       "subtitle": "Start with the essentials. You can shape the curriculum, media, pricing, and publishing checklist in the studio.",
       "titleLabel": "Course title",
@@ -2277,6 +2328,26 @@
     "settings": "Assistant settings"
   },
   "theme": {
+    "aaPass": "AA pass",
+    "aaFail": "AA fail",
+    "contrastOnToken": "on {token}",
+    "saveDraftBtn": "Save draft",
+    "tokBackground": "Background",
+    "tokForeground": "Foreground",
+    "tokCard": "Card",
+    "tokCardForeground": "Card text",
+    "tokMuted": "Muted",
+    "tokMutedForeground": "Muted text",
+    "tokBorder": "Border",
+    "tokPrimary": "Primary",
+    "tokSecondary": "Secondary",
+    "tokAccent": "Accent",
+    "tokRing": "Focus ring",
+    "kindSans": "Sans",
+    "kindGrotesk": "Grotesk",
+    "kindMono": "Mono",
+    "kindSerif": "Serif",
+    "loadingEditor": "Loading theme editor…",
     "title": "Theme Editor",
     "subtitle": "Colors, typography and shape for the customer experience",
     "colors": "Colors",
@@ -4610,7 +4681,11 @@
       "statusNew": "New",
       "statusDraft": "Draft",
       "required": "Required",
-      "optional": "Optional"
+      "optional": "Optional",
+      "discardTitle": "Discard unsaved changes?",
+      "discardBody": "Your edits have not been saved. If you leave now they will be lost.",
+      "discardConfirm": "Discard changes",
+      "keepEditing": "Keep editing"
     },
     "emailTemplateEditor": {
       "allowedHtmlHint": "'<b> <i> <u> <a> <span> <br>' only — anything else is stripped.",

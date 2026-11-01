@@ -1,131 +1,52 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
-import { cn } from '@/lib/utils';
 import { AnimatePresence, m } from 'framer-motion';
 import { spring, transition } from '@/lib/motion';
 import { api } from '@/lib/api-client';
-import {
-  AdminCommandBar,
-  AdminPageHeader,
-  BarButton,
-  BarPrimaryButton,
-} from '@/components/admin/admin-chrome';
-import { TextField, TextAreaField } from '@/components/admin/admin-form';
-import {
-  TranslateAction,
-  TranslationCoveragePanel,
-  useTranslateDraft,
-} from '@/components/admin/translation';
-import {
-  PRODUCT_FIELDS,
-  HOTSPOT_FIELDS,
-  coverageOf,
-  type TranslationCoverage,
-} from '@titan/shared';
+import { AdminCommandBar, AdminPageHeader } from '@/components/admin/admin-chrome';
+import { FormLayout, SaveDock, SectionNav, StatusChip } from '@/components/admin/form-page';
 import {
   ProductFormSections,
   PublishReadiness,
+  firstInvalidSection,
   productFormPayload,
+  productReadinessChecks,
+  productSectionItems,
   useProductForm,
+  validateProduct,
 } from '../product-form';
 
 export default function NewProductPage() {
   const t = useTranslations('admin.productForm');
+  const tForm = useTranslations('ui.adminForm');
+  const tt = t as unknown as (key: string) => string;
   const router = useRouter();
   const { value, set } = useProductForm();
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Errors only appear after the first attempt, so the form is not red on arrival.
+  const [attempted, setAttempted] = useState(false);
 
-  const tTranslate = useTranslations('admin.translate');
-
-  const translateGroups = useMemo(() => {
-    const main: Record<string, string> = {
-      Title: value.title,
-      Tagline: value.tagline,
-      Description: value.description,
-      'Bullet points (one per line)': value.features,
-      'SEO title': value.seoTitle,
-      'SEO description': value.seoDescription,
-    };
-    const groups: Array<{ key: string; fields: Record<string, string> }> = [{ key: 'product', fields: main }];
-    for (const pin of value.pinpoints) {
-      groups.push({
-        key: `pin:${pin.id}`,
-        fields: { Label: pin.label, Tooltip: pin.tooltip ?? '', Detail: pin.detail ?? '' },
-      });
-    }
-    return groups;
-  }, [value.title, value.tagline, value.description, value.features, value.seoTitle, value.seoDescription, value.pinpoints]);
-
-  const { busy: translateBusy, run: runTranslate, coverageFor } = useTranslateDraft({
-    entity: 'product copy',
-    descriptors: PRODUCT_FIELDS,
-    groups: translateGroups,
-    onApply: (key, translations) => {
-      if (key.startsWith('pin:')) {
-        const id = key.slice('pin:'.length);
-        const current = value.translationsAr.hotspots[id] ?? { label: '', tooltip: '', detail: '' };
-        set('translationsAr', {
-          ...value.translationsAr,
-          hotspots: {
-            ...value.translationsAr.hotspots,
-            [id]: {
-              label: translations['Label'] ?? current.label,
-              tooltip: translations['Tooltip'] ?? current.tooltip,
-              detail: translations['Detail'] ?? current.detail,
-            },
-          },
-        });
-        return;
-      }
-      set('translationsAr', {
-        ...value.translationsAr,
-        title: translations['Title'] ?? value.translationsAr.title,
-        tagline: translations['Tagline'] ?? value.translationsAr.tagline,
-        description: translations['Description'] ?? value.translationsAr.description,
-        features: translations['Bullet points (one per line)'] ?? value.translationsAr.features,
-        seoTitle: translations['SEO title'] ?? value.translationsAr.seoTitle,
-        seoDescription: translations['SEO description'] ?? value.translationsAr.seoDescription,
-      });
-    },
-    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
-  });
-
-  const productCoverage = coverageFor(value, value.translationsAr);
-  const hotspotCoverage = value.pinpoints.map((pin) => ({
-    pin,
-    coverage: coverageOf(pin, value.translationsAr.hotspots?.[pin.id] ?? null, HOTSPOT_FIELDS),
-  }));
-  const totalProductCoverage = useMemo<TranslationCoverage | undefined>(() => {
-    if (!productCoverage) return undefined;
-    let translated = productCoverage.translated;
-    let total = productCoverage.total;
-    const missing = [...productCoverage.missing];
-    for (const entry of hotspotCoverage) {
-      total += entry.coverage.total;
-      translated += entry.coverage.translated;
-      missing.push(...entry.coverage.missing);
-    }
-    return { total, translated, missing, present: [] };
-  }, [productCoverage, hotspotCoverage]);
-
-  const priceText = value.priceCents.trim();
-  const valid = value.title.trim().length > 0 && (priceText === '' || (Number.isFinite(Number(priceText)) && Number(priceText) >= 0));
+  const liveErrors = validateProduct(value, tt);
+  const canSave = Object.keys(liveErrors).length === 0;
+  const errors = attempted ? liveErrors : {};
+  const checks = productReadinessChecks(tt, value);
 
   const submit = async () => {
-    if (!value.title.trim()) {
-      toast({ type: 'err', title: t('titleRequired', { default: 'Title required' }) });
-      return;
-    }
-    if (priceText !== '' && (!Number.isFinite(Number(priceText)) || Number(priceText) < 0)) {
-      toast({ type: 'err', title: t('priceRequired', { default: 'Price must be a number' }) });
+    setAttempted(true);
+    if (!canSave) {
+      // Bring the first problem into view rather than leaving the author to hunt for it.
+      const section = firstInvalidSection(liveErrors);
+      if (section) document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast({ type: 'err', title: liveErrors.title ?? liveErrors.price ?? '' });
       return;
     }
     setBusy(true);
+    setFailed(false);
     setError(null);
     try {
       const body = productFormPayload(value);
@@ -139,6 +60,7 @@ export default function NewProductPage() {
       router.replace(`/admin/products/${created?.slug ?? body.slug}/edit`);
     } catch (e) {
       const message = e instanceof Error ? e.message : t('createFailedGeneric', { default: 'Create failed' });
+      setFailed(true);
       setError(message);
       toast({ type: 'err', title: t('createFailedGeneric', { default: 'Create failed' }), description: message });
     } finally {
@@ -147,141 +69,78 @@ export default function NewProductPage() {
   };
 
   return (
-    <div className="w-full">
+    <div
+      className="w-full"
+      onKeyDown={(e) => {
+        // Enter in a single-line field attempts the create, which is also how an empty form
+        // reveals what is missing (the Create button itself stays disabled until it is valid).
+        const target = e.target;
+        if (
+          e.key === 'Enter' &&
+          target instanceof HTMLInputElement &&
+          (target.type === 'text' || target.type === 'number') &&
+          !busy
+        ) {
+          e.preventDefault();
+          void submit();
+        }
+      }}
+    >
       <AdminCommandBar
         trail={[
           { label: t('productsCrumb', { default: 'Products' }), href: '/admin/products' },
           { label: t('newProduct', { default: 'New product' }) },
         ]}
-        live={t('live', { default: 'Live' })}
-        actions={
-          <BarButton onClick={() => router.push('/admin/products')}>
-            {t('cancel', { default: 'Cancel' })}
-          </BarButton>
-        }
-        primary={
-          <BarPrimaryButton
-            icon={busy ? <Loader2 className="size-4 animate-spin" /> : undefined}
-            disabled={busy || !valid}
-            onClick={() => void submit()}
-          >
-            {busy ? t('creating', { default: 'Creating…' }) : t('createProduct', { default: 'Create product' })}
-          </BarPrimaryButton>
-        }
+        // A record that does not exist yet is not "Live"; the page header carries a `New` chip.
+        live={false}
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-6 pt-6">
-        <AdminPageHeader
-          title={t('newProduct', { default: 'New product' })}
-          description={t('newDescription', { default: 'Create a new product for your catalog.' })}
-        />
-        <PublishReadiness
-          checks={[
-            { label: t('readinessTitle'), ok: !!value.title.trim() },
-            { label: t('readinessSlug'), ok: !!value.slug.trim() },
-            { label: t('readinessDescription'), ok: !!value.description.trim() },
-            { label: t('readinessCategory'), ok: !!value.category.trim() },
-            { label: t('readinessThumbnail'), ok: !!value.thumbnailUrl },
-            { label: t('readinessPrice'), ok: value.priceCents.trim() !== '' && Number(value.priceCents) > 0 },
-          ]}
-        />
-        <AnimatePresence initial={false}>
-        {error && (
-          <m.div
-            key="error"
-            role="alert"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0, transition: spring.smooth }}
-            exit={{ opacity: 0, y: -4, transition: transition.leave }}
-            className="rounded-2xl border border-destructive/20 bg-destructive/8 px-5 py-3.5 text-13 font-medium text-destructive"
-          >
-            {error}
-          </m.div>
-        )}
-        </AnimatePresence>
-        {/* Two columns, matching the academies create screen. Seven stacked full-width
-            sections turned this into an endless scroll on a laptop. */}
-        <ProductFormSections value={value} set={set} columns={2} />
-        <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-6" dir="rtl">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
-                {t('arabicCopy', { default: 'Arabic copy' })}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('arabicCopyHint', {
-                  default: 'Shown to Arabic visitors. Leave blank to fall back to English.',
-                })}
-              </p>
-            </div>
-            <TranslateAction
-              coverage={totalProductCoverage}
-              busy={translateBusy}
-              onTranslate={(scope) => void runTranslate(scope)}
-            />
-          </div>
-          {totalProductCoverage && (
-            <TranslationCoveragePanel coverage={totalProductCoverage} className="mt-3" />
-          )}
-          <div className="mt-4 grid gap-4">
-            <TextField
-              label={t('arabicTitle', { default: 'Arabic title' })}
-              value={value.translationsAr.title}
-              onChange={(e) =>
-                set('translationsAr', { ...value.translationsAr, title: e.target.value })
-              }
-            />
-            <TextField
-              label={t('arabicTagline', { default: 'Arabic tagline' })}
-              value={value.translationsAr.tagline}
-              onChange={(e) =>
-                set('translationsAr', { ...value.translationsAr, tagline: e.target.value })
-              }
-            />
-            <TextAreaField
-              label={t('arabicDescription', { default: 'Arabic description' })}
-              value={value.translationsAr.description}
-              onChange={(e) =>
-                set('translationsAr', { ...value.translationsAr, description: e.target.value })
-              }
-              rows={5}
-            />
-            <TextAreaField
-              label={t('arabicFeatures', { default: 'Arabic bullet points (one per line)' })}
-              value={value.translationsAr.features}
-              onChange={(e) =>
-                set('translationsAr', { ...value.translationsAr, features: e.target.value })
-              }
-              rows={4}
-            />
-          </div>
+      <div className="space-y-6 pt-6">
+        <div className="mx-auto w-full max-w-6xl">
+          <AdminPageHeader
+            title={t('newProduct', { default: 'New product' })}
+            description={t('newDescription', { default: 'Create a new product for your catalog.' })}
+            badge={<StatusChip tone="new">{tForm('statusNew')}</StatusChip>}
+          />
         </div>
-        {/* Mirrors the academies create screen: a plain action row at the foot, repeated
-            from the command bar. Deliberately not the shared FormActions — that component
-            reports "All changes saved", which is false here, because a product that has not
-            been created has never been saved at all. */}
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => router.push('/admin/products')}
-            className="rounded-xl border border-border/70 bg-card px-4 py-2 text-sm font-medium text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground active:scale-[0.98]"
-          >
-            {t('cancel', { default: 'Cancel' })}
-          </button>
-          <button
-            type="button"
-            onClick={() => void submit()}
-            disabled={busy || !valid}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium text-primary-foreground shadow-xs transition active:scale-[0.98] disabled:opacity-50',
-              busy || !valid ? 'bg-muted-foreground/40' : 'bg-primary shadow-xs hover:bg-primary/90',
+
+        <FormLayout
+          aside={
+            <>
+              <SectionNav items={productSectionItems(tt, errors)} />
+              <PublishReadiness checks={checks} />
+            </>
+          }
+        >
+          <PublishReadiness checks={checks} className="xl:hidden" />
+          <AnimatePresence initial={false}>
+            {error && (
+              <m.div
+                key="error"
+                role="alert"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0, transition: spring.smooth }}
+                exit={{ opacity: 0, y: -4, transition: transition.leave }}
+                className="rounded-2xl border border-destructive/20 bg-destructive/8 px-5 py-3.5 text-13 font-medium text-destructive"
+              >
+                {error}
+              </m.div>
             )}
-          >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {busy ? t('creating', { default: 'Creating…' }) : t('createProduct', { default: 'Create product' })}
-          </button>
-        </div>
+          </AnimatePresence>
+          <ProductFormSections value={value} set={set} mode="create" errors={errors} />
+        </FormLayout>
       </div>
+
+      <SaveDock
+        mode="create"
+        saving={busy}
+        failed={failed}
+        canSave={canSave}
+        onSave={() => void submit()}
+        onCancel={() => router.push('/admin/products')}
+        saveLabel={busy ? t('creating', { default: 'Creating…' }) : t('createProduct', { default: 'Create product' })}
+        savingLabel={t('creating', { default: 'Creating…' })}
+      />
     </div>
   );
 }
