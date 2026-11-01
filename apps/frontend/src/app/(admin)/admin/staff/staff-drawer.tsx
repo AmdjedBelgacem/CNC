@@ -29,7 +29,8 @@ import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatedNumber, Crossfade } from '@/components/ui/motion';
 import { toast } from '@/components/ui/toast';
-import { Modal, GLASS_SUB } from '@/components/ui/modal';
+import { PresenceContext } from 'framer-motion';
+import { Modal, ModalTabs, GLASS_SUB } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -1314,20 +1315,14 @@ export function StaffDrawer({
   };
 
   return (
-    <>
-      <Modal
-        onClose={guard.requestClose}
-        width="max-w-4xl"
-        tabs={TABS.map((tab) => ({
-          ...tab,
-          label: tAdmin(`tabs.${tab.key}`, { default: tab.label }),
-        }))}
-        activeTab={activeTab}
-        onTabChange={(k) => setActiveTab(k as TabKey)}
-        title={
-          user?.name || user?.email || tAdmin('drawer.staffDetails', { default: 'Staff details' })
-        }
-        header={
+    <Modal
+      onClose={guard.requestClose}
+      width="max-w-4xl"
+      title={
+        user?.name || user?.email || tAdmin('drawer.staffDetails', { default: 'Staff details' })
+      }
+      header={
+        <>
           <div className="border-b border-border/70 bg-card px-4 py-4 sm:px-6 sm:py-5">
             {loading ? (
               <div className="flex items-center gap-3 sm:gap-4">
@@ -1411,38 +1406,50 @@ export function StaffDrawer({
               </p>
             )}
           </div>
-        }
-      >
-        <div className="px-4 py-4 sm:px-6 sm:py-6">
-          {loadError && (
-            <ErrorState
-              title={tAdmin('drawer.couldNotLoadStaff', { default: 'Could not load staff member' })}
-              description={loadError}
-              onRetry={loadAll}
-              compact
-              className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10"
+          {/* The tab pill is a shared-layout element; inside the parent's AnimatePresence it
+            kept the closing drawer mounted (and the page blocked) after a tab switch. */}
+          <PresenceContext.Provider value={null}>
+            <ModalTabs
+              tabs={TABS.map((tab) => ({
+                ...tab,
+                label: tAdmin(`tabs.${tab.key}`, { default: tab.label }),
+              }))}
+              active={activeTab}
+              onChange={(k) => setActiveTab(k as TabKey)}
             />
-          )}
-          {loading && !user ? (
-            <LoadingState
-              label={tAdmin('drawer.loadingStaffMember', { default: 'Loading staff member…' })}
-              rows={4}
-            />
-          ) : (
-            <Crossfade value={activeTab}>{renderTab() ?? <span />}</Crossfade>
-          )}
-        </div>
-        <DrawerFooter
-          editable={canEdit && !!user}
-          dirty={dirty}
-          saving={savingRoles}
-          failed={saveFailed}
-          onSave={saveAll}
-          onDiscard={discardEdits}
-          onClose={guard.requestClose}
-        />
-      </Modal>
+          </PresenceContext.Provider>
+        </>
+      }
+    >
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        {loadError && (
+          <ErrorState
+            title={tAdmin('drawer.couldNotLoadStaff', { default: 'Could not load staff member' })}
+            description={loadError}
+            onRetry={loadAll}
+            compact
+            className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10"
+          />
+        )}
+        {loading && !user ? (
+          <LoadingState
+            label={tAdmin('drawer.loadingStaffMember', { default: 'Loading staff member…' })}
+            rows={4}
+          />
+        ) : (
+          <Crossfade value={activeTab}>{renderTab() ?? <span />}</Crossfade>
+        )}
+      </div>
+      <DrawerFooter
+        editable={canEdit && !!user}
+        dirty={dirty}
+        saving={savingRoles}
+        failed={saveFailed}
+        onSave={saveAll}
+        onDiscard={discardEdits}
+        onClose={guard.requestClose}
+      />
       <DiscardChangesDialog guard={guard} />
-    </>
+    </Modal>
   );
 }

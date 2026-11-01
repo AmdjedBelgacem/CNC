@@ -145,7 +145,10 @@ export function DrawerFooter({
           <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
         </>
       ) : null}
-      <div className="flex min-w-0 flex-1 items-center gap-2 text-13" aria-live="polite">
+      <div
+        className="order-first flex min-w-0 basis-full items-center gap-2 text-13 sm:order-none sm:basis-0 sm:flex-1"
+        aria-live="polite"
+      >
         {editable ? (
           <AnimatePresence mode="wait" initial={false}>
             {status === 'saving' ? (
@@ -187,7 +190,7 @@ export function DrawerFooter({
       </div>
 
       {editable ? (
-        <div className="flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           {create ? (
             <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
               {tc('cancel')}
@@ -216,7 +219,7 @@ export function DrawerFooter({
           </Button>
         </div>
       ) : (
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
+        <Button type="button" variant="outline" size="sm" className="ms-auto" onClick={onClose}>
           {tc('close')}
         </Button>
       )}

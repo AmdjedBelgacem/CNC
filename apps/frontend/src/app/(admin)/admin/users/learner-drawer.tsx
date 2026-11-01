@@ -1076,7 +1076,6 @@ export function LearnerDrawer({
   };
 
   return (
-    <>
     <Modal
       onClose={guard.requestClose}
       width="max-w-3xl"
@@ -1206,8 +1205,7 @@ export function LearnerDrawer({
         onDiscard={discardEdits}
         onClose={guard.requestClose}
       />
+      <DiscardChangesDialog guard={guard} />
     </Modal>
-    <DiscardChangesDialog guard={guard} />
-    </>
   );
 }

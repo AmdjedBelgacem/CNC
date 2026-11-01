@@ -19,7 +19,8 @@ import {
   Files,
 } from 'lucide-react';
 import { AnimatePresence, m } from 'framer-motion';
-import { Modal, type ModalTab } from '@/components/ui/modal';
+import { PresenceContext } from 'framer-motion';
+import { Modal, ModalTabs, type ModalTab } from '@/components/ui/modal';
 import { spring } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import {
@@ -427,10 +428,8 @@ export function LessonDrawer({
           width="max-w-4xl"
           onClose={guard.requestClose}
           title={pageTitle}
-          tabs={tabs}
-          activeTab={tab}
-          onTabChange={(k) => setTab(k as typeof tab)}
           header={
+            <>
             <div className="flex items-center gap-3 border-b border-border/70 bg-card px-5 py-4 sm:gap-4 sm:px-7 sm:py-5">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-display text-lg font-medium text-primary ring-1 ring-inset ring-primary/15 sm:size-12">
                 {pageTitle.charAt(0).toUpperCase()}
@@ -455,6 +454,11 @@ export function LessonDrawer({
                 <X className="size-[18px]" />
               </button>
             </div>
+            {/* Shared-layout tab pill: kept outside the exit presence so closing never hangs. */}
+            <PresenceContext.Provider value={null}>
+              <ModalTabs tabs={tabs} active={tab} onChange={(k) => setTab(k as typeof tab)} />
+            </PresenceContext.Provider>
+            </>
           }
         >
           <div className="px-5 py-5 sm:px-7 sm:py-6">

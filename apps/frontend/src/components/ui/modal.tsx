@@ -1,7 +1,7 @@
 'use client';
 import type { ReactNode, ElementType } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { m } from 'framer-motion';
+import { PresenceContext, m } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,38 +88,46 @@ export function ModalTabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div
-      className={cn(
-        GLASS_SUB,
-        'no-scrollbar mx-5 mt-4 flex gap-1 overflow-x-auto p-1 sm:mx-7 sm:mt-5',
-      )}
-    >
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
-        return (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => onChange(tab.key)}
-            className={cn(
-              'relative flex min-w-max flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 font-sans text-sm font-medium transition-colors duration-200',
-              active === tab.key ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {active === tab.key && (
-              <m.span
-                layoutId="modal-tab-indicator"
-                transition={spring.smooth}
-                className="absolute inset-0 rounded-lg bg-card shadow-sm ring-1 ring-border/60"
-              />
-            )}
-            <span className="relative flex items-center gap-1.5">
-              <Icon className="size-4" /> {tab.label}
-            </span>
-          </button>
-        );
-      })}
-    </div>
+    // The tab pill is a shared-layout element. Inside a parent `AnimatePresence` (the staff
+    // page wraps its drawer in one), the pill registers with that presence and keeps the
+    // drawer mounted after it closes — leaving the page click-blocked. Isolating the tabs
+    // from the surrounding presence stops that.
+    <PresenceContext.Provider value={null}>
+      <div
+        className={cn(
+          GLASS_SUB,
+          'no-scrollbar mx-5 mt-4 flex gap-1 overflow-x-auto p-1 sm:mx-7 sm:mt-5',
+        )}
+      >
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => onChange(tab.key)}
+              className={cn(
+                'relative flex min-w-max flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 font-sans text-sm font-medium transition-colors duration-200',
+                active === tab.key
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {active === tab.key && (
+                <m.span
+                  layoutId="modal-tab-indicator"
+                  transition={spring.smooth}
+                  className="absolute inset-0 rounded-lg bg-card shadow-sm ring-1 ring-border/60"
+                />
+              )}
+              <span className="relative flex items-center gap-1.5">
+                <Icon className="size-4" /> {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </PresenceContext.Provider>
   );
 }
 

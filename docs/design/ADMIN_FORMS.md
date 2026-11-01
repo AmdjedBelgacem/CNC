@@ -60,3 +60,29 @@ The reference implementation is `app/(admin)/admin/academies/new/page.tsx`.
 
 Screenshot it in light and dark, at desktop width and at 390px, empty and filled, and
 with a failed attempt. Look at the image — do not infer from the code.
+
+## Drawers and dialogs
+
+Drawers (`staff-drawer`, `learner-drawer`, `LessonDrawer`, the quote dialog) are not
+pages, so they skip `FormLayout`, the command bar and the floating dock. They use
+`components/admin/drawer-kit.tsx` instead: a sticky `DrawerFooter` (Saving / Saved /
+Unsaved changes, Discard, Save with ⌘S), a discard-changes dialog whose safe default is
+"Keep editing", and a hook that intercepts Esc, overlay click and the close button while
+dirty. Tabs use `ModalTabs`, which isolates its shared-layout pill from any surrounding
+`AnimatePresence` — without that, switching tabs and then closing left the drawer
+mounted and the page click-blocked.
+
+## Reordering
+
+`components/admin/sortable-list.tsx` is drag-to-reorder built from `m`. Do not use
+Framer's `Reorder`: it renders `motion`, which `LazyMotion strict` rejects. Every
+sortable list also offers keyboard and button alternatives.
+
+## Known gaps
+
+- The certificate template editor is still a modal, not a page.
+- `window.confirm` is still used for theme Reset and a few discards; a kit
+  `ConfirmDialog` would replace it.
+- `SaveDock` has no inline mode, so a modal needs its own footer.
+- `SecretField` (reveal toggle) is hand-built on the AI assistant page.
+- The AI assistant's payment and learning panels keep their own Save buttons.
