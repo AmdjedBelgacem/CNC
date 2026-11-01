@@ -1102,7 +1102,7 @@ function BlockCard({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-13 font-medium">{t(BLOCK_LABEL[block.type] as never)}</span>
-            <span className="block truncate text-xs text-muted-foreground">{summary || t('blockEmpty')}</span>
+            <span dir="auto" className="block truncate text-xs text-muted-foreground">{summary || t('blockEmpty')}</span>
           </span>
         </button>
         {!readOnly && (

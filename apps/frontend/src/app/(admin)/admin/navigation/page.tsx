@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { AdminPageHeader } from '@/components/admin/admin-chrome';
 import { NavigationEditor } from '@/components/admin/navigation-editor';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -8,12 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `${t('title')} | TITANS Admin` };
 }
 
-export default async function AdminNavigationPage() {
-  const t = await getTranslations('admin.navigation');
-  return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <AdminPageHeader title={t('title')} description={t('description')} />
-      <NavigationEditor />
-    </div>
-  );
+// The editor owns its own header, preview and save dock.
+export default function AdminNavigationPage() {
+  return <NavigationEditor />;
 }

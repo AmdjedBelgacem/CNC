@@ -412,7 +412,7 @@ export function LessonDrawer({
         : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40',
     );
   const panel = (key: typeof tab) => cn('space-y-5', tab !== key && 'hidden');
-  const pageTitle = title || t('studio.newLesson', { default: 'New lesson' });
+  const pageTitle = lesson.title || title || t('studio.newLesson', { default: 'New lesson' });
   const statusTone = lesson.isArchived ? 'archived' : lesson.isPublished ? 'live' : 'draft';
   const statusLabel = lesson.isArchived
     ? t('studio.statusArchived', { default: 'Archived' })

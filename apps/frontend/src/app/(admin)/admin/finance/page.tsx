@@ -13,7 +13,7 @@ import {
   AdminKpiCard, AdminPageHeader,
 } from '@/components/admin/admin-chrome';
 import { Toolbar, PillTabs, TableCard, EmptyState, ErrorBanner } from '@/components/admin/admin-ui';
-import { SelectInput, TextArea, TextInput } from '@/components/admin/admin-form';
+import { SelectField, TextAreaField, TextField } from '@/components/admin/admin-form';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -414,64 +414,47 @@ export default function AdminFinancePage() {
             </DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-4">
-            <label className="block">
-              <span className="text-13 font-medium text-foreground">
-                {t('colPeriod', { default: 'Period' })}
-              </span>
-              <SelectInput
-                value={form.period}
-                onChange={(e) => setForm((f) => ({ ...f, period: e.target.value }))}
-                className="mt-1.5 h-10"
-              >
-                {PERIODS.map((p) => (
-                  <option key={p} value={p}>
-                    {t(`period.${PERIOD_LABEL_KEYS[p]}`, { default: PERIOD_LABEL_DEFAULTS[p] })}
-                  </option>
-                ))}
-              </SelectInput>
-            </label>
-            <label className="block">
-              <span className="text-13 font-medium text-foreground">
-                {t('colCategory', { default: 'Category' })}
-              </span>
-              <SelectInput
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                className="mt-1.5 h-10"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {t(`category.${CATEGORY_LABEL_KEYS[c]}`, {
-                      default: CATEGORY_LABEL_DEFAULTS[c],
-                    })}
-                  </option>
-                ))}
-              </SelectInput>
-            </label>
-            <label className="block">
-              <span className="text-13 font-medium text-foreground">
-                {t('targetCents', { default: 'Target (cents)' })}
-              </span>
-              <TextInput
-                type="number"
-                min={0}
-                value={form.targetCents}
-                onChange={(e) => setForm((f) => ({ ...f, targetCents: Number(e.target.value) }))}
-                className="mt-1.5 h-10 tabular-nums"
-              />
-            </label>
-            <label className="block">
-              <span className="text-13 font-medium text-foreground">
-                {t('notes', { default: 'Notes' })}
-              </span>
-              <TextArea
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                maxLength={500}
-                rows={2}
-                className="mt-1.5 min-h-0"
-              />
-            </label>
+            <SelectField
+              label={t('colPeriod', { default: 'Period' })}
+              value={form.period}
+              onChange={(e) => setForm((f) => ({ ...f, period: e.target.value }))}
+            >
+              {PERIODS.map((p) => (
+                <option key={p} value={p}>
+                  {t(`period.${PERIOD_LABEL_KEYS[p]}`, { default: PERIOD_LABEL_DEFAULTS[p] })}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label={t('colCategory', { default: 'Category' })}
+              value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {t(`category.${CATEGORY_LABEL_KEYS[c]}`, {
+                    default: CATEGORY_LABEL_DEFAULTS[c],
+                  })}
+                </option>
+              ))}
+            </SelectField>
+            <TextField
+              label={t('targetCents', { default: 'Target (cents)' })}
+              type="number"
+              min={0}
+              dir="ltr"
+              value={form.targetCents}
+              onChange={(e) => setForm((f) => ({ ...f, targetCents: Number(e.target.value) }))}
+              className="tabular-nums"
+            />
+            <TextAreaField
+              label={t('notes', { default: 'Notes' })}
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              maxLength={500}
+              rows={2}
+              className="min-h-0"
+            />
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setShowForm(false)}>

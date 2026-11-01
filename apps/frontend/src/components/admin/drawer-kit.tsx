@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { AnimatePresence, m } from 'framer-motion';
 import { Check, Loader2 } from 'lucide-react';
@@ -50,9 +50,19 @@ export type DirtyClose = ReturnType<typeof useDirtyClose>;
 
 export function DiscardChangesDialog({ guard }: { guard: DirtyClose }) {
   const t = useTranslations('ui.adminForm');
+  const keepRef = useRef<HTMLButtonElement>(null);
   return (
     <Dialog open={guard.confirming} onOpenChange={(open) => !open && guard.keepEditing()}>
-      <DialogContent size="sm" hideClose title={t('discardTitle')}>
+      <DialogContent
+        size="sm"
+        hideClose
+        title={t('discardTitle')}
+        onOpenAutoFocus={(event) => {
+          // Land on the safe choice, not the destructive one.
+          event.preventDefault();
+          keepRef.current?.focus();
+        }}
+      >
         <DialogHeader className="pe-5 sm:pe-7">
           <DialogTitle>{t('discardTitle')}</DialogTitle>
           <DialogDescription>{t('discardBody')}</DialogDescription>
@@ -61,7 +71,7 @@ export function DiscardChangesDialog({ guard }: { guard: DirtyClose }) {
           <Button type="button" variant="destructive" onClick={guard.discard}>
             {t('discardConfirm')}
           </Button>
-          <Button type="button" variant="outline" onClick={guard.keepEditing} autoFocus>
+          <Button type="button" variant="outline" onClick={guard.keepEditing} ref={keepRef}>
             {t('keepEditing')}
           </Button>
         </DialogFooter>
@@ -129,7 +139,12 @@ export function DrawerFooter({
         className,
       )}
     >
-      {extra ? <div className="flex items-center gap-1">{extra}</div> : null}
+      {extra ? (
+        <>
+          <div className="flex items-center gap-1">{extra}</div>
+          <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
+        </>
+      ) : null}
       <div className="flex min-w-0 flex-1 items-center gap-2 text-13" aria-live="polite">
         {editable ? (
           <AnimatePresence mode="wait" initial={false}>
