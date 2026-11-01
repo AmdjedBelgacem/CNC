@@ -2193,6 +2193,12 @@
     }
   },
   "aiAssistant": {
+    "rangeError": "Enter a number between {min} and {max}.",
+    "requiredError": "This field is required.",
+    "showKey": "Show key",
+    "hideKey": "Hide key",
+    "apiKeyWillClear": "The key will be removed when you save",
+    "undoClear": "Undo",
     "title": "AI Assistant",
     "description": "Configure a tenant-scoped assistant that answers from verified workspace content.",
     "dialect": {

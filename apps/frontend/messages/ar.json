@@ -2193,6 +2193,12 @@
     }
   },
   "aiAssistant": {
+    "rangeError": "أدخل رقمًا بين {min} و{max}.",
+    "requiredError": "هذا الحقل مطلوب.",
+    "showKey": "إظهار المفتاح",
+    "hideKey": "إخفاء المفتاح",
+    "apiKeyWillClear": "ستتم إزالة المفتاح عند الحفظ",
+    "undoClear": "تراجع",
     "title": "المساعد الذكي",
     "description": "اضبط مساعدًا خاصًا بالمؤسسة يجيب من محتوى مساحة العمل الموثّق.",
     "dialect": {

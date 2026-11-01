@@ -458,6 +458,20 @@ export function slugify(input: string, max = 80) {
 }
 
 /**
+ * Cleans a slug *while it is being typed*: lowercases, turns anything outside
+ * a-z / 0-9 into a hyphen and collapses repeats, but keeps a trailing hyphen —
+ * stripping it per keystroke makes "my-course" impossible to type by hand.
+ * Edges are trimmed on blur (and by `slugify` when the slug follows a title).
+ */
+export function slugifyLive(input: string, max = 80) {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')
+    .slice(0, max);
+}
+
+/**
  * URL slug entry.
  *
  * Create: follows the title until the author types in it themselves.
@@ -525,7 +539,12 @@ export function SlugField({
               readOnly={locked}
               onChange={(event) => {
                 setTouched(true);
-                onChange(slugify(event.target.value));
+                onChange(slugifyLive(event.target.value));
+              }}
+              onBlur={() => {
+                // Trim stray hyphens once the author is done typing.
+                const trimmed = slugify(value);
+                if (trimmed !== value) onChange(trimmed);
               }}
               className="min-w-0 flex-1 border-0 bg-transparent px-1 font-mono shadow-none ring-0 focus:ring-0 focus:border-0"
             />
