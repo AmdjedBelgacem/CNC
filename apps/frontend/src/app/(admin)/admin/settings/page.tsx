@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, m } from 'framer-motion';
 import { useTranslations } from 'next-intl';
@@ -11,8 +11,6 @@ import {
   Check,
   Copy,
   Palette,
-  RotateCcw,
-  Save,
   Sparkles,
   Store,
 } from 'lucide-react';
@@ -24,14 +22,16 @@ import { PlatformAlertSettings } from './platform-alert-settings';
 import { toast } from '@/components/ui/toast';
 import { HoverLift, Reveal } from '@/components/ui/motion';
 import { ease, spring } from '@/lib/motion';
+import { AdminCommandBar, AdminPageHeader } from '@/components/admin/admin-chrome';
 import {
-  AdminCommandBar,
-  AdminPageHeader,
-  BarIconButton,
-  BarPrimaryButton,
-} from '@/components/admin/admin-chrome';
+  ColorField,
+  FormLayout,
+  SaveDock,
+  SectionNav,
+} from '@/components/admin/form-page';
 import {
   Field,
+  FieldGrid,
   FormSection,
   FormSkeleton,
   TextAreaField,
@@ -100,8 +100,6 @@ const SECTIONS = [
   { key: 'platformAlerts', icon: TriangleAlert, superAdminOnly: true },
 ] as const;
 
-type SectionKey = (typeof SECTIONS)[number]['key'];
-
 /** Relative luminance, used to warn about unreadable brand colours. */
 function luminance(hex: string): number {
   if (!HEX.test(hex)) return 0;
@@ -122,10 +120,27 @@ function contrastWithWhite(hex: string): number {
   return (1.05 / (luminance(hex) + 0.05));
 }
 
+function toForm(data: TenantProfile): FormState {
+  return {
+    name: data.name ?? '',
+    description: data.description ?? '',
+    logoUrl: data.logoUrl ?? '',
+    faviconUrl: data.faviconUrl ?? '',
+    primaryColor: data.primaryColor ?? '#B65433',
+    secondaryColor: data.secondaryColor ?? '#3D3D3A',
+    accentColor: data.accentColor ?? '#4D6E58',
+    fontFamily: data.fontFamily ?? '',
+    domain: data.domain ?? '',
+    gaMeasurementId: data.settings?.analytics?.gaMeasurementId ?? '',
+    snapchatPixelId: data.settings?.analytics?.snapchatPixelId ?? '',
+  };
+}
+
 export default function AdminSettingsPage() {
   const tAdmin = useTranslations('admin');
   const t = useTranslations('admin.settingsPage');
   const tCommon = useTranslations('common');
+  const tForm = useTranslations('ui.adminForm');
 
   const [profile, setProfile] = useState<TenantProfile | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -133,7 +148,9 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [active, setActive] = useState<SectionKey>('identity');
+  const [failed, setFailed] = useState(false);
+  // Validation stays quiet until the first save attempt.
+  const [attempted, setAttempted] = useState(false);
   // Platform alerting is a super-admin responsibility: the backend refuses
   // everyone else, so the section must not be offered to them either.
   const role = useAuthStore((s) => s.user?.role) ?? '';
@@ -144,29 +161,16 @@ export default function AdminSettingsPage() {
     () => SECTIONS.filter((s) => !s.superAdminOnly || isSuperAdmin),
     [isSuperAdmin],
   );
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/proxy/admin/tenant', { credentials: 'include' });
       if (!res.ok) throw new Error(`${res.status}`);
       const data: TenantProfile = await res.json();
       setProfile(data);
-      setForm({
-        name: data.name ?? '',
-        description: data.description ?? '',
-        logoUrl: data.logoUrl ?? '',
-        faviconUrl: data.faviconUrl ?? '',
-        primaryColor: data.primaryColor ?? '#B65433',
-        secondaryColor: data.secondaryColor ?? '#3D3D3A',
-        accentColor: data.accentColor ?? '#4D6E58',
-        fontFamily: data.fontFamily ?? '',
-        domain: data.domain ?? '',
-        gaMeasurementId: data.settings?.analytics?.gaMeasurementId ?? '',
-        snapchatPixelId: data.settings?.analytics?.snapchatPixelId ?? '',
-      });
+      setForm(toForm(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('loadFailed', { default: 'Failed to load' }));
     } finally {
@@ -181,22 +185,13 @@ export default function AdminSettingsPage() {
   const prevGa = profile?.settings?.analytics?.gaMeasurementId ?? '';
   const prevSnap = profile?.settings?.analytics?.snapchatPixelId ?? '';
 
+  // Compared against the loaded record as the form would render it, so a tenant
+  // with no stored colours does not start out "dirty" on the defaults.
   const dirty = useMemo(() => {
     if (!profile) return false;
-    return (
-      form.name !== (profile.name ?? '') ||
-      form.description !== (profile.description ?? '') ||
-      form.logoUrl !== (profile.logoUrl ?? '') ||
-      form.faviconUrl !== (profile.faviconUrl ?? '') ||
-      form.primaryColor !== (profile.primaryColor ?? '') ||
-      form.secondaryColor !== (profile.secondaryColor ?? '') ||
-      form.accentColor !== (profile.accentColor ?? '') ||
-      form.fontFamily !== (profile.fontFamily ?? '') ||
-      form.domain !== (profile.domain ?? '') ||
-      form.gaMeasurementId !== prevGa ||
-      form.snapchatPixelId !== prevSnap
-    );
-  }, [form, profile, prevGa, prevSnap]);
+    const base = toForm(profile);
+    return (Object.keys(base) as (keyof FormState)[]).some((k) => form[k] !== base[k]);
+  }, [form, profile]);
 
   const hexValid = useMemo(
     () => ['primaryColor', 'secondaryColor', 'accentColor'].every((k) => HEX.test(form[k as keyof FormState])),
@@ -214,13 +209,32 @@ export default function AdminSettingsPage() {
     return d === '' || /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(d);
   }, [form.domain]);
 
-  const canSave = dirty && hexValid && analyticsValid && domainValid && !!form.name.trim();
+  const valid = hexValid && analyticsValid && domainValid && !!form.name.trim();
+  const nameMissing = !form.name.trim();
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
 
+  const discard = () => {
+    if (profile) setForm(toForm(profile));
+    setAttempted(false);
+  };
+
   const save = async () => {
-    if (!profile || !canSave) return;
+    if (!profile) return;
+    if (!valid) {
+      // Validation appears after the first attempt: reveal every error and
+      // take the author to the first section that needs attention.
+      setAttempted(true);
+      const firstInvalid =
+        nameMissing || !domainValid ? 'identity' : !hexValid ? 'branding' : 'analytics';
+      document
+        .getElementById(firstInvalid)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setFailed(true);
+      return;
+    }
     setSaving(true);
+    setFailed(false);
     try {
       // Only changed whitelisted fields are sent, so a partial save can never
       // blank something the form does not own.
@@ -251,8 +265,10 @@ export default function AdminSettingsPage() {
       }
       await api.patch('/admin/tenant', patch);
       toast({ type: 'ok', title: t('savedToast', { default: 'Settings saved' }) });
-      void load();
+      setAttempted(false);
+      await load(true);
     } catch (e) {
+      setFailed(true);
       toast({
         type: 'err',
         title: t('saveFailed', { default: 'Save failed' }),
@@ -273,29 +289,6 @@ export default function AdminSettingsPage() {
     }
   };
 
-  // Highlight the section nearest the top of the viewport as the user scrolls.
-  useEffect(() => {
-    if (loading) return;
-    const onScroll = () => {
-      let current: SectionKey = 'identity';
-      for (const s of sections) {
-        const el = sectionRefs.current[s.key];
-        if (el && el.getBoundingClientRect().top <= 120) current = s.key;
-      }
-      setActive(current);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [loading, sections]);
-
-  const scrollTo = (key: SectionKey) => {
-    const el = sectionRefs.current[key];
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setActive(key);
-  };
-
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-[1500px] pt-6">
@@ -304,100 +297,53 @@ export default function AdminSettingsPage() {
     );
   }
 
+  const navItems = sections.map((s) => ({
+    id: s.key,
+    label: t(`nav.${s.key}`, { default: s.key }),
+    icon: s.icon,
+    invalid:
+      attempted &&
+      ((s.key === 'identity' && (nameMissing || !domainValid)) ||
+        (s.key === 'branding' && !hexValid) ||
+        (s.key === 'analytics' && !analyticsValid)),
+  }));
+
   return (
     <div className="w-full">
       <AdminCommandBar
-        trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('settings', { default: 'Settings' })}]}
-        live={
-          dirty
-            ? t('unsaved', { default: 'Unsaved changes' })
-            : t('allSaved', { default: 'All changes saved' })
-        }
-        actions={
-          dirty ? (
-            <BarIconButton
-              title={t('discard', { default: 'Discard changes' })}
-              onClick={() => void load()}
-            >
-              <RotateCcw className="size-4" />
-            </BarIconButton>
-          ) : undefined
-        }
-        primary={
-          <BarPrimaryButton
-            icon={<Save className="size-4" strokeWidth={2.5} />}
-            disabled={!canSave || saving}
-            onClick={() => void save()}
-          >
-            {saving ? t('saving', { default: 'Saving…' }) : t('saveChanges', { default: 'Save changes' })}
-          </BarPrimaryButton>
-        }
+        trail={[{ label: tAdmin('settings', { default: 'Settings' }) }]}
+        live={false}
       />
 
-      <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
-        <Reveal>
-        <AdminPageHeader
-          title={tAdmin('settings', { default: 'Settings' })}
-          description={t('description', {
-            default:
-              'Tenant identity, brand appearance, measurement and connected tools for this workspace.',
-          })}
-          badge={
-            <span className="inline-flex items-center gap-2 self-start rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-xs md:self-auto">
-              <Store className="size-3.5" />
-              <span className="font-mono" dir="ltr">{profile?.slug ?? '—'}</span>
-            </span>
-          }
-        />
-        </Reveal>
-
-        {error && <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry')} />}
-
-        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
-          {/* Section nav */}
-          <nav
-            aria-label={t('sections', { default: 'Settings sections' })}
-            className="hidden lg:block"
-          >
-            <div className="sticky top-24 space-y-0.5">
-              {sections.map((s) => {
-                const Icon = s.icon;
-                const isActive = active === s.key;
-                return (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => scrollTo(s.key)}
-                    aria-current={isActive ? 'true' : undefined}
-                    className={cn(
-                      'relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-start text-13 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      isActive
-                        ? 'text-foreground'
-                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                    )}
-                  >
-                    {isActive && (
-                      <m.span
-                        layoutId="settings-nav-active"
-                        transition={spring.smooth}
-                        className="absolute inset-0 rounded-lg border border-border/70 bg-card shadow-xs"
-                        aria-hidden="true"
-                      >
-                        <span className="absolute inset-y-2 start-0 w-0.5 rounded-full bg-primary" />
-                      </m.span>
-                    )}
-                    <Icon
-                      className={cn(
-                        'relative size-4 transition-colors',
-                        isActive ? 'text-primary' : 'text-muted-foreground',
-                      )}
-                    />
-                    <span className="relative">{t(`nav.${s.key}`, { default: s.key })}</span>
-                  </button>
-                );
+      <div className="space-y-6 pt-6">
+        <div className="mx-auto w-full max-w-6xl">
+          <Reveal>
+            <AdminPageHeader
+              title={tAdmin('settings', { default: 'Settings' })}
+              description={t('description', {
+                default:
+                  'Tenant identity, brand appearance, measurement and connected tools for this workspace.',
               })}
+              badge={
+                <span className="inline-flex items-center gap-2 self-start rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-xs md:self-auto">
+                  <Store className="size-3.5" />
+                  <span className="font-mono" dir="ltr">{profile?.slug ?? '—'}</span>
+                </span>
+              }
+            />
+          </Reveal>
+          {error && (
+            <div className="mt-4">
+              <ErrorBanner message={error} onRetry={() => load()} retryLabel={tCommon('retry')} />
+            </div>
+          )}
+        </div>
 
-              <div className="mt-6 rounded-xl border border-border/70 bg-card p-3.5 shadow-xs">
+        <FormLayout
+          aside={
+            <>
+              <SectionNav items={navItems} />
+              <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-xs">
                 <p className="text-xs font-medium text-muted-foreground">
                   {t('tenantSlug', { default: 'Tenant slug' })}
                 </p>
@@ -423,340 +369,272 @@ export default function AdminSettingsPage() {
                   </AnimatePresence>
                 </button>
               </div>
-            </div>
-          </nav>
-
-          <div className="min-w-0 space-y-8">
-            {/* ---------------- Identity ---------------- */}
-            <section
-              ref={(el) => {
-                sectionRefs.current.identity = el;
-              }}
-              className="scroll-mt-24"
+            </>
+          }
+        >
+          {/* ---------------- Identity ---------------- */}
+          <Reveal>
+            <FormSection
+              id="identity"
+              title={t('identity.title', { default: 'Identity' })}
+              icon={Store}
+              description={t('identity.desc', {
+                default: 'How this workspace is named and addressed across the platform.',
+              })}
             >
-              <Reveal>
-              <FormSection
-                title={t('identity.title', { default: 'Identity' })}
-                icon={Store}
-                description={t('identity.desc', {
-                  default: 'How this workspace is named and addressed across the platform.',
-                })}
-              >
-                <div className="space-y-4">
-                  <TextField
-                    label={t('identity.name', { default: 'Name' })}
-                    required
-                    value={form.name}
-                    onChange={(e) => set({ name: e.target.value })}
-                    error={!form.name.trim() ? t('identity.nameRequired', { default: 'A name is required.' }) : undefined}
-                  />
-                  <TextAreaField
-                    label={t('identity.description', { default: 'Description' })}
-                    hint={t('identity.descriptionHint', {
-                      default: 'Shown in page metadata and wherever the workspace is introduced.',
-                    })}
-                    rows={3}
-                    value={form.description}
-                    onChange={(e) => set({ description: e.target.value })}
-                  />
-                  <TextField
-                    label={t('identity.domain', { default: 'Custom domain' })}
-                    hint={t('identity.domainHint', {
-                      default: 'Leave blank to use the default address.',
-                    })}
-                    value={form.domain}
-                    onChange={(e) => set({ domain: e.target.value })}
-                    placeholder="academy.example.com"
-                    dir="ltr"
-                    spellCheck={false}
-                    error={
-                      !domainValid ? t('identity.domainInvalid', { default: 'Enter a valid hostname.' }) : undefined
-                    }
-                  />
-                </div>
-              </FormSection>
-              </Reveal>
-            </section>
+              <div className="space-y-5">
+                <TextField
+                  label={t('identity.name', { default: 'Name' })}
+                  required
+                  value={form.name}
+                  onChange={(e) => set({ name: e.target.value })}
+                  error={
+                    attempted && nameMissing
+                      ? t('identity.nameRequired', { default: 'A name is required.' })
+                      : undefined
+                  }
+                />
+                <TextAreaField
+                  label={t('identity.description', { default: 'Description' })}
+                  hint={t('identity.descriptionHint', {
+                    default: 'Shown in page metadata and wherever the workspace is introduced.',
+                  })}
+                  rows={3}
+                  value={form.description}
+                  onChange={(e) => set({ description: e.target.value })}
+                />
+                <TextField
+                  label={t('identity.domain', { default: 'Custom domain' })}
+                  hint={t('identity.domainHint', {
+                    default: 'Leave blank to use the default address.',
+                  })}
+                  value={form.domain}
+                  onChange={(e) => set({ domain: e.target.value })}
+                  placeholder="academy.example.com"
+                  dir="ltr"
+                  spellCheck={false}
+                  error={
+                    !domainValid ? t('identity.domainInvalid', { default: 'Enter a valid hostname.' }) : undefined
+                  }
+                />
+              </div>
+            </FormSection>
+          </Reveal>
 
-            {/* ---------------- Branding ---------------- */}
-            <section
-              ref={(el) => {
-                sectionRefs.current.branding = el;
-              }}
-              className="scroll-mt-24"
+          {/* ---------------- Branding ---------------- */}
+          <Reveal delay={0.04}>
+            <FormSection
+              id="branding"
+              title={t('branding.title', { default: 'Branding' })}
+              icon={Palette}
+              description={t('branding.desc', {
+                default: 'Colours, logo and typography applied across the storefront.',
+              })}
+              bodyClassName="p-0"
             >
-              <Reveal>
-              <FormSection
-                title={t('branding.title', { default: 'Branding' })}
-                icon={Palette}
-                description={t('branding.desc', {
-                  default: 'Colours, logo and typography applied across the storefront.',
-                })}
-                bodyClassName="p-0"
-              >
-                <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="space-y-6 p-5 sm:p-6">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <TextField
-                        label={t('branding.logo', { default: 'Logo URL' })}
-                        value={form.logoUrl}
-                        onChange={(e) => set({ logoUrl: e.target.value })}
-                        placeholder="https://…/logo.png"
-                        dir="ltr"
-                        spellCheck={false}
-                      />
-                      <TextField
-                        label={t('branding.favicon', { default: 'Favicon URL' })}
-                        value={form.faviconUrl}
-                        onChange={(e) => set({ faviconUrl: e.target.value })}
-                        placeholder="https://…/favicon.png"
-                        dir="ltr"
-                        spellCheck={false}
-                      />
-                    </div>
+              <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+                <div className="space-y-6 p-4 sm:p-5">
+                  <FieldGrid cols={2}>
+                    <TextField
+                      label={t('branding.logo', { default: 'Logo URL' })}
+                      value={form.logoUrl}
+                      onChange={(e) => set({ logoUrl: e.target.value })}
+                      placeholder="https://…/logo.png"
+                      dir="ltr"
+                      spellCheck={false}
+                    />
+                    <TextField
+                      label={t('branding.favicon', { default: 'Favicon URL' })}
+                      value={form.faviconUrl}
+                      onChange={(e) => set({ faviconUrl: e.target.value })}
+                      placeholder="https://…/favicon.png"
+                      dir="ltr"
+                      spellCheck={false}
+                    />
+                  </FieldGrid>
 
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      {(
-                        [
-                          ['primaryColor', t('branding.primary', { default: 'Primary' })],
-                          ['secondaryColor', t('branding.secondary', { default: 'Secondary' })],
-                          ['accentColor', t('branding.accent', { default: 'Accent' })],
-                        ] as const
-                      ).map(([key, label]) => {
-                        const value = form[key];
-                        const valid = HEX.test(value);
-                        const lowContrast = valid && contrastWithWhite(value) < 3;
-                        return (
-                          <Field
-                            key={key}
-                            label={label}
-                            error={!valid ? t('branding.hexInvalid', { default: 'Use a 6-digit hex value.' }) : undefined}
-                            hint={
-                              lowContrast
-                                ? t('branding.lowContrast', {
-                                    default: 'Too light for white text on this colour.',
-                                  })
-                                : undefined
-                            }
-                          >
-                            {(a) => (
-                              <div className="flex items-center gap-2">
-                                <span className="relative shrink-0">
-                                  <input
-                                    type="color"
-                                    value={valid ? value : '#000000'}
-                                    onChange={(e) => set({ [key]: e.target.value } as Partial<FormState>)}
-                                    aria-label={label}
-                                    className="size-10 cursor-pointer rounded-full border border-border/70 bg-card p-1 shadow-xs transition hover:border-border-strong"
-                                  />
-                                </span>
-                                <TextInput
-                                  {...a}
-                                  value={value}
-                                  onChange={(e) => set({ [key]: e.target.value } as Partial<FormState>)}
-                                  dir="ltr"
-                                  spellCheck={false}
-                                  className="font-mono"
-                                />
-                              </div>
-                            )}
-                          </Field>
-                        );
-                      })}
-                    </div>
-
-                    <Field
-                      label={t('branding.font', { default: 'Font family' })}
-                      hint={t('branding.fontHint', {
-                        default: 'Applied to storefront headings and body copy.',
-                      })}
-                    >
-                      {(a) => (
-                        <>
-                          <TextInput
-                            {...a}
-                            list="font-suggestions"
-                            value={form.fontFamily}
-                            onChange={(e) => set({ fontFamily: e.target.value })}
-                            dir="ltr"
-                            placeholder={t('branding.fontPlaceholder', { default: 'e.g. Inter' })}
-                          />
-                          <datalist id="font-suggestions">
-                            {FONT_SUGGESTIONS.map((f) => (
-                              <option key={f} value={f} />
-                            ))}
-                          </datalist>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {FONT_SUGGESTIONS.map((f) => (
-                              <button
-                                key={f}
-                                type="button"
-                                onClick={() => set({ fontFamily: f })}
-                                style={{ fontFamily: f }}
-                                aria-pressed={form.fontFamily === f}
-                                className={cn(
-                                  'rounded-full border px-2.5 py-1 text-xs font-medium transition active:scale-[0.97]',
-                                  form.fontFamily === f
-                                    ? 'border-primary/40 bg-primary/10 text-primary'
-                                    : 'border-border/70 bg-background text-muted-foreground hover:border-border-strong hover:text-foreground',
-                                )}
-                              >
-                                {f}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </Field>
+                  <div className="space-y-5">
+                    {(
+                      [
+                        ['primaryColor', t('branding.primary', { default: 'Primary' })],
+                        ['secondaryColor', t('branding.secondary', { default: 'Secondary' })],
+                        ['accentColor', t('branding.accent', { default: 'Accent' })],
+                      ] as const
+                    ).map(([key, label]) => {
+                      const value = form[key];
+                      const lowContrast = HEX.test(value) && contrastWithWhite(value) < 3;
+                      return (
+                        <ColorField
+                          key={key}
+                          label={label}
+                          value={value}
+                          onChange={(v) => set({ [key]: v } as Partial<FormState>)}
+                          hint={
+                            lowContrast
+                              ? t('branding.lowContrast', {
+                                  default: 'Too light for white text on this colour.',
+                                })
+                              : undefined
+                          }
+                        />
+                      );
+                    })}
                   </div>
 
-                  <BrandPreview
-                    name={form.name || t('preview.placeholderName', { default: 'Your academy' })}
-                    tagline={form.description}
-                    logoUrl={form.logoUrl}
-                    primary={HEX.test(form.primaryColor) ? form.primaryColor : '#B65433'}
-                    secondary={HEX.test(form.secondaryColor) ? form.secondaryColor : '#3D3D3A'}
-                    accent={HEX.test(form.accentColor) ? form.accentColor : '#4D6E58'}
-                    fontFamily={form.fontFamily}
-                  />
-                </div>
-              </FormSection>
-              </Reveal>
-            </section>
-
-            {/* ---------------- Analytics ---------------- */}
-            <section
-              ref={(el) => {
-                sectionRefs.current.analytics = el;
-              }}
-              className="scroll-mt-24"
-            >
-              <Reveal>
-              <FormSection
-                title={t('analytics.title', { default: 'Analytics & pixels' })}
-                icon={BarChart3}
-                description={t('analytics.desc', {
-                  default: 'Measurement IDs for this workspace. Leave a field blank to disable it.',
-                })}
-              >
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <TextField
-                    label={t('analytics.ga', { default: 'GA4 Measurement ID' })}
-                    value={form.gaMeasurementId}
-                    onChange={(e) => set({ gaMeasurementId: e.target.value })}
-                    placeholder="G-XXXXXXXXXX"
-                    dir="ltr"
-                    spellCheck={false}
-                    className="font-mono"
-                    error={
-                      form.gaMeasurementId.trim() !== '' && !/^G-[A-Z0-9]{4,}$/i.test(form.gaMeasurementId.trim())
-                        ? t('analytics.gaInvalid', { default: 'Expected a value like G-ABC1234.' })
-                        : undefined
-                    }
-                  />
-                  <TextField
-                    label={t('analytics.snapchat', { default: 'Snapchat Pixel ID' })}
-                    value={form.snapchatPixelId}
-                    onChange={(e) => set({ snapchatPixelId: e.target.value })}
-                    placeholder="123456789012"
-                    dir="ltr"
-                    spellCheck={false}
-                    inputMode="numeric"
-                    className="font-mono"
-                    error={
-                      form.snapchatPixelId.trim() !== '' && !/^\d{5,}$/.test(form.snapchatPixelId.trim())
-                        ? t('analytics.snapInvalid', { default: 'Must be empty or digits only.' })
-                        : undefined
-                    }
-                  />
-                </div>
-              </FormSection>
-              </Reveal>
-            </section>
-
-            {/* ---------------- Integrations ---------------- */}
-            <section
-              ref={(el) => {
-                sectionRefs.current.integrations = el;
-              }}
-              className="scroll-mt-24"
-            >
-              <Reveal>
-              <FormSection
-                title={t('integrations.title', { default: 'Tools & integrations' })}
-                icon={Sparkles}
-                description={t('integrations.desc', {
-                  default: 'Deeper configuration lives in each tool.',
-                })}
-                bodyClassName="p-3"
-              >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <IntegrationCard
-                    href="/admin/settings/ai-assistant"
-                    icon={Bot}
-                    title={tAdmin('aiAssistant', { default: 'AI Assistant' })}
-                    description={tAdmin('aiAssistantLink', {
-                      default: 'Configure provider, access, retrieval, and indexing',
+                  <Field
+                    label={t('branding.font', { default: 'Font family' })}
+                    hint={t('branding.fontHint', {
+                      default: 'Applied to storefront headings and body copy.',
                     })}
-                    actionLabel={tAdmin('configure', { default: 'Configure' })}
-                  />
-                  <IntegrationCard
-                    href="/admin/theme"
-                    icon={Palette}
-                    title={tAdmin('theme', { default: 'Theme' })}
-                    description={tAdmin('themeEditorLink', {
-                      default: 'Manage colors & typography in Theme Editor',
-                    })}
-                    actionLabel={t('open', { default: 'Open' })}
-                  />
+                  >
+                    {(a) => (
+                      <>
+                        <TextInput
+                          {...a}
+                          list="font-suggestions"
+                          value={form.fontFamily}
+                          onChange={(e) => set({ fontFamily: e.target.value })}
+                          dir="ltr"
+                          placeholder={t('branding.fontPlaceholder', { default: 'e.g. Inter' })}
+                        />
+                        <datalist id="font-suggestions">
+                          {FONT_SUGGESTIONS.map((f) => (
+                            <option key={f} value={f} />
+                          ))}
+                        </datalist>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {FONT_SUGGESTIONS.map((f) => (
+                            <button
+                              key={f}
+                              type="button"
+                              onClick={() => set({ fontFamily: f })}
+                              style={{ fontFamily: f }}
+                              aria-pressed={form.fontFamily === f}
+                              className={cn(
+                                'rounded-full border px-2.5 py-1 text-xs font-medium transition active:scale-[0.97]',
+                                form.fontFamily === f
+                                  ? 'border-primary/40 bg-primary/10 text-primary'
+                                  : 'border-border/70 bg-background text-muted-foreground hover:border-border-strong hover:text-foreground',
+                              )}
+                            >
+                              {f}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </Field>
                 </div>
-              </FormSection>
-              </Reveal>
-            </section>
 
-            {isSuperAdmin && (
-              <section
-                id="section-platformAlerts"
-                ref={(el) => {
-                  sectionRefs.current.platformAlerts = el;
-                }}
-                className="scroll-mt-28"
-              >
-                <Reveal>
-                <PlatformAlertSettings />
-                </Reveal>
-              </section>
-            )}
+                <BrandPreview
+                  name={form.name || t('preview.placeholderName', { default: 'Your academy' })}
+                  tagline={form.description}
+                  logoUrl={form.logoUrl}
+                  primary={HEX.test(form.primaryColor) ? form.primaryColor : '#B65433'}
+                  secondary={HEX.test(form.secondaryColor) ? form.secondaryColor : '#3D3D3A'}
+                  accent={HEX.test(form.accentColor) ? form.accentColor : '#4D6E58'}
+                  fontFamily={form.fontFamily}
+                />
+              </div>
+            </FormSection>
+          </Reveal>
 
-            {/* Validation summary, so a blocked save explains itself. */}
-            <AnimatePresence initial={false}>
-            {dirty && !canSave && (
-              <m.div
-                key="cannot-save"
-                role="alert"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
-                exit={{ opacity: 0, y: 4, transition: { duration: 0.16, ease: ease.exit } }}
-                className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3.5"
-              >
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-                <div className="text-xs text-foreground">
-                  <p className="font-medium">
-                    {t('cannotSave', { default: 'Some changes still need attention' })}
-                  </p>
-                  <ul className="mt-1 list-disc space-y-0.5 ps-4 text-muted-foreground">
-                    {!form.name.trim() && <li>{t('identity.nameRequired', { default: 'A name is required.' })}</li>}
-                    {!hexValid && <li>{t('branding.hexInvalid', { default: 'Use a 6-digit hex value.' })}</li>}
-                    {!domainValid && <li>{t('identity.domainInvalid', { default: 'Enter a valid hostname.' })}</li>}
-                    {!analyticsValid && <li>{t('analytics.fixIds', { default: 'Check the measurement IDs.' })}</li>}
-                  </ul>
-                </div>
-              </m.div>
-            )}
-            </AnimatePresence>
-          </div>
-        </div>
+          {/* ---------------- Analytics ---------------- */}
+          <Reveal delay={0.08}>
+            <FormSection
+              id="analytics"
+              title={t('analytics.title', { default: 'Analytics & pixels' })}
+              icon={BarChart3}
+              description={t('analytics.desc', {
+                default: 'Measurement IDs for this workspace. Leave a field blank to disable it.',
+              })}
+              badge={tForm('optional')}
+            >
+              <FieldGrid cols={2}>
+                <TextField
+                  label={t('analytics.ga', { default: 'GA4 Measurement ID' })}
+                  value={form.gaMeasurementId}
+                  onChange={(e) => set({ gaMeasurementId: e.target.value })}
+                  placeholder="G-XXXXXXXXXX"
+                  dir="ltr"
+                  spellCheck={false}
+                  className="font-mono"
+                  error={
+                    form.gaMeasurementId.trim() !== '' && !/^G-[A-Z0-9]{4,}$/i.test(form.gaMeasurementId.trim())
+                      ? t('analytics.gaInvalid', { default: 'Expected a value like G-ABC1234.' })
+                      : undefined
+                  }
+                />
+                <TextField
+                  label={t('analytics.snapchat', { default: 'Snapchat Pixel ID' })}
+                  value={form.snapchatPixelId}
+                  onChange={(e) => set({ snapchatPixelId: e.target.value })}
+                  placeholder="123456789012"
+                  dir="ltr"
+                  spellCheck={false}
+                  inputMode="numeric"
+                  className="font-mono"
+                  error={
+                    form.snapchatPixelId.trim() !== '' && !/^\d{5,}$/.test(form.snapchatPixelId.trim())
+                      ? t('analytics.snapInvalid', { default: 'Must be empty or digits only.' })
+                      : undefined
+                  }
+                />
+              </FieldGrid>
+            </FormSection>
+          </Reveal>
+
+          {/* ---------------- Integrations ---------------- */}
+          <Reveal delay={0.12}>
+            <FormSection
+              id="integrations"
+              title={t('integrations.title', { default: 'Tools & integrations' })}
+              icon={Sparkles}
+              description={t('integrations.desc', {
+                default: 'Deeper configuration lives in each tool.',
+              })}
+              bodyClassName="p-3"
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <IntegrationCard
+                  href="/admin/settings/ai-assistant"
+                  icon={Bot}
+                  title={tAdmin('aiAssistant', { default: 'AI Assistant' })}
+                  description={tAdmin('aiAssistantLink', {
+                    default: 'Configure provider, access, retrieval, and indexing',
+                  })}
+                  actionLabel={tAdmin('configure', { default: 'Configure' })}
+                />
+                <IntegrationCard
+                  href="/admin/theme"
+                  icon={Palette}
+                  title={tAdmin('theme', { default: 'Theme' })}
+                  description={tAdmin('themeEditorLink', {
+                    default: 'Manage colors & typography in Theme Editor',
+                  })}
+                  actionLabel={t('open', { default: 'Open' })}
+                />
+              </div>
+            </FormSection>
+          </Reveal>
+
+          {isSuperAdmin && (
+            <Reveal delay={0.16}>
+              <PlatformAlertSettings id="platformAlerts" />
+            </Reveal>
+          )}
+        </FormLayout>
       </div>
+
+      <SaveDock
+        mode="edit"
+        dirty={dirty}
+        saving={saving}
+        failed={failed}
+        onSave={() => void save()}
+        onDiscard={discard}
+        saveLabel={t('saveChanges', { default: 'Save changes' })}
+      />
     </div>
   );
 }

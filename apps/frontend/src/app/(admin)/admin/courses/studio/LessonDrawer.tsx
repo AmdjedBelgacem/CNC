@@ -13,12 +13,25 @@ import {
   Music,
   FileText,
   Image as ImageIcon,
+  LayoutList,
+  Clapperboard,
+  Blocks,
+  Files,
 } from 'lucide-react';
 import { AnimatePresence, m } from 'framer-motion';
-import { Modal, ModalHeader } from '@/components/ui/modal';
-import { Switch } from '@/components/ui/switch';
+import { Modal, type ModalTab } from '@/components/ui/modal';
 import { spring } from '@/lib/motion';
-import { INPUT, LABEL } from './glass';
+import { cn } from '@/lib/utils';
+import {
+  FormSection,
+  SelectField,
+  SwitchField,
+  TextAreaField,
+  TextField,
+  TextInput,
+} from '@/components/admin/admin-form';
+import { SlugField, StatusChip } from '@/components/admin/form-page';
+import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/admin/drawer-kit';
 import { toast } from '@/components/ui/toast';
 import type { Attachment, Lesson, LessonVideoMeta, Section } from './types';
 import { slugify } from './slugify';
@@ -45,6 +58,26 @@ function FileGlyph({ type }: { type: string }) {
   if (type === 'application/pdf')
     return <FileText className="size-4 text-destructive" />;
   return <Paperclip className="size-4 text-muted-foreground" />;
+}
+/** Everything the Save button persists — compared against what was loaded to decide "dirty". */
+function snapshot(v: {
+  title: string;
+  slug: string;
+  videoUrl: string;
+  thumbUrl: string;
+  description: string;
+  freePreview: boolean;
+  attachments: Attachment[];
+}): string {
+  return JSON.stringify([
+    v.title,
+    v.slug,
+    v.videoUrl,
+    v.thumbUrl,
+    v.description,
+    v.freePreview,
+    v.attachments.map((a) => [a.id, a.name, a.url]),
+  ]);
 }
 function isVideoUrl(u: string): boolean {
   if (/^\/uploads\//i.test(u)) return /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(u);
@@ -76,7 +109,7 @@ export function LessonDrawer({
 }) {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
   const [videoUrl, setVideoUrl] = useState('');
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoDisplayUrl, setVideoDisplayUrl] = useState<string | null>(null);
@@ -96,6 +129,9 @@ export function LessonDrawer({
   const thumbInputRef = useRef<HTMLInputElement>(null);
   const attInputRef = useRef<HTMLInputElement>(null);
   const [resolvingVideo, setResolvingVideo] = useState(false);
+  const [base, setBase] = useState<string | null>(null);
+  const [attempted, setAttempted] = useState(false);
+  const [tab, setTab] = useState<'details' | 'media' | 'content' | 'files'>('details');
   const t = useTranslations('courses');
   const tMedia = useTranslations('media');
   const tCommon = useTranslations('common');
@@ -104,7 +140,6 @@ export function LessonDrawer({
     const translation = lesson.translations?.[locale] ?? {};
     setTitle(locale === 'en' ? lesson.title : translation.title ?? '');
     setSlug(lesson.slug);
-    setSlugTouched(true);
     // Keep the storage key (not the resolved/expiring playback URL) so saving preserves it.
     setVideoUrl(lesson.videoMeta?.key ?? lesson.videoUrl ?? '');
     setVideoPreview(null);
@@ -123,7 +158,26 @@ export function LessonDrawer({
     setAttachments(lesson.attachments ?? []);
     setSectionId(lesson.seriesId);
     setUploading({});
-  }, [open, lesson?.id, locale]);
+    setAttempted(false);
+    setTab('details');
+    setBase(
+      snapshot({
+        title: locale === 'en' ? lesson.title : translation.title ?? '',
+        slug: lesson.slug,
+        videoUrl: lesson.videoMeta?.key ?? lesson.videoUrl ?? '',
+        thumbUrl: lesson.thumbnailUrl ?? '',
+        description: locale === 'en' ? lesson.description ?? '' : translation.description ?? '',
+        freePreview: lesson.freePreview,
+        attachments: lesson.attachments ?? [],
+      }),
+    );
+  }, [open, lesson?.id, locale, resetKey]);
+
+  const dirty =
+    base !== null &&
+    base !== snapshot({ title, slug, videoUrl, thumbUrl, description, freePreview, attachments });
+  const guard = useDirtyClose(dirty, onClose);
+  const [deleteArmed, setDeleteArmed] = useState(false);
 
   // Resolve S3 storage keys (tenants/...) to a playable signed URL for the admin preview.
   // Admins always pass the paywall, so this also verifies the upload actually persisted.
@@ -303,7 +357,8 @@ export function LessonDrawer({
   };
   const save = () => {
     if (locale === 'en' && !title.trim()) {
-      toast({ type: 'err', title: t('studio.titleRequired', { default: 'Lesson title is required' }) });
+      setAttempted(true);
+      setTab('details');
       return;
     }
     if (uploadingCount > 0) {
@@ -339,422 +394,475 @@ export function LessonDrawer({
   };
   const displaySrc =
     videoPreview || videoDisplayUrl || (videoUrl && isVideoUrl(videoUrl) ? videoUrl : null);
+  const titleError =
+    attempted && locale === 'en' && !title.trim()
+      ? t('studio.titleRequired', { default: 'Lesson title is required' })
+      : undefined;
+  const tabs: ModalTab[] = [
+    { key: 'details', label: t('studio.drawerTabDetails', { default: 'Details' }), icon: LayoutList },
+    { key: 'media', label: t('studio.drawerTabMedia', { default: 'Media' }), icon: Clapperboard },
+    { key: 'content', label: t('studio.drawerTabContent', { default: 'Content' }), icon: Blocks },
+    { key: 'files', label: t('studio.attachments', { default: 'Attachments' }), icon: Files },
+  ];
+  const dropZone = (active: boolean) =>
+    cn(
+      'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center transition-colors',
+      active
+        ? 'border-primary/60 bg-primary/5'
+        : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40',
+    );
+  const panel = (key: typeof tab) => cn('space-y-5', tab !== key && 'hidden');
+  const pageTitle = title || t('studio.newLesson', { default: 'New lesson' });
+  const statusTone = lesson.isArchived ? 'archived' : lesson.isPublished ? 'live' : 'draft';
+  const statusLabel = lesson.isArchived
+    ? t('studio.statusArchived', { default: 'Archived' })
+    : lesson.isPublished
+      ? t('studio.statusPublished', { default: 'Published' })
+      : t('studio.statusDraft', { default: 'Draft' });
   return (
-    <AnimatePresence>
-    <Modal
-      key="lesson-drawer"
-      width="max-w-5xl"
-      onClose={onClose}
-      title={title || t('studio.newLesson', { default: 'New lesson' })}
-      header={
-        <ModalHeader
-          loading={false}
-          initials={(title || 'L').charAt(0).toUpperCase()}
-          gradient="bg-primary/10 text-primary font-display"
-          title={title || t('studio.newLesson', { default: 'New lesson' })}
-          subtitle={'/' + (slug || 'slug')}
-          onClose={onClose}
-        />
-      }
-    >
-      {' '}
-      <div className="space-y-6 px-5 py-5 sm:px-7 sm:py-6">
-        {' '}
-        <div className="space-y-1.5">
-          {' '}
-           <label className={LABEL}>{t('studio.live.titleLabel', { default: 'Title' })} {locale === 'en' ? '*' : t('studio.arabicTranslation', { default: '(Arabic translation)' })}</label>{' '}
-          <input
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              if (!slugTouched) setSlug(slugify(e.target.value));
-            }}
-            className={INPUT}
-            dir={locale === 'ar' ? 'rtl' : 'ltr'}
-          />{' '}
-        </div>{' '}
-        <div className="space-y-1.5">
-          {' '}
-          <label className={LABEL}>{t('studio.slug', { default: 'Slug' })}</label>{' '}
-          <input
-            value={slug}
-            onChange={(e) => {
-              setSlugTouched(true);
-              setSlug(e.target.value);
-            }}
-            className={INPUT + ' font-mono text-sm'}
-          />{' '}
-        </div>{' '}
-        <div className="space-y-1.5">
-          {' '}
-          <label className={LABEL}>{t('studio.section', { default: 'Section' })}</label>{' '}
-          <select
-            value={sectionId}
-            onChange={(e) => setSectionId(e.target.value)}
-            className={INPUT}
-          >
-            {' '}
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {' '}
-                {s.title}{' '}
-              </option>
-            ))}{' '}
-          </select>{' '}
-          {sectionId !== lesson.seriesId && (
-            <button
-              type="button"
-              onClick={() => onMoveSection(sectionId)}
-              className="mt-1 rounded-lg bg-primary px-3 py-1.5 font-sans text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
-            >
-              {' '}
-              {t('studio.moveToSection', { title: sections.find((s) => s.id === sectionId)?.title ?? '', default: 'Move to “{title}”' })}{' '}
-            </button>
-          )}{' '}
-        </div>{' '}
-        <div className="space-y-2">
-          {' '}
-          <label className={LABEL}>{t('studio.lessonVideo', { default: 'Lesson video' })}</label>{' '}
-          {resolvingVideo && !displaySrc ? (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 font-sans text-xs text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> {t('studio.resolvingVideo', { default: 'Resolving stored video for preview…' })}
-            </div>
-          ) : null}
-          {videoUrl.startsWith('tenants/') &&
-          !resolvingVideo &&
-          !videoDisplayUrl &&
-          !videoPreview ? (
-            <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 font-sans text-xs text-warning ">
-              {t('studio.videoKeyUnresolved', { key: videoUrl.slice(0, 60), default: 'Video key saved ({key}…) but no playable URL resolved — the file may be missing in storage. Re-upload below.' })}
-            </div>
-          ) : null}
-          {displaySrc ? (
-            <div className="space-y-2">
-              {' '}
-              <video
-                src={displaySrc}
-                controls
-                className="h-48 w-full rounded-xl border border-border/70 bg-muted object-contain"
-              />{' '}
-              <div className="flex items-center justify-between">
-                {' '}
-                <p className="font-sans text-xs text-muted-foreground">
-                  {' '}
-                  {videoMeta
-                    ? `${videoMeta.filename} · ${formatBytes(videoMeta.size)}`
-                    : tMedia('videoUploaded', { default: 'Video uploaded' })}{' '}
-                </p>{' '}
-                <button
-                  type="button"
-                  onClick={removeVideo}
-                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
-                >
-                  {' '}
-                  {tMedia('remove', { default: 'Remove' })}{' '}
-                </button>{' '}
-              </div>{' '}
-            </div>
-          ) : null}{' '}
-          <div
-            onClick={() => videoInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              void handleVideoFile(e.dataTransfer.files?.[0]);
-            }}
-            className={
-              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center transition-colors ' +
-              (dragOver
-                ? 'border-primary/60 bg-primary/5'
-                : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
-            }
-          >
-            {' '}
-            <Upload className="size-5 text-muted-foreground/70" />{' '}
-            <p className="font-sans text-sm text-muted-foreground">
-              {' '}
-              {dragOver ? tMedia('dropToUpload', { default: 'Drop to upload' }) : tMedia('dropVideoBrowse', { default: 'Drag & drop a video, or click to browse' })}{' '}
-            </p>{' '}
-            <p className="font-sans text-xs text-muted-foreground/60">
-              {tMedia('videoFormatsHint', { default: 'MP4, WebM, MOV · up to 500MB' })}
-            </p>{' '}
-          </div>{' '}
-          <input
-            ref={videoInputRef}
-            type="file"
-            accept="video/*"
-            className="hidden"
-            onChange={(e) => {
-              void handleVideoFile(e.target.files?.[0]);
-              e.target.value = '';
-            }}
-          />{' '}
-          {uploading.video && videoProgress !== null ? (
-            <div className="flex items-center gap-2">
-              {' '}
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                {' '}
-                <m.div
-                  className="h-full rounded-full bg-primary"
-                  initial={false}
-                  animate={{ width: `${videoProgress}%` }}
-                  transition={spring.smooth}
-                />{' '}
-              </div>{' '}
-              <span className="font-sans text-xs tabular-nums text-muted-foreground">
-                {videoProgress}%
-              </span>{' '}
-            </div>
-          ) : uploading.video ? (
-            <div className="flex items-center gap-1.5 font-sans text-xs text-muted-foreground">
-              {' '}
-              <Loader2 className="size-3.5 animate-spin" /> {tMedia('uploading', { default: 'Uploading…' })}{' '}
-            </div>
-          ) : null}{' '}
-        </div>{' '}
-        <div className="space-y-2">
-          <label className={LABEL}>{t('studio.lessonThumbnail', { default: 'Lesson thumbnail' })}</label>
-          {(thumbPreview || thumbUrl) && (
-            <div className="space-y-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={thumbPreview || thumbUrl}
-                alt=""
-                className="h-36 w-full rounded-xl border border-border/70 bg-muted object-cover"
-              />
-              <div className="flex items-center justify-between">
-                <p className="font-sans text-xs text-muted-foreground">
-                  {thumbPreview ? t('studio.newThumbnail', { default: 'New thumbnail — saves with lesson' }) : t('studio.thumbnailSaved', { default: 'Thumbnail saved' })}
+    <>
+      <AnimatePresence>
+        <Modal
+          key="lesson-drawer"
+          width="max-w-4xl"
+          onClose={guard.requestClose}
+          title={pageTitle}
+          tabs={tabs}
+          activeTab={tab}
+          onTabChange={(k) => setTab(k as typeof tab)}
+          header={
+            <div className="flex items-center gap-3 border-b border-border/70 bg-card px-5 py-4 sm:gap-4 sm:px-7 sm:py-5">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-display text-lg font-medium text-primary ring-1 ring-inset ring-primary/15 sm:size-12">
+                {pageTitle.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-display text-xl font-medium leading-tight tracking-[-0.015em] text-foreground sm:text-2xl">
+                    {pageTitle}
+                  </p>
+                  <StatusChip tone={statusTone}>{statusLabel}</StatusChip>
+                </div>
+                <p dir="ltr" className="truncate text-start font-mono text-xs text-muted-foreground">
+                  /{slug || 'slug'}
                 </p>
+              </div>
+              <button
+                type="button"
+                aria-label={tCommon('close')}
+                onClick={guard.requestClose}
+                className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-[background-color,color,transform] hover:bg-muted hover:text-foreground active:scale-90"
+              >
+                <X className="size-[18px]" />
+              </button>
+            </div>
+          }
+        >
+          <div className="px-5 py-5 sm:px-7 sm:py-6">
+            <div className={panel('details')}>
+              <FormSection as="h3" title={t('studio.drawerTabDetails', { default: 'Details' })}>
+                <div className="space-y-4">
+                  <TextField
+                    label={`${t('studio.live.titleLabel', { default: 'Title' })}${
+                      locale === 'en' ? '' : ` ${t('studio.arabicTranslation', { default: '(Arabic translation)' })}`
+                    }`}
+                    required={locale === 'en'}
+                    value={title}
+                    error={titleError}
+                    onChange={(e) => setTitle(e.target.value)}
+                    dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                  />
+                  <SlugField
+                    label={t('studio.slug', { default: 'Slug' })}
+                    value={slug}
+                    onChange={setSlug}
+                    prefix="/"
+                    mode="edit"
+                  />
+                  <div className="space-y-2">
+                    <SelectField
+                      label={t('studio.section', { default: 'Section' })}
+                      value={sectionId}
+                      onChange={(e) => setSectionId(e.target.value)}
+                    >
+                      {sections.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </SelectField>
+                    {sectionId !== lesson.seriesId && (
+                      <button
+                        type="button"
+                        onClick={() => onMoveSection(sectionId)}
+                        className="rounded-lg bg-primary px-3 py-1.5 font-sans text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
+                      >
+                        {t('studio.moveToSection', {
+                          title: sections.find((s) => s.id === sectionId)?.title ?? '',
+                          default: 'Move to “{title}”',
+                        })}
+                      </button>
+                    )}
+                  </div>
+                  <TextAreaField
+                    label={t('studio.description', { default: 'Description' })}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                    dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                  />
+                  <SwitchField
+                    label={t('studio.freePreview', { default: 'Free preview' })}
+                    description={t('studio.freePreviewHint', {
+                      default: 'Let unenrolled learners watch this lesson',
+                    })}
+                    checked={freePreview}
+                    onCheckedChange={setFreePreview}
+                  />
+                </div>
+              </FormSection>
+            </div>
+
+            <div className={panel('media')}>
+              <FormSection as="h3" title={t('studio.lessonVideo', { default: 'Lesson video' })}>
+                <div className="space-y-2">
+                  {resolvingVideo && !displaySrc ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 font-sans text-xs text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin" />{' '}
+                      {t('studio.resolvingVideo', { default: 'Resolving stored video for preview…' })}
+                    </div>
+                  ) : null}
+                  {videoUrl.startsWith('tenants/') && !resolvingVideo && !videoDisplayUrl && !videoPreview ? (
+                    <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 font-sans text-xs text-warning">
+                      {t('studio.videoKeyUnresolved', {
+                        key: videoUrl.slice(0, 60),
+                        default:
+                          'Video key saved ({key}…) but no playable URL resolved — the file may be missing in storage. Re-upload below.',
+                      })}
+                    </div>
+                  ) : null}
+                  {displaySrc ? (
+                    <div className="space-y-2">
+                      <video
+                        src={displaySrc}
+                        controls
+                        className="h-48 w-full rounded-xl border border-border/70 bg-muted object-contain"
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="font-sans text-xs text-muted-foreground">
+                          {videoMeta
+                            ? `${videoMeta.filename} · ${formatBytes(videoMeta.size)}`
+                            : tMedia('videoUploaded', { default: 'Video uploaded' })}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={removeVideo}
+                          className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+                        >
+                          {tMedia('remove', { default: 'Remove' })}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div
+                    onClick={() => videoInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOver(false);
+                      void handleVideoFile(e.dataTransfer.files?.[0]);
+                    }}
+                    className={dropZone(dragOver)}
+                  >
+                    <Upload className="size-5 text-muted-foreground/70" />
+                    <p className="font-sans text-sm text-muted-foreground">
+                      {dragOver
+                        ? tMedia('dropToUpload', { default: 'Drop to upload' })
+                        : tMedia('dropVideoBrowse', { default: 'Drag & drop a video, or click to browse' })}
+                    </p>
+                    <p className="font-sans text-xs text-muted-foreground/60">
+                      {tMedia('videoFormatsHint', { default: 'MP4, WebM, MOV · up to 500MB' })}
+                    </p>
+                  </div>
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      void handleVideoFile(e.target.files?.[0]);
+                      e.target.value = '';
+                    }}
+                  />
+                  {uploading.video && videoProgress !== null ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                        <m.div
+                          className="h-full rounded-full bg-primary"
+                          initial={false}
+                          animate={{ width: `${videoProgress}%` }}
+                          transition={spring.smooth}
+                        />
+                      </div>
+                      <span className="font-sans text-xs tabular-nums text-muted-foreground">
+                        {videoProgress}%
+                      </span>
+                    </div>
+                  ) : uploading.video ? (
+                    <div className="flex items-center gap-1.5 font-sans text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" />{' '}
+                      {tMedia('uploading', { default: 'Uploading…' })}
+                    </div>
+                  ) : null}
+                </div>
+              </FormSection>
+
+              <FormSection
+                as="h3"
+                title={t('studio.lessonThumbnail', { default: 'Lesson thumbnail' })}
+                badge={t('studio.optional', { default: 'Optional' })}
+              >
+                <div className="space-y-2">
+                  {(thumbPreview || thumbUrl) && (
+                    <div className="space-y-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={thumbPreview || thumbUrl}
+                        alt=""
+                        className="h-36 w-full rounded-xl border border-border/70 bg-muted object-cover"
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="font-sans text-xs text-muted-foreground">
+                          {thumbPreview
+                            ? t('studio.newThumbnail', { default: 'New thumbnail — saves with lesson' })
+                            : t('studio.thumbnailSaved', { default: 'Thumbnail saved' })}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={removeThumb}
+                          className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+                        >
+                          {tMedia('remove', { default: 'Remove' })}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <div
+                    onClick={() => thumbInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setThumbDrag(true);
+                    }}
+                    onDragLeave={() => setThumbDrag(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setThumbDrag(false);
+                      void handleThumbFile(e.dataTransfer.files?.[0]);
+                    }}
+                    className={dropZone(thumbDrag)}
+                  >
+                    <ImageIcon className="size-5 text-muted-foreground/70" />
+                    <p className="font-sans text-sm text-muted-foreground">
+                      {thumbDrag
+                        ? tMedia('dropToUpload', { default: 'Drop to upload' })
+                        : tMedia('dropThumbBrowse', { default: 'Drag & drop a thumbnail, or click to browse' })}
+                    </p>
+                    <p className="font-sans text-xs text-muted-foreground/60">
+                      {tMedia('thumbFormatsHint', { default: 'JPG, PNG, WebP · 16:9 recommended · up to 5MB' })}
+                    </p>
+                  </div>
+                  <input
+                    ref={thumbInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      void handleThumbFile(e.target.files?.[0]);
+                      e.target.value = '';
+                    }}
+                  />
+                  {uploading.thumb ? (
+                    <div className="flex items-center gap-1.5 font-sans text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" />{' '}
+                      {tMedia('uploadingThumbnail', { default: 'Uploading thumbnail…' })}
+                    </div>
+                  ) : null}
+                </div>
+              </FormSection>
+            </div>
+
+            <div className={panel('content')}>
+              <LessonBlockEditor
+                key={lesson.id}
+                lessonId={lesson.id}
+                initialDocument={lesson.contentBlocks}
+                locale={locale}
+                videoUrl={displaySrc}
+                onDocumentChange={onContentBlocksChange}
+              />
+            </div>
+
+            <div className={panel('files')}>
+              <FormSection
+                as="h3"
+                title={t('studio.attachments', { default: 'Attachments' })}
+                badge={t('studio.optional', { default: 'Optional' })}
+              >
+                <div className="space-y-3">
+                  <div
+                    onClick={() => attInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setAttDragOver(true);
+                    }}
+                    onDragLeave={() => setAttDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setAttDragOver(false);
+                      void handleAttachmentFiles(e.dataTransfer.files);
+                    }}
+                    className={dropZone(attDragOver)}
+                  >
+                    <Upload className="size-5 text-muted-foreground/70" />
+                    <p className="font-sans text-sm text-muted-foreground">
+                      {attDragOver
+                        ? tMedia('dropToAttach', { default: 'Drop to attach' })
+                        : tMedia('dropFilesBrowse', { default: 'Drag & drop files, or click to browse' })}
+                    </p>
+                    <p className="font-sans text-xs text-muted-foreground/60">
+                      {tMedia('attachmentFormatsHint', { default: 'PDF, slides, images, video · multiple allowed' })}
+                    </p>
+                  </div>
+                  <input
+                    ref={attInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      void handleAttachmentFiles(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                  <div className="space-y-2">
+                    <AnimatePresence initial={false}>
+                      {attachments.map((a) => {
+                        const busy = uploading[a.id];
+                        return (
+                          <m.div
+                            key={a.id}
+                            layout="position"
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+                            transition={spring.smooth}
+                            className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-card p-2 shadow-xs"
+                          >
+                            {busy ? (
+                              <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                            ) : (
+                              <FileGlyph type={a.type} />
+                            )}
+                            <TextInput
+                              value={a.name}
+                              disabled={busy}
+                              aria-label={tMedia('label', { default: 'Label' })}
+                              onChange={(e) => patchAttachment(a.id, { name: e.target.value })}
+                              placeholder={tMedia('label', { default: 'Label' })}
+                              className="h-8 w-40 px-2 py-1"
+                            />
+                            {busy ? (
+                              <span className="font-sans text-xs text-muted-foreground">
+                                {tMedia('uploading', { default: 'Uploading…' })}
+                              </span>
+                            ) : a.url ? (
+                              <a
+                                href={a.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                dir="ltr"
+                                className="min-w-0 flex-1 truncate font-sans text-xs text-primary underline-offset-2 hover:underline"
+                              >
+                                {a.url}
+                              </a>
+                            ) : (
+                              <span className="flex-1" />
+                            )}
+                            {!busy && a.size ? (
+                              <span className="whitespace-nowrap font-sans text-xs text-muted-foreground">
+                                {formatBytes(a.size)}
+                              </span>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => removeAttachment(a.id)}
+                              aria-label={tMedia('removeAttachment', { default: 'Remove attachment' })}
+                              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </m.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </FormSection>
+            </div>
+          </div>
+          <DrawerFooter
+            dirty={dirty}
+            canSave={uploadingCount === 0}
+            onSave={save}
+            onDiscard={() => setResetKey((k) => k + 1)}
+            onClose={guard.requestClose}
+            saveLabel={
+              uploadingCount > 0
+                ? tMedia('uploading', { default: 'Uploading…' })
+                : t('studio.saveLesson', { default: 'Save lesson' })
+            }
+            extra={
+              <>
                 <button
                   type="button"
-                  onClick={removeThumb}
-                  className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+                  onClick={onDuplicate}
+                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
-                  {tMedia('remove', { default: 'Remove' })}
+                  <Copy className="size-4" />
+                  <span className="hidden sm:inline">{t('studio.duplicate', { default: 'Duplicate' })}</span>
                 </button>
-              </div>
-            </div>
-          )}
-          <div
-            onClick={() => thumbInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setThumbDrag(true);
-            }}
-            onDragLeave={() => setThumbDrag(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setThumbDrag(false);
-              void handleThumbFile(e.dataTransfer.files?.[0]);
-            }}
-            className={
-              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-6 text-center transition-colors ' +
-              (thumbDrag
-                ? 'border-primary/60 bg-primary/5'
-                : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
-            }
-          >
-            <ImageIcon className="size-5 text-muted-foreground/70" />
-            <p className="font-sans text-sm text-muted-foreground">
-              {thumbDrag ? tMedia('dropToUpload', { default: 'Drop to upload' }) : tMedia('dropThumbBrowse', { default: 'Drag & drop a thumbnail, or click to browse' })}
-            </p>
-            <p className="font-sans text-xs text-muted-foreground/60">
-              {tMedia('thumbFormatsHint', { default: 'JPG, PNG, WebP · 16:9 recommended · up to 5MB' })}
-            </p>
-          </div>
-          <input
-            ref={thumbInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              void handleThumbFile(e.target.files?.[0]);
-              e.target.value = '';
-            }}
-          />
-          {uploading.thumb ? (
-            <div className="flex items-center gap-1.5 font-sans text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" /> {tMedia('uploadingThumbnail', { default: 'Uploading thumbnail…' })}
-            </div>
-          ) : null}
-        </div>{' '}
-        <div className="space-y-1.5">
-          {' '}
-          <label className={LABEL}>{t('studio.description', { default: 'Description' })}</label>{' '}
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className={INPUT + ' resize-y'}
-            dir={locale === 'ar' ? 'rtl' : 'ltr'}
-          />{' '}
-        </div>{' '}
-        <div className="border-t border-border/70 pt-6">
-          <LessonBlockEditor
-            key={lesson.id}
-            lessonId={lesson.id}
-            initialDocument={lesson.contentBlocks}
-            locale={locale}
-            videoUrl={displaySrc}
-            onDocumentChange={onContentBlocksChange}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/30 px-4 py-3.5">
-          <span>
-            <span id="lesson-free-preview-label" className="font-sans text-sm font-medium text-foreground">{t('studio.freePreview', { default: 'Free preview' })}</span>
-            <span className="block font-sans text-xs text-muted-foreground">
-              {t('studio.freePreviewHint', { default: 'Let unenrolled learners watch this lesson' })}
-            </span>
-          </span>
-          <Switch
-            checked={freePreview}
-            onCheckedChange={(v) => setFreePreview(v)}
-            aria-labelledby="lesson-free-preview-label"
-          />
-        </div>
-        <div className="space-y-2">
-          {' '}
-          <label className={LABEL}>{t('studio.attachments', { default: 'Attachments' })}</label>{' '}
-          <div
-            onClick={() => attInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setAttDragOver(true);
-            }}
-            onDragLeave={() => setAttDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setAttDragOver(false);
-              void handleAttachmentFiles(e.dataTransfer.files);
-            }}
-            className={
-              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center transition-colors ' +
-              (attDragOver
-                ? 'border-primary/60 bg-primary/5'
-                : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40')
-            }
-          >
-            {' '}
-            <Upload className="size-5 text-muted-foreground/70" />{' '}
-            <p className="font-sans text-sm text-muted-foreground">
-              {' '}
-              {attDragOver ? tMedia('dropToAttach', { default: 'Drop to attach' }) : tMedia('dropFilesBrowse', { default: 'Drag & drop files, or click to browse' })}{' '}
-            </p>{' '}
-            <p className="font-sans text-xs text-muted-foreground/60">
-              {tMedia('attachmentFormatsHint', { default: 'PDF, slides, images, video · multiple allowed' })}
-            </p>{' '}
-          </div>{' '}
-          <input
-            ref={attInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              void handleAttachmentFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />{' '}
-          <div className="space-y-2">
-            <AnimatePresence initial={false}>
-            {attachments.map((a) => {
-              const busy = uploading[a.id];
-              return (
-                <m.div
-                  key={a.id}
-                  layout="position"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
-                  transition={spring.smooth}
-                  className="flex items-center gap-2 rounded-lg border border-border/70 bg-card p-2 shadow-xs"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!deleteArmed) {
+                      setDeleteArmed(true);
+                      return;
+                    }
+                    onDelete();
+                  }}
+                  onBlur={() => setDeleteArmed(false)}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-lg px-2.5 py-2 font-sans text-sm font-medium transition',
+                    deleteArmed
+                      ? 'bg-destructive text-destructive-foreground'
+                      : 'text-destructive hover:bg-destructive/10',
+                  )}
                 >
-                  {' '}
-                  {busy ? (
-                    <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-                  ) : (
-                    <FileGlyph type={a.type} />
-                  )}{' '}
-                  <input
-                    value={a.name}
-                    disabled={busy}
-                    onChange={(e) => patchAttachment(a.id, { name: e.target.value })}
-                    placeholder={tMedia('label', { default: 'Label' })}
-                    className="w-36 rounded-md border border-border/80 bg-transparent px-2 py-1 font-sans text-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
-                  />{' '}
-                  {busy ? (
-                    <span className="font-sans text-xs text-muted-foreground">{tMedia('uploading', { default: 'Uploading…' })}</span>
-                  ) : a.url ? (
-                    <a
-                      href={a.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 truncate font-sans text-xs text-primary underline-offset-2 hover:underline"
-                    >
-                      {' '}
-                      {a.url}{' '}
-                    </a>
-                  ) : (
-                    <span className="flex-1" />
-                  )}{' '}
-                  {!busy && a.size ? (
-                    <span className="whitespace-nowrap font-sans text-xs text-muted-foreground">
-                      {formatBytes(a.size)}
-                    </span>
-                  ) : null}{' '}
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(a.id)}
-                    aria-label={tMedia('removeAttachment', { default: 'Remove attachment' })}
-                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    {' '}
-                    <X className="size-4" />{' '}
-                  </button>{' '}
-                </m.div>
-              );
-            })}
-            </AnimatePresence>
-          </div>{' '}
-        </div>{' '}
-        <div className="sticky bottom-0 -mx-5 -mb-5 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-card/95 px-5 py-3.5 backdrop-blur sm:-mx-7 sm:-mb-6 sm:px-7">
-          {' '}
-          <div className="flex items-center gap-2">
-            {' '}
-            <button
-              type="button"
-              onClick={onDuplicate}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 font-sans text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
-              {' '}
-              <Copy className="size-4" /> {t('studio.duplicate', { default: 'Duplicate' })}{' '}
-            </button>{' '}
-            <button
-              type="button"
-              onClick={onDelete}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 font-sans text-sm font-medium text-destructive transition hover:bg-destructive/10"
-            >
-              {' '}
-              <Trash2 className="size-4" /> {tCommon('delete', { default: 'Delete' })}{' '}
-            </button>{' '}
-          </div>{' '}
-          <button
-            type="button"
-            onClick={save}
-            disabled={uploadingCount > 0}
-            className="rounded-lg bg-primary px-4 py-2 font-sans text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {' '}
-            {uploadingCount > 0 ? tMedia('uploading', { default: 'Uploading…' }) : t('studio.saveLesson', { default: 'Save lesson' })}{' '}
-          </button>{' '}
-        </div>{' '}
-      </div>{' '}
-    </Modal>
-    </AnimatePresence>
+                  <Trash2 className="size-4" />
+                  <span className={deleteArmed ? '' : 'hidden sm:inline'}>
+                    {deleteArmed
+                      ? t('studio.confirmDelete', { default: 'Confirm delete' })
+                      : tCommon('delete', { default: 'Delete' })}
+                  </span>
+                </button>
+              </>
+            }
+          />
+        </Modal>
+      </AnimatePresence>
+      <DiscardChangesDialog guard={guard} />
+    </>
   );
 }

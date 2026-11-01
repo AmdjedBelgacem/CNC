@@ -7,11 +7,15 @@ import {
   Bot,
   CheckCircle2,
   Database,
+  Eye,
+  EyeOff,
   RefreshCw,
-  Save,
+  Search,
+  SlidersHorizontal,
   Sparkles,
   TestTube2,
   TriangleAlert,
+  Type,
 } from 'lucide-react';
 import type { AiAdminStatus, AiProviderName, AiSettingsUpdate } from '@/lib/api/types';
 import {
@@ -21,18 +25,21 @@ import {
   useTestAiConnection,
   useUpdateAiSettings,
 } from '@/hooks/use-ai-assistant';
+import { AdminCommandBar, AdminPageHeader, BarButton } from '@/components/admin/admin-chrome';
 import {
-  AdminCommandBar,
-  AdminPageHeader,
-  BarButton,
-  BarPrimaryButton,
-} from '@/components/admin/admin-chrome';
+  Field,
+  FieldGrid,
+  FormSection,
+  SelectField,
+  SwitchField,
+  TextAreaField,
+  TextField,
+  TextInput,
+} from '@/components/admin/admin-form';
+import { FormLayout, SaveDock, SectionNav } from '@/components/admin/form-page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input, Textarea } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Card } from '@/components/ui/card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
@@ -149,26 +156,6 @@ function formatDate(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
 }
 
-function Field({
-  label,
-  htmlFor,
-  hint,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor} className="text-sm font-medium">{label}</Label>
-      {children}
-      {hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
 export default function AiAssistantSettingsPage() {
   const t = useTranslations('aiAssistant');
   const tAdmin = useTranslations('admin');
@@ -182,6 +169,8 @@ export default function AiAssistantSettingsPage() {
   const [clearApiKey, setClearApiKey] = useState(false);
   const [action, setAction] = useState<'idle' | 'success' | 'error'>('idle');
   const [actionMessage, setActionMessage] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const [reindexRecord, setReindexRecord] = useState<ReindexRecord | null>(readReindexRecord);
   const initialized = useRef(false);
   const isDirtyRef = useRef(false);
@@ -213,6 +202,15 @@ export default function AiAssistantSettingsPage() {
     isValidNumber(form.retrievalTopK, 1, 50, true) &&
     isValidNumber(form.retrievalMinScore, 0, 1) &&
     isValidNumber(form.maxContextChars, 1000, 100000, true);
+  const connectionInvalid = !form.baseUrl.trim() || !form.primaryModel.trim();
+  const generationInvalid =
+    !isValidNumber(form.timeoutMs, 1000, 120000, true) ||
+    !isValidNumber(form.maxTokens, 256, 8000, true) ||
+    !isValidNumber(form.temperature, 0, 2);
+  const retrievalInvalid =
+    !isValidNumber(form.retrievalTopK, 1, 50, true) ||
+    !isValidNumber(form.retrievalMinScore, 0, 1) ||
+    !isValidNumber(form.maxContextChars, 1000, 100000, true);
   const corpus = settings?.corpus ?? { documents: 0, chunks: 0, embeddedChunks: 0 };
   const operationError =
     statusQuery.error ?? saveMutation.error ?? testMutation.error ?? reindexMutation.error;
@@ -281,12 +279,30 @@ const buildPayload = (): AiSettingsUpdate => {
     }
   };
 
+  const discard = () => {
+    setForm(currentForm);
+    setApiKey('');
+    setClearApiKey(false);
+    isDirtyRef.current = false;
+    setAttempted(false);
+    setAction('idle');
+    setActionMessage('');
+  };
+
   const save = async () => {
-    if (!dirty || !formValid || saveMutation.isPending) return;
+    if (!dirty || saveMutation.isPending) return;
+    if (!formValid) {
+      // Validation appears after the first attempt; take the author to the first problem.
+      setAttempted(true);
+      const first = connectionInvalid ? 'connection' : generationInvalid ? 'generation' : 'retrieval';
+      document.getElementById(first)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     setAction('idle');
     setActionMessage('');
     try {
       await persistPendingEdits();
+      setAttempted(false);
       setAction('success');
       setActionMessage(t('saved'));
       toast({ type: 'ok', title: t('saved') });
@@ -397,497 +413,491 @@ const buildPayload = (): AiSettingsUpdate => {
             {t('refresh')}
           </BarButton>
         }
-        primary={
-          <BarPrimaryButton
-            icon={<Save className="size-4" />}
-            onClick={() => void save()}
-            disabled={!dirty || !formValid || saveMutation.isPending}
-          >
-            {saveMutation.isPending ? t('saving') : t('save')}
-          </BarPrimaryButton>
-        }
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-8 pt-6">
-        <Reveal>
-        <AdminPageHeader
-          title={t('title')}
-          description={t('description')}
-          badge={
-            <Badge variant={statusVariant} className="self-start md:self-auto">
-              {settings.status === 'ready'
-                ? t('ready')
-                : settings.status === 'error'
-                  ? t('notReady')
-                  : t('notConfigured')}
-            </Badge>
-          }
-        />
-        </Reveal>
+      <div className="space-y-6 pt-6">
+        <div className="mx-auto w-full max-w-6xl">
+          <AdminPageHeader
+            title={t('title')}
+            description={t('description')}
+            badge={
+              <Badge variant={statusVariant} className="self-start md:self-auto">
+                {settings.status === 'ready'
+                  ? t('ready')
+                  : settings.status === 'error'
+                    ? t('notReady')
+                    : t('notConfigured')}
+              </Badge>
+            }
+          />
+        </div>
 
-        <AnimatePresence initial={false}>
-        {!settings.encryptionConfigured && (
-          <m.div
-            key="encryption"
-            role="status"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
-            exit={{ opacity: 0, y: -4, transition: { duration: 0.16, ease: ease.exit } }}
-            className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning"
-          >
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <span>{t('encryptionRequired')}</span>
-          </m.div>
-        )}
-
-        {operationError && (
-          <m.div
-            key="operation-error"
-            role="alert"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
-            exit={{ opacity: 0, y: -4, transition: { duration: 0.16, ease: ease.exit } }}
-            className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
-          >
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <span>{getAiErrorMessage(operationError, { detailed: true })}</span>
-          </m.div>
-        )}
-        </AnimatePresence>
-
-        <Stagger className="grid gap-4 sm:grid-cols-3">
-          <StaggerItem index={0}>
-          <Card className="h-full p-5">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t('providerStatus')}
-            </p>
-            <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
-              <Bot className="size-4 text-primary" />
-              {settings.provider}
-            </p>
-          </Card>
-          </StaggerItem>
-          <StaggerItem index={1}>
-          <Card className="h-full p-5">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t('apiKeyStatus')}
-            </p>
-            <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
-              {settings.apiKeyConfigured ? (
-                <CheckCircle2 className="size-4 text-success" />
-              ) : (
-                <TriangleAlert className="size-4 text-warning" />
-              )}
-              {settings.apiKeyConfigured ? t('apiKeyConfigured') : t('apiKeyNotConfigured')}
-            </p>
-            {settings.apiKeyMasked && (
-              <p className="mt-1 font-mono text-xs text-muted-foreground">
-                {settings.apiKeyMasked}
-              </p>
-            )}
-          </Card>
-          </StaggerItem>
-          <StaggerItem index={2}>
-          <Card className="h-full p-5">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t('encryptionStatus')}
-            </p>
-            <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
-              {settings.encryptionConfigured ? (
-                <CheckCircle2 className="size-4 text-success" />
-              ) : (
-                <TriangleAlert className="size-4 text-warning" />
-              )}
-              {settings.encryptionConfigured ? t('configured') : t('encryptionUnavailable')}
-            </p>
-          </Card>
-          </StaggerItem>
-        </Stagger>
-
-        <Reveal>
-        <Card>
-          <CardHeader className="border-b border-border/70 pb-5">
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="size-4 text-primary" />
-              {t('connection')}
-            </CardTitle>
-            <CardDescription>{t('connectionDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 p-6">
-            <div className="grid gap-5 md:grid-cols-2">
-              <Field label={t('provider')} htmlFor="ai-provider" hint={t('providerHint')}>
-                <select
-                  id="ai-provider"
-                  value={form.provider}
-                  onChange={(event) => setField('provider', event.target.value as AiProviderName)}
-                  className="flex h-10 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs outline-none transition-colors hover:border-border-strong focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="openai-compatible">OpenAI-compatible</option>
-                  <option value="deepseek">DeepSeek</option>
-                </select>
-              </Field>
-              <Field label={t('baseUrl')} htmlFor="ai-base-url" hint={t('baseUrlHint')}>
-                <Input
-                  id="ai-base-url"
-                  type="url"
-                  value={form.baseUrl}
-                  onChange={(event) => setField('baseUrl', event.target.value)}
-                />
-              </Field>
-            </div>
-            <div className="grid gap-5 md:grid-cols-2">
-              <Field label={t('apiKey')} htmlFor="ai-api-key" hint={t('apiKeyHint')}>
-                <Input
-                  id="ai-api-key"
-                  type="password"
-                  autoComplete="off"
-                  value={apiKey}
-                    onChange={(event) => {
-                      isDirtyRef.current = true;
-                      setApiKey(event.target.value);
-                      setClearApiKey(false);
-                    }}
-                   placeholder={
-                     settings.apiKeyConfigured
-                       ? (settings.apiKeyMasked ?? '********')
-                       : t('apiKeyPlaceholder')
-                   }
-                 />
-                 {settings.apiKeyConfigured && (
-                   <Button
-                     type="button"
-                     variant="ghost"
-                     size="sm"
-                     className="mt-2 px-0 text-xs text-destructive hover:text-destructive"
-                     onClick={() => {
-                       isDirtyRef.current = true;
-                       setApiKey('');
-                       setClearApiKey(true);
-                     }}
-                   >
-                     {t('clearApiKey')}
-                   </Button>
-                 )}
-               </Field>
-              <div className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">
-                <p className="mb-1 font-medium text-foreground">{t('writeOnlyTitle')}</p>
-                <p>{t('writeOnlyDescription')}</p>
-              </div>
-            </div>
-            <div className="grid gap-5 md:grid-cols-2">
-              <Field label={t('primaryModel')} htmlFor="ai-primary-model">
-                <Input
-                  id="ai-primary-model"
-                  value={form.primaryModel}
-                  onChange={(event) => setField('primaryModel', event.target.value)}
-                />
-              </Field>
-              <Field
-                label={t('fallbackModel')}
-                htmlFor="ai-fallback-model"
-                hint={t('fallbackHint')}
-              >
-                <Input
-                  id="ai-fallback-model"
-                  value={form.fallbackModel}
-                  onChange={(event) => setField('fallbackModel', event.target.value)}
-                  placeholder={t('optional')}
-                />
-              </Field>
-            </div>
-            <div className="grid gap-5 md:grid-cols-2">
-              <Field label={t('embeddingModel')} htmlFor="ai-embedding-model" hint={t('embeddingHint')}>
-                <Input
-                  id="ai-embedding-model"
-                  value={form.embeddingModel}
-                  onChange={(event) => setField('embeddingModel', event.target.value)}
-                  placeholder={t('optional')}
-                />
-              </Field>
-              <Field label={t('embeddingBaseUrl')} htmlFor="ai-embedding-base-url">
-                <Input
-                  id="ai-embedding-base-url"
-                  type="url"
-                  value={form.embeddingBaseUrl}
-                  onChange={(event) => setField('embeddingBaseUrl', event.target.value)}
-                  placeholder={form.baseUrl}
-                />
-              </Field>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card p-4">
-                <div>
-                  <Label htmlFor="ai-enabled">{t('enabled')}</Label>
-                  <p className="mt-1 text-xs text-muted-foreground">{t('enabledHint')}</p>
-                </div>
-                <Switch
-                  id="ai-enabled"
-                  checked={form.enabled}
-                  onCheckedChange={(checked) => setField('enabled', checked)}
-                />
-              </div>
-              <div
-                className={cn(
-                  'flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card p-4 transition-opacity duration-200',
-                  !form.enabled && 'opacity-60',
-                )}
-              >
-                <div>
-                  <Label htmlFor="ai-public-enabled">{t('publicEnabled')}</Label>
-                  <p className="mt-1 text-xs text-muted-foreground">{t('publicEnabledHint')}</p>
-                </div>
-                <Switch
-                  id="ai-public-enabled"
-                  checked={form.publicEnabled}
-                  disabled={!form.enabled}
-                  onCheckedChange={(checked) => setField('publicEnabled', checked)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        </Reveal>
-
-        <Reveal>
-        <Card>
-          <CardHeader className="border-b border-border/70 pb-5">
-            <CardTitle>{t('generation')}</CardTitle>
-            <CardDescription>{t('generationDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5 p-6 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label={t('timeout')} htmlFor="ai-timeout">
-              <Input
-                id="ai-timeout"
-                type="number"
-                min={1000}
-                max={120000}
-                step={1000}
-                value={form.timeoutMs}
-                onChange={(event) => setField('timeoutMs', event.target.value)}
-              />
-            </Field>
-            <Field label={t('maxTokens')} htmlFor="ai-max-tokens">
-              <Input
-                id="ai-max-tokens"
-                type="number"
-                min={1}
-                max={8000}
-                step={1}
-                value={form.maxTokens}
-                onChange={(event) => setField('maxTokens', event.target.value)}
-              />
-            </Field>
-            <Field label={t('temperature')} htmlFor="ai-temperature">
-              <Input
-                id="ai-temperature"
-                type="number"
-                min={0}
-                max={2}
-                step={0.1}
-                value={form.temperature}
-                onChange={(event) => setField('temperature', event.target.value)}
-              />
-            </Field>
-          </CardContent>
-        </Card>
-        </Reveal>
-
-        <Reveal>
-        <Card>
-          <CardHeader className="border-b border-border/70 pb-5">
-            <CardTitle>{t('retrieval')}</CardTitle>
-            <CardDescription>{t('retrievalDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5 p-6 sm:grid-cols-3">
-            <Field label={t('topK')} htmlFor="ai-top-k">
-              <Input
-                id="ai-top-k"
-                type="number"
-                min={1}
-                max={50}
-                step={1}
-                value={form.retrievalTopK}
-                onChange={(event) => setField('retrievalTopK', event.target.value)}
-              />
-            </Field>
-            <Field label={t('minScore')} htmlFor="ai-min-score">
-              <Input
-                id="ai-min-score"
-                type="number"
-                min={0}
-                max={1}
-                step={0.05}
-                value={form.retrievalMinScore}
-                onChange={(event) => setField('retrievalMinScore', event.target.value)}
-              />
-            </Field>
-            <Field label={t('maxContextChars')} htmlFor="ai-max-context">
-              <Input
-                id="ai-max-context"
-                type="number"
-                min={1000}
-                max={100000}
-                step={1000}
-                value={form.maxContextChars}
-                onChange={(event) => setField('maxContextChars', event.target.value)}
-              />
-            </Field>
-          </CardContent>
-        </Card>
-        </Reveal>
-
-        <Reveal>
-        <Card>
-          <CardHeader className="border-b border-border/70 pb-5">
-            <CardTitle>{t('stylePrompt')}</CardTitle>
-            <CardDescription>{t('stylePromptHint')}</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <Textarea
-              value={form.systemStyle}
-              onChange={(event) => setField('systemStyle', event.target.value)}
-              placeholder={t('stylePlaceholder')}
-              maxLength={2000}
-              rows={5}
+        <FormLayout
+          aside={
+            <SectionNav
+              items={[
+                { id: 'connection', label: t('connection'), icon: Sparkles, invalid: attempted && connectionInvalid },
+                { id: 'generation', label: t('generation'), icon: SlidersHorizontal, invalid: attempted && generationInvalid },
+                { id: 'retrieval', label: t('retrieval'), icon: Search, invalid: attempted && retrievalInvalid },
+                { id: 'style', label: t('stylePrompt'), icon: Type },
+                { id: 'index', label: t('indexStatus'), icon: Database },
+              ]}
             />
-          </CardContent>
-        </Card>
-        </Reveal>
+          }
+        >
+          <AnimatePresence initial={false}>
+            {!settings.encryptionConfigured && (
+              <m.div
+                key="encryption"
+                role="status"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+                exit={{ opacity: 0, y: -4, transition: { duration: 0.16, ease: ease.exit } }}
+                className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning"
+              >
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                <span>{t('encryptionRequired')}</span>
+              </m.div>
+            )}
 
-        <Reveal>
-        <Card>
-          <CardHeader className="border-b border-border/70 pb-5">
-            <CardTitle className="flex items-center gap-2">
-              <Database className="size-4 text-primary" />
-              {t('indexStatus')}
-            </CardTitle>
-            <CardDescription>{t('indexDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 p-6">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-medium text-muted-foreground">{t('documents')}</p>
-                <AnimatedNumber
-                  value={corpus.documents}
-                  animateOnChange
-                  className="mt-1 block font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground"
-                />
-              </div>
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-medium text-muted-foreground">{t('chunks')}</p>
-                <AnimatedNumber
-                  value={corpus.chunks}
-                  animateOnChange
-                  className="mt-1 block font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground"
-                />
-              </div>
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-medium text-muted-foreground">{t('embeddedChunks')}</p>
-                <AnimatedNumber
-                  value={corpus.embeddedChunks}
-                  animateOnChange
-                  className="mt-1 block font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 text-sm sm:grid-cols-2">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t('lastIndex')}
+            {operationError && (
+              <m.div
+                key="operation-error"
+                role="alert"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+                exit={{ opacity: 0, y: -4, transition: { duration: 0.16, ease: ease.exit } }}
+                className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+              >
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                <span>{getAiErrorMessage(operationError, { detailed: true })}</span>
+              </m.div>
+            )}
+          </AnimatePresence>
+
+          <Stagger className="grid gap-4 sm:grid-cols-3">
+            <StaggerItem index={0}>
+              <Card className="h-full p-5">
+                <p className="text-xs font-medium text-muted-foreground">{t('providerStatus')}</p>
+                <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Bot className="size-4 text-primary" />
+                  {settings.provider}
                 </p>
-                <p className="mt-1">
-                  {settings.lastIndexedAt
-                    ? formatDate(settings.lastIndexedAt)
-                    : reindexRecord?.at
-                      ? formatDate(reindexRecord.at)
-                      : t('neverIndexed')}
+              </Card>
+            </StaggerItem>
+            <StaggerItem index={1}>
+              <Card className="h-full p-5">
+                <p className="text-xs font-medium text-muted-foreground">{t('apiKeyStatus')}</p>
+                <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  {settings.apiKeyConfigured ? (
+                    <CheckCircle2 className="size-4 text-success" />
+                  ) : (
+                    <TriangleAlert className="size-4 text-warning" />
+                  )}
+                  {settings.apiKeyConfigured ? t('apiKeyConfigured') : t('apiKeyNotConfigured')}
                 </p>
-                {(settings.lastIndexedAt || reindexRecord?.at) && !settings.lastIndexError && !reindexRecord?.error && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {settings.lastIndexDocuments || reindexRecord?.documents || corpus.documents} {t('documents')} ·{' '}
-                    {settings.lastIndexChunks || reindexRecord?.chunks || corpus.chunks} {t('chunks')}
+                {settings.apiKeyMasked && (
+                  <p className="mt-1 font-mono text-xs text-muted-foreground" dir="ltr">
+                    {settings.apiKeyMasked}
                   </p>
                 )}
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t('lastTested')}
+              </Card>
+            </StaggerItem>
+            <StaggerItem index={2}>
+              <Card className="h-full p-5">
+                <p className="text-xs font-medium text-muted-foreground">{t('encryptionStatus')}</p>
+                <p className="mt-2.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  {settings.encryptionConfigured ? (
+                    <CheckCircle2 className="size-4 text-success" />
+                  ) : (
+                    <TriangleAlert className="size-4 text-warning" />
+                  )}
+                  {settings.encryptionConfigured ? t('configured') : t('encryptionUnavailable')}
                 </p>
-                <p className="mt-1">
-                  {settings.lastTestedAt ? formatDate(settings.lastTestedAt) : t('neverTested')}
-                </p>
+              </Card>
+            </StaggerItem>
+          </Stagger>
+
+          <Reveal>
+            <FormSection
+              id="connection"
+              icon={Sparkles}
+              title={t('connection')}
+              description={t('connectionDescription')}
+            >
+              <div className="space-y-5">
+                <FieldGrid>
+                  <SelectField
+                    label={t('provider')}
+                    hint={t('providerHint')}
+                    value={form.provider}
+                    onChange={(event) => setField('provider', event.target.value as AiProviderName)}
+                  >
+                    <option value="openai-compatible">OpenAI-compatible</option>
+                    <option value="deepseek">DeepSeek</option>
+                  </SelectField>
+                  <TextField
+                    label={t('baseUrl')}
+                    hint={t('baseUrlHint')}
+                    required
+                    type="url"
+                    dir="ltr"
+                    value={form.baseUrl}
+                    onChange={(event) => setField('baseUrl', event.target.value)}
+                    error={attempted && !form.baseUrl.trim() ? t('requiredError') : undefined}
+                  />
+                </FieldGrid>
+
+                <FieldGrid>
+                  <Field label={t('apiKey')} hint={t('apiKeyHint')}>
+                    {(a) => (
+                      <>
+                        <div className="relative">
+                          <TextInput
+                            {...a}
+                            type={showKey ? 'text' : 'password'}
+                            autoComplete="off"
+                            spellCheck={false}
+                            dir="ltr"
+                            className="pe-10 font-mono"
+                            value={apiKey}
+                            onChange={(event) => {
+                              isDirtyRef.current = true;
+                              setApiKey(event.target.value);
+                              setClearApiKey(false);
+                            }}
+                            placeholder={
+                              clearApiKey
+                                ? t('apiKeyWillClear')
+                                : settings.apiKeyConfigured
+                                  ? (settings.apiKeyMasked ?? '********')
+                                  : t('apiKeyPlaceholder')
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowKey((v) => !v)}
+                            aria-pressed={showKey}
+                            title={showKey ? t('hideKey') : t('showKey')}
+                            className="absolute inset-y-0 end-0 flex w-10 items-center justify-center rounded-e-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                            <span className="sr-only">{showKey ? t('hideKey') : t('showKey')}</span>
+                          </button>
+                        </div>
+                        {clearApiKey && (
+                          <p className="mt-2 flex items-center gap-2 text-xs font-medium text-warning">
+                            <TriangleAlert className="size-3.5" />
+                            {t('apiKeyWillClear')}
+                            <button
+                              type="button"
+                              onClick={() => setClearApiKey(false)}
+                              className="font-medium text-foreground underline underline-offset-2"
+                            >
+                              {t('undoClear')}
+                            </button>
+                          </p>
+                        )}
+                        {settings.apiKeyConfigured && !clearApiKey && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 px-0 text-xs text-destructive hover:text-destructive"
+                            onClick={() => {
+                              isDirtyRef.current = true;
+                              setApiKey('');
+                              setClearApiKey(true);
+                            }}
+                          >
+                            {t('clearApiKey')}
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </Field>
+                  <div className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">
+                    <p className="mb-1 font-medium text-foreground">{t('writeOnlyTitle')}</p>
+                    <p>{t('writeOnlyDescription')}</p>
+                  </div>
+                </FieldGrid>
+
+                <FieldGrid>
+                  <TextField
+                    label={t('primaryModel')}
+                    required
+                    dir="ltr"
+                    value={form.primaryModel}
+                    onChange={(event) => setField('primaryModel', event.target.value)}
+                    error={attempted && !form.primaryModel.trim() ? t('requiredError') : undefined}
+                  />
+                  <TextField
+                    label={t('fallbackModel')}
+                    hint={t('fallbackHint')}
+                    dir="ltr"
+                    value={form.fallbackModel}
+                    onChange={(event) => setField('fallbackModel', event.target.value)}
+                    placeholder={t('optional')}
+                  />
+                </FieldGrid>
+
+                <FieldGrid>
+                  <TextField
+                    label={t('embeddingModel')}
+                    hint={t('embeddingHint')}
+                    dir="ltr"
+                    value={form.embeddingModel}
+                    onChange={(event) => setField('embeddingModel', event.target.value)}
+                    placeholder={t('optional')}
+                  />
+                  <TextField
+                    label={t('embeddingBaseUrl')}
+                    type="url"
+                    dir="ltr"
+                    value={form.embeddingBaseUrl}
+                    onChange={(event) => setField('embeddingBaseUrl', event.target.value)}
+                    placeholder={form.baseUrl}
+                  />
+                </FieldGrid>
+
+                <FieldGrid>
+                  <SwitchField
+                    label={t('enabled')}
+                    description={t('enabledHint')}
+                    checked={form.enabled}
+                    onCheckedChange={(checked) => setField('enabled', checked)}
+                  />
+                  <SwitchField
+                    label={t('publicEnabled')}
+                    description={t('publicEnabledHint')}
+                    checked={form.publicEnabled}
+                    disabled={!form.enabled}
+                    className={cn('transition-opacity duration-200', !form.enabled && 'opacity-60')}
+                    onCheckedChange={(checked) => setField('publicEnabled', checked)}
+                  />
+                </FieldGrid>
               </div>
-            </div>
-            {reindexRecord?.error && (
-              <p role="alert" className="text-sm text-destructive">
-                {t('indexError')}: {reindexRecord.error}
-              </p>
-            )}
-            {settings.lastIndexError && (
-              <p role="alert" className="text-sm text-destructive">
-                {t('indexError')}: {settings.lastIndexError}
-              </p>
-            )}
-            {settings.lastErrorCode && (
-              <p role="alert" className="text-sm text-destructive">
-                {t('lastError')}: {settings.lastErrorCode}
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void testConnection()}
-                 disabled={testMutation.isPending || !settings.apiKeyConfigured || !formValid}
-                loading={testMutation.isPending}
+            </FormSection>
+          </Reveal>
+
+          <Reveal>
+            <FormSection
+              id="generation"
+              icon={SlidersHorizontal}
+              title={t('generation')}
+              description={t('generationDescription')}
+            >
+              <FieldGrid cols={3}>
+                <NumField label={t('timeout')} value={form.timeoutMs} min={1000} max={120000} step={1000} integer attempted={attempted} onChange={(v) => setField('timeoutMs', v)} />
+                <NumField label={t('maxTokens')} value={form.maxTokens} min={256} max={8000} step={1} integer attempted={attempted} onChange={(v) => setField('maxTokens', v)} />
+                <NumField label={t('temperature')} value={form.temperature} min={0} max={2} step={0.1} attempted={attempted} onChange={(v) => setField('temperature', v)} />
+              </FieldGrid>
+            </FormSection>
+          </Reveal>
+
+          <Reveal>
+            <FormSection
+              id="retrieval"
+              icon={Search}
+              title={t('retrieval')}
+              description={t('retrievalDescription')}
+            >
+              <FieldGrid cols={3}>
+                <NumField label={t('topK')} value={form.retrievalTopK} min={1} max={50} step={1} integer attempted={attempted} onChange={(v) => setField('retrievalTopK', v)} />
+                <NumField label={t('minScore')} value={form.retrievalMinScore} min={0} max={1} step={0.05} attempted={attempted} onChange={(v) => setField('retrievalMinScore', v)} />
+                <NumField label={t('maxContextChars')} value={form.maxContextChars} min={1000} max={100000} step={1000} integer attempted={attempted} onChange={(v) => setField('maxContextChars', v)} />
+              </FieldGrid>
+            </FormSection>
+          </Reveal>
+
+          <Reveal>
+            <FormSection
+              id="style"
+              icon={Type}
+              title={t('stylePrompt')}
+              description={t('stylePromptHint')}
+              badge={t('optional')}
+            >
+              <TextAreaField
+                label={t('stylePrompt')}
+                value={form.systemStyle}
+                onChange={(event) => setField('systemStyle', event.target.value)}
+                placeholder={t('stylePlaceholder')}
+                maxLength={2000}
+                rows={5}
+              />
+            </FormSection>
+          </Reveal>
+
+          <Reveal>
+            <FormSection
+              id="index"
+              icon={Database}
+              title={t('indexStatus')}
+              description={t('indexDescription')}
+            >
+              <div className="space-y-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {(
+                    [
+                      ['documents', corpus.documents],
+                      ['chunks', corpus.chunks],
+                      ['embeddedChunks', corpus.embeddedChunks],
+                    ] as const
+                  ).map(([key, value]) => (
+                    <div key={key} className="rounded-xl bg-muted/50 p-4">
+                      <p className="text-xs font-medium text-muted-foreground">{t(key)}</p>
+                      <AnimatedNumber
+                        value={value}
+                        animateOnChange
+                        className="mt-1 block font-display text-2xl font-medium tabular-nums tracking-[-0.015em] text-foreground"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">{t('lastIndex')}</p>
+                    <p className="mt-1">
+                      {settings.lastIndexedAt
+                        ? formatDate(settings.lastIndexedAt)
+                        : reindexRecord?.at
+                          ? formatDate(reindexRecord.at)
+                          : t('neverIndexed')}
+                    </p>
+                    {(settings.lastIndexedAt || reindexRecord?.at) && !settings.lastIndexError && !reindexRecord?.error && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {settings.lastIndexDocuments || reindexRecord?.documents || corpus.documents} {t('documents')} ·{' '}
+                        {settings.lastIndexChunks || reindexRecord?.chunks || corpus.chunks} {t('chunks')}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">{t('lastTested')}</p>
+                    <p className="mt-1">
+                      {settings.lastTestedAt ? formatDate(settings.lastTestedAt) : t('neverTested')}
+                    </p>
+                  </div>
+                </div>
+                {reindexRecord?.error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {t('indexError')}: {reindexRecord.error}
+                  </p>
+                )}
+                {settings.lastIndexError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {t('indexError')}: {settings.lastIndexError}
+                  </p>
+                )}
+                {settings.lastErrorCode && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {t('lastError')}: {settings.lastErrorCode}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void testConnection()}
+                    disabled={testMutation.isPending || !settings.apiKeyConfigured || !formValid}
+                    loading={testMutation.isPending}
+                  >
+                    <TestTube2 />
+                    {testMutation.isPending ? t('testing') : t('testConnection')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void reindex()}
+                    disabled={reindexMutation.isPending}
+                    loading={reindexMutation.isPending}
+                  >
+                    <RefreshCw />
+                    {reindexMutation.isPending ? t('reindexing') : t('reindex')}
+                  </Button>
+                </div>
+              </div>
+            </FormSection>
+          </Reveal>
+
+          <PaymentSettingsPanel />
+
+          <AiLearningPanel />
+
+          <AnimatePresence initial={false}>
+            {actionMessage && (
+              <m.div
+                key="action-message"
+                role="status"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
+                exit={{ opacity: 0, y: 4, transition: { duration: 0.16, ease: ease.exit } }}
+                className={cn(
+                  'flex items-center gap-2 rounded-xl border p-3.5 text-sm',
+                  action === 'error'
+                    ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                    : 'border-success/30 bg-success/10 text-success',
+                )}
               >
-                <TestTube2 />
-                {testMutation.isPending ? t('testing') : t('testConnection')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void reindex()}
-                disabled={reindexMutation.isPending}
-                loading={reindexMutation.isPending}
-              >
-                <RefreshCw />
-                {reindexMutation.isPending ? t('reindexing') : t('reindex')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        </Reveal>
-
-        <PaymentSettingsPanel />
-
-        <AiLearningPanel />
-
-        <AnimatePresence initial={false}>
-        {actionMessage && (
-          <m.div
-            key="action-message"
-            role="status"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: ease.emerge } }}
-            exit={{ opacity: 0, y: 4, transition: { duration: 0.16, ease: ease.exit } }}
-            className={cn(
-              'flex items-center gap-2 rounded-xl border p-3.5 text-sm',
-              action === 'error'
-                ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                : 'border-success/30 bg-success/10 text-success',
+                {action === 'error' ? (
+                  <TriangleAlert className="size-4" />
+                ) : (
+                  <CheckCircle2 className="size-4" />
+                )}
+                {actionMessage}
+              </m.div>
             )}
-          >
-            {action === 'error' ? (
-              <TriangleAlert className="size-4" />
-            ) : (
-              <CheckCircle2 className="size-4" />
-            )}
-            {actionMessage}
-          </m.div>
-        )}
-        </AnimatePresence>
+          </AnimatePresence>
+        </FormLayout>
       </div>
+
+      <SaveDock
+        mode="edit"
+        dirty={dirty}
+        saving={saveMutation.isPending}
+        failed={action === 'error'}
+        onSave={() => void save()}
+        onDiscard={discard}
+        saveLabel={t('save')}
+        savingLabel={t('saving')}
+      />
     </div>
+  );
+}
+
+/** A numeric setting with its range enforced inline once a save was attempted. */
+function NumField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  integer = false,
+  attempted,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  min: number;
+  max: number;
+  step: number;
+  integer?: boolean;
+  attempted: boolean;
+  onChange: (value: string) => void;
+}) {
+  const t = useTranslations('aiAssistant');
+  const bad = attempted && !isValidNumber(value, min, max, integer);
+  return (
+    <TextField
+      label={label}
+      type="number"
+      dir="ltr"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      error={bad ? t('rangeError', { min, max }) : undefined}
+    />
   );
 }

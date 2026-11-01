@@ -933,6 +933,7 @@
       "title": "Issue certificate"
     },
     "certificateTemplates": {
+      "discardConfirm": "Discard your unsaved changes to this template?",
       "activate": "Activate",
       "addVariable": "Add variable",
       "allLayouts": "All layouts",
@@ -964,7 +965,7 @@
       "fieldLayout": "Layout",
       "fieldLinkedCourse": "Linked course",
       "fieldLogoUrl": "Logo URL",
-      "fieldTemplateName": "Template name *",
+      "fieldTemplateName": "Template name",
       "fieldTypeface": "Typeface",
       "fieldWeight": "Weight",
       "filterByLayout": "Filter by layout",
@@ -2137,7 +2138,13 @@
       "markContacted": "Mark contacted",
       "markClosed": "Close",
       "updated": "Request updated",
-      "updateFailed": "Could not update"
+      "updateFailed": "Could not update",
+      "close": "Close",
+      "received": "Received",
+      "statusSection": "Status",
+      "details": "Details",
+      "optional": "Optional",
+      "priceInvalid": "Enter a whole number, 0 or more."
     },
     "translate": {
       "button": "Translate to Arabic",
@@ -2190,6 +2197,17 @@
       "groupPeople": "People",
       "groupCommerce": "Commerce",
       "groupPlatform": "Platform"
+    },
+    "partnerReview": {
+      "rejectTitle": "Reject application",
+      "rejectHint": "The reason is recorded with the decision.",
+      "reasonLabel": "Reason",
+      "rejectAction": "Reject application",
+      "infoTitle": "Request more information",
+      "infoHint": "This message is sent to the applicant.",
+      "messageLabel": "Message",
+      "sendRequest": "Send request",
+      "required": "This field is required."
     }
   },
   "aiAssistant": {
@@ -2961,7 +2979,14 @@
       },
       "translateHint": "Seeds the Arabic tab from English. Review before saving.",
       "lessonsTranslation": "Lessons and content",
-      "lessonsTranslationHint": "Fills Arabic for every section, lesson and content block in one pass."
+      "lessonsTranslationHint": "Fills Arabic for every section, lesson and content block in one pass.",
+      "drawerTabDetails": "Details",
+      "drawerTabMedia": "Media",
+      "drawerTabContent": "Content",
+      "statusPublished": "Published",
+      "statusDraft": "Draft",
+      "statusArchived": "Archived",
+      "confirmDelete": "Confirm delete"
     }
   },
   "lesson": {

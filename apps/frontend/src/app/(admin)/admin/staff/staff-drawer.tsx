@@ -35,6 +35,9 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { SelectField } from '@/components/admin/admin-form';
+import { StatusChip } from '@/components/admin/form-page';
+import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/admin/drawer-kit';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCan, useCanAny, useIsSuper } from '@/lib/use-permissions';
 import { userInitials, type AdminUserRow } from '../users/users-shared';
@@ -263,7 +266,12 @@ export function StaffDrawer({
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const myId = me?.id ?? '';
-  const canSuspend = useCanAny(['staff:suspend', 'users:suspend', 'staff:unsuspend', 'users:unsuspend']);
+  const canSuspend = useCanAny([
+    'staff:suspend',
+    'users:suspend',
+    'staff:unsuspend',
+    'users:unsuspend',
+  ]);
   const canForcePw = useCan('users:force_password_reset');
   const canImpersonate = useCanAny(['staff:impersonate', 'users:impersonate']);
   const canRevoke = useCanAny(['staff:impersonate', 'users:manage', 'staff:assign_roles']);
@@ -288,12 +296,9 @@ export function StaffDrawer({
   const [permCatalog, setPermCatalog] = useState<PermissionGroup[]>([]);
   const [permsLoading, setPermsLoading] = useState(false);
   const [pendingRole, setPendingRole] = useState('');
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  /** Roles as last loaded / saved — the baseline the dirty check compares against. */
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -352,7 +357,9 @@ export function StaffDrawer({
         if (!cancelled && rolesRes.ok) setAllRoles(await rolesRes.json());
         if (!cancelled && assignedRes.ok) {
           const assigned = await assignedRes.json();
-          setAssignedIds(Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : []);
+          const ids = Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : [];
+          setAssignedIds(ids);
+          setSavedIds(ids);
         }
       } catch {
       } finally {
@@ -408,7 +415,11 @@ export function StaffDrawer({
     const method = (init.method ?? 'POST').toUpperCase();
     let body: unknown;
     if (typeof init.body === 'string') {
-      try { body = JSON.parse(init.body); } catch { body = undefined; }
+      try {
+        body = JSON.parse(init.body);
+      } catch {
+        body = undefined;
+      }
     }
     try {
       if (method === 'PUT') await api.put(url, body ?? {});
@@ -417,10 +428,13 @@ export function StaffDrawer({
       else await api.post(url, body ?? {});
     } catch (error) {
       const detail = error as { status?: number; body?: { message?: string }; message?: string };
-      const msg = detail?.body?.message ?? detail?.message ?? tAdmin('drawer.requestFailed', {
-        status: detail?.status ?? '',
-        default: 'Request failed ({status})',
-      });
+      const msg =
+        detail?.body?.message ??
+        detail?.message ??
+        tAdmin('drawer.requestFailed', {
+          status: detail?.status ?? '',
+          default: 'Request failed ({status})',
+        });
       toast({
         type: 'err',
         title: tAdmin('drawer.actionFailed', { default: 'Action failed' }),
@@ -476,7 +490,7 @@ export function StaffDrawer({
         },
         tAdmin('drawer.rolesUpdated', { default: 'Roles updated' }),
       );
-      if (activeTab === 'permissions') setActiveTab('permissions');
+      setSavedIds(assignedIds);
     } finally {
       setSavingRoles(false);
     }
@@ -500,6 +514,32 @@ export function StaffDrawer({
       setSavingRoles(false);
     }
   };
+
+  const sameSet = (a: string[], b: string[]) =>
+    a.length === b.length && a.every((id) => b.includes(id));
+  const rolesDirty = canAssignRoles && editableRoles && !sameSet(assignedIds, savedIds);
+  const primaryDirty =
+    canChangeRole && !isSelf && !!user && !!pendingRole && pendingRole !== user.role;
+  const dirty = rolesDirty || primaryDirty;
+  const canEdit = (canAssignRoles && editableRoles) || (canChangeRole && !isSelf);
+
+  /** Footer Save: applies whichever of the two independent edits changed. */
+  const saveAll = async () => {
+    setSaveFailed(false);
+    try {
+      if (rolesDirty) await saveRoles();
+      if (primaryDirty) await changePrimaryRole();
+    } catch {
+      // `mutate` already toasted the server's message.
+      setSaveFailed(true);
+    }
+  };
+  const discardEdits = () => {
+    setAssignedIds(savedIds);
+    setPendingRole(user?.role ?? '');
+    setSaveFailed(false);
+  };
+  const guard = useDirtyClose(dirty, onClose);
 
   const toggleSuspend = async (suspend: boolean) => {
     if (!canSuspend) return;
@@ -617,9 +657,7 @@ export function StaffDrawer({
           <section>
             <SectionLabel
               hint={
-                canSuspend
-                  ? undefined
-                  : tAdmin('drawer.noPermission', { default: 'No permission' })
+                canSuspend ? undefined : tAdmin('drawer.noPermission', { default: 'No permission' })
               }
             >
               {tAdmin('drawer.statusControls', { default: 'Status & controls' })}
@@ -641,9 +679,7 @@ export function StaffDrawer({
                   </p>
                 </div>
                 <Switch
-                  checked={
-                    user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'
-                  }
+                  checked={user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'}
                   disabled={
                     !canSuspend || togglingStatus || isSelf || user.accountStatus === 'deleted'
                   }
@@ -712,46 +748,56 @@ export function StaffDrawer({
                     }
                   />
                 )}
-                {canSuspend &&
-                  user.accountStatus !== 'suspended' &&
-                  user.accountStatus !== 'deleted' && (
-                    <ActionButton
-                      label={tAdmin('drawer.suspendStaff', { default: 'Suspend staff' })}
-                      icon={UserX}
-                      variant="danger"
-                      onConfirm={() =>
-                        mutate(
-                          `/api/proxy/admin/users/${userId}/suspend`,
-                          {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ reason: suspendReason }),
-                          },
-                          tAdmin('drawer.staffSuspended', { default: 'Staff suspended' }),
-                        ).then(() => loadAll())
-                      }
-                    />
-                  )}
-                {canDelete && !isSelf && (
-                  <ActionButton
-                    label={tAdmin('drawer.deleteStaffMember', {
-                      default: 'Delete staff member',
-                    })}
-                    icon={Trash2}
-                    variant="danger"
-                    onConfirm={async () => {
-                      await mutate(
-                        `/api/proxy/admin/users/${userId}`,
-                        { method: 'DELETE' },
-                        tAdmin('drawer.staffMemberDeleted', {
-                          default: 'Staff member deleted',
-                        }),
-                      );
-                      onClose();
-                    }}
-                  />
-                )}
               </div>
+              {(canSuspend &&
+                user.accountStatus !== 'suspended' &&
+                user.accountStatus !== 'deleted') ||
+                (canDelete && !isSelf && (
+                  <div className="space-y-2 rounded-lg border border-destructive/25 bg-destructive/[0.04] p-3">
+                    <p className="font-sans text-xs font-medium text-destructive">
+                      {tAdmin('drawer.dangerZone', { default: 'Danger zone' })}
+                    </p>
+                    {canSuspend &&
+                      user.accountStatus !== 'suspended' &&
+                      user.accountStatus !== 'deleted' && (
+                        <ActionButton
+                          label={tAdmin('drawer.suspendStaff', { default: 'Suspend staff' })}
+                          icon={UserX}
+                          variant="danger"
+                          onConfirm={() =>
+                            mutate(
+                              `/api/proxy/admin/users/${userId}/suspend`,
+                              {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reason: suspendReason }),
+                              },
+                              tAdmin('drawer.staffSuspended', { default: 'Staff suspended' }),
+                            ).then(() => loadAll())
+                          }
+                        />
+                      )}
+                    {canDelete && !isSelf && (
+                      <ActionButton
+                        label={tAdmin('drawer.deleteStaffMember', {
+                          default: 'Delete staff member',
+                        })}
+                        icon={Trash2}
+                        variant="danger"
+                        onConfirm={async () => {
+                          await mutate(
+                            `/api/proxy/admin/users/${userId}`,
+                            { method: 'DELETE' },
+                            tAdmin('drawer.staffMemberDeleted', {
+                              default: 'Staff member deleted',
+                            }),
+                          );
+                          onClose();
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
             </div>
           </section>
         </div>
@@ -820,9 +866,7 @@ export function StaffDrawer({
                         disabled={!editableRoles}
                         onChange={(e) =>
                           setAssignedIds((prev) =>
-                            e.target.checked
-                              ? [...prev, r.id]
-                              : prev.filter((id) => id !== r.id),
+                            e.target.checked ? [...prev, r.id] : prev.filter((id) => id !== r.id),
                           )
                         }
                         className="size-4 rounded border-border accent-primary"
@@ -849,24 +893,10 @@ export function StaffDrawer({
                   );
                 })
               )}
-              {canAssignRoles && editableRoles && (
-                <Button
-                  type="button"
-                  className="mt-2 w-full"
-                  disabled={savingRoles || rolesLoading}
-                  loading={savingRoles}
-                  onClick={saveRoles}
-                >
-                  {savingRoles
-                    ? tCommon('saving')
-                    : tAdmin('drawer.saveRoles', { default: 'Save roles' })}
-                </Button>
-              )}
               {canAssignRoles && !editableRoles && (
                 <p className="px-1 pt-1 font-sans text-xs text-muted-foreground">
                   {tAdmin('drawer.superAdminRolesLocked', {
-                    default:
-                      'A super admin’s roles can only be changed by another super admin.',
+                    default: 'A super admin’s roles can only be changed by another super admin.',
                   })}
                 </p>
               )}
@@ -902,37 +932,20 @@ export function StaffDrawer({
               {canChangeRole && (
                 <>
                   <Separator />
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <label className="min-w-0 flex-1 space-y-1.5">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {tAdmin('drawer.changePrimaryRole', { default: 'Change primary role' })}
-                      </span>
-                      <select
-                        value={pendingRole}
-                        onChange={(e) => setPendingRole(e.target.value)}
-                        className="w-full rounded-lg border border-input bg-card px-3 py-2 font-sans text-sm text-foreground shadow-xs outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30"
-                      >
-                        {['super_admin', 'admin', 'instructor', 'moderator', 'sponsor', 'learner'].map(
-                          (r) => (
-                            <option key={r} value={r}>
-                              {tAdmin(`role.${r}`, { default: roleLabel[r] ?? r.replace('_', ' ') })}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={
-                        savingRoles || !pendingRole || pendingRole === user.role || isSelf
-                      }
-                      loading={savingRoles}
-                      onClick={changePrimaryRole}
-                    >
-                      {tAdmin('drawer.updateRole', { default: 'Update role' })}
-                    </Button>
-                  </div>
+                  <SelectField
+                    label={tAdmin('drawer.changePrimaryRole', { default: 'Change primary role' })}
+                    value={pendingRole}
+                    disabled={isSelf}
+                    onChange={(e) => setPendingRole(e.target.value)}
+                  >
+                    {['super_admin', 'admin', 'instructor', 'moderator', 'sponsor', 'learner'].map(
+                      (r) => (
+                        <option key={r} value={r}>
+                          {tAdmin(`role.${r}`, { default: roleLabel[r] ?? r.replace('_', ' ') })}
+                        </option>
+                      ),
+                    )}
+                  </SelectField>
                   {isSelf && (
                     <p className="font-sans text-xs text-muted-foreground">
                       {tAdmin('drawer.cannotChangeOwnRole', {
@@ -955,8 +968,7 @@ export function StaffDrawer({
             icon={Key}
             title={tAdmin('drawer.noAccessToPermissions', { default: 'No access to permissions' })}
             description={tAdmin('drawer.needManageRoles', {
-              default:
-                'You need the staff:manage_roles permission to inspect granted permissions.',
+              default: 'You need the staff:manage_roles permission to inspect granted permissions.',
             })}
             compact
           />
@@ -1078,9 +1090,7 @@ export function StaffDrawer({
           <section>
             <SectionLabel
               hint={
-                canSuspend
-                  ? undefined
-                  : tAdmin('drawer.noPermission', { default: 'No permission' })
+                canSuspend ? undefined : tAdmin('drawer.noPermission', { default: 'No permission' })
               }
             >
               {tAdmin('drawer.sessionControls', { default: 'Session controls' })}
@@ -1102,9 +1112,7 @@ export function StaffDrawer({
                   </p>
                 </div>
                 <Switch
-                  checked={
-                    user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'
-                  }
+                  checked={user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted'}
                   disabled={
                     !canSuspend || togglingStatus || isSelf || user.accountStatus === 'deleted'
                   }
@@ -1306,113 +1314,135 @@ export function StaffDrawer({
   };
 
   return (
-    <Modal
-      onClose={onClose}
-      width="max-w-4xl"
-      tabs={TABS.map((tab) => ({
-        ...tab,
-        label: tAdmin(`tabs.${tab.key}`, { default: tab.label }),
-      }))}
-      activeTab={activeTab}
-      onTabChange={(k) => setActiveTab(k as TabKey)}
-      title={
-        user?.name ||
-        user?.email ||
-        tAdmin('drawer.staffDetails', { default: 'Staff details' })
-      }
-      header={
-        <div className="border-b border-border/70 bg-card px-4 py-4 sm:px-6 sm:py-5">
-          {loading ? (
-            <div className="flex items-center gap-3 sm:gap-4">
-              <Skeleton className="size-12 rounded-full sm:size-14" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-40 rounded" />
-                <Skeleton className="h-3 w-56 rounded" />
-              </div>
-            </div>
-          ) : user ? (
-            <div className="flex items-start gap-3 sm:gap-4">
-              <span
-                className={cn(
-                  'flex size-12 shrink-0 items-center justify-center rounded-full font-display text-lg font-medium shadow-xs sm:size-14 sm:text-xl',
-                  roleGrad[user.role] ??
-                    (user.accountStatus === 'suspended'
-                      ? 'bg-destructive text-destructive-foreground'
-                      : 'bg-foreground text-background'),
-                )}
-              >
-                {userInitials(user.name, user.email)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-display text-xl font-medium leading-tight tracking-[-0.018em] text-foreground sm:text-[26px]">
-                    {user.name || user.email.split('@')[0] || user.email}
-                  </p>
-                  {statusMeta && (
-                    <Badge variant={statusMeta.variant}>
-                      {tAdmin(`status.${user.accountStatus}`, { default: statusMeta.label })}
-                    </Badge>
-                  )}
-                  <Badge variant={roleBadge[user.role] ?? 'secondary'}>
-                    {tAdmin(`role.${user.role}`, { default: roleLabel[user.role] ?? user.role })}
-                  </Badge>
-                  {isSelf && (
-                    <Badge variant="soft">{tAdmin('drawer.you', { default: 'You' })}</Badge>
-                  )}
+    <>
+      <Modal
+        onClose={guard.requestClose}
+        width="max-w-4xl"
+        tabs={TABS.map((tab) => ({
+          ...tab,
+          label: tAdmin(`tabs.${tab.key}`, { default: tab.label }),
+        }))}
+        activeTab={activeTab}
+        onTabChange={(k) => setActiveTab(k as TabKey)}
+        title={
+          user?.name || user?.email || tAdmin('drawer.staffDetails', { default: 'Staff details' })
+        }
+        header={
+          <div className="border-b border-border/70 bg-card px-4 py-4 sm:px-6 sm:py-5">
+            {loading ? (
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Skeleton className="size-12 rounded-full sm:size-14" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40 rounded" />
+                  <Skeleton className="h-3 w-56 rounded" />
                 </div>
-                <p className="mt-0.5 truncate font-sans text-sm text-muted-foreground">
-                  {user.email}
-                  {user.username ? ` · @${user.username}` : ''}
-                </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  title={tCommon('refresh')}
-                  aria-label={tCommon('refresh')}
-                  onClick={() => loadAll()}
+            ) : user ? (
+              <div className="flex items-start gap-3 sm:gap-4">
+                <span
+                  className={cn(
+                    'flex size-12 shrink-0 items-center justify-center rounded-full font-display text-lg font-medium shadow-xs sm:size-14 sm:text-xl',
+                    roleGrad[user.role] ??
+                      (user.accountStatus === 'suspended'
+                        ? 'bg-destructive text-destructive-foreground'
+                        : 'bg-foreground text-background'),
+                  )}
                 >
-                  <RefreshCw className="size-4" />
-                </Button>
-                <button
-                  type="button"
-                  aria-label={tAdmin('drawer.closePanel', { default: 'Close panel' })}
-                  onClick={onClose}
-                  className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
-                >
-                  <X className="size-5" />
-                </button>
+                  {userInitials(user.name, user.email)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-display text-xl font-medium leading-tight tracking-[-0.018em] text-foreground sm:text-[26px]">
+                      {user.name || user.email.split('@')[0] || user.email}
+                    </p>
+                    {statusMeta && (
+                      <StatusChip
+                        tone={
+                          user.accountStatus === 'active'
+                            ? 'live'
+                            : user.accountStatus.startsWith('pending')
+                              ? 'draft'
+                              : 'archived'
+                        }
+                        className={cn(
+                          user.accountStatus === 'suspended' &&
+                            'bg-destructive/10 text-destructive',
+                        )}
+                      >
+                        {tAdmin(`status.${user.accountStatus}`, { default: statusMeta.label })}
+                      </StatusChip>
+                    )}
+                    <Badge variant={roleBadge[user.role] ?? 'secondary'}>
+                      {tAdmin(`role.${user.role}`, { default: roleLabel[user.role] ?? user.role })}
+                    </Badge>
+                    {isSelf && (
+                      <Badge variant="soft">{tAdmin('drawer.you', { default: 'You' })}</Badge>
+                    )}
+                  </div>
+                  <p className="mt-0.5 truncate font-sans text-sm text-muted-foreground">
+                    {user.email}
+                    {user.username ? ` · @${user.username}` : ''}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    title={tCommon('refresh')}
+                    aria-label={tCommon('refresh')}
+                    onClick={() => loadAll()}
+                  >
+                    <RefreshCw className="size-4" />
+                  </Button>
+                  <button
+                    type="button"
+                    aria-label={tAdmin('drawer.closePanel', { default: 'Close panel' })}
+                    onClick={guard.requestClose}
+                    className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
+                  >
+                    <X className="size-5" />
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <p className="font-sans text-sm text-muted-foreground">
+                {tAdmin('drawer.staffMember', { default: 'Staff member' })}
+              </p>
+            )}
+          </div>
+        }
+      >
+        <div className="px-4 py-4 sm:px-6 sm:py-6">
+          {loadError && (
+            <ErrorState
+              title={tAdmin('drawer.couldNotLoadStaff', { default: 'Could not load staff member' })}
+              description={loadError}
+              onRetry={loadAll}
+              compact
+              className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10"
+            />
+          )}
+          {loading && !user ? (
+            <LoadingState
+              label={tAdmin('drawer.loadingStaffMember', { default: 'Loading staff member…' })}
+              rows={4}
+            />
           ) : (
-            <p className="font-sans text-sm text-muted-foreground">
-              {tAdmin('drawer.staffMember', { default: 'Staff member' })}
-            </p>
+            <Crossfade value={activeTab}>{renderTab() ?? <span />}</Crossfade>
           )}
         </div>
-      }
-    >
-      <div className="flex-1 space-y-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-        {loadError && (
-          <ErrorState
-            title={tAdmin('drawer.couldNotLoadStaff', { default: 'Could not load staff member' })}
-            description={loadError}
-            onRetry={loadAll}
-            compact
-            className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10"
-          />
-        )}
-        {loading && !user ? (
-          <LoadingState
-            label={tAdmin('drawer.loadingStaffMember', { default: 'Loading staff member…' })}
-            rows={4}
-          />
-        ) : (
-          <Crossfade value={activeTab}>{renderTab() ?? <span />}</Crossfade>
-        )}
-      </div>
-    </Modal>
+        <DrawerFooter
+          editable={canEdit && !!user}
+          dirty={dirty}
+          saving={savingRoles}
+          failed={saveFailed}
+          onSave={saveAll}
+          onDiscard={discardEdits}
+          onClose={guard.requestClose}
+        />
+      </Modal>
+      <DiscardChangesDialog guard={guard} />
+    </>
   );
 }

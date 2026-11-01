@@ -933,6 +933,7 @@
       "title": "إصدار شهادة"
     },
     "certificateTemplates": {
+      "discardConfirm": "هل تريد تجاهل التغييرات غير المحفوظة على هذا القالب؟",
       "activate": "تفعيل",
       "addVariable": "إضافة متغير",
       "allLayouts": "كل التخطيطات",
@@ -964,7 +965,7 @@
       "fieldLayout": "التخطيط",
       "fieldLinkedCourse": "الدورة المرتبطة",
       "fieldLogoUrl": "رابط الشعار",
-      "fieldTemplateName": "اسم القالب *",
+      "fieldTemplateName": "اسم القالب",
       "fieldTypeface": "نوع الخط",
       "fieldWeight": "الوزن",
       "filterByLayout": "تصفية حسب التخطيط",
@@ -2137,7 +2138,13 @@
       "markContacted": "وضع علامة تم التواصل",
       "markClosed": "إغلاق",
       "updated": "تم تحديث الطلب",
-      "updateFailed": "تعذّر التحديث"
+      "updateFailed": "تعذّر التحديث",
+      "close": "إغلاق",
+      "received": "تاريخ الاستلام",
+      "statusSection": "الحالة",
+      "details": "التفاصيل",
+      "optional": "اختياري",
+      "priceInvalid": "أدخل عددًا صحيحًا يساوي 0 أو أكثر."
     },
     "translate": {
       "button": "ترجمة إلى العربية",
@@ -2190,6 +2197,17 @@
       "groupPeople": "الأشخاص",
       "groupCommerce": "التجارة",
       "groupPlatform": "المنصة"
+    },
+    "partnerReview": {
+      "rejectTitle": "رفض الطلب",
+      "rejectHint": "يُسجَّل السبب مع القرار.",
+      "reasonLabel": "السبب",
+      "rejectAction": "رفض الطلب",
+      "infoTitle": "طلب معلومات إضافية",
+      "infoHint": "تُرسل هذه الرسالة إلى مقدّم الطلب.",
+      "messageLabel": "الرسالة",
+      "sendRequest": "إرسال الطلب",
+      "required": "هذا الحقل مطلوب."
     }
   },
   "aiAssistant": {
@@ -2960,7 +2978,14 @@
       },
       "translateHint": "يملئ تبويب العربية من الإنجليزية. راجعه قبل الحفظ.",
       "lessonsTranslation": "الدروس والمحتوى",
-      "lessonsTranslationHint": "يملأ النص العربي لكل قسم ودرس وكتلة محتوى في عملية واحدة."
+      "lessonsTranslationHint": "يملأ النص العربي لكل قسم ودرس وكتلة محتوى في عملية واحدة.",
+      "drawerTabDetails": "التفاصيل",
+      "drawerTabMedia": "الوسائط",
+      "drawerTabContent": "المحتوى",
+      "statusPublished": "منشور",
+      "statusDraft": "مسودة",
+      "statusArchived": "مؤرشف",
+      "confirmDelete": "تأكيد الحذف"
     }
   },
   "lesson": {

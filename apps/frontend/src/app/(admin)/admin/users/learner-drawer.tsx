@@ -39,6 +39,8 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { StatusChip } from '@/components/admin/form-page';
+import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/admin/drawer-kit';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCan, useCanAny, useIsSuper } from '@/lib/use-permissions';
 import {
@@ -272,6 +274,9 @@ export function LearnerDrawer({
   const [rolesLoading, setRolesLoading] = useState(false);
   const [savingRoles, setSavingRoles] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  /** Roles as last loaded / saved — the baseline the dirty check compares against. */
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const me = useAuthStore((s) => s.user);
   const tAdmin = useTranslations('admin');
@@ -285,12 +290,6 @@ export function LearnerDrawer({
   const canAssignRoles = useCan('staff:assign_roles');
   const canDelete = useIsSuper();
   const isSuper = useIsSuper();
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -351,7 +350,9 @@ export function LearnerDrawer({
         if (!cancelled && rolesRes.ok) setAllRoles(await rolesRes.json());
         if (!cancelled && assignedRes.ok) {
           const assigned = await assignedRes.json();
-          setAssignedIds(Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : []);
+          const ids = Array.isArray(assigned) ? assigned.map((r: RoleSummary) => r.id) : [];
+          setAssignedIds(ids);
+          setSavedIds(ids);
         }
       } catch {
       } finally {
@@ -446,10 +447,30 @@ export function LearnerDrawer({
         },
         tAdmin('drawer.rolesUpdated', { default: 'Roles updated' }),
       );
+      setSavedIds(assignedIds);
     } finally {
       setSavingRoles(false);
     }
   };
+
+  const rolesDirty =
+    canAssignRoles &&
+    editableRoles &&
+    !(assignedIds.length === savedIds.length && assignedIds.every((id) => savedIds.includes(id)));
+  const saveAll = async () => {
+    setSaveFailed(false);
+    try {
+      await saveRoles();
+    } catch {
+      // `mutate` already toasted the server's message.
+      setSaveFailed(true);
+    }
+  };
+  const discardEdits = () => {
+    setAssignedIds(savedIds);
+    setSaveFailed(false);
+  };
+  const guard = useDirtyClose(rolesDirty, onClose);
 
   const toggleSuspend = async (suspend: boolean) => {
     if (!canSuspend) return;
@@ -624,6 +645,12 @@ export function LearnerDrawer({
                     }
                   />
                 )}
+              </div>
+              {((canSuspend && user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted') || (canDelete && !isSelf)) && (
+                <div className="space-y-2 rounded-lg border border-destructive/25 bg-destructive/[0.04] p-3">
+                  <p className="font-sans text-xs font-medium text-destructive">
+                    {tAdmin('drawer.dangerZone', { default: 'Danger zone' })}
+                  </p>
                 {canSuspend && user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted' && (
                   <ActionButton
                     label={tAdmin('learnerDrawer.suspendLearner', { default: 'Suspend learner' })}
@@ -657,7 +684,8 @@ export function LearnerDrawer({
                     }}
                   />
                 )}
-              </div>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -746,17 +774,6 @@ export function LearnerDrawer({
                     </label>
                   );
                 })
-              )}
-              {editableRoles && (
-                <Button
-                  type="button"
-                  className="mt-2 w-full"
-                  disabled={savingRoles || rolesLoading}
-                  loading={savingRoles}
-                  onClick={saveRoles}
-                >
-                  {savingRoles ? tCommon('saving') : tAdmin('drawer.saveRoles', { default: 'Save roles' })}
-                </Button>
               )}
               {!editableRoles && (
                 <p className="px-1 pt-1 font-sans text-xs text-muted-foreground">
@@ -1059,8 +1076,9 @@ export function LearnerDrawer({
   };
 
   return (
+    <>
     <Modal
-      onClose={onClose}
+      onClose={guard.requestClose}
       width="max-w-3xl"
       tabs={TABS.map((tab) => ({
         ...tab,
@@ -1104,9 +1122,18 @@ export function LearnerDrawer({
                     {user.name || user.email.split('@')[0] || user.email}
                   </p>
                   {statusMeta && (
-                    <Badge variant={statusMeta.variant} className={softBadge[statusMeta.variant]}>
+                    <StatusChip
+                      tone={
+                        user.accountStatus === 'active'
+                          ? 'live'
+                          : user.accountStatus.startsWith('pending')
+                            ? 'draft'
+                            : 'archived'
+                      }
+                      className={cn(user.accountStatus === 'suspended' && 'bg-destructive/10 text-destructive')}
+                    >
                       {tAdmin(`status.${user.accountStatus}`, { default: statusMeta.label })}
-                    </Badge>
+                    </StatusChip>
                   )}
                   <Badge
                     variant={roleBadge[user.role] ?? 'secondary'}
@@ -1134,7 +1161,7 @@ export function LearnerDrawer({
                 <button
                   type="button"
                   aria-label={tAdmin('drawer.closePanel', { default: 'Close panel' })}
-                  onClick={onClose}
+                  onClick={guard.requestClose}
                   className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground active:scale-90"
                 >
                   <X className="size-5" />
@@ -1149,7 +1176,7 @@ export function LearnerDrawer({
         </div>
       }
     >
-      <div className="flex-1 space-y-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
         {loadError && (
           <ErrorState
             title={tAdmin('learnerDrawer.couldNotLoad', { default: 'Could not load learner' })}
@@ -1170,6 +1197,17 @@ export function LearnerDrawer({
           </Crossfade>
         )}
       </div>
+      <DrawerFooter
+        editable={canAssignRoles && editableRoles && !!user}
+        dirty={rolesDirty}
+        saving={savingRoles}
+        failed={saveFailed}
+        onSave={saveAll}
+        onDiscard={discardEdits}
+        onClose={guard.requestClose}
+      />
     </Modal>
+    <DiscardChangesDialog guard={guard} />
+    </>
   );
 }

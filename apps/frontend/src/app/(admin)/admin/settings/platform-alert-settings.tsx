@@ -67,7 +67,7 @@ const SEVERITY_TONE: Record<Severity, Tone> = {
   info: 'blue',
 };
 
-export function PlatformAlertSettings() {
+export function PlatformAlertSettings({ id }: { id?: string }) {
   const t = useTranslations('admin.platformAlerts');
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +111,8 @@ export function PlatformAlertSettings() {
 
   return (
     <FormSection
+      id={id}
+      badge={t('appliesImmediately')}
       title={t('settingsTitle', { default: 'Platform alerts' })}
       icon={TriangleAlert}
       description={t('settingsDesc', {

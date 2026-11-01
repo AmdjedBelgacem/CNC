@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -31,7 +31,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { StatusPill } from '@/components/admin/admin-ui';
-import { SelectInput } from '@/components/admin/admin-form';
+import { SelectInput, TextInput } from '@/components/admin/admin-form';
+import { ColorField as KitColorField, useFormGuard } from '@/components/admin/form-page';
 import { toast } from '@/components/ui/toast';
 import { Modal, ModalHeader } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -1632,9 +1633,30 @@ function TemplateStudioSheet({
   const [academies, setAcademies] = useState<Array<{ id: string; title: string }>>([]);
   const [saving, setSaving] = useState(false);
   const [showAnchors, setShowAnchors] = useState(true);
+  const [attempted, setAttempted] = useState(false);
+  const tForm = useTranslations('ui.adminForm');
+  // Unsaved-changes tracking: the baseline is whatever the load effect below
+  // put into the form, captured once those state updates have rendered.
+  const snapshot = JSON.stringify({
+    name, layout, primaryColor, secondaryColor, logoUrl, backgroundUrl, fontFamily, fields,
+    courseId, academyId, scopeType,
+  });
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+  const [loadVersion, setLoadVersion] = useState(0);
+  const [baseline, setBaseline] = useState<string | null>(null);
+  useEffect(() => {
+    if (loadVersion > 0) setBaseline(snapshotRef.current);
+  }, [loadVersion]);
+  const dirty = baseline !== null && snapshot !== baseline;
+  const requestClose = () => {
+    if (dirty && !window.confirm(t('discardConfirm'))) return;
+    onClose();
+  };
   useEffect(() => {
     if (open) {
       setTab('design');
+      setAttempted(false);
       fetch('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
         .then((r) => (r.ok ? r.json() : { items: [] }))
         .then((d) => setCourses((d?.items ?? []).map((c: any) => ({ id: c.id, title: c.title }))))
@@ -1686,6 +1708,9 @@ function TemplateStudioSheet({
         setFontFamily('Inter');
         setFields(defaultFields());
       }
+      setLoadVersion((v) => v + 1);
+    } else {
+      setBaseline(null);
     }
   }, [open, template]);
   const updateField = (idx: number, patch: Partial<TemplateField>) =>
@@ -1725,6 +1750,7 @@ function TemplateStudioSheet({
     ]);
   };
   const handleSave = async () => {
+    setAttempted(true);
     if (!name.trim()) {
       toast({
         type: 'err',
@@ -1771,6 +1797,7 @@ function TemplateStudioSheet({
       setSaving(false);
     }
   };
+  useFormGuard({ dirty: open && dirty, saving, onSave: () => void handleSave() });
   const preview: Partial<Template> = {
     name,
     layout,
@@ -1787,7 +1814,7 @@ function TemplateStudioSheet({
     {open && (
     <Modal
       key="template-studio"
-      onClose={onClose}
+      onClose={requestClose}
       width="max-w-[1040px]"
       title={isEdit ? t('editTemplate', { default: 'Edit template' }) : t('newTemplate', { default: 'New template' })}
       header={
@@ -1803,7 +1830,7 @@ function TemplateStudioSheet({
                   default: 'Start from a preset, then refine every pixel',
                 })
           }
-          onClose={onClose}
+          onClose={requestClose}
         />
       }
     >
@@ -1899,15 +1926,19 @@ function TemplateStudioSheet({
           {tab === 'design' && (
             <>
               {' '}
-              <Field label={t('fieldTemplateName', { default: 'Template name *' })}>
+              <Field
+                label={t('fieldTemplateName', { default: 'Template name' })}
+                required
+                error={attempted && !name.trim() ? t('nameRequiredDesc', { default: 'Give your template a memorable name.' }) : undefined}
+              >
                 {' '}
-                <input
+                <TextInput
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t('namePlaceholder', {
                     default: 'e.g. Heritage Gold — Completion',
                   })}
-                  className={inputCls}
+                  
                   maxLength={80}
                 />{' '}
                 <p className="mt-1 text-end text-2xs text-muted-foreground">
@@ -1963,7 +1994,7 @@ function TemplateStudioSheet({
                       'Learners who finish this course auto-receive this template.',
                   })}
                   error={
-                    !courseId
+                    attempted && !courseId
                       ? t('courseRequired', { default: 'Choose the course this template is for.' })
                       : undefined
                   }
@@ -1991,7 +2022,7 @@ function TemplateStudioSheet({
                       'Issued for any course in this academy that has no course-level template.',
                   })}
                   error={
-                    !academyId
+                    attempted && !academyId
                       ? t('academyRequired', { default: 'Choose the academy this template is for.' })
                       : undefined
                   }
@@ -2102,15 +2133,17 @@ function TemplateStudioSheet({
               </Field>{' '}
               <div className="grid grid-cols-2 gap-3">
                 {' '}
-                <ColorField
+                <KitColorField
                   label={t('colorPrimary', { default: 'Primary' })}
                   value={primaryColor}
                   onChange={setPrimaryColor}
+                  presets={SWATCHES}
                 />{' '}
-                <ColorField
+                <KitColorField
                   label={t('colorSecondary', { default: 'Secondary' })}
                   value={secondaryColor}
                   onChange={setSecondaryColor}
+                  presets={SWATCHES}
                 />{' '}
               </div>{' '}
               <div className="flex items-center gap-2.5 rounded-xl bg-muted/50 px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground">
@@ -2337,12 +2370,12 @@ function TemplateStudioSheet({
                 {' '}
                 <div className="flex items-center gap-2">
                   {' '}
-                  <input
+                  <TextInput
                     value={logoUrl}
                     onChange={(e) => setLogoUrl(e.target.value)}
                     placeholder="https:// …/logo.png"
                     spellCheck={false}
-                    className={inputCls}
+                    
                   />{' '}
                   {logoUrl && (
                     <button
@@ -2386,12 +2419,12 @@ function TemplateStudioSheet({
                 {' '}
                 <div className="flex items-center gap-2">
                   {' '}
-                  <input
+                  <TextInput
                     value={backgroundUrl}
                     onChange={(e) => setBackgroundUrl(e.target.value)}
                     placeholder="https:// …/texture.jpg"
                     spellCheck={false}
-                    className={inputCls}
+                    
                   />{' '}
                   {backgroundUrl && (
                     <button
@@ -2432,28 +2465,35 @@ function TemplateStudioSheet({
             </>
           )}{' '}
           </Crossfade>
-          <div className="flex items-center gap-2 border-t border-border/70 pt-4">
-            {' '}
+          <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex items-center gap-2 border-t border-border/70 bg-card/90 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:-mb-6 sm:px-6">
+            <span
+              className={cn(
+                'me-auto inline-flex min-w-0 items-center gap-2 truncate text-xs',
+                dirty ? 'font-medium text-warning' : 'text-muted-foreground',
+              )}
+              aria-live="polite"
+            >
+              {dirty && <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden="true" />}
+              {dirty ? tForm('unsavedChanges') : isEdit ? tForm('allChangesSaved') : tForm('readyToCreate')}
+            </span>
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="h-10 rounded-lg border border-border bg-card px-4 text-sm font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]"
             >
-              {' '}
-              {tCommon('cancel', { default: 'Cancel' })}{' '}
-            </button>{' '}
+              {tCommon('cancel', { default: 'Cancel' })}
+            </button>
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving}
-              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-60"
+              disabled={saving || (isEdit && !dirty)}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
             >
-              {' '}
-              {saving && <Loader2 className="size-4 animate-spin" />}{' '}
+              {saving && <Loader2 className="size-4 animate-spin" />}
               {isEdit
                 ? tCommon('saveChanges', { default: 'Save changes' })
-                : t('createTemplate', { default: 'Create template' })}{' '}
-            </button>{' '}
+                : t('createTemplate', { default: 'Create template' })}
+            </button>
           </div>{' '}
         </div>{' '}
         {/* preview column */}{' '}
@@ -2520,17 +2560,18 @@ function TemplateStudioSheet({
     </AnimatePresence>
   );
 }
-/* --------------------------------- primitives ------------------------------ */ const inputCls =
-  'w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm text-foreground shadow-xs outline-none transition placeholder:text-muted-foreground/60 hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30';
+/* --------------------------------- primitives ------------------------------ */
 function Field({
   label,
   hint,
   error,
+  required,
   children,
 }: {
   label: string;
   hint?: string;
   error?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -2538,6 +2579,11 @@ function Field({
       {' '}
       <p className="text-sm font-medium text-foreground">
         {label}
+        {required && (
+          <span className="ms-1 text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
       </p>{' '}
       {hint && <p className="mb-1.5 mt-0.5 text-xs leading-relaxed text-muted-foreground">{hint}</p>}{' '}
       <div className="mt-1.5">{children}</div>{' '}
@@ -2547,59 +2593,6 @@ function Field({
           {error}
         </p>
       )}{' '}
-    </div>
-  );
-}
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div>
-      {' '}
-      <p className="text-sm font-medium text-foreground">
-        {label}
-      </p>{' '}
-      <div className="mt-1.5 rounded-xl border border-border/70 bg-card p-2 shadow-xs">
-        {' '}
-        <div className="flex items-center gap-2">
-          {' '}
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-9 w-11 cursor-pointer rounded-lg border border-border/70 bg-card p-1"
-            aria-label={`${label} picker`}
-          />{' '}
-          <input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            spellCheck={false}
-            className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-card px-2 font-mono text-xs uppercase outline-none transition hover:border-border-strong focus:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30"
-          />{' '}
-        </div>{' '}
-        <div className="mt-2 grid grid-cols-5 gap-1">
-          {' '}
-          {SWATCHES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              title={s}
-              onClick={() => onChange(s)}
-              className={cn(
-                'h-6 rounded-full ring-1 ring-border/70 transition-transform duration-200 hover:scale-110 active:scale-95',
-                value.toLowerCase() === s.toLowerCase() && 'ring-2 ring-primary ring-offset-2 ring-offset-card',
-              )}
-              style={{ backgroundColor: s }}
-            />
-          ))}{' '}
-        </div>{' '}
-      </div>{' '}
     </div>
   );
 }
