@@ -277,13 +277,16 @@ export function ProductDetailClient({
             role="tabpanel"
             aria-labelledby={gallery.length > 1 ? `product-image-tab-${Math.min(imageIndex, gallery.length - 1)}` : undefined}
             className={cn(
-              'group/gallery relative overflow-hidden rounded-2xl border border-border/70 bg-muted shadow-xs',
+              'group/gallery relative rounded-2xl border border-border/70 bg-muted shadow-xs',
               // An annotated product must not be cropped: the admin placed the
               // markers against the whole image, so a cover crop here would put
-              // every marker on the wrong feature.
+              // every marker on the wrong feature. Annotated panels also must not
+              // clip: hotspot popups open outside the image and were being cut at
+              // the panel edge. Plain products keep the crop for the slide
+              // transition, and round the image through overflow-hidden instead.
               hasPinpoints
                 ? 'flex min-h-[22rem] items-center justify-center'
-                : 'aspect-square',
+                : 'aspect-square overflow-hidden',
             )}
           >
             <div className={cn('relative', hasPinpoints ? 'inline-block max-h-[34rem] max-w-full' : 'size-full')}>
@@ -294,7 +297,7 @@ export function ProductDetailClient({
                 key={activeImage}
                 src={getImageSrc(activeImage, 'product')}
                 alt={p.title}
-                className={hasPinpoints ? 'block max-h-[34rem] max-w-full object-contain' : 'size-full object-cover'}
+                className={hasPinpoints ? 'block max-h-[34rem] max-w-full rounded-2xl object-contain' : 'size-full object-cover'}
                 loading="eager"
                 initial={galleryMoved ? { opacity: 0, x: galleryDir * 18, scale: 1.015 } : false}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -303,10 +306,11 @@ export function ProductDetailClient({
 
               {pinpointList.map((h, index) => {
                 const isOpen = activeHotspotId === h.id;
-                // The panel clips overflow, so the popup flips below the marker near the
-                // top edge and shifts sideways near the left/right edges. It stays
+                // A marker in the upper part of the image flips its popup below, so
+                // the panel opens over the picture instead of drifting into the
+                // header; near the left/right edges it shifts sideways. It stays
                 // attached to the marker in every case.
-                const below = h.y < 28;
+                const below = h.y < 42;
                 const shiftRight = h.x < 30;
                 const shiftLeft = h.x > 70;
                 return (
