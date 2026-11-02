@@ -61,7 +61,10 @@ export function HotspotStudio({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const stageRef = useRef<HTMLDivElement>(null);
+  /** The rendered image wrapper — x/y percentages are measured against the
+   *  picture itself, not the padded stage around it, so a marker placed on a
+   *  feature of the image sits on that same feature in the storefront. */
+  const imageRef = useRef<HTMLDivElement>(null);
   const loadedImageId = useRef<string | null>(null);
 
   /*
@@ -94,7 +97,7 @@ export function HotspotStudio({
   };
 
   const percentFrom = (event: ReactMouseEvent<HTMLElement>) => {
-    const rect = (stageRef.current ?? event.currentTarget).getBoundingClientRect();
+    const rect = (imageRef.current ?? event.currentTarget).getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return null;
     return {
       x: Number(
@@ -127,7 +130,7 @@ export function HotspotStudio({
   const drag = (event: ReactMouseEvent<HTMLButtonElement>, id: string) => {
     event.preventDefault();
     const onMove = (move: PointerEvent) => {
-      const rect = stageRef.current?.getBoundingClientRect();
+      const rect = imageRef.current?.getBoundingClientRect();
       if (!rect || rect.width === 0) return;
       const x = Number(
         Math.min(100, Math.max(0, ((move.clientX - rect.left) / rect.width) * 100)).toFixed(2),
@@ -209,43 +212,50 @@ export function HotspotStudio({
               </div>
 
               <div
-                ref={stageRef}
-                onClick={addAt}
                 className={cn(
                   'relative flex max-h-[52vh] min-h-[18rem] items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted/40 transition-shadow duration-200',
                   placing && 'cursor-crosshair ring-2 ring-primary ring-offset-2 ring-offset-card',
                 )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={image.url}
-                  alt={image.alt ?? ''}
-                  className="block max-h-[52vh] w-auto max-w-full select-none object-contain"
-                  draggable={false}
-                />
+                {/* Markers live inside this wrapper, which hugs the rendered image:
+                    x/y percentages are relative to the picture, so a pin sits on the
+                    same feature here and in the storefront. */}
+                <div
+                  ref={imageRef}
+                  onClick={addAt}
+                  className={cn('relative inline-block', placing && 'cursor-crosshair')}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={image.url}
+                    alt={image.alt ?? ''}
+                    className="block max-h-[52vh] w-auto max-w-full select-none object-contain"
+                    draggable={false}
+                  />
 
-                {draft.map((h, index) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    aria-label={h.label}
-                    aria-pressed={selectedId === h.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedId(h.id);
-                    }}
-                    onPointerDown={(e) => drag(e, h.id)}
-                    style={{ left: `${h.x}%`, top: `${h.y}%` }}
-                    className={cn(
-                      'absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 animate-fade-in cursor-grab items-center justify-center rounded-full border-2 border-white text-[11px] font-semibold tabular-nums shadow-lg transition active:cursor-grabbing',
-                      selectedId === h.id
-                        ? 'bg-primary text-primary-foreground ring-4 ring-primary/30'
-                        : 'bg-primary/90 text-primary-foreground hover:scale-110',
-                    )}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
+                  {draft.map((h, index) => (
+                    <button
+                      key={h.id}
+                      type="button"
+                      aria-label={h.label}
+                      aria-pressed={selectedId === h.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(h.id);
+                      }}
+                      onPointerDown={(e) => drag(e, h.id)}
+                      style={{ left: `${h.x}%`, top: `${h.y}%` }}
+                      className={cn(
+                        'absolute z-10 flex size-7 -translate-x-1/2 -translate-y-1/2 animate-fade-in cursor-grab items-center justify-center rounded-full border-2 border-white text-[11px] font-semibold tabular-nums shadow-lg transition active:cursor-grabbing',
+                        selectedId === h.id
+                          ? 'bg-primary text-primary-foreground ring-4 ring-primary/30'
+                          : 'bg-primary/90 text-primary-foreground hover:scale-110',
+                      )}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                </div>
 
                 {draft.length === 0 && !placing ? (
                   <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-xs text-muted-foreground">
