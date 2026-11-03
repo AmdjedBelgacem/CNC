@@ -1,3 +1,4 @@
+import { coerceLocale } from '@/i18n/config';
 import { serverApiUrl } from '@/lib/server-api-url';
 
 const API_BASE = serverApiUrl();
@@ -27,21 +28,29 @@ export interface CatalogEvent {
   registeredCount: number;
 }
 
-function tenantHeaders(tenantSlug: string): HeadersInit {
-  return { 'x-tenant-slug': tenantSlug };
+function tenantHeaders(tenantSlug: string, locale?: string): HeadersInit {
+  const resolved = coerceLocale(locale ?? process.env.NEXT_LOCALE);
+  return {
+    'x-tenant-slug': tenantSlug,
+    'x-locale': resolved,
+    'x-next-locale': resolved,
+    'accept-language': `${resolved},en;q=0.8`,
+  };
 }
 
 /** Server-side: list published events for the events hall. */
 export async function fetchCatalogEvents(
   tenantSlug: string,
   opts: { limit?: number; upcoming?: boolean } = {},
+  locale?: string,
 ): Promise<CatalogEvent[]> {
   try {
     const params = new URLSearchParams();
     params.set('limit', String(opts.limit ?? 50));
     if (opts.upcoming) params.set('upcoming', 'true');
+    if (locale) params.set('locale', coerceLocale(locale));
     const res = await fetch(`${API_BASE}/events?${params.toString()}`, {
-      headers: tenantHeaders(tenantSlug),
+      headers: tenantHeaders(tenantSlug, locale),
       next: { revalidate: REVALIDATE },
     });
     if (!res.ok) return [];

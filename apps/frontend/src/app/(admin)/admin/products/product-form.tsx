@@ -199,8 +199,14 @@ export function useProductForm(initial?: Partial<ProductFormValue>) {
     ...initial,
     translationsAr: initial?.translationsAr ?? emptyArabicProduct(),
   });
-  const set = <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) =>
-    setValue((v) => ({ ...v, [key]: next }));
+  const set = <K extends keyof ProductFormValue>(
+    key: K,
+    next: ProductFormValue[K] | ((prev: ProductFormValue[K]) => ProductFormValue[K]),
+  ) =>
+    setValue((v) => ({
+      ...v,
+      [key]: typeof next === 'function' ? (next as (prev: ProductFormValue[K]) => ProductFormValue[K])(v[key]) : next,
+    }));
   /** Replace the whole form, used by "discard changes". */
   const reset = useCallback((next: ProductFormValue) => setValue(next), []);
   return { value, set, reset, setValue };
@@ -515,7 +521,10 @@ function SubHeading({ children, hint }: { children: ReactNode; hint?: ReactNode 
  */
 function useProductArabic(
   value: ProductFormValue,
-  set: <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) => void,
+  set: <K extends keyof ProductFormValue>(
+    key: K,
+    next: ProductFormValue[K] | ((prev: ProductFormValue[K]) => ProductFormValue[K]),
+  ) => void,
 ) {
   const tTranslate = useTranslations('admin.translate');
 
@@ -543,30 +552,31 @@ function useProductArabic(
     descriptors: PRODUCT_FIELDS,
     groups,
     onApply: (key, translations) => {
-      if (key.startsWith('pin:')) {
-        const id = key.slice('pin:'.length);
-        const current = value.translationsAr.hotspots[id] ?? { label: '', tooltip: '', detail: '' };
-        set('translationsAr', {
-          ...value.translationsAr,
-          hotspots: {
-            ...value.translationsAr.hotspots,
-            [id]: {
-              label: translations['Label'] ?? current.label,
-              tooltip: translations['Tooltip'] ?? current.tooltip,
-              detail: translations['Detail'] ?? current.detail,
+      set('translationsAr', (prev) => {
+        if (key.startsWith('pin:')) {
+          const id = key.slice('pin:'.length);
+          const current = prev.hotspots?.[id] ?? { label: '', tooltip: '', detail: '' };
+          return {
+            ...prev,
+            hotspots: {
+              ...(prev.hotspots ?? {}),
+              [id]: {
+                label: translations['Label'] ?? current.label,
+                tooltip: translations['Tooltip'] ?? current.tooltip,
+                detail: translations['Detail'] ?? current.detail,
+              },
             },
-          },
-        });
-        return;
-      }
-      set('translationsAr', {
-        ...value.translationsAr,
-        title: translations['Title'] ?? value.translationsAr.title,
-        tagline: translations['Tagline'] ?? value.translationsAr.tagline,
-        description: translations['Description'] ?? value.translationsAr.description,
-        features: translations['Bullet points (one per line)'] ?? value.translationsAr.features,
-        seoTitle: translations['SEO title'] ?? value.translationsAr.seoTitle,
-        seoDescription: translations['SEO description'] ?? value.translationsAr.seoDescription,
+          };
+        }
+        return {
+          ...prev,
+          title: translations['Title'] ?? prev.title,
+          tagline: translations['Tagline'] ?? prev.tagline,
+          description: translations['Description'] ?? prev.description,
+          features: translations['Bullet points (one per line)'] ?? prev.features,
+          seoTitle: translations['SEO title'] ?? prev.seoTitle,
+          seoDescription: translations['SEO description'] ?? prev.seoDescription,
+        };
       });
     },
     confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
@@ -600,7 +610,10 @@ export function ProductFormSections({
   gallery,
 }: {
   value: ProductFormValue;
-  set: <K extends keyof ProductFormValue>(key: K, next: ProductFormValue[K]) => void;
+  set: <K extends keyof ProductFormValue>(
+    key: K,
+    next: ProductFormValue[K] | ((prev: ProductFormValue[K]) => ProductFormValue[K]),
+  ) => void;
   mode?: 'create' | 'edit';
   /** Inline errors; the page decides when they become visible (after the first attempt). */
   errors?: ProductFormErrors;
@@ -614,7 +627,7 @@ export function ProductFormSections({
   const digits = fractionDigits(value.currency);
   const unit = digits === 0 ? t('minorUnitWhole', { default: 'minor units' }) : t('minorUnit', { default: 'cents' });
   const setAr = (patch: Partial<ProductFormValue['translationsAr']>) =>
-    set('translationsAr', { ...value.translationsAr, ...patch });
+    set('translationsAr', (prev) => ({ ...prev, ...patch }));
 
   return (
     <>

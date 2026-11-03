@@ -272,7 +272,7 @@ export default async function AcademyDetailPage(props: Props) {
 
   const courses = academy.courses ?? [];
   const products = academy.id
-    ? await fetchLinkedProducts(tenantSlug, { academyId: academy.id, limit: 4 }).catch(() => [])
+    ? await fetchLinkedProducts(tenantSlug, { academyId: academy.id, limit: 4 }, locale).catch(() => [])
     : [];
   const publishedProducts = products.filter((product) => product.isPublished !== false && product.isArchived !== true);
   const accent = academy.accentColor || 'var(--color-primary)';

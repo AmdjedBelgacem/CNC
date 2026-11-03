@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
+import type { ContentLocale } from '@titan/shared';
 import { HomeBuilder } from '@/components/home/home-builder';
 import {
   ProductsDepartments,
@@ -38,7 +39,7 @@ export default async function ProductsPage() {
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, products] = await Promise.all([
     resolvePageLayout(tenantSlug, 'products'),
-    fetchCatalogProducts(tenantSlug, { limit: 100 }),
+    fetchCatalogProducts(tenantSlug, { limit: 100 }, locale as ContentLocale),
   ]);
 
   const categoryCounts = new Map<string, number>();

@@ -1,4 +1,6 @@
 import { cookies } from 'next/headers';
+import { getLocale } from 'next-intl/server';
+import type { ContentLocale } from '@titan/shared';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { fetchProductBySlug } from '@/lib/products';
 import { ProductDetailClient } from './product-detail-client';
@@ -17,9 +19,10 @@ import { ProductDetailClient } from './product-detail-client';
  */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const locale = (await getLocale()) as ContentLocale;
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
-  const product = await fetchProductBySlug(tenantSlug, slug);
+  const product = await fetchProductBySlug(tenantSlug, slug, locale);
   if (!product) return { title: productMetaFallback() };
   return {
     title: product.title,
@@ -38,8 +41,9 @@ function productMetaFallback() {
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const locale = (await getLocale()) as ContentLocale;
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
-  const initialProduct = await fetchProductBySlug(tenantSlug, slug);
+  const initialProduct = await fetchProductBySlug(tenantSlug, slug, locale);
   return <ProductDetailClient slug={slug} initialProduct={initialProduct} />;
 }

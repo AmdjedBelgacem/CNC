@@ -183,14 +183,35 @@ export function localizeAcademyFields(
   academy: Record<string, any>,
   locale: ContentLocale,
 ): LocalizedFields<Record<string, any>> {
-  return localizedValue(academy, academy.translations, locale, ['title', 'description', 'seoTitle', 'seoDescription']);
+  return localizedValue(academy, academy.translations, locale, ['title', 'subtitle', 'description', 'seoTitle', 'seoDescription']);
 }
 
 export function localizeProductFields(
   product: Record<string, any>,
   locale: ContentLocale,
 ): LocalizedFields<Record<string, any>> {
-  return localizedValue(product, product.translations, locale, ['title', 'tagline', 'description', 'features']);
+  const localized = localizedValue(product, product.translations, locale, [
+    'title',
+    'tagline',
+    'description',
+    'features',
+    'seoTitle',
+    'seoDescription',
+  ]);
+  const hotspotTranslations = (product.translations as Record<string, any> | undefined)?.[locale]?.hotspots;
+  if (isRecord(hotspotTranslations) && Array.isArray(localized.value.pinpoints)) {
+    localized.value.pinpoints = localized.value.pinpoints.map((pin: any) => {
+      const tr = hotspotTranslations[pin?.id];
+      if (!tr) return pin;
+      return {
+        ...pin,
+        label: tr.label || pin.label,
+        tooltip: tr.tooltip !== undefined ? tr.tooltip : pin.tooltip,
+        detail: tr.detail !== undefined ? tr.detail : pin.detail,
+      };
+    });
+  }
+  return localized;
 }
 
 export function localizeEventFields(

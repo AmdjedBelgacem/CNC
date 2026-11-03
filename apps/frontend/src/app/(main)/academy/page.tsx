@@ -29,7 +29,7 @@ export default async function AcademyPage() {
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, academies] = await Promise.all([
     resolvePageLayout(tenantSlug, 'academy-landing'),
-    fetchPublishedAcademies(tenantSlug),
+    fetchPublishedAcademies(tenantSlug, locale),
   ]);
 
   const jsonLd = {

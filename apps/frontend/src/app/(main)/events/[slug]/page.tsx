@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
+import { api } from '@/lib/api-client';
 import { formatDate as formatDateInLocale } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,8 +54,7 @@ export default function EventDetailPage() {
   const [registering, setRegistering] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const fetchEvent = () => {
-    fetch(`/api/proxy/events/${slug}`, { credentials: 'include' })
-      .then((r) => r.json())
+    api.get<EventDetail>(`/events/${slug}`, { locale })
       .then(setEvent)
       .catch(() => {})
       .finally(() => setLoading(false));

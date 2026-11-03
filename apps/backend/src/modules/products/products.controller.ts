@@ -11,6 +11,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { resolveContentLocale } from '../courses/lesson-content';
 
 @ApiTags('products')
 @Controller('products')
@@ -138,7 +139,7 @@ export class ProductsController {
      * `ensureImagesFromLegacy` backfills it for products created before the gallery
      * existed. Card/list endpoints keep reading the single `thumbnailUrl` column.
      */
-    const images = await this.products.ensureImagesFromLegacy(product as {
+    const rawImages = await this.products.ensureImagesFromLegacy(product as {
       id: string;
       tenantId: string;
       title?: string | null;
@@ -148,6 +149,25 @@ export class ProductsController {
       // image on first view instead of being invisible to shoppers.
       pinpoints?: unknown;
     });
+    const locale = resolveContentLocale(req);
+    const hotspotTranslations = (product as any)?.translations?.[locale]?.hotspots;
+    const images = hotspotTranslations && typeof hotspotTranslations === 'object'
+      ? rawImages.map((img) => ({
+          ...img,
+          hotspots: Array.isArray(img.hotspots)
+            ? img.hotspots.map((pin: any) => {
+                const tr = (hotspotTranslations as Record<string, any>)[pin?.id];
+                if (!tr) return pin;
+                return {
+                  ...pin,
+                  label: tr.label || pin.label,
+                  tooltip: tr.tooltip !== undefined ? tr.tooltip : pin.tooltip,
+                  detail: tr.detail !== undefined ? tr.detail : pin.detail,
+                };
+              })
+            : img.hotspots,
+        }))
+      : rawImages;
     const primary = images.find((i) => i.isPrimary) ?? images[0] ?? null;
     return {
       ...product,

@@ -1,4 +1,6 @@
+import type { ContentLocale } from '@titan/shared';
 import type { Product } from '@/lib/api/types';
+import { coerceLocale } from '@/i18n/config';
 import { serverApiUrl } from '@/lib/server-api-url';
 
 /**
@@ -14,22 +16,30 @@ import { serverApiUrl } from '@/lib/server-api-url';
 const API_BASE = serverApiUrl();
 const REVALIDATE = 60;
 
-function tenantHeaders(tenantSlug: string): HeadersInit {
-  return { 'x-tenant-slug': tenantSlug };
+function tenantHeaders(tenantSlug: string, locale?: string): HeadersInit {
+  const resolved = coerceLocale(locale ?? process.env.NEXT_LOCALE);
+  return {
+    'x-tenant-slug': tenantSlug,
+    'x-locale': resolved,
+    'x-next-locale': resolved,
+    'accept-language': `${resolved},en;q=0.8`,
+  };
 }
 
 /** Server-side: list published products for the storefront. */
 export async function fetchCatalogProducts(
   tenantSlug: string,
   opts: { limit?: number; category?: string; featured?: boolean } = {},
+  locale?: ContentLocale,
 ): Promise<Product[]> {
   try {
     const params = new URLSearchParams();
     if (opts.limit) params.set('limit', String(opts.limit));
     if (opts.category) params.set('category', opts.category);
     if (opts.featured) params.set('featured', 'true');
+    if (locale) params.set('locale', coerceLocale(locale));
     const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
-      headers: tenantHeaders(tenantSlug),
+      headers: tenantHeaders(tenantSlug, locale),
       next: { revalidate: REVALIDATE },
     });
     if (!res.ok) return [];
@@ -45,14 +55,16 @@ export async function fetchCatalogProducts(
 export async function fetchLinkedProducts(
   tenantSlug: string,
   opts: { academyId?: string; courseId?: string; limit?: number },
+  locale?: ContentLocale,
 ): Promise<Product[]> {
   try {
     const params = new URLSearchParams();
     if (opts.academyId) params.set('academyId', opts.academyId);
     if (opts.courseId) params.set('courseId', opts.courseId);
     if (opts.limit) params.set('limit', String(opts.limit));
+    if (locale) params.set('locale', coerceLocale(locale));
     const res = await fetch(`${API_BASE}/products?${params.toString()}`, {
-      headers: tenantHeaders(tenantSlug),
+      headers: tenantHeaders(tenantSlug, locale),
       next: { revalidate: REVALIDATE },
     });
     if (!res.ok) return [];
@@ -77,13 +89,18 @@ export async function fetchLinkedProducts(
 export async function fetchProductBySlug(
   tenantSlug: string,
   slug: string,
+  locale?: ContentLocale,
 ): Promise<Product | null> {
   if (!slug) return null;
   try {
-    const res = await fetch(`${API_BASE}/products/${encodeURIComponent(slug)}`, {
-      headers: tenantHeaders(tenantSlug),
-      next: { revalidate: REVALIDATE },
-    });
+    const resolved = coerceLocale(locale);
+    const res = await fetch(
+      `${API_BASE}/products/${encodeURIComponent(slug)}?locale=${resolved}`,
+      {
+        headers: tenantHeaders(tenantSlug, locale),
+        next: { revalidate: REVALIDATE },
+      },
+    );
     if (!res.ok) return null;
     return (await res.json()) as Product;
   } catch {

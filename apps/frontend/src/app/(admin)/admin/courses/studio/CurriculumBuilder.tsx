@@ -310,8 +310,8 @@ export function CurriculumBuilder({
   onOpenLesson: (lesson: Lesson) => void;
   onDeleteLesson: (id: string) => void;
   onDuplicateLesson: (id: string) => void;
-  onUpdateLesson: (id: string, patch: Partial<Lesson>) => void;
-  onUpdateSection: (id: string, patch: Partial<Section>) => void;
+  onUpdateLesson: (id: string, patch: Partial<Lesson> | ((prev: Lesson) => Partial<Lesson>)) => void;
+  onUpdateSection: (id: string, patch: Partial<Section> | ((prev: Section) => Partial<Section>)) => void;
 }) {
   const [items, setItems] = useState<Section[]>(sections);
   const t = useTranslations('courses');

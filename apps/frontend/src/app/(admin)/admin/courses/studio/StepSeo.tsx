@@ -73,7 +73,12 @@ export function StepLocalization({
     update({
       translations: {
         ...(course.translations ?? {}),
-        ar: { ...current, ...(translations as Record<string, string>) },
+        ar: {
+          ...current,
+          seoTitle: translations['SEO title'] ?? current.seoTitle ?? null,
+          seoDescription: translations['SEO description'] ?? current.seoDescription ?? null,
+          seoKeywords: translations['SEO keywords'] ?? current.seoKeywords ?? null,
+        },
       },
     });
   };

@@ -33,8 +33,8 @@ import type { Lesson, Section } from './types';
 export interface CourseLessonsTranslationProps {
   sections: Section[];
   /** Replaces the matching lesson in the studio draft. */
-  onUpdateLesson: (id: string, patch: Partial<Lesson>) => void;
-  onUpdateSection: (id: string, patch: Partial<Section>) => void;
+  onUpdateLesson: (id: string, patch: Partial<Lesson> | ((prev: Lesson) => Partial<Lesson>)) => void;
+  onUpdateSection: (id: string, patch: Partial<Section> | ((prev: Section) => Partial<Section>)) => void;
 }
 
 interface Harvested {
@@ -96,58 +96,58 @@ export function CourseLessonsTranslation({
     onApply: (groupKey, translations) => {
       if (groupKey.startsWith('section:')) {
         const id = groupKey.slice('section:'.length);
-        const current = sections.find((s) => s.id === id);
-        onUpdateSection(id, {
+        onUpdateSection(id, (prev) => ({
           translations: {
-            ...(current?.translations ?? {}),
+            ...(prev?.translations ?? {}),
             ar: {
-              ...(current?.translations?.ar ?? {}),
-              title: translations['Section title'] ?? current?.translations?.ar?.title,
-              description: translations['Section description'] ?? current?.translations?.ar?.description,
+              ...(prev?.translations?.ar ?? {}),
+              title: translations['Section title'] ?? prev?.translations?.ar?.title,
+              description: translations['Section description'] ?? prev?.translations?.ar?.description,
             },
           },
-        });
+        }));
         return;
       }
 
       const lessonId = groupKey.slice('lesson:'.length);
       const entry = harvested.lessons.find((e) => e.lesson.id === lessonId);
       if (!entry) return;
-      const lesson = entry.lesson;
-      const blocks = lesson.contentBlocks?.blocks;
-      onUpdateLesson(lessonId, {
-        translations: {
-          ...(lesson.translations ?? {}),
-          ar: {
-            ...(lesson.translations?.ar ?? {}),
-            title: translations['Lesson title'] ?? lesson.translations?.ar?.title,
-            description:
-              translations['Lesson description'] ??
-              lesson.translations?.ar?.description ??
-              undefined,
+      onUpdateLesson(lessonId, (currentLesson) => {
+        const blocks = currentLesson.contentBlocks?.blocks ?? entry.lesson.contentBlocks?.blocks;
+        return {
+          translations: {
+            ...(currentLesson.translations ?? {}),
+            ar: {
+              ...(currentLesson.translations?.ar ?? {}),
+              title: translations['Lesson title'] ?? currentLesson.translations?.ar?.title,
+              description:
+                translations['Lesson description'] ??
+                currentLesson.translations?.ar?.description ??
+                undefined,
+            },
           },
-        },
-        // Only touch blocks when there are any; a lesson with none must not gain an empty document.
-        ...(blocks && blocks.length > 0
-          ? {
-              contentBlocks: {
-                schemaVersion: 1,
-                blocks: blocks.map((block) => {
-                  const blockFields = entry.fields.filter((field) => field.key.startsWith(`${block.id}:`));
-                  if (blockFields.length === 0) return block;
-                  // Strip the `blockId:` prefix the model was given, so paths match the block content.
-                  const stripped: HarvestedField[] = blockFields.map((field) => ({
-                    ...field,
-                    key: field.key.slice(block.id.length + 1),
-                  }));
-                  return {
-                    ...block,
-                    content: applyBlockTranslations(block.content, stripped, translations),
-                  };
-                }),
-              },
-            }
-          : {}),
+          // Only touch blocks when there are any; a lesson with none must not gain an empty document.
+          ...(blocks && blocks.length > 0
+            ? {
+                contentBlocks: {
+                  schemaVersion: 1,
+                  blocks: blocks.map((block) => {
+                    const blockFields = entry.fields.filter((field) => field.key.startsWith(`${block.id}:`));
+                    if (blockFields.length === 0) return block;
+                    // Strip the `blockId:` prefix the model was given, so paths match the block content.
+                    const stripped: HarvestedField[] = blockFields.map((field) => ({
+                      ...field,
+                      key: field.key.slice(block.id.length + 1),
+                    }));
+                    return {
+                      ...block,
+                      content: applyBlockTranslations(block.content, stripped, translations),
+                    };
+                  }),
+                },
+              }
+            : {}),
+        };
       });
     },
     confirmOverwrite: () => window.confirm(t('overwriteConfirm')),

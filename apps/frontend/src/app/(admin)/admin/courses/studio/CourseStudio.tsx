@@ -379,13 +379,27 @@ export function CourseStudio({ slug }: { slug: string }) {
     }
   }, [drawerLesson, t]);
 
-  const updateLessonLocal = useCallback((id: string, patch: Partial<Lesson>) => {
+  const updateLessonLocal = useCallback((id: string, patch: Partial<Lesson> | ((prev: Lesson) => Partial<Lesson>)) => {
     const current = courseRef.current;
     if (!current) return;
-    const next = { ...current, series: current.series.map((section) => ({ ...section, lessons: section.lessons.map((lesson) => lesson.id === id ? { ...lesson, ...patch } : lesson) })) };
+    const next = {
+      ...current,
+      series: current.series.map((section) => ({
+        ...section,
+        lessons: section.lessons.map((lesson) => {
+          if (lesson.id !== id) return lesson;
+          const resolved = typeof patch === 'function' ? patch(lesson) : patch;
+          return { ...lesson, ...resolved };
+        }),
+      })),
+    };
     courseRef.current = next;
     setCourse(next);
-    setDrawerLesson((lesson) => lesson?.id === id ? { ...lesson, ...patch } : lesson);
+    setDrawerLesson((lesson) => {
+      if (lesson?.id !== id) return lesson;
+      const resolved = typeof patch === 'function' ? patch(lesson) : patch;
+      return { ...lesson, ...resolved };
+    });
   }, []);
 
   const deleteLesson = useCallback(async (id: string) => {
@@ -535,7 +549,34 @@ export function CourseStudio({ slug }: { slug: string }) {
 
   const stepContent = [
     <StepBasics key="basics" course={course} update={update} locale={locale} />,
-    <CurriculumBuilder key="curriculum" sections={course.series} locale={locale} onReorder={handleReorder} onAddSection={() => void addSection(t('studio.newSection', { default: 'New section' }))} onRenameSection={renameSection} onDeleteSection={(id) => void deleteSection(id)} onAddLesson={(id) => void addLesson(id)} onOpenLesson={openLesson} onDeleteLesson={(id) => void deleteLesson(id)} onDuplicateLesson={(id) => void duplicateLesson(id)} onUpdateLesson={updateLessonLocal} onUpdateSection={(id, patch) => { const current = courseRef.current; if (!current) return; update({ series: current.series.map((section) => section.id === id ? { ...section, ...patch } : section) }); }} />,
+    <CurriculumBuilder
+      key="curriculum"
+      sections={course.series}
+      locale={locale}
+      onReorder={handleReorder}
+      onAddSection={() => void addSection(t('studio.newSection', { default: 'New section' }))}
+      onRenameSection={renameSection}
+      onDeleteSection={(id) => void deleteSection(id)}
+      onAddLesson={(id) => void addLesson(id)}
+      onOpenLesson={openLesson}
+      onDeleteLesson={(id) => void deleteLesson(id)}
+      onDuplicateLesson={(id) => void duplicateLesson(id)}
+      onUpdateLesson={updateLessonLocal}
+      onUpdateSection={(id, patch) => {
+        const current = courseRef.current;
+        if (!current) return;
+        const next = {
+          ...current,
+          series: current.series.map((section) => {
+            if (section.id !== id) return section;
+            const resolved = typeof patch === 'function' ? patch(section) : patch;
+            return { ...section, ...resolved };
+          }),
+        };
+        courseRef.current = next;
+        update(next);
+      }}
+    />,
     <StepMedia key="media" course={course} update={update} />,
     <StepPricing key="pricing" course={course} update={update} />,
     <StepLocalization key="localization" course={course} update={update} locale={locale} />,

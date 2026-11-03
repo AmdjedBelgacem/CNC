@@ -19,10 +19,13 @@ function tenantHeaders(tenantSlug: string, locale?: string): HeadersInit {
 }
 
 /** Server-side: list published academies for a tenant (real backend data, ISR 60s). */
-export async function fetchPublishedAcademies(tenantSlug: string): Promise<AcademySummary[]> {
+export async function fetchPublishedAcademies(tenantSlug: string, locale?: string): Promise<AcademySummary[]> {
   try {
-    const res = await fetch(`${API_BASE}/academies`, {
-      headers: tenantHeaders(tenantSlug),
+    const params = new URLSearchParams();
+    if (locale) params.set('locale', locale);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE}/academies${qs}`, {
+      headers: tenantHeaders(tenantSlug, locale),
       next: { revalidate: REVALIDATE },
     });
     if (!res.ok) return [];
@@ -44,7 +47,8 @@ export async function fetchAcademyDetail(
   locale?: string,
 ): Promise<AcademyDetail | null> {
   try {
-    const res = await fetch(`${API_BASE}/academies/${encodeURIComponent(slug)}`, {
+    const resolved = locale ? `?locale=${encodeURIComponent(locale)}` : '';
+    const res = await fetch(`${API_BASE}/academies/${encodeURIComponent(slug)}${resolved}`, {
       headers: tenantHeaders(tenantSlug, locale),
       next: { revalidate: REVALIDATE },
     });

@@ -76,6 +76,26 @@ interface ProductDetail {
 
 /** The form value that a saved product corresponds to, used for dirty tracking. */
 function baselineOf(p: ProductDetail): ProductFormValue {
+  const allImageHotspots: InteractiveHotspot[] = [];
+  if (Array.isArray(p.images)) {
+    for (const img of p.images) {
+      if (Array.isArray(img.hotspots)) {
+        for (const h of img.hotspots) {
+          if (!allImageHotspots.some((existing) => existing.id === h.id)) {
+            allImageHotspots.push(h);
+          }
+        }
+      }
+    }
+  }
+  const rawPins = Array.isArray((p as any).pinpoints) ? (p as any).pinpoints : [];
+  const mergedPins = [...rawPins];
+  for (const h of allImageHotspots) {
+    if (!mergedPins.some((existing: any) => existing.id === h.id)) {
+      mergedPins.push(h);
+    }
+  }
+
   return {
     title: p.title ?? '',
     slug: p.slug ?? '',
@@ -102,7 +122,7 @@ function baselineOf(p: ProductDetail): ProductFormValue {
     seoTitle: p.seoTitle ?? '',
     seoDescription: p.seoDescription ?? '',
     thumbnailUrl: p.thumbnailUrl ?? null,
-    pinpoints: (p as any).pinpoints ?? [],
+    pinpoints: mergedPins,
     documents: (p as any).documents ?? [],
     translationsAr: {
       title: p.translations?.ar?.title ?? '',
