@@ -344,6 +344,71 @@ export function useHasReducedMotion(): boolean {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+ * MotionSection / MotionCard / MotionButton — the mission-named surface
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * A public section root that fades up once when scrolled into view.
+ *
+ * Thin intent-named wrapper over `<Reveal>`: `whileInView` with
+ * `viewport.once`, short travel, opacity-only for reduced-motion users (via
+ * the global MotionConfig). Never use inside the page-builder canvas — the
+ * canvas renders block components directly and must stay 1:1 and selectable.
+ */
+export function MotionSection({
+  children,
+  delay = 0,
+  className,
+  as = 'section',
+  ...rest
+}: RevealProps) {
+  return (
+    <Reveal as={as} delay={delay} className={className} {...rest}>
+      {children}
+    </Reveal>
+  );
+}
+
+/**
+ * Card hover lift on a spring. Pair with a `transition-shadow` class on the
+ * same element (or its inner Card) for the elevation half of the effect.
+ *
+ * Hover-only by design — safe to use on components that also render inside
+ * the builder canvas, since nothing animates until the pointer arrives.
+ */
+export function MotionCard({
+  children,
+  lift = 4,
+  className,
+  as = 'div',
+  ...rest
+}: HoverLiftProps) {
+  return (
+    <HoverLift as={as} lift={lift} className={className} {...rest}>
+      {children}
+    </HoverLift>
+  );
+}
+
+/**
+ * Tap-down feedback for buttons. Spring-return, no hover motion — hover
+ * styling stays in CSS where it belongs.
+ */
+export function MotionButton({
+  children,
+  amount = 0.97,
+  className,
+  as = 'button',
+  ...rest
+}: PressScaleProps) {
+  return (
+    <PressScale as={as} amount={amount} className={className} {...rest}>
+      {children}
+    </PressScale>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
  * Presence helpers — mount/unmount animation
  * ═══════════════════════════════════════════════════════════════════════════ */
 

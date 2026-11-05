@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, AlertTriangle, Mail, Check } from 'lucide-react';
 import { spring } from '@/lib/motion';
+import { MotionCard } from '@/components/ui/motion';
 import { useCartStore } from '@/stores/cart-store';
 import { useCurrencyStore } from '@/stores/currency-store';
 import { useFxRates } from '@/hooks/use-fx-rates';
@@ -81,6 +82,7 @@ export function ProductCard({ product }: { product: Product }) {
   const href = `/products/${product.slug}`;
 
   return (
+    <MotionCard lift={5} className="h-full">
     <Card className="card-hover group flex h-full flex-col rounded-2xl border-border/70 shadow-xs">
       <div className="p-2.5 pb-0">
         <Link
@@ -228,5 +230,6 @@ export function ProductCard({ product }: { product: Product }) {
         />
       ) : null}
     </Card>
+    </MotionCard>
   );
 }

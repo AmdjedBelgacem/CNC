@@ -28,7 +28,7 @@ import { PageTranslationPanel } from '@/components/builder/page-translation';
 import { BuilderTranslationProvider } from '@/components/builder/translation-context';
 import { BuilderLivePreviewProvider } from '@/components/builder/live-preview-context';
 import { Languages, Loader2 } from 'lucide-react';
-import { AnimatePresence, m } from 'framer-motion';
+import { AnimatePresence, m, MotionConfig } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { spring, transition } from '@/lib/motion';
 import { BuilderHeader, VIEWPORTS } from '@/components/builder/editor-header';
@@ -1016,21 +1016,32 @@ Stable registration callback (unstable identity would re-run the bridge effect o
             <div className="min-h-0 flex-1">
               {' '}
               <BuilderLivePreviewProvider pageSlug={page?.slug ?? slug}>
-                <Puck
-                  // A page switch remounts the canvas with the new page as Puck's
-                  // initial `data`, instead of hoping an imperative setData landed.
-                  key={canvasPage ?? 'empty'}
-                  config={puckConfig}
-                  data={data}
-                  onChange={handleChange}
-                  viewports={PUCK_VIEWPORTS}
-                  iframe={PUCK_IFRAME}
-                  /**
-                   * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
-                    PUCK_UI
-                  }
-                  overrides={overrides}
-                />{' '}
+                {/* MotionConfig reducedMotion="always" — the canvas must stay a
+                    1:1, selectable copy of the production page. Blocks share
+                    components with the public site and some carry motion
+                    wrappers (Reveal, LayoutBox, StaggerItem); inside the canvas
+                    those become instant, transform-free states so nothing
+                    slides, springs or reflows while editing, and every node
+                    sits at its final layout position for accurate selection.
+                    Context flows through Puck's iframe portal, so this covers
+                    the whole canvas. */}
+                <MotionConfig reducedMotion="always">
+                  <Puck
+                    // A page switch remounts the canvas with the new page as Puck's
+                    // initial `data`, instead of hoping an imperative setData landed.
+                    key={canvasPage ?? 'empty'}
+                    config={puckConfig}
+                    data={data}
+                    onChange={handleChange}
+                    viewports={PUCK_VIEWPORTS}
+                    iframe={PUCK_IFRAME}
+                    /**
+                     * Puck's built-in sidebars are disabled entirely: the Layers * panel (left) and the Inspector (right) are rendered by this * page's own docked panels, which are far cheaper than Puck's * (~167 layer nodes re-select on every store change). */ ui={
+                      PUCK_UI
+                    }
+                    overrides={overrides}
+                  />{' '}
+                </MotionConfig>
               </BuilderLivePreviewProvider>
             </div>{' '}
             {page && data && (

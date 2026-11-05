@@ -67,6 +67,8 @@ export const spring = {
   smooth: { type: 'spring', stiffness: 380, damping: 32, mass: 0.9 },
   /** Large surfaces: sheets, page transitions. Carries momentum deliberately. */
   gentle: { type: 'spring', stiffness: 260, damping: 30, mass: 1.1 },
+  /** Softest settle — content that appears and should feel calm, never springy. */
+  soft: { type: 'spring', stiffness: 210, damping: 30, mass: 1 },
   /** Layout-shifting reflows (grids reordering, expanding panels). */
   layout: { type: 'spring', stiffness: 300, damping: 34, mass: 1 },
 } as const;
@@ -118,6 +120,19 @@ export const fade: Variants = {
   visible: { opacity: 1, transition: transition.crossfade },
   exit: { opacity: 0, transition: transition.leave },
 };
+
+/** Named aliases so call sites read as intent, not implementation. */
+export const fadeIn: Variants = fade;
+
+/** Scale-and-fade entrance, spring-settled. For cards and tiles that appear. */
+export const scaleIn: Variants = fadeScale;
+
+/**
+ * The default cascade container. Pair with `<StaggerItem>` (or per-child
+ * `staggerItem(i)` transitions) — the child owns its delay so one slow item
+ * can't push the rest of the cascade out.
+ */
+export const staggerContainer: Variants = stagger();
 
 /**
  * Container that reveals its children one after another.

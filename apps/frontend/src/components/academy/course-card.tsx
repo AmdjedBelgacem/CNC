@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { MotionCard } from '@/components/ui/motion';
 import { DifficultyBar } from './difficulty-bar';
 import { getImageSrc } from '@/lib/images';
 import { LanguageAvailability } from '@/components/academy/language-availability';
@@ -36,7 +37,10 @@ export function CourseCard({
       href={`/courses/${slug}`}
       className="group block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      <Card className="card-hover flex h-full flex-col overflow-hidden rounded-2xl border-border/70 shadow-xs transition-[border-color,box-shadow] duration-300 group-hover:border-border-strong group-hover:shadow-lg">
+      {/* Hover lift on a spring; the CSS transition below still owns the
+          border/shadow half so the two settle at slightly different rates. */}
+      <MotionCard lift={5} className="h-full">
+        <Card className="card-hover flex h-full flex-col overflow-hidden rounded-2xl border-border/70 shadow-xs transition-[border-color,box-shadow] duration-300 group-hover:border-border-strong group-hover:shadow-lg">
         <div className="relative m-2 mb-0 aspect-[16/10] overflow-hidden rounded-xl bg-surface-sunken">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -80,6 +84,7 @@ export function CourseCard({
           )}
         </CardFooter>
       </Card>
+      </MotionCard>
     </Link>
   );
 }
