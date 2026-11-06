@@ -73,7 +73,7 @@ import {
   LIVE_ISLAND_VARIANTS,
 } from '@titan/shared';
 import { ImageUploadControl } from '@/components/builder/inspector/image-upload-control';
-import { NodeAnimation } from '@/components/builder/animation';
+import { NodeAnimation, PlaybackRunner, nodeAnimationVariants, useAnimPlayback } from '@/components/builder/animation';
 import { BLOCK_COMPONENTS } from '@/components/builder/blocks';
 import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
 import { BuilderPageFrame } from '@/components/builder/builder-page-frame'; // ---------------------------------------------------------------- helpers
@@ -218,18 +218,44 @@ const render = (type: string) => (editorProps: any) => {
     const node = findNodeById(data, props.id as string | undefined);
     return node ? getSlotChildren(node, slotName, data.zones) : [];
   };
-  // Per-element entrance animation. In edit mode the canvas renders bare so
-  // it stays a 1:1, selectable copy of the final layout; in preview mode the
-  // admin's chosen entrance plays exactly as it will on the public site.
-  const rendered = (
-    <NodeAnimation
-      type={(props as Record<string, unknown>).animType}
-      delay={typeof (props as Record<string, unknown>).animDelay === 'number' ? (props as Record<string, unknown>).animDelay as number : 0}
-      active={editMode !== true}
-    >
-      <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />
-    </NodeAnimation>
-  );
+  // Per-element entrance animation.
+  //   edit mode: canvas renders bare so it stays a 1:1, selectable copy of
+  //   the final layout — EXCEPT when the inspector's Play transport is
+  //   running for this node, which mounts a temporary playback runner.
+  //   preview mode: the admin's chosen entrance plays as it will publicly.
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const animParams = {
+    delay: num((props as Record<string, unknown>).animDelay) ?? 0,
+    duration: num((props as Record<string, unknown>).animDuration),
+    easeKind: typeof (props as Record<string, unknown>).animEase === 'string'
+      ? (props as Record<string, unknown>).animEase as string
+      : undefined,
+    stiffness: num((props as Record<string, unknown>).animStiffness),
+    damping: num((props as Record<string, unknown>).animDamping),
+  };
+  const animType = (props as Record<string, unknown>).animType;
+  const playback = useAnimPlayback((s) => (s.nodeId === (props as Record<string, unknown>).id ? s : null));
+  const playbackActive = playback !== null && playback.mode === 'play' && nodeAnimationVariants(animType, animParams) !== null;
+  const playbackVariants = playbackActive ? nodeAnimationVariants(animType, animParams) : null;
+
+  const rendered =
+    playbackActive && playbackVariants ? (
+      <PlaybackRunner variants={playbackVariants} mode={playback.mode} token={playback.token}>
+        <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />
+      </PlaybackRunner>
+    ) : (
+      <NodeAnimation
+        type={animType}
+        delay={animParams.delay}
+        duration={animParams.duration}
+        easeKind={animParams.easeKind}
+        stiffness={animParams.stiffness}
+        damping={animParams.damping}
+        active={editMode !== true}
+      >
+        <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />
+      </NodeAnimation>
+    );
   if (suppressed) {
     // Still mounted so its nodes remain in Puck's tree and the Layers pane can
     // select them; `hidden` removes it from flow and from the painted page.

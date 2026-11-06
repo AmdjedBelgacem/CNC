@@ -3880,6 +3880,12 @@
       "value": "٪"
     },
     "fieldLabels": {
+    "animEntrance": "الدخول",
+    "animDelayLabel": "التأخير (ث)",
+    "animDurationLabel": "المدة (ث)",
+    "animEaseLabel": "إحساس الحركة",
+    "animStiffness": "الصلابة",
+    "animDamping": "التخميد",
       "4": "٤",
       "32": "٣٢",
       "40": "٤٠",
@@ -4093,7 +4099,13 @@
       "more": "المزيد"
     },
     "groups": {
-      "animation": "الحركة",
+            "animationPreview": "معاينة الحركة",
+      "play": "تشغيل",
+      "pause": "إيقاف مؤقت",
+      "replay": "إعادة",
+      "playing": "قيد التشغيل…",
+      "held": "معلّق",
+"animation": "الحركة",
       "advanced": "متقدم",
       "behavior": "السلوك",
       "content": "المحتوى",

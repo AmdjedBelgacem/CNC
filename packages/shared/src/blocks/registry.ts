@@ -2195,11 +2195,41 @@ const liveIsland: BlockDefinition = {
  * the block in the matching motion container. `none` is the default, so
  * existing layouts and untouched elements never move.
  */
-export const NODE_ANIMATION_TYPES = ['none', 'fade', 'fadeUp', 'scaleIn', 'slideStart', 'slideEnd'] as const;
+export const NODE_ANIMATION_TYPES = [
+  'none',
+  'fade',
+  'fadeUp',
+  'fadeDown',
+  'scaleIn',
+  'slideStart',
+  'slideEnd',
+  'fadeScale',
+  'blurIn',
+] as const;
 export type NodeAnimationType = (typeof NODE_ANIMATION_TYPES)[number];
+
+/** Motion feel: two spring presets and the default tween. */
+export const NODE_ANIMATION_EASES = ['smooth', 'soft', 'snappy'] as const;
+export type NodeAnimationEase = (typeof NODE_ANIMATION_EASES)[number];
+
 export const NODE_ANIMATION_DEFAULTS: Record<string, unknown> = {
   animType: 'none',
   animDelay: 0,
+  animDuration: 0.45,
+  animEase: 'smooth',
+};
+
+/** Zod shape shared by every block schema, so animation props survive the
+ *  JSON inspector's apply (which validates against the block schema) and any
+ *  server-side layout validation. Optional everywhere: existing layouts that
+ *  only carry animType + animDelay keep working unchanged. */
+export const NODE_ANIMATION_SCHEMA_SHAPE = {
+  animType: z.enum(NODE_ANIMATION_TYPES).optional(),
+  animDelay: z.number().min(0).max(2).optional(),
+  animDuration: z.number().min(0.05).max(3).optional(),
+  animEase: z.enum(NODE_ANIMATION_EASES).optional(),
+  animStiffness: z.number().min(30).max(800).optional(),
+  animDamping: z.number().min(5).max(100).optional(),
 };
 
 const BASE_BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
@@ -2277,6 +2307,12 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = Object.
     {
       ...def,
       defaultProps: { ...NODE_ANIMATION_DEFAULTS, ...def.defaultProps },
+      // The animation shape rides on every schema so layout JSON that carries
+      // it validates everywhere (JSON inspector apply, server-side checks).
+      schema:
+        'extend' in def.schema && typeof def.schema.extend === 'function'
+          ? def.schema.extend(NODE_ANIMATION_SCHEMA_SHAPE)
+          : def.schema,
     },
   ]),
 ) as Readonly<Record<string, BlockDefinition>>;

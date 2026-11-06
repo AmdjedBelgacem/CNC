@@ -3312,6 +3312,12 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
  * the canvas in preview mode; the edit-mode canvas renders bare so selection
  * stays exact.
  */
+/** True when an entrance is picked — every timing control hides for `none`. */
+const hasEntrance = (props: Record<string, unknown>) =>
+  props.animType !== undefined && props.animType !== 'none';
+const hasSpringFeel = (props: Record<string, unknown>) =>
+  hasEntrance(props) && (props.animEase === 'soft' || props.animEase === 'snappy');
+
 export const animationInspectorGroup: InspectorGroup<Record<string, unknown>> = {
   id: 'animation',
   title: 'Animation',
@@ -3321,24 +3327,71 @@ export const animationInspectorGroup: InspectorGroup<Record<string, unknown>> = 
     {
       key: 'animType',
       label: 'Entrance',
+      labelKey: 'animEntrance',
       control: 'select',
       options: [
         { label: 'None', value: 'none' },
         { label: 'Fade', value: 'fade' },
         { label: 'Fade up', value: 'fadeUp' },
+        { label: 'Fade down', value: 'fadeDown' },
         { label: 'Scale in', value: 'scaleIn' },
+        { label: 'Fade + scale', value: 'fadeScale' },
         { label: 'Slide from start', value: 'slideStart' },
         { label: 'Slide from end', value: 'slideEnd' },
+        { label: 'Blur in', value: 'blurIn' },
       ],
     },
     {
       key: 'animDelay',
       label: 'Delay (s)',
-      control: 'number',
+      labelKey: 'animDelayLabel',
+      control: 'slider',
       min: 0,
       max: 2,
       step: 0.05,
-      showWhen: (props) => props.animType !== undefined && props.animType !== 'none',
+      showWhen: hasEntrance,
+    },
+    {
+      key: 'animDuration',
+      label: 'Duration (s)',
+      labelKey: 'animDurationLabel',
+      control: 'slider',
+      min: 0.2,
+      max: 1.5,
+      step: 0.05,
+      showWhen: hasEntrance,
+    },
+    {
+      key: 'animEase',
+      label: 'Motion feel',
+      labelKey: 'animEaseLabel',
+      control: 'select',
+      options: [
+        { label: 'Smooth tween', value: 'smooth' },
+        { label: 'Soft spring', value: 'soft' },
+        { label: 'Snappy spring', value: 'snappy' },
+      ],
+      showWhen: hasEntrance,
+    },
+    {
+      key: 'animStiffness',
+      label: 'Stiffness',
+      labelKey: 'animStiffness',
+      control: 'slider',
+      min: 60,
+      max: 700,
+      step: 10,
+      showWhen: hasSpringFeel,
+    },
+    {
+      key: 'animDamping',
+      label: 'Damping',
+      labelKey: 'animDamping',
+      control: 'slider',
+      min: 8,
+      max: 80,
+      step: 1,
+      showWhen: hasSpringFeel,
     },
   ],
 };

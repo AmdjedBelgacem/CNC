@@ -3883,6 +3883,12 @@
       "value": "%"
     },
     "fieldLabels": {
+    "animEntrance": "Entrance",
+    "animDelayLabel": "Delay (s)",
+    "animDurationLabel": "Duration (s)",
+    "animEaseLabel": "Motion feel",
+    "animStiffness": "Stiffness",
+    "animDamping": "Damping",
       "4": "4",
       "32": "32",
       "40": "40",
@@ -4096,7 +4102,13 @@
       "more": "More"
     },
     "groups": {
-      "animation": "Animation",
+            "animationPreview": "Preview entrance",
+      "play": "Play",
+      "pause": "Pause",
+      "replay": "Replay",
+      "playing": "Playing…",
+      "held": "Held",
+"animation": "Animation",
       "advanced": "Advanced",
       "behavior": "Behavior",
       "content": "Content",

@@ -3,12 +3,23 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { getBlockDefinition } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
-import { ChevronDown, ChevronUp, MousePointerClick, Plus, Settings2, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  MousePointerClick,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { spring, transition } from '@/lib/motion';
 import { JsonInspectorSection } from '../node-inspector';
 import { BLOCK_INSPECTOR, animationInspectorGroup } from './fields';
+import { useAnimPlayback } from '@/components/builder/animation';
 import { DynamicContentNotice } from './dynamic-content-notice';
 import { BlockTranslationFields } from './block-translation-fields';
 import type { InspectorGroup, InspectorFieldDef } from './types';
@@ -105,7 +116,8 @@ export function SmartInspector() {
       <DynamicContentNotice type={selected.type} props={selected.props} />{' '}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         {' '}
-        {[...def.groups, animationInspectorGroup].map((group) => (
+        <AnimationTransport nodeId={String(selected.props.id ?? '')} animType={selected.props.animType} />{' '}
+      {[...def.groups, animationInspectorGroup].map((group) => (
           <InspectorGroupSection
             key={group.id}
             group={group as InspectorGroup<Record<string, unknown>>}
@@ -553,5 +565,64 @@ function DebouncedSliderControl({
       step={step}
       onPointerUp={flush}
     />
+  );
+}
+
+/**
+ * Play / Pause / Replay transport for the selected element's entrance.
+ *
+ * Inspector-only: it drives a temporary playback through the canvas via the
+ * animation playback store — it never changes the published page, and it does
+ * not enable always-on canvas motion. Hidden unless an entrance is picked.
+ */
+function AnimationTransport({ nodeId, animType }: { nodeId: string; animType: unknown }) {
+  const t = useTranslations('builder');
+  const nodeIdActive = useAnimPlayback((s) => s.nodeId === nodeId);
+  const mode = useAnimPlayback((s) => (s.nodeId === nodeId ? s.mode : null));
+  const play = useAnimPlayback((s) => s.play);
+  const replay = useAnimPlayback((s) => s.replay);
+  const pause = useAnimPlayback((s) => s.pause);
+
+  if (!animType || animType === 'none' || !nodeId) return null;
+  const isPlaying = nodeIdActive && mode === 'play';
+
+  const btn = 'flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground active:scale-95';
+
+  return (
+    <div className="border-t border-border/60 px-3.5 py-2.5">
+      <p className="mb-1.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+        {t('groups.animationPreview', { default: 'Preview entrance' })}
+      </p>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => play(nodeId)}
+          aria-label={t('groups.play', { default: 'Play' })}
+          className={btn}
+        >
+          <Play className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => pause()}
+          aria-label={t('groups.pause', { default: 'Pause' })}
+          disabled={!isPlaying}
+          className={cn(btn, 'disabled:cursor-not-allowed disabled:opacity-40')}
+        >
+          <Pause className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => replay(nodeId)}
+          aria-label={t('groups.replay', { default: 'Replay' })}
+          className={btn}
+        >
+          <RotateCcw className="size-3.5" />
+        </button>
+        <span className="ms-auto text-2xs text-muted-foreground">
+          {isPlaying ? t('groups.playing', { default: 'Playing…' }) : t('groups.held', { default: 'Held' })}
+        </span>
+      </div>
+    </div>
   );
 }

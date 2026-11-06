@@ -56,8 +56,13 @@ export function BuilderNode({
   // Per-element entrance animation, chosen by the admin in the builder
   // inspector (animType / animDelay node props). `none` (the default) renders
   // the block bare, so untouched elements never gain a wrapper.
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
   const animType = typeof props.animType === 'string' ? props.animType : undefined;
-  const animDelay = typeof props.animDelay === 'number' ? props.animDelay : 0;
+  const animDelay = num(props.animDelay);
+  const animDuration = num(props.animDuration);
+  const animEase = typeof props.animEase === 'string' ? props.animEase : undefined;
+  const animStiffness = num(props.animStiffness);
+  const animDamping = num(props.animDamping);
   if (definition?.zones) {
     const nodeWithDefaults: PuckNode = { type: node.type, props };
     const puck: PuckBridge = {
@@ -75,9 +80,31 @@ export function BuilderNode({
       getSlotData: (slot: string) => getSlotChildren(nodeWithDefaults, slot, zones),
       isEditing: false,
     };
-    return <NodeAnimation type={animType} delay={animDelay}><Component props={props} puck={puck} /></NodeAnimation>;
+    return (
+      <NodeAnimation
+        type={animType}
+        delay={animDelay}
+        duration={animDuration}
+        easeKind={animEase}
+        stiffness={animStiffness}
+        damping={animDamping}
+      >
+        <Component props={props} puck={puck} />
+      </NodeAnimation>
+    );
   }
-  return <NodeAnimation type={animType} delay={animDelay}><Component props={props} puck={PUBLIC_PUCK} /></NodeAnimation>;
+  return (
+    <NodeAnimation
+      type={animType}
+      delay={animDelay}
+      duration={animDuration}
+      easeKind={animEase}
+      stiffness={animStiffness}
+      damping={animDamping}
+    >
+      <Component props={props} puck={PUBLIC_PUCK} />
+    </NodeAnimation>
+  );
 }
 export function BlockRenderer({ layout }: { layout: PageLayout }) {
   const nodes = layout.content ?? [];
