@@ -6,7 +6,8 @@ import {
   BLOCK_COMPONENTS,
   type PuckBridge,
 } from '@/components/builder/blocks';
-import { Reveal } from '@/components/ui/motion'; /** * Public renderer. * * Renders the exact same block components the Puck editor uses, injecting a * synthetic `puck` bridge whose `renderSlot` resolves slot children inline * from the node's props — so the public page and the editor canvas can * never render differently. Layouts still in the legacy DropZone shape * (flat `zones` map) are honored through the same fallback the shared * slot helpers provide. */ /** * Renders a single layout node (and its nested slots) with the shared block * components. `intercept` lets special blocks (e.g. the auth-aware navbar) * substitute or drop specific nodes before they render. */
+import { Reveal } from '@/components/ui/motion';
+import { NodeAnimation } from '@/components/builder/animation'; /** * Public renderer. * * Renders the exact same block components the Puck editor uses, injecting a * synthetic `puck` bridge whose `renderSlot` resolves slot children inline * from the node's props — so the public page and the editor canvas can * never render differently. Layouts still in the legacy DropZone shape * (flat `zones` map) are honored through the same fallback the shared * slot helpers provide. */ /** * Renders a single layout node (and its nested slots) with the shared block * components. `intercept` lets special blocks (e.g. the auth-aware navbar) * substitute or drop specific nodes before they render. */
 /**
  * Blocks that duplicate the app chrome.
  *
@@ -52,6 +53,11 @@ export function BuilderNode({
   const definition = getBlockDefinition(node.type);
   const Component = BLOCK_COMPONENTS[node.type];
   if (!Component) return null;
+  // Per-element entrance animation, chosen by the admin in the builder
+  // inspector (animType / animDelay node props). `none` (the default) renders
+  // the block bare, so untouched elements never gain a wrapper.
+  const animType = typeof props.animType === 'string' ? props.animType : undefined;
+  const animDelay = typeof props.animDelay === 'number' ? props.animDelay : 0;
   if (definition?.zones) {
     const nodeWithDefaults: PuckNode = { type: node.type, props };
     const puck: PuckBridge = {
@@ -69,9 +75,9 @@ export function BuilderNode({
       getSlotData: (slot: string) => getSlotChildren(nodeWithDefaults, slot, zones),
       isEditing: false,
     };
-    return <Component props={props} puck={puck} />;
+    return <NodeAnimation type={animType} delay={animDelay}><Component props={props} puck={puck} /></NodeAnimation>;
   }
-  return <Component props={props} puck={PUBLIC_PUCK} />;
+  return <NodeAnimation type={animType} delay={animDelay}><Component props={props} puck={PUBLIC_PUCK} /></NodeAnimation>;
 }
 export function BlockRenderer({ layout }: { layout: PageLayout }) {
   const nodes = layout.content ?? [];

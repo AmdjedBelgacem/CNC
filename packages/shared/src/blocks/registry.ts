@@ -2187,7 +2187,22 @@ const liveIsland: BlockDefinition = {
   },
 };
 
-export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
+/**
+ * Per-element entrance animation defaults, injected into every block below.
+ *
+ * The admin picks an entrance (or none) per element in the builder inspector;
+ * the public renderer and the builder's preview mode read these props and wrap
+ * the block in the matching motion container. `none` is the default, so
+ * existing layouts and untouched elements never move.
+ */
+export const NODE_ANIMATION_TYPES = ['none', 'fade', 'fadeUp', 'scaleIn', 'slideStart', 'slideEnd'] as const;
+export type NodeAnimationType = (typeof NODE_ANIMATION_TYPES)[number];
+export const NODE_ANIMATION_DEFAULTS: Record<string, unknown> = {
+  animType: 'none',
+  animDelay: 0,
+};
+
+const BASE_BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   nav,
   hero,
   'hero-console': heroConsole,
@@ -2250,6 +2265,21 @@ export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   'product-card': productCard,
   'live-island': liveIsland,
 };
+
+/**
+ * Public registry — every definition carries the animation defaults, so
+ * `mergeBlockProps` hands the public renderer a complete prop set and the
+ * inspector shows the animation controls with a real fallback.
+ */
+export const BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = Object.fromEntries(
+  Object.entries(BASE_BLOCK_REGISTRY).map(([type, def]) => [
+    type,
+    {
+      ...def,
+      defaultProps: { ...NODE_ANIMATION_DEFAULTS, ...def.defaultProps },
+    },
+  ]),
+) as Readonly<Record<string, BlockDefinition>>;
 
 export const BLOCK_TYPES = Object.keys(BLOCK_REGISTRY) as readonly string[];
 

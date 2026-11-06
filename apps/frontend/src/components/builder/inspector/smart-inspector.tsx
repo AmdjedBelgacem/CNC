@@ -8,7 +8,7 @@ import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { spring, transition } from '@/lib/motion';
 import { JsonInspectorSection } from '../node-inspector';
-import { BLOCK_INSPECTOR } from './fields';
+import { BLOCK_INSPECTOR, animationInspectorGroup } from './fields';
 import { DynamicContentNotice } from './dynamic-content-notice';
 import { BlockTranslationFields } from './block-translation-fields';
 import type { InspectorGroup, InspectorFieldDef } from './types';
@@ -105,7 +105,7 @@ export function SmartInspector() {
       <DynamicContentNotice type={selected.type} props={selected.props} />{' '}
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         {' '}
-        {def.groups.map((group) => (
+        {[...def.groups, animationInspectorGroup].map((group) => (
           <InspectorGroupSection
             key={group.id}
             group={group as InspectorGroup<Record<string, unknown>>}

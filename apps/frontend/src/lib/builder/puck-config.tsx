@@ -73,6 +73,7 @@ import {
   LIVE_ISLAND_VARIANTS,
 } from '@titan/shared';
 import { ImageUploadControl } from '@/components/builder/inspector/image-upload-control';
+import { NodeAnimation } from '@/components/builder/animation';
 import { BLOCK_COMPONENTS } from '@/components/builder/blocks';
 import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
 import { BuilderPageFrame } from '@/components/builder/builder-page-frame'; // ---------------------------------------------------------------- helpers
@@ -177,7 +178,7 @@ const render = (type: string) => (editorProps: any) => {
   const preview = useBuilderLivePreview();
   const C = BLOCK_COMPONENTS[type] as ComponentType<{ props: unknown; puck: unknown }> | undefined;
   if (!C) return <></>;
-  const { puck, editMode: _editMode, ...props } = editorProps ?? {};
+  const { puck, editMode, ...props } = editorProps ?? {};
   const hidden = (props as Record<string, unknown>)?.visible === false;
   const suppressed =
     CHROME_BLOCK_TYPES.has(type) ||
@@ -217,7 +218,18 @@ const render = (type: string) => (editorProps: any) => {
     const node = findNodeById(data, props.id as string | undefined);
     return node ? getSlotChildren(node, slotName, data.zones) : [];
   };
-  const rendered = <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />;
+  // Per-element entrance animation. In edit mode the canvas renders bare so
+  // it stays a 1:1, selectable copy of the final layout; in preview mode the
+  // admin's chosen entrance plays exactly as it will on the public site.
+  const rendered = (
+    <NodeAnimation
+      type={(props as Record<string, unknown>).animType}
+      delay={typeof (props as Record<string, unknown>).animDelay === 'number' ? (props as Record<string, unknown>).animDelay as number : 0}
+      active={editMode !== true}
+    >
+      <C props={props} puck={{ ...puck, renderSlot, getSlotData }} />
+    </NodeAnimation>
+  );
   if (suppressed) {
     // Still mounted so its nodes remain in Puck's tree and the Layers pane can
     // select them; `hidden` removes it from flow and from the painted page.

@@ -2602,6 +2602,8 @@
     "level": "Level",
     "beginner": "Beginner",
     "intermediate": "Intermediate",
+    "animation": "Animation",
+    "animation": "Animation",
     "advanced": "Advanced",
     "instructor": "Instructor",
     "curriculum": "Curriculum",
@@ -4094,6 +4096,7 @@
       "more": "More"
     },
     "groups": {
+      "animation": "Animation",
       "advanced": "Advanced",
       "behavior": "Behavior",
       "content": "Content",

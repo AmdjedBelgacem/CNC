@@ -3302,3 +3302,43 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   'twin-code-line': { label: 'Code Line', groups: twinCodeLineInspector.groups },
   'twin-readout': { label: 'Readout Cell', groups: twinReadoutInspector.groups },
 };
+
+/* ── Animation — per-element entrance controls, appended to every block ──── */
+
+/**
+ * One shared group appended to every block's inspector, so any element the
+ * admin selects can carry an entrance animation. Values ride on the node's
+ * props (animType / animDelay) and are applied by the public renderer and by
+ * the canvas in preview mode; the edit-mode canvas renders bare so selection
+ * stays exact.
+ */
+export const animationInspectorGroup: InspectorGroup<Record<string, unknown>> = {
+  id: 'animation',
+  title: 'Animation',
+  titleKey: 'animation',
+  icon: Sparkles,
+  fields: [
+    {
+      key: 'animType',
+      label: 'Entrance',
+      control: 'select',
+      options: [
+        { label: 'None', value: 'none' },
+        { label: 'Fade', value: 'fade' },
+        { label: 'Fade up', value: 'fadeUp' },
+        { label: 'Scale in', value: 'scaleIn' },
+        { label: 'Slide from start', value: 'slideStart' },
+        { label: 'Slide from end', value: 'slideEnd' },
+      ],
+    },
+    {
+      key: 'animDelay',
+      label: 'Delay (s)',
+      control: 'number',
+      min: 0,
+      max: 2,
+      step: 0.05,
+      showWhen: (props) => props.animType !== undefined && props.animType !== 'none',
+    },
+  ],
+};
