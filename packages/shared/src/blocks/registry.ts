@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { ICON_KEYS, type IconKey } from '../types/theme';
 import type { PuckNode } from '../types/page';
+import { NODE_ANIMATION_DEFAULTS, NODE_ANIMATION_SCHEMA_SHAPE } from './animation';
+
+export * from './animation';
 
 /**
  * Block registry — the single source of truth for the layout builder.
@@ -2185,51 +2188,6 @@ const liveIsland: BlockDefinition = {
     // while the catalog still owns filtering, sorting, pagination and live data.
     records: { allow: ['product-card'] },
   },
-};
-
-/**
- * Per-element entrance animation defaults, injected into every block below.
- *
- * The admin picks an entrance (or none) per element in the builder inspector;
- * the public renderer and the builder's preview mode read these props and wrap
- * the block in the matching motion container. `none` is the default, so
- * existing layouts and untouched elements never move.
- */
-export const NODE_ANIMATION_TYPES = [
-  'none',
-  'fade',
-  'fadeUp',
-  'fadeDown',
-  'scaleIn',
-  'slideStart',
-  'slideEnd',
-  'fadeScale',
-  'blurIn',
-] as const;
-export type NodeAnimationType = (typeof NODE_ANIMATION_TYPES)[number];
-
-/** Motion feel: two spring presets and the default tween. */
-export const NODE_ANIMATION_EASES = ['smooth', 'soft', 'snappy'] as const;
-export type NodeAnimationEase = (typeof NODE_ANIMATION_EASES)[number];
-
-export const NODE_ANIMATION_DEFAULTS: Record<string, unknown> = {
-  animType: 'none',
-  animDelay: 0,
-  animDuration: 0.45,
-  animEase: 'smooth',
-};
-
-/** Zod shape shared by every block schema, so animation props survive the
- *  JSON inspector's apply (which validates against the block schema) and any
- *  server-side layout validation. Optional everywhere: existing layouts that
- *  only carry animType + animDelay keep working unchanged. */
-export const NODE_ANIMATION_SCHEMA_SHAPE = {
-  animType: z.enum(NODE_ANIMATION_TYPES).optional(),
-  animDelay: z.number().min(0).max(2).optional(),
-  animDuration: z.number().min(0.05).max(3).optional(),
-  animEase: z.enum(NODE_ANIMATION_EASES).optional(),
-  animStiffness: z.number().min(30).max(800).optional(),
-  animDamping: z.number().min(5).max(100).optional(),
 };
 
 const BASE_BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {

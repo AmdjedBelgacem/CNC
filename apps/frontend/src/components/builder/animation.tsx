@@ -1,244 +1,222 @@
 'use client';
 
 import * as React from 'react';
-import { create } from 'zustand';
-import { m, MotionConfig, useAnimationControls, useReducedMotion } from 'framer-motion';
-import type { Variants } from 'framer-motion';
-import { distance, fadeIn, fadeUp, inView, scaleIn, transition } from '@/lib/motion';
+import { useLocale } from 'next-intl';
+import { m, MotionConfig, useInView, useReducedMotion, useReducedMotionConfig } from 'framer-motion';
+import { coerceLocale, dirFor } from '@/i18n/config';
+import {
+  cascadeDelay,
+  entranceVariants,
+  hoverTarget,
+  loopMotion,
+  pressTarget,
+  resolveNodeAnimation,
+  type NodeAnimationConfig,
+  type NodeEntrance,
+} from '@/lib/builder/node-animation';
 
 /**
- * Per-element entrance animation for builder blocks.
+ * Runtime for the per-element animation authored in the builder inspector.
  *
- * The admin picks an entrance per element in the builder inspector
- * (`animType` / `animDelay` node props). The same wrapper renders in three
- * places with one behaviour difference:
+ *   - public site: plays as authored
+ *   - builder preview (eye toggle): plays as authored, with `unlockMotion` lifting the canvas's
+ *     reducedMotion="always" guard, which would otherwise strip every transform
+ *   - builder edit canvas: renders bare, so the canvas stays a 1:1, selectable copy of the final
+ *     layout. The inspector's Play button animates the existing DOM node instead of remounting
+ *     it (see `inspector/animation-preview.ts`).
  *
- *   - public site: `active` — animates in when scrolled into view, once
- *   - builder preview (eye toggle): `active` — same as the public site
- *   - builder edit canvas: NOT rendered bare — the canvas must stay a 1:1,
- *     selectable copy of the final layout, so the edit-mode render path never
- *     mounts this wrapper
- *
- * Reduced motion is enforced globally by `<MotionConfig>` in the root layout:
- * transforms are dropped after mount and only the opacity fade remains.
+ * Reduced motion: `<MotionConfig>` strips transforms, `entranceTransition` makes blur and clip
+ * instant, and loops are skipped. Opacity still fades, so content arrives gracefully.
  */
 
-const SLIDE_VARIANTS: Record<'slideStart' | 'slideEnd', Variants> = {
-  slideStart: {
-    hidden: { opacity: 0, x: distance.md },
-    visible: { opacity: 1, x: 0, transition: transition.reveal },
-  },
-  slideEnd: {
-    hidden: { opacity: 0, x: -distance.md },
-    visible: { opacity: 1, x: 0, transition: transition.reveal },
-  },
-};
-
-const fadeDown: Variants = {
-  hidden: { opacity: 0, y: -distance.md },
-  visible: { opacity: 1, y: 0 },
-};
-
-const blurIn: Variants = {
-  hidden: { opacity: 0, filter: 'blur(8px)' },
-  visible: { opacity: 1, filter: 'blur(0px)' },
-};
-
-const VARIANTS_BY_TYPE: Record<string, Variants> = {
-  fade: fadeIn,
-  fadeUp,
-  fadeDown,
-  scaleIn,
-  fadeScale: scaleIn,
-  ...SLIDE_VARIANTS,
-  blurIn,
-};
-
-export interface NodeAnimationParams {
-  delay?: number;
-  duration?: number;
-  easeKind?: string;
-  stiffness?: number;
-  damping?: number;
+interface CascadeValue {
+  entrance: NodeEntrance;
+  gap: number;
+  /** The parent's own trigger settings, inherited along with its entrance. */
+  config: NodeAnimationConfig;
 }
 
-/** Motion feel → the transition used for the entrance. Springs ignore the
- *  duration (stiffness/damping own the timing); the tween uses it directly. */
-function transitionFor(params: NodeAnimationParams): Record<string, unknown> {
-  const { duration = 0.45, easeKind = 'smooth', stiffness, damping } = params;
-  if (easeKind === 'soft') {
-    return { type: 'spring' as const, stiffness: stiffness ?? 210, damping: damping ?? 30, mass: 1 };
-  }
-  if (easeKind === 'snappy') {
-    return { type: 'spring' as const, stiffness: stiffness ?? 520, damping: damping ?? 34, mass: 0.7 };
-  }
-  return { duration, ease: [0.32, 0.72, 0, 1] };
-}
-
-export const NODE_ANIMATION_OPTIONS: ReadonlyArray<{ label: string; value: string }> = [
-  { label: 'None', value: 'none' },
-  { label: 'Fade', value: 'fade' },
-  { label: 'Fade up', value: 'fadeUp' },
-  { label: 'Fade down', value: 'fadeDown' },
-  { label: 'Scale in', value: 'scaleIn' },
-  { label: 'Fade + scale', value: 'fadeScale' },
-  { label: 'Slide from start', value: 'slideStart' },
-  { label: 'Slide from end', value: 'slideEnd' },
-  { label: 'Blur in', value: 'blurIn' },
-];
-
-export function isNodeAnimationType(value: unknown): value is string {
-  return typeof value === 'string' && value !== 'none' && value in VARIANTS_BY_TYPE;
-}
-
-export function nodeAnimationVariants(
-  type: unknown,
-  params: NodeAnimationParams = {},
-): Variants | null {
-  const { delay = 0 } = params;
-  if (!isNodeAnimationType(type)) return null;
-  const base = VARIANTS_BY_TYPE[type] as Variants;
-  const visible = base.visible as Record<string, unknown>;
-  return {
-    ...base,
-    visible: {
-      ...visible,
-      transition: {
-        ...(visible.transition as object),
-        ...transitionFor(params),
-        ...(delay ? { delay } : {}),
-      },
-    },
-  };
-}
-
-/* ── Playback transport store (builder inspector → canvas) ───────────────── */
-
-export type AnimPlaybackMode = 'play' | 'pause';
-
-interface AnimPlaybackState {
-  nodeId: string | null;
-  token: number;
-  mode: AnimPlaybackMode;
-}
+const CascadeContext = React.createContext<CascadeValue | null>(null);
 
 /**
- * Carries the inspector's Play/Pause/Replay clicks to the canvas node.
- * `token` bumps on every Play/Replay so the runner remounts from hidden;
- * `pause` freezes the running animation at its current frame.
- */
-export const useAnimPlayback = create<
-  AnimPlaybackState & {
-    play: (nodeId: string) => void;
-    replay: (nodeId: string) => void;
-    pause: () => void;
-    clear: () => void;
-  }
->((set) => ({
-  nodeId: null,
-  token: 0,
-  mode: 'play',
-  play: (nodeId) =>
-    set((s) => ({ nodeId, mode: 'play' as const, token: s.nodeId === nodeId ? s.token + 1 : 1 })),
-  replay: (nodeId) =>
-    set((s) => ({ nodeId, mode: 'play' as const, token: s.token + 1 })),
-  pause: () => set((s) => (s.nodeId ? { mode: 'pause' as const } : s)),
-  clear: () => set({ nodeId: null, mode: 'play' as const }),
-}))
-
-/* ── Playback runner — canvas-only, forced playback ───────────────────────── */
-
-export interface PlaybackRunnerProps {
-  variants: Variants;
-  mode: AnimPlaybackMode;
-  token: number;
-  children: React.ReactNode;
-}
-
-/**
- * Runs the entrance on demand. Play/Replay parks the node at hidden and
- * animates to visible (the variant's own transition applies, delay included);
- * Pause freezes the animation at its current frame via controls.stop().
+ * Reports when an element reaches the viewport.
  *
- * The nested MotionConfig overrides the editor's reducedMotion="always" guard
- * for this subtree only — Play is a deliberate preview request — while
- * `user` still drops transforms for reduced-motion visitors.
+ * This replaces `whileInView` for two failure modes that leave content invisible for good. A
+ * threshold can be impossible to meet on an element much taller than the screen, so a tall element
+ * fires as soon as it appears. And if the observer never reports at all, the element is revealed
+ * rather than left at opacity 0.
  */
-export function PlaybackRunner({ variants, mode, token, children }: PlaybackRunnerProps) {
-  const controls = useAnimationControls();
-  const reduce = useReducedMotion();
+function useEntersView(
+  ref: React.RefObject<HTMLElement | null>,
+  { enabled, amount, once }: { enabled: boolean; amount: number; once: boolean },
+): boolean {
+  const [shown, setShown] = React.useState(!enabled);
 
   React.useEffect(() => {
-    if (mode === 'pause') {
-      controls.stop();
+    const el = ref.current;
+    if (!enabled) {
+      setShown(true);
       return;
     }
-    // set → start in the same tick: framer animates from the hidden state to
-    // visible using the variant's own transition. (A rAF-deferred start was
-    // tried here and cancelled by re-render cleanups before it ever fired,
-    // leaving the node stuck at hidden.)
-    controls.set('hidden');
-    void controls.start('visible');
-  }, [controls, mode, token]);
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setShown(true);
+      return;
+    }
+    let reported = false;
+    const failsafe = setTimeout(() => {
+      if (!reported) setShown(true);
+    }, 1500);
+    const thresholds = Array.from({ length: 21 }, (_, index) => index / 20);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        reported = true;
+        const entry = entries[entries.length - 1];
+        if (!entry) return;
+        const viewportHeight = el.ownerDocument.defaultView?.innerHeight ?? Infinity;
+        const tall = entry.boundingClientRect.height > viewportHeight;
+        const hit = entry.isIntersecting && (tall || entry.intersectionRatio >= amount);
+        if (hit) {
+          setShown(true);
+          if (once) observer.disconnect();
+        } else if (!once && !entry.isIntersecting) {
+          setShown(false);
+        }
+      },
+      { threshold: thresholds },
+    );
+    observer.observe(el);
+    return () => {
+      clearTimeout(failsafe);
+      observer.disconnect();
+    };
+  }, [ref, enabled, amount, once]);
 
-  return (
-    <MotionConfig reducedMotion={reduce ? 'user' : 'never'}>
-      <m.div animate={controls} initial={false} variants={variants}>
-        {children}
-      </m.div>
-    </MotionConfig>
-  );
+  return shown;
 }
 
-export interface NodeAnimationProps {
-  /** `props.animType` on the node. Anything unknown/none renders bare. */
-  type?: unknown;
-  /** `props.animDelay` — seconds before the entrance starts. */
-  delay?: unknown;
-  /** `props.animDuration` — seconds the entrance runs (tween feel). */
-  duration?: unknown;
-  /** `props.animEase` — motion feel: smooth tween, soft or snappy spring. */
-  easeKind?: unknown;
-  /** `props.animStiffness` — spring override. */
-  stiffness?: unknown;
-  /** `props.animDamping` — spring override. */
-  damping?: unknown;
-  /** False in the builder edit canvas → children render with no wrapper. */
-  active?: boolean;
-  children: React.ReactNode;
-}
-
-function num(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
-
-export function NodeAnimation({
-  type,
-  delay,
-  duration,
-  easeKind,
-  stiffness,
-  damping,
-  active = true,
-  children,
-}: NodeAnimationProps) {
-  if (!active) return <>{children}</>;
-  const variants = nodeAnimationVariants(type, {
-    delay: num(delay) ?? 0,
-    duration: num(duration),
-    easeKind: typeof easeKind === 'string' ? easeKind : undefined,
-    stiffness: num(stiffness),
-    damping: num(damping),
-  });
-  if (!variants) return <>{children}</>;
+/** Continuous motion on its own layer, so it never fights the entrance or hover transform. */
+export function LoopLayer({ config, children }: { config: NodeAnimationConfig; children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotionConfig();
+  // Stops off screen, so a long page is not running animations nobody can see.
+  const inView = useInView(ref);
+  const motion = loopMotion(config);
+  if (!motion || reduce) return <>{children}</>;
   return (
     <m.div
-      variants={variants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: inView.once, amount: inView.amount }}
+      ref={ref}
+      animate={inView ? motion.animate : motion.rest}
+      transition={inView ? motion.transition : { duration: 0.3 }}
     >
       {children}
     </m.div>
   );
+}
+
+function AnimatedNode({
+  config,
+  index,
+  hasSlots,
+  children,
+}: {
+  config: NodeAnimationConfig | null;
+  index: number;
+  hasSlots: boolean;
+  children: React.ReactNode;
+}) {
+  const parent = React.useContext(CascadeContext);
+  const dir = dirFor(coerceLocale(useLocale()));
+  const reduce = useReducedMotionConfig() === true;
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  // A cascading container hands its entrance to its children and holds still itself. Animating
+  // both would stack the transforms and move each child further than authored.
+  const own = config?.entrance ?? null;
+  const cascades = Boolean(config && own && hasSlots && config.stagger > 0);
+  const entrance = cascades ? null : (own ?? parent?.entrance ?? null);
+  const timing = own ? config : (parent?.config ?? config);
+  const shown = useEntersView(ref, {
+    enabled: entrance !== null && timing?.onLoad !== true,
+    amount: timing?.viewAmount ?? 0.15,
+    once: timing?.repeat !== true,
+  });
+
+  const variants = React.useMemo(
+    () =>
+      entrance
+        ? entranceVariants(entrance, {
+            dir,
+            reduce,
+            extraDelay: parent ? cascadeDelay(index, parent.gap) : 0,
+          })
+        : undefined,
+    [entrance, dir, reduce, parent, index],
+  );
+
+  const cascadeValue = React.useMemo<CascadeValue | null>(
+    () => (cascades && config && own ? { entrance: own, gap: config.stagger, config } : null),
+    [cascades, config, own],
+  );
+
+  const whileHover = config ? hoverTarget(config, dir) : undefined;
+  const whileTap = config ? pressTarget(config) : undefined;
+  const hasLoop = config !== null && config.loop !== 'none';
+  const content = hasLoop && config ? <LoopLayer config={config}>{children}</LoopLayer> : children;
+  // Always reset the context, so a cascade only ever reaches its direct children.
+  const scoped = <CascadeContext.Provider value={cascadeValue}>{content}</CascadeContext.Provider>;
+
+  if (!variants && !whileHover && !whileTap) return scoped;
+  return (
+    <m.div
+      ref={ref}
+      // `node-anim` is what lets globals.css force this visible when scripting is off.
+      className={variants ? 'node-anim' : undefined}
+      variants={variants}
+      initial={variants ? 'hidden' : false}
+      animate={variants ? (shown ? 'visible' : 'hidden') : undefined}
+      whileHover={whileHover}
+      whileTap={whileTap}
+    >
+      {scoped}
+    </m.div>
+  );
+}
+
+export interface NodeAnimationProps {
+  /** The node's merged props. The `anim*` keys are read from here. */
+  animProps: Record<string, unknown>;
+  /** False in the builder edit canvas: children render with no wrapper. */
+  active?: boolean;
+  /** Position among the node's siblings, used when its parent cascades. */
+  index?: number;
+  /** Whether this block has slots, and so has children a cascade can reach. */
+  hasSlots?: boolean;
+  /** Lifts the builder canvas's motion guard for this subtree (eye preview). */
+  unlockMotion?: boolean;
+  children: React.ReactNode;
+}
+
+function UnlockedMotion({ children }: { children: React.ReactNode }) {
+  // `useReducedMotion` reads the system setting directly, not the canvas guard above it.
+  const prefersReduced = useReducedMotion();
+  return <MotionConfig reducedMotion={prefersReduced ? 'user' : 'never'}>{children}</MotionConfig>;
+}
+
+export function NodeAnimation({
+  animProps,
+  active = true,
+  index = 0,
+  hasSlots = false,
+  unlockMotion = false,
+  children,
+}: NodeAnimationProps) {
+  const parent = React.useContext(CascadeContext);
+  const config = React.useMemo(() => resolveNodeAnimation(animProps), [animProps]);
+  if (!active || (!config && !parent)) return <>{children}</>;
+  const node = (
+    <AnimatedNode config={config} index={index} hasSlots={hasSlots}>
+      {children}
+    </AnimatedNode>
+  );
+  return unlockMotion ? <UnlockedMotion>{node}</UnlockedMotion> : node;
 }

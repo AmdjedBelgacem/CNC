@@ -1,5 +1,6 @@
 'use client';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
+import { resolveNodeAnimation } from '@/lib/builder/node-animation';
 import type { PageLayout, PuckNode } from '@titan/shared';
 import { getBlockDefinition, getSlotChildren, mergeBlockProps } from '@titan/shared';
 import {
@@ -39,11 +40,14 @@ export function BuilderNode({
   node,
   zones,
   intercept,
+  index,
 }: {
   node: PuckNode;
   /** Legacy flat zones map — only consulted when a node has no inline slot children. */
   zones?: Record<string, PuckNode[]>;
   intercept?: (node: PuckNode) => ReactNode | null | undefined;
+  /** Position among its siblings, used when the parent cascades its entrance. */
+  index?: number;
 }) {
   const props = mergeBlockProps(node.type, node.props);
   if (props.visible === false) return null;
@@ -53,27 +57,20 @@ export function BuilderNode({
   const definition = getBlockDefinition(node.type);
   const Component = BLOCK_COMPONENTS[node.type];
   if (!Component) return null;
-  // Per-element entrance animation, chosen by the admin in the builder
-  // inspector (animType / animDelay node props). `none` (the default) renders
-  // the block bare, so untouched elements never gain a wrapper.
-  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
-  const animType = typeof props.animType === 'string' ? props.animType : undefined;
-  const animDelay = num(props.animDelay);
-  const animDuration = num(props.animDuration);
-  const animEase = typeof props.animEase === 'string' ? props.animEase : undefined;
-  const animStiffness = num(props.animStiffness);
-  const animDamping = num(props.animDamping);
+  // Animation authored in the builder inspector. Untouched elements render bare and never gain a
+  // wrapper, unless their parent cascades its entrance onto them.
   if (definition?.zones) {
     const nodeWithDefaults: PuckNode = { type: node.type, props };
     const puck: PuckBridge = {
       renderSlot: (slot: string) => {
         const children = getSlotChildren(nodeWithDefaults, slot, zones);
-        return children.map((child, index) => (
+        return children.map((child, childIndex) => (
           <BuilderNode
-            key={(child.props?.id as string | undefined) ?? index}
+            key={(child.props?.id as string | undefined) ?? childIndex}
             node={child}
             zones={zones}
             intercept={intercept}
+            index={childIndex}
           />
         ));
       },
@@ -81,27 +78,13 @@ export function BuilderNode({
       isEditing: false,
     };
     return (
-      <NodeAnimation
-        type={animType}
-        delay={animDelay}
-        duration={animDuration}
-        easeKind={animEase}
-        stiffness={animStiffness}
-        damping={animDamping}
-      >
+      <NodeAnimation animProps={props} index={index} hasSlots>
         <Component props={props} puck={puck} />
       </NodeAnimation>
     );
   }
   return (
-    <NodeAnimation
-      type={animType}
-      delay={animDelay}
-      duration={animDuration}
-      easeKind={animEase}
-      stiffness={animStiffness}
-      damping={animDamping}
-    >
+    <NodeAnimation animProps={props} index={index}>
       <Component props={props} puck={PUBLIC_PUCK} />
     </NodeAnimation>
   );
@@ -122,12 +105,19 @@ export function BlockRenderer({ layout }: { layout: PageLayout }) {
           (the hero) animates on arrival and everything below waits its turn.
 
           The `.motion-reveal` marker that `<Reveal>` attaches is what lets
-          globals.css force these visible when scripting is off. */}
-      {nodes.map((node, index) => (
-        <Reveal key={(node.props?.id as string | undefined) ?? index}>
-          <BuilderNode node={node} zones={zones} />
-        </Reveal>
-      ))}{' '}
+          globals.css force these visible when scripting is off.
+
+          A block with its own authored entrance skips the default reveal: stacking the two would
+          play a rise on top of whatever was chosen, which the canvas preview never shows. */}
+      {nodes.map((node, index) => {
+        const key = (node.props?.id as string | undefined) ?? index;
+        const element = <BuilderNode node={node} zones={zones} index={index} />;
+        return resolveNodeAnimation(mergeBlockProps(node.type, node.props))?.entrance ? (
+          <Fragment key={key}>{element}</Fragment>
+        ) : (
+          <Reveal key={key}>{element}</Reveal>
+        );
+      })}{' '}
     </div>
   );
 }

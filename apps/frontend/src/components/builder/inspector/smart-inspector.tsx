@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { getBlockDefinition } from '@titan/shared';
 import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
@@ -7,10 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   MousePointerClick,
-  Pause,
-  Play,
   Plus,
-  RotateCcw,
   Settings2,
   Trash2,
 } from 'lucide-react';
@@ -18,8 +15,9 @@ import { m } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { spring, transition } from '@/lib/motion';
 import { JsonInspectorSection } from '../node-inspector';
-import { BLOCK_INSPECTOR, animationInspectorGroup } from './fields';
-import { useAnimPlayback } from '@/components/builder/animation';
+import { BLOCK_INSPECTOR } from './fields';
+import { AnimationPanel } from './animation-panel';
+import { useDebouncedValue } from './use-debounced-value';
 import { DynamicContentNotice } from './dynamic-content-notice';
 import { BlockTranslationFields } from './block-translation-fields';
 import type { InspectorGroup, InspectorFieldDef } from './types';
@@ -49,6 +47,9 @@ export function SmartInspector() {
   // the short-circuit path the intl provider was never reached.
   const groupText = useInspectorText();
   const t = useTranslations('ui.builder');
+  const tAnim = useTranslations('builder.animPanel');
+  // Kept across selections, so tuning several elements in a row stays on the same tab.
+  const [tab, setTab] = useState<'properties' | 'animation'>('properties');
   const selected = useBuilderPuck((s) => s.selectedItem) as unknown as SelectedNode | null;
   const getSelectorForId = useBuilderPuck((s) => s.getSelectorForId);
   const dispatch = useBuilderPuck((s) => s.dispatch);
@@ -61,19 +62,20 @@ export function SmartInspector() {
     [selected?.type],
   );
   if (!selected) return <EmptyInspectorState />;
-  const updateProp = (key: string, value: unknown) => {
+  const updateProps = (patch: Record<string, unknown>) => {
     const id = selected.props.id as string | undefined;
     if (!id) return;
     const selector = getSelectorForId(id);
     if (!selector) return;
-    const newProps = { ...selected.props, [key]: value };
     dispatch({
       type: 'replace',
       destinationIndex: selector.index,
       destinationZone: selector.zone || ROOT_DROPPABLE_ID,
-      data: { ...selected, props: newProps },
+      data: { ...selected, props: { ...selected.props, ...patch } },
     });
-  }; // Selected block without an inspector definition (chrome blocks etc.) gets a // lightweight fallback panel so the sidebar never looks broken.
+  };
+  const updateProp = (key: string, value: unknown) => updateProps({ [key]: value });
+  // Selected block without an inspector definition (chrome blocks etc.) gets a // lightweight fallback panel so the sidebar never looks broken.
   if (!def) {
     return (
       <m.div
@@ -114,19 +116,38 @@ export function SmartInspector() {
         label={groupText.label(undefined, def.label ?? selected.type)}
       />{' '}
       <DynamicContentNotice type={selected.type} props={selected.props} />{' '}
+      <div className="shrink-0 border-b border-border/60 px-3.5 py-2">
+        <SegmentedControl
+          value={tab}
+          onChange={(next) => setTab(next as 'properties' | 'animation')}
+          options={[
+            { label: tAnim('tabProperties'), value: 'properties' },
+            { label: tAnim('tabAnimation'), value: 'animation' },
+          ]}
+        />
+      </div>
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-        {' '}
-        <AnimationTransport nodeId={String(selected.props.id ?? '')} animType={selected.props.animType} />{' '}
-      {[...def.groups, animationInspectorGroup].map((group) => (
-          <InspectorGroupSection
-            key={group.id}
-            group={group as InspectorGroup<Record<string, unknown>>}
+        {tab === 'animation' ? (
+          <AnimationPanel
+            nodeId={String(selected.props.id ?? '')}
             props={selected.props}
-            defaults={defaults}
-            onUpdate={updateProp}
+            hasSlots={Boolean(getBlockDefinition(selected.type)?.zones)}
+            onUpdate={updateProps}
           />
-        ))}{' '}
-        <BlockTranslationFields selected={selected} />
+        ) : (
+          <>
+            {def.groups.map((group) => (
+              <InspectorGroupSection
+                key={group.id}
+                group={group as InspectorGroup<Record<string, unknown>>}
+                props={selected.props}
+                defaults={defaults}
+                onUpdate={updateProp}
+              />
+            ))}{' '}
+            <BlockTranslationFields selected={selected} />
+          </>
+        )}
       </div>{' '}
       <JsonInspectorSection />{' '}
     </m.div>
@@ -465,45 +486,6 @@ function ObjectControl({
       </div>
     </div>
   );
-} /** * Debounces commits for text-like inputs so typing stays smooth (no store * dispatch per keystroke, stable cursor). Local state drives the input; * the value is committed after a 150ms pause or on blur. External changes * (undo/redo/page switch) are picked up via lastCommitted comparison. */
-function useDebouncedValue<T>(value: T, commit: (next: T) => void, delay = 150) {
-  const [local, setLocal] = useState(value);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const commitRef = useRef(commit);
-  commitRef.current = commit;
-  const lastCommitted = useRef(value);
-  useEffect(() => {
-    if (value !== lastCommitted.current) {
-      lastCommitted.current = value;
-      setLocal(value);
-    }
-  }, [value]);
-  useEffect(
-    () => () => {
-      if (timer.current !== null) {
-        clearTimeout(timer.current);
-        commitRef.current(lastCommitted.current);
-      }
-    },
-    [],
-  );
-  const update = (next: T) => {
-    lastCommitted.current = next;
-    setLocal(next);
-    if (timer.current !== null) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      commitRef.current(next);
-    }, delay);
-  };
-  const flush = () => {
-    if (timer.current !== null) {
-      clearTimeout(timer.current);
-      timer.current = null;
-      commitRef.current(lastCommitted.current);
-    }
-  };
-  return { local, update, flush };
 }
 function DebouncedTextControl({
   value,
@@ -565,64 +547,5 @@ function DebouncedSliderControl({
       step={step}
       onPointerUp={flush}
     />
-  );
-}
-
-/**
- * Play / Pause / Replay transport for the selected element's entrance.
- *
- * Inspector-only: it drives a temporary playback through the canvas via the
- * animation playback store — it never changes the published page, and it does
- * not enable always-on canvas motion. Hidden unless an entrance is picked.
- */
-function AnimationTransport({ nodeId, animType }: { nodeId: string; animType: unknown }) {
-  const t = useTranslations('builder');
-  const nodeIdActive = useAnimPlayback((s) => s.nodeId === nodeId);
-  const mode = useAnimPlayback((s) => (s.nodeId === nodeId ? s.mode : null));
-  const play = useAnimPlayback((s) => s.play);
-  const replay = useAnimPlayback((s) => s.replay);
-  const pause = useAnimPlayback((s) => s.pause);
-
-  if (!animType || animType === 'none' || !nodeId) return null;
-  const isPlaying = nodeIdActive && mode === 'play';
-
-  const btn = 'flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 bg-card text-muted-foreground shadow-xs transition hover:bg-muted hover:text-foreground active:scale-95';
-
-  return (
-    <div className="border-t border-border/60 px-3.5 py-2.5">
-      <p className="mb-1.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
-        {t('groups.animationPreview', { default: 'Preview entrance' })}
-      </p>
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => play(nodeId)}
-          aria-label={t('groups.play', { default: 'Play' })}
-          className={btn}
-        >
-          <Play className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => pause()}
-          aria-label={t('groups.pause', { default: 'Pause' })}
-          disabled={!isPlaying}
-          className={cn(btn, 'disabled:cursor-not-allowed disabled:opacity-40')}
-        >
-          <Pause className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => replay(nodeId)}
-          aria-label={t('groups.replay', { default: 'Replay' })}
-          className={btn}
-        >
-          <RotateCcw className="size-3.5" />
-        </button>
-        <span className="ms-auto text-2xs text-muted-foreground">
-          {isPlaying ? t('groups.playing', { default: 'Playing…' }) : t('groups.held', { default: 'Held' })}
-        </span>
-      </div>
-    </div>
   );
 }

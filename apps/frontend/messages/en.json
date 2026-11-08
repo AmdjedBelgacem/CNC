@@ -3768,6 +3768,106 @@
     "unsavedChanges": "You have unsaved changes."
   },
   "builder": {
+    "animPanel": {
+      "tabProperties": "Properties",
+      "tabAnimation": "Animation",
+      "stageHint": "Click to replay. Hover or press the sample to try its interaction.",
+      "secondsUnit": "s",
+      "sections": {
+        "entrance": "Entrance",
+        "startState": "Start state",
+        "timing": "Timing and feel",
+        "trigger": "Trigger",
+        "cascade": "Cascade children",
+        "interaction": "Interaction",
+        "loop": "Continuous loop"
+      },
+      "entrance": {
+        "none": "None",
+        "fade": "Fade",
+        "fadeUp": "Fade up",
+        "fadeDown": "Fade down",
+        "scaleIn": "Scale in",
+        "slideStart": "From start",
+        "slideEnd": "From end",
+        "blurIn": "Blur in",
+        "blurUp": "Blur up",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "rotateIn": "Rotate in",
+        "flipUp": "Flip up",
+        "wipeUp": "Wipe up",
+        "wipeStart": "Wipe across"
+      },
+      "ease": {
+        "smooth": "Smooth",
+        "easeOut": "Ease out",
+        "easeInOut": "In and out",
+        "linear": "Linear",
+        "overshoot": "Rebound",
+        "soft": "Soft",
+        "snappy": "Snappy",
+        "bouncy": "Bouncy"
+      },
+      "trigger": {
+        "view": "Scrolled into view",
+        "load": "Page load"
+      },
+      "hover": {
+        "none": "None",
+        "lift": "Lift",
+        "grow": "Grow",
+        "shrink": "Shrink",
+        "tilt": "Tilt"
+      },
+      "press": {
+        "none": "None",
+        "press": "Press",
+        "deep": "Deep press"
+      },
+      "loopKind": {
+        "none": "None",
+        "float": "Float",
+        "pulse": "Pulse",
+        "sway": "Sway",
+        "breathe": "Breathe",
+        "spin": "Spin"
+      },
+      "distance": "Distance",
+      "scale": "Scale",
+      "rotate": "Rotation",
+      "blur": "Blur",
+      "fromOpacity": "Opacity",
+      "delay": "Delay",
+      "duration": "Duration",
+      "stiffness": "Stiffness",
+      "damping": "Damping",
+      "mass": "Mass",
+      "total": "Total {seconds} {unit}",
+      "longRun": "Over 1.5 seconds is long enough that visitors may scroll past before it finishes.",
+      "startWhen": "Start when",
+      "viewAmount": "Visible before starting",
+      "viewAmountHint": "How much of the element must be on screen. Elements taller than the screen start as soon as they appear.",
+      "repeat": "Replay on every entry",
+      "repeatHint": "Plays again each time the element scrolls back into view.",
+      "stagger": "Gap between children",
+      "staggerHint": "Above 0, this element holds still and passes its entrance to its direct children, one after another. A child with its own entrance keeps it.",
+      "hoverLabel": "On hover",
+      "pressLabel": "On press",
+      "loopLabel": "Loop",
+      "loopDuration": "Cycle length",
+      "loopAmount": "Intensity",
+      "copy": "Copy",
+      "paste": "Paste",
+      "resetAll": "Reset all",
+      "play": "Play on canvas",
+      "pause": "Pause",
+      "resume": "Resume",
+      "replay": "Replay",
+      "timeline": "Timeline",
+      "loopPreview": "Loop the canvas preview",
+      "liveCanvas": "Replay on the canvas when a setting changes"
+    },
     "canvas": {
       "zoomOut": "Zoom out",
       "zoomToFit": "Zoom to fit",
@@ -3881,12 +3981,6 @@
       "value": "%"
     },
     "fieldLabels": {
-    "animEntrance": "Entrance",
-    "animDelayLabel": "Delay (s)",
-    "animDurationLabel": "Duration (s)",
-    "animEaseLabel": "Motion feel",
-    "animStiffness": "Stiffness",
-    "animDamping": "Damping",
       "4": "4",
       "32": "32",
       "40": "40",
@@ -4100,12 +4194,6 @@
       "more": "More"
     },
     "groups": {
-            "animationPreview": "Preview entrance",
-      "play": "Play",
-      "pause": "Pause",
-      "replay": "Replay",
-      "playing": "Playing…",
-      "held": "Held",
 "animation": "Animation",
       "advanced": "Advanced",
       "behavior": "Behavior",

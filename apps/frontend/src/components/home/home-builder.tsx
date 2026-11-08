@@ -107,6 +107,7 @@ export function HomeBuilder({
             node={child}
             zones={zones}
             intercept={intercept}
+            index={index}
           />
         ));
       const puck: PuckBridge = {
@@ -135,6 +136,7 @@ export function HomeBuilder({
             node={child}
             zones={zones}
             intercept={intercept}
+            index={index}
           />
         ));
       const visible = sponsors.slice(0, 8);
@@ -171,6 +173,7 @@ export function HomeBuilder({
             node={child}
             zones={zones}
             intercept={intercept}
+            index={index}
           />
         ));
       const puck: PuckBridge = {
@@ -206,6 +209,7 @@ export function HomeBuilder({
           node={child}
           zones={zones}
           intercept={intercept}
+          index={index}
         />
       ));
     const puck: PuckBridge = {

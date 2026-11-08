@@ -822,9 +822,12 @@
     background-color: rgb(var(--c-muted) / 0.6);
   }
 
-  .motion-reveal {
+  .motion-reveal,
+  .node-anim {
       opacity: 1 !important;
       transform: none !important;
+      filter: none !important;
+      clip-path: none !important;
     }
   }
 
