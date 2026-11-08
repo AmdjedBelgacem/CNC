@@ -113,6 +113,7 @@ export const RESERVED_SLUGS: readonly string[] = [
   'groups', 'learning', 'sponsors', 'titan-tv', 'verify', 'ai', 'home',
   'account', 'appearance', 'billing', 'callback', 'chat', 'confirm', 'connected-accounts',
   'courses', 'danger', 'profile', 'repair', 'security', 'success', 'tags',
+  'become-a-partner', 'learn', 'partners',
   // auth routes — a page here would collide with the auth screens
   'forgot-password', 'register', 'resend-verification', 'reset-password',
   'verify-email', 'verify-email-change',

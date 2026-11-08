@@ -885,7 +885,7 @@ function ThemePreview() {
         <div className="mt-6 flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-xs">
             Primary action
-            <ArrowRight className="size-3.5" />
+            <ArrowRight className="flip-rtl size-3.5" />
           </span>
           <span className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-foreground shadow-xs">
             Secondary

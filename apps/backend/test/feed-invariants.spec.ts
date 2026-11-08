@@ -194,7 +194,7 @@ describe('author identity', () => {
 });
 
 describe('wire snapshot tag coercion', () => {
-  const wire = readFileSync(resolve(__dirname, '../../frontend/src/lib/feed.ts'), 'utf8');
+  const wire = readFileSync(resolve(__dirname, '../../frontend/src/lib/feed-snapshot.ts'), 'utf8');
 
   it('never stringifies a tag object', () => {
     // `String(raw)` on a `{ slug, label }` tag publishes the literal

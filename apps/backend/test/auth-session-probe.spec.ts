@@ -44,12 +44,14 @@ describe('session probe answers without failing', () => {
     expect(authController).not.toMatch(/@Get\('session'\)/);
   });
 
-  it('is what the client probes, not /auth/me', () => {
+  it('is not what the client hydrates from, because only a 401 starts a token refresh', () => {
+    // Commit 6298527 moved hydration back to /auth/me: /auth/session answers an expired access
+    // cookie with a 200, so the API client never refreshes and the user reads as signed out.
     const hydration = readFileSync(
       resolve(__dirname, '../../frontend/src/components/auth/auth-hydration.tsx'),
       'utf8',
     );
-    expect(hydration).toMatch(/\/auth\/session/);
-    expect(hydration).not.toMatch(/api\.get<[^>]*>\('\/auth\/me'\)/);
+    expect(hydration).toMatch(/api\.get<[^>]*>\('\/auth\/me'\)/);
+    expect(hydration).not.toMatch(/api\.get<[^>]*>\('\/auth\/session'\)/);
   });
 });

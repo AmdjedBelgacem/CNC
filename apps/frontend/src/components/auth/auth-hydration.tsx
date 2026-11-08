@@ -6,10 +6,11 @@ import { api } from '@/lib/api-client';
 /**
  * Restores the client session on app load.
  *
- * Asks GET /auth/session, which answers `{ authenticated: false }` with a 200 when nobody is
- * signed in. It used to ask `/auth/me`, where an anonymous visitor got a 401 — which the API
- * client then answered with a `/auth/refresh` that 401'd too. Two doomed requests and two
- * console errors on every public page load, to learn what the server already knew.
+ * Asks GET /auth/me rather than /auth/session. An expired access cookie makes /auth/session
+ * answer `{ authenticated: false }` with a 200, which never triggers the API client's
+ * refresh, so a valid refresh cookie would read as signed out. The 401 from /auth/me is what
+ * starts the rotation. The cost is that an anonymous visitor logs a 401 from /auth/me and
+ * another from /auth/refresh on each page load.
  *
  * Marks the store hydrated either way so `hasHydrated` gates (nav menus, admin gate) can
  * render correctly.

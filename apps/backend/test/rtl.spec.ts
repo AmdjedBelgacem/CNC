@@ -47,11 +47,14 @@ describe('RTL correctness', () => {
   });
 
   it('keeps the centering transform physical, because translate is not mirrored', () => {
-    // `left-1/2 -translate-x-1/2` is symmetric and correct in both directions;
-    // rewriting it to `start-1/2` would break it.
+    // `left-1/2` with a -50% translate is symmetric and correct in both directions;
+    // rewriting it to `start-1/2` would break it. The translate lives in `.dialog-pop`
+    // so it composes independently of the `transform` Framer writes.
     const dialog = read('apps/frontend/src/components/ui/dialog.tsx');
-    expect(dialog).toMatch(/left-1\/2/);
-    expect(dialog).toMatch(/-translate-x-1\/2/);
+    expect(dialog).toMatch(/dialog-pop fixed left-1\/2/);
+    expect(read('apps/frontend/src/styles/globals.css')).toMatch(
+      /\.dialog-pop\s*\{\s*translate: -50% -50%;/,
+    );
   });
 
   it('mirrors horizontal navigation icons', () => {
