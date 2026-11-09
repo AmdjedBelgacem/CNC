@@ -558,8 +558,8 @@ export function DashboardView() {
     },
     {
       icon: Users,
-      label: t('kpiVisitors', { default: 'Visitors' }),
-      sub: t('kpiVisitorsSub', { default: 'Active sessions' }),
+      label: t('kpiVisitors'),
+      sub: t('kpiVisitorsSub'),
       value: count(overview?.visitors?.value ?? 0),
       amount: overview?.visitors?.value ?? 0,
       formatAmount: (n: number) => count(Math.round(n)),
@@ -567,7 +567,7 @@ export function DashboardView() {
       sparkline: overview?.visitors?.sparkline,
       tone: 'primary' as const,
       href: '/admin/analytics',
-      sparkLabel: t('kpiVisitors', { default: 'Visitors' }),
+      sparkLabel: t('kpiVisitors'),
     },
     {
       icon: UserPlus,
