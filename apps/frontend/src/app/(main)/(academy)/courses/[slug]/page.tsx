@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import CourseDetailClient from './course-detail-client';
@@ -42,8 +43,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const t = await getTranslations('courses');
 
   if (!course) {
-    // A missing course must not inherit another course's title. Keep it indexable only if
-    // it genuinely exists, so unknown slugs are noindex rather than thin-indexed.
+    // Unknown slug: generic noindex metadata. The real 404 status comes from the page
+    // body's notFound() below — a gate here would stream into an already-committed 200
+    // (Next 16 streams metadata), i.e. the exact soft 404 crawlers complain about.
     return {
       title: t('title'),
       description: t('subtitle'),
@@ -86,6 +88,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
     slug,
     locale as ContentLocale,
   );
+  if (!course) notFound();
 
   return (
     <>

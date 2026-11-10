@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import type { ContentLocale } from '@titan/shared';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
@@ -23,7 +24,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const product = await fetchProductBySlug(tenantSlug, slug, locale);
-  if (!product) return { title: productMetaFallback() };
+  if (!product) {
+    // Unknown slug: generic metadata; the 404 status comes from the page body's notFound().
+    return { title: 'Product', robots: { index: false, follow: true } };
+  }
   return {
     title: product.title,
     description: product.tagline || product.description?.slice(0, 160) || undefined,
@@ -35,15 +39,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-function productMetaFallback() {
-  return { title: 'Product' };
-}
-
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const locale = (await getLocale()) as ContentLocale;
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const initialProduct = await fetchProductBySlug(tenantSlug, slug, locale);
+  if (!initialProduct) notFound();
   return <ProductDetailClient slug={slug} initialProduct={initialProduct} />;
 }

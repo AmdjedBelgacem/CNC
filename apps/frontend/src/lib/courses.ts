@@ -1,4 +1,5 @@
 import type { ContentLocale, Course } from '@titan/shared';
+import type { Lesson } from '@/lib/api/types';
 import { coerceLocale } from '@/i18n/config';
 import { serverApiUrl } from '@/lib/server-api-url';
 
@@ -65,15 +66,44 @@ export async function fetchCourseDetail(
       `${API_BASE}/courses/${encodeURIComponent(slug)}?locale=${resolved}`,
       {
         headers: tenantHeaders(tenantSlug, locale),
-        // Short window: prices, enrolment state and publish flags all move, and a stale
-        // price is worse than a slightly slower page.
-        next: { revalidate: REVALIDATE },
+        cache: 'no-store',
       },
     );
     if (!res.ok) return null;
     const body = (await res.json()) as Course | { data?: Course };
     if (body && typeof body === 'object' && 'data' in body && body.data) return body.data;
     return body as Course;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Server-side: one lesson by course + lesson slug. The endpoint is public with an
+ * optional auth guard, so an anonymous server fetch answers "does this lesson exist"
+ * without ever leaking enrolment state. Returns null on any failure so the caller can
+ * render a 404 instead of 500-ing a public URL.
+ */
+export async function fetchLessonDetail(
+  tenantSlug: string,
+  courseSlug: string,
+  lessonSlug: string,
+  locale?: ContentLocale,
+): Promise<Lesson | null> {
+  if (!courseSlug || !lessonSlug) return null;
+  try {
+    const resolved = coerceLocale(locale);
+    const res = await fetch(
+      `${API_BASE}/courses/${encodeURIComponent(courseSlug)}/lessons/${encodeURIComponent(lessonSlug)}?locale=${resolved}`,
+      {
+        headers: tenantHeaders(tenantSlug, locale),
+        next: { revalidate: REVALIDATE },
+      },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as Lesson | { data?: Lesson };
+    if (body && typeof body === 'object' && 'data' in body && body.data) return body.data;
+    return body as Lesson;
   } catch {
     return null;
   }

@@ -115,7 +115,7 @@ function backendUrlFor(pathname: string, request: NextRequest): URL | null {
   return new URL(forwardPath + request.nextUrl.search, base);
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const tenantSlug = resolveTenantSlug(request.headers.get('host') || '');
   const { pathname } = request.nextUrl;
 
@@ -282,13 +282,10 @@ if (isProtected && !mayHaveSession) { const loginUrl = new URL('/login', request
 }
 export const config = {
   /**
-   * Run on the Node.js runtime, not Edge.
-   *
-   * Middleware defaults to the Edge runtime, which made this build emit an Edge Function
-   * (`_middleware`) — and a Vercel *services* project rejects Edge output outright:
-   * "Edge Runtime is not supported in services." Nothing here needs an edge isolate; it
-   * only uses web APIs plus `process.env`, both of which Node supports.
+   * No `runtime` config here: Next 16's proxy always runs on the Node.js runtime
+   * ("Route segment config is not allowed in Proxy file"), which is what we want —
+   * the old `middleware.ts` needed `runtime: 'nodejs'` because middleware defaulted
+   * to Edge, and a Vercel *services* project rejects Edge output outright.
    */
-  runtime: 'nodejs',
   matcher: ['/((?!_next/static|_next/image|favicon.ico|opengraph-image|robots|sitemap).*)'],
 };
