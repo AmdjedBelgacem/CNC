@@ -100,25 +100,80 @@ REMOTE_PRUNE
 size=$(docker image inspect "$IMAGE" --format '{{.Size}}')
 printf '==> transferring (%.0f MB uncompressed, gzipped on the wire)\n' "$(echo "$size / 1048576" | bc -l)"
 
-attempt=1
-max=5
-while true; do
-  echo "==> push attempt $attempt/$max"
-  # gzip gives `set -o pipefail` something to catch a truncated stream, and the remote `gunzip`
-  # will refuse to load a corrupt archive rather than loading half an image.
-  if docker save "$IMAGE" | gzip -1 | ssh "${SSH_OPTS[@]}" "${CONNECT_OPTS[@]}" "$HOST" 'gunzip | docker load'; then
-    if ssh "${SSH_OPTS[@]}" "${CONNECT_OPTS[@]}" "$HOST" "docker image inspect '$IMAGE' >/dev/null 2>&1"; then
-      echo "==> landed on the host"
-      break
+# The one-shot pipe (`docker save | gzip | ssh 'gunzip | docker load'`) is a single long-lived
+# TCP stream, and on this uplink it wedges mid-transfer: one deploy sat at 28 bytes / 10 s for
+# two hours with the connection neither closed nor flowing. So the image is shipped as 20 MB
+# chunks instead: each chunk is a short-lived scp with SSH keepalives, md5-verified after
+# landing and retried individually — a stall costs one chunk, not the whole image. The remote
+# `docker load` also runs detached: a dropped control connection used to leave a zombie load
+# holding the daemon lock, and every later load queued behind it forever.
+PACK_DIR="/tmp/lightsail-deploy.$$"
+trap 'rm -rf "$PACK_DIR"' EXIT
+mkdir -p "$PACK_DIR"
+
+echo "==> packing image locally"
+LOCAL_GZ="$PACK_DIR/image.tar.gz"
+docker save "$IMAGE" | gzip -1 > "$LOCAL_GZ"
+EXPECTED_MD5=$(md5 -q "$LOCAL_GZ")
+split -b 20m "$LOCAL_GZ" "$PACK_DIR/c-"
+
+remote_md5_of() {
+  ssh "${SSH_OPTS[@]}" "${CONNECT_OPTS[@]}" "$HOST" "md5sum /tmp/$1 2>/dev/null | cut -d' ' -f1"
+}
+
+for CHUNK in "$PACK_DIR"/c-*; do
+  NAME=$(basename "$CHUNK")
+  CHUNK_MD5=$(md5 -q "$CHUNK")
+  ok=0
+  for attempt in 1 2 3 4; do
+    echo "==> chunk $NAME (attempt $attempt)"
+    if scp -i "$KEY" -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=6 \
+         "$CHUNK" "$HOST:/tmp/$NAME" 2>/dev/null; then
+      [ "$(remote_md5_of "$NAME")" = "$CHUNK_MD5" ] && { ok=1; break; }
+      echo "    md5 mismatch; resending"
+    else
+      echo "    scp failed; retrying"
     fi
-    echo "    transfer reported success but the image is not present; retrying"
-  else
-    echo "    transfer failed; retrying"
-  fi
-  attempt=$((attempt + 1))
-  [[ "$attempt" -le "$max" ]] || { echo "Giving up after $max attempts" >&2; exit 1; }
-  sleep $((attempt * 10))
+    sleep $((attempt * 5))
+  done
+  [[ "$ok" -eq 1 ]] || { echo "Chunk $NAME failed after 4 attempts" >&2; exit 1; }
 done
+
+echo "==> remote assemble + load"
+ssh "${SSH_OPTS[@]}" "${CONNECT_OPTS[@]}" "$HOST" bash -s -- "$IMAGE" "$EXPECTED_MD5" <<'REMOTE_ASSEMBLE'
+set -eu
+IMAGE="$1"
+EXPECTED="$2"
+cd /tmp
+# Clear any zombie load from an earlier interrupted deploy — it holds the daemon lock and
+# every subsequent load silently queues behind it.
+pkill -f 'docker load' 2>/dev/null || true
+sleep 1
+cat c-* > image.tar.gz
+if [ "$(md5sum image.tar.gz | cut -d' ' -f1)" != "$EXPECTED" ]; then
+  echo "assembled archive md5 mismatch" >&2
+  exit 1
+fi
+nohup sh -c "docker load -i /tmp/image.tar.gz" > /tmp/docker-load.log 2>&1 &
+for i in $(seq 1 30); do
+  sleep 10
+  if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "    image loaded"
+    rm -f /tmp/c-* /tmp/image.tar.gz /tmp/docker-load.log
+    exit 0
+  fi
+  if ! pgrep -f 'docker load' >/dev/null; then
+    echo "docker load exited without producing the image:" >&2
+    tail -5 /tmp/docker-load.log >&2
+    exit 1
+  fi
+done
+echo "docker load did not finish in 5 minutes" >&2
+exit 1
+REMOTE_ASSEMBLE
+
+echo "==> landed on the host"
+ssh "${SSH_OPTS[@]}" "${CONNECT_OPTS[@]}" "$HOST" "docker image inspect '$IMAGE' >/dev/null 2>&1"
 
 if [[ "$PUSH_ONLY" -eq 1 ]]; then
   echo "==> push-only; leaving the running service untouched"
