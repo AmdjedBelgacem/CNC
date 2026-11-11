@@ -157,6 +157,7 @@ export function BilingualField({
   ar,
   onDraftArabic,
   drafting = false,
+  stacked = false,
   className,
 }: {
   id: string;
@@ -172,6 +173,8 @@ export function BilingualField({
   /** Fill missing Arabic from the English copy (AI draft, reviewed by a person). */
   onDraftArabic?: () => void;
   drafting?: boolean;
+  /** Put Arabic under English, for narrow panels such as the lesson inspector. */
+  stacked?: boolean;
   className?: string;
 }) {
   const t = useTranslations('admin.editorKit');
@@ -228,7 +231,7 @@ export function BilingualField({
           </span>
         )}
       </label>
-      <div className={cn('grid gap-3', both ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}>
+      <div className={cn('grid gap-3', both && !stacked ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}>
         {showEn && (
           <div className="relative">
             {control('en')}

@@ -37,6 +37,45 @@ const PATHS: Record<EntityKind, string> = { product: 'products', course: 'course
 
 type Option = { id: string; title: string };
 
+/** Starter outlines: section keys, each with its lesson keys (titles come from the catalog). */
+const OUTLINES: Record<'workshop' | 'academy', { section: string; lessons: string[] }[]> = {
+  workshop: [
+    { section: 'intro', lessons: ['welcome', 'setup'] },
+    { section: 'practice', lessons: ['demo', 'exercise'] },
+    { section: 'wrapUp', lessons: ['check'] },
+  ],
+  academy: [
+    { section: 'foundations', lessons: ['welcome', 'safety'] },
+    { section: 'core', lessons: ['concepts', 'demo'] },
+    { section: 'practice', lessons: ['exercise'] },
+    { section: 'checkpoint1', lessons: ['check'] },
+    { section: 'advanced', lessons: ['concepts', 'exercise'] },
+    { section: 'capstone', lessons: ['project', 'check'] },
+  ],
+};
+
+async function seedOutline(
+  courseId: string,
+  outline: { section: string; lessons: string[] }[],
+  t: (key: string) => string,
+) {
+  const stamp = Date.now().toString(36);
+  for (const [i, part] of outline.entries()) {
+    const series = await api.post<{ id: string }>('/admin/courses/series', {
+      courseId,
+      slug: `${part.section.toLowerCase()}-${i + 1}-${stamp}`,
+      title: t(`outline.section.${part.section}`),
+    });
+    for (const [j, lesson] of part.lessons.entries()) {
+      await api.post('/admin/courses/lessons', {
+        seriesId: series.id,
+        slug: `${lesson.toLowerCase()}-${i + 1}-${j + 1}-${stamp}`,
+        title: t(`outline.lesson.${lesson}`),
+      });
+    }
+  }
+}
+
 function useAcademies(enabled: boolean) {
   const [items, setItems] = useState<Option[]>([]);
   useEffect(() => {
@@ -112,13 +151,23 @@ function CreateForm({
         });
         router.push(`/admin/products/${created?.slug ?? effectiveSlug}/edit`);
       } else if (kind === 'course') {
-        const created = await api.post<{ slug?: string }>('/admin/courses', {
+        const created = await api.post<{ id?: string; slug?: string }>('/admin/courses', {
           title: name.trim(),
           slug: effectiveSlug,
           academyId: academyId || undefined,
           metadata: template === 'blank' ? undefined : { template },
         });
-        router.push(`/admin/courses/${created?.slug ?? effectiveSlug}/edit`);
+        // A template used to be stored and never read, so every course started empty
+        // whatever was picked. Build its outline now; a failure here leaves a valid
+        // course with a partial outline, which the editor shows and can finish.
+        if (created?.id && template !== 'blank') {
+          try {
+            await seedOutline(created.id, OUTLINES[template], t);
+          } catch {
+            toast({ type: 'err', title: t('outlineFailed') });
+          }
+        }
+        router.push(`/admin/courses/${created?.slug ?? effectiveSlug}/edit?step=curriculum`);
       } else {
         const created = await api.post<{ slug?: string }>('/admin/academies', {
           title: name.trim(),

@@ -124,6 +124,56 @@ export function reasonToStep(reason: string): number {
   return 6;
 }
 
+/** The order of `stepStates`, which `reasonToStep` indexes into. */
+const LEGACY_STEP_ORDER = ['basics', 'curriculum', 'media', 'pricing', 'localization', 'live', 'publish'] as const;
+
+/** Server publish blocker → the editor section that fixes it. */
+export function reasonToSection(reason: string): string {
+  const key = LEGACY_STEP_ORDER[reasonToStep(reason)] ?? 'publish';
+  return key === 'publish' ? 'certificate' : key;
+}
+
+/**
+ * How much of the course's copy has an Arabic version.
+ *
+ * A field counts only when its English source has text, so an empty subtitle
+ * never reads as "missing Arabic". Covers the course copy, search fields, and
+ * every series and lesson title and description: what an Arabic visitor reads.
+ */
+export function arabicCoverage(course: CourseStudioData): { translated: number; total: number } {
+  let total = 0;
+  let translated = 0;
+  const count = (en: string | null | undefined, ar: string | null | undefined) => {
+    if (!en?.trim()) return;
+    total += 1;
+    if (ar?.trim()) translated += 1;
+  };
+  const ar = course.translations?.ar ?? {};
+  count(course.title, ar.title);
+  count(course.subtitle, ar.subtitle);
+  count(course.description, ar.description);
+  count(course.seoTitle, ar.seoTitle);
+  count(course.seoDescription, ar.seoDescription);
+  count(course.seoKeywords, ar.seoKeywords);
+  for (const section of course.series) {
+    count(section.title, section.translations?.ar?.title);
+    count(section.description, section.translations?.ar?.description);
+    for (const lesson of section.lessons ?? []) {
+      count(lesson.title, lesson.translations?.ar?.title);
+      count(lesson.description, lesson.translations?.ar?.description);
+    }
+  }
+  return { translated, total };
+}
+
+/** A lesson whose title (and description, when it has one) has Arabic. */
+export function lessonArabicComplete(lesson: CourseStudioData['series'][number]['lessons'][number]): boolean {
+  const ar = lesson.translations?.ar;
+  if (!ar?.title?.trim()) return false;
+  if (lesson.description?.trim() && !ar.description?.trim()) return false;
+  return true;
+}
+
 /**
  * True when every non-advisory step is complete. Advisory steps are excluded so
  * a missing SEO override never blocks a publish.

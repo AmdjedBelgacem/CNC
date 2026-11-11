@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CalendarClock, Loader2, Pencil, Plus, RefreshCw, Trash2, Video, X } from 'lucide-react';
-import { Field, FormSection, TextField } from '@/components/admin/admin-form';
+import { Field, TextField } from '@/components/admin/admin-form';
+import { StudioSection } from './StudioSection';
 import { StatusPill } from '@/components/admin/admin-ui';
 import { toast } from '@/components/ui/toast';
 import { AnimatePresence, m } from 'framer-motion';
@@ -173,7 +174,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
 
   return (
     <div className="space-y-6">
-      <FormSection
+      <StudioSection
         title={t('section', { default: 'Live sessions' })}
         icon={Video}
         description={t('sectionDesc', { default: 'Schedule live teaching on Google Meet. Published sessions appear on the course page for enrolled learners, who can join 15 minutes before start.' })}
@@ -182,7 +183,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.97]"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.97]"
           >
             <Plus className="size-4" />
             {t('add', { default: 'Add live session' })}
@@ -191,7 +192,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
           >
             <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
             {t('refresh', { default: 'Refresh' })}
@@ -251,7 +252,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
                         {t('cancel', { default: 'Cancel' })}
                       </button>
                     ) : null}
-                    <button type="button" onClick={() => void act(session, 'delete')} disabled={busyId === session.id} aria-label={t('delete', { default: 'Delete' })} className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+                    <button type="button" onClick={() => void act(session, 'delete')} disabled={busyId === session.id} aria-label={t('delete', { default: 'Delete' })} className="inline-flex size-10 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
                       <Trash2 className="size-3.5" />
                     </button>
                   </div>
@@ -261,12 +262,12 @@ export function StepLive({ course }: { course: CourseStudioData }) {
             </AnimatePresence>
           </ul>
         )}
-      </FormSection>
+      </StudioSection>
 
       <AnimatePresence initial={false}>
       {draft ? (
         <m.div key="live-draft" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8, transition: { duration: 0.16 } }} transition={spring.gentle}>
-        <FormSection
+        <StudioSection
           title={draft.id ? t('editTitle', { default: 'Edit live session' }) : t('createTitle', { default: 'New live session' })}
           icon={Video}
           description={t('formHint', { default: 'Dates are interpreted in your local timezone and stored in UTC. Times are shown to learners in the session timezone.' })}
@@ -337,16 +338,16 @@ export function StepLive({ course }: { course: CourseStudioData }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => void saveDraft()} disabled={saving} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50">
+            <button type="button" onClick={() => void saveDraft()} disabled={saving} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50">
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {draft.id ? t('save', { default: 'Save changes' }) : t('create', { default: 'Create session' })}
             </button>
-            <button type="button" onClick={() => setDraft(null)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
+            <button type="button" onClick={() => setDraft(null)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-4 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground">
               <X className="size-4" />
               {t('discard', { default: 'Discard' })}
             </button>
           </div>
-        </FormSection>
+        </StudioSection>
         </m.div>
       ) : null}
       </AnimatePresence>

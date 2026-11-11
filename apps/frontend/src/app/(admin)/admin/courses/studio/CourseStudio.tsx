@@ -1,34 +1,69 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Eye, Loader2, Save } from 'lucide-react';
 import { DEFAULT_CURRENCY, isCurrencyCode } from '@titan/shared';
 import type { ContentLocale, LessonContentDocument } from '@titan/shared';
-import { StudioHeader, type StudioSaveStatus } from './StudioHeader';
-import { SummaryPanel } from './SummaryPanel';
+import { AdminCommandBar } from '@/components/admin/admin-chrome';
+import { useFormGuard } from '@/components/admin/form-page';
+import {
+  AsideCard,
+  CheckList,
+  EditorHeader,
+  EditorLayout,
+  EditorRail,
+  LanguageModeProvider,
+  SaveStateLine,
+  useLanguageMode,
+  useSaveState,
+  type EditorCheck,
+  type RailSection,
+  type SaveState,
+} from '@/components/admin/editor/editor-kit';
+import { PublishSheet } from '@/components/admin/editor/publish-sheet';
+import { difficultyFallback, difficultyKey } from '@/lib/difficulty';
+import { CourseCardPreview } from './SummaryPanel';
 import { StepBasics } from './StepBasics';
 import { StepMedia } from './StepMedia';
 import { StepPricing } from './StepPricing';
 import { StepLocalization } from './StepSeo';
 import { StepLive } from './StepLive';
+import { StepArabic } from './StepArabic';
 import { StepPublish } from './StepPublish';
 import { StudioPreview } from './StudioPreview';
 import { CurriculumBuilder } from './CurriculumBuilder';
 import { LessonDrawer } from './LessonDrawer';
-import { allStepsDone, stepStates } from './completeness';
+import { LessonInspector, type LessonDrawerTab } from './LessonInspector';
+import { allStepsDone, arabicCoverage, reasonToSection, stepHint, stepLabel, stepStates } from './completeness';
+import { useCourseCopyTranslate } from './useCourseTranslate';
 import { slugify } from './slugify';
 import { toast } from '@/components/ui/toast';
 import { Crossfade, Reveal } from '@/components/ui/motion';
 import type { CourseStudioData, Lesson, Section } from './types';
 import * as api from './api';
 
-const STEP_KEYS = ['basics', 'curriculum', 'media', 'pricing', 'localization', 'live', 'publish'] as const;
+/** Rail order. `publish` was the old name of `certificate`; old links still land there. */
+const STEP_KEYS = ['basics', 'curriculum', 'media', 'pricing', 'live', 'arabic', 'localization', 'certificate'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
 
-function isStepKey(value: string | null): value is StepKey {
-  return !!value && (STEP_KEYS as readonly string[]).includes(value);
+function readStepKey(value: string | null): StepKey | null {
+  if (value === 'publish') return 'certificate';
+  return value && (STEP_KEYS as readonly string[]).includes(value) ? (value as StepKey) : null;
+}
+
+/** Whether the aside sits beside the form (the editor layout's `2xl`), so a lesson can dock there. */
+function useWideLayout() {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 96rem)');
+    const sync = () => setWide(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
+  return wide;
 }
 
 function scalarPatch(course: CourseStudioData): Record<string, unknown> {
@@ -55,9 +90,27 @@ function scalarPatch(course: CourseStudioData): Record<string, unknown> {
 }
 
 export function CourseStudio({ slug }: { slug: string }) {
+  return (
+    <LanguageModeProvider>
+      <CourseStudioEditor slug={slug} />
+    </LanguageModeProvider>
+  );
+}
+
+function CourseStudioEditor({ slug }: { slug: string }) {
   const router = useRouter();
+  const tk = useTranslations('admin.editorKit');
+  const { mode } = useLanguageMode();
+  /**
+   * The language that single-language controls edit (series titles, the lesson
+   * drawer, the preview). Side-by-side fields show both; these follow Arabic
+   * only when the editor chose Arabic alone.
+   */
+  const locale: ContentLocale = mode === 'ar' ? 'ar' : 'en';
+  const wide = useWideLayout();
   const t = useTranslations('courses');
   const tCommon = useTranslations('common');
+  const tDifficulty = useTranslations('admin');
   const courseRef = useRef<CourseStudioData | null>(null);
   const pendingRef = useRef<Record<string, unknown> | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,16 +121,17 @@ export function CourseStudio({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [step, setStepState] = useState<StepKey>('basics');
-  const [locale, setLocale] = useState<ContentLocale>('en');
-  const [saveStatus, setSaveStatus] = useState<StudioSaveStatus>('idle');
+  const [saveStatus, setSaveStatus] = useState<SaveState>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [publishReasons, setPublishReasons] = useState<string[]>([]);
   const [publishCheckLoading, setPublishCheckLoading] = useState(false);
   const [publishCheckOk, setPublishCheckOk] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [drawerLesson, setDrawerLesson] = useState<Lesson | null>(null);
+  /** The lesson selected in the outline: docked in the inspector, or open in the drawer. */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<LessonDrawerTab>('details');
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLesson, setPreviewLesson] = useState<Lesson | null>(null);
 
@@ -96,7 +150,6 @@ export function CourseStudio({ slug }: { slug: string }) {
       courseRef.current = data;
       pendingBlockDocsRef.current = {};
       setCourse(data);
-      if (data.locale) setLocale(data.locale);
       setSaveStatus('idle');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t('studio.loadFailed', { default: 'Failed to load course' }));
@@ -111,8 +164,8 @@ export function CourseStudio({ slug }: { slug: string }) {
 
   useEffect(() => {
     const readStep = () => {
-      const value = new URLSearchParams(window.location.search).get('step');
-      if (isStepKey(value)) setStepState(value);
+      const value = readStepKey(new URLSearchParams(window.location.search).get('step'));
+      if (value) setStepState(value);
     };
     readStep();
     window.addEventListener('popstate', readStep);
@@ -184,7 +237,6 @@ export function CourseStudio({ slug }: { slug: string }) {
     setSaveError(null);
     try {
       await api.saveCourse(courseRef.current.slug, patch);
-      setLastSavedAt(Date.now());
       if (version === versionRef.current) {
         setSaveStatus('saved');
       } else {
@@ -214,6 +266,24 @@ export function CourseStudio({ slug }: { slug: string }) {
     timerRef.current = setTimeout(() => void flush(), 700);
   }, [flush]);
 
+  const copyTranslate = useCourseCopyTranslate(course, update, () => courseRef.current);
+
+  /** A section changed outside the outline (a translation pass); saved with the course draft as before. */
+  const updateSectionLocal = useCallback((id: string, patch: Partial<Section> | ((prev: Section) => Partial<Section>)) => {
+    const current = courseRef.current;
+    if (!current) return;
+    const next = {
+      ...current,
+      series: current.series.map((section) => {
+        if (section.id !== id) return section;
+        const resolved = typeof patch === 'function' ? patch(section) : patch;
+        return { ...section, ...resolved };
+      }),
+    };
+    courseRef.current = next;
+    update(next);
+  }, [update]);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) {
@@ -234,7 +304,6 @@ export function CourseStudio({ slug }: { slug: string }) {
     try {
       await api.saveCourse(courseRef.current.slug, scalarPatch(courseRef.current));
       pendingRef.current = null;
-      setLastSavedAt(Date.now());
       setSaveStatus('saved');
       toast({ type: 'ok', title: tCommon('saved', { default: 'Saved' }) });
       return true;
@@ -288,7 +357,7 @@ export function CourseStudio({ slug }: { slug: string }) {
       series: current.series.map((section) => {
         if (section.id !== id) return section;
         if (!translated) return { ...section, title };
-        return { ...section, translations: { ...(section.translations ?? {}), [sectionLocale]: { ...(section.translations?.[sectionLocale] ?? {}), title: title.trim() || undefined } } };
+        return { ...section, translations: { ...(section.translations ?? {}), [sectionLocale]: { ...(section.translations?.[sectionLocale] ?? {}), title: title || undefined } } };
       }),
     };
     courseRef.current = next;
@@ -361,23 +430,23 @@ export function CourseStudio({ slug }: { slug: string }) {
     }
   }, [t]);
 
-  const patchLesson = useCallback(async (patch: Partial<Lesson>) => {
-    const selected = drawerLesson;
-    if (!selected) return;
+  const patchLessonById = useCallback(async (id: string, patch: Partial<Lesson>) => {
     const current = courseRef.current;
-    if (!current) return;
-    const next = { ...current, series: current.series.map((section) => ({ ...section, lessons: section.lessons.map((lesson) => lesson.id === selected.id ? { ...lesson, ...patch } : lesson) })) };
+    if (!current || id.startsWith('tmp-')) return;
+    const next = { ...current, series: current.series.map((section) => ({ ...section, lessons: section.lessons.map((lesson) => lesson.id === id ? { ...lesson, ...patch } : lesson) })) };
     courseRef.current = next;
     setCourse(next);
-    setDrawerLesson((lesson) => lesson ? { ...lesson, ...patch } : lesson);
     try {
-      await api.updateLesson(selected.id, patch);
+      await api.updateLesson(id, patch);
       setSaveStatus('saved');
-      setLastSavedAt(Date.now());
     } catch (saveError) {
       toast({ type: 'err', title: t('studio.saveLessonFailed', { default: 'Save lesson failed' }), description: saveError instanceof Error ? saveError.message : undefined });
     }
-  }, [drawerLesson, t]);
+  }, [t]);
+
+  const patchLesson = useCallback(async (patch: Partial<Lesson>) => {
+    if (selectedId) await patchLessonById(selectedId, patch);
+  }, [patchLessonById, selectedId]);
 
   const updateLessonLocal = useCallback((id: string, patch: Partial<Lesson> | ((prev: Lesson) => Partial<Lesson>)) => {
     const current = courseRef.current;
@@ -395,11 +464,6 @@ export function CourseStudio({ slug }: { slug: string }) {
     };
     courseRef.current = next;
     setCourse(next);
-    setDrawerLesson((lesson) => {
-      if (lesson?.id !== id) return lesson;
-      const resolved = typeof patch === 'function' ? patch(lesson) : patch;
-      return { ...lesson, ...resolved };
-    });
   }, []);
 
   const deleteLesson = useCallback(async (id: string) => {
@@ -446,7 +510,7 @@ export function CourseStudio({ slug }: { slug: string }) {
 
   const moveLessonToSection = useCallback(async (toSectionId: string) => {
     const current = courseRef.current;
-    const selected = drawerLesson;
+    const selected = selectedId ? { id: selectedId } : null;
     if (!current || !selected) return;
     let moving: Lesson | undefined;
     for (const section of current.series) moving = moving ?? section.lessons.find((lesson) => lesson.id === selected.id);
@@ -469,7 +533,7 @@ export function CourseStudio({ slug }: { slug: string }) {
       toast({ type: 'err', title: t('studio.reorderFailed', { default: 'Reorder failed' }), description: reorderError instanceof Error ? reorderError.message : undefined });
       void load();
     }
-  }, [drawerLesson, load, t]);
+  }, [selectedId, load, t]);
 
   const handleReorder = useCallback((sections: Section[]) => {
     const current = courseRef.current;
@@ -486,8 +550,20 @@ export function CourseStudio({ slug }: { slug: string }) {
     });
   }, [load, t]);
 
+  /**
+   * Select a lesson. Beside a wide outline it docks in the inspector; on a
+   * narrower screen, where the aside sits under the form, it opens the drawer.
+   */
   const openLesson = useCallback((lesson: Lesson) => {
-    setDrawerLesson(lesson);
+    setSelectedId(lesson.id);
+    if (!wide) {
+      setDrawerTab('details');
+      setDrawerOpen(true);
+    }
+  }, [wide]);
+
+  const openFullEditor = useCallback((tab: LessonDrawerTab) => {
+    setDrawerTab(tab);
     setDrawerOpen(true);
   }, []);
 
@@ -507,9 +583,10 @@ export function CourseStudio({ slug }: { slug: string }) {
     }
     try {
       const updated = await api.publishCourse(course.slug);
-      const next = { ...course, isPublished: true, isArchived: false, publishedAt: updated.publishedAt };
+      const next = { ...(courseRef.current ?? course), isPublished: true, isArchived: false, publishedAt: updated.publishedAt };
       courseRef.current = next;
       setCourse(next);
+      setReviewOpen(false);
       toast({ type: 'ok', title: t('studio.coursePublished', { default: 'Course published' }) });
     } catch (publishError) {
       await syncPublish();
@@ -521,16 +598,36 @@ export function CourseStudio({ slug }: { slug: string }) {
 
   const unpublish = async () => {
     if (!course) return;
+    setPublishing(true);
     try {
       const updated = await api.unpublishCourse(course.slug);
-      const next = { ...course, isPublished: false, publishedAt: updated.publishedAt ?? null };
+      const next = { ...(courseRef.current ?? course), isPublished: false, publishedAt: updated.publishedAt ?? null };
       courseRef.current = next;
       setCourse(next);
+      setReviewOpen(false);
       toast({ type: 'ok', title: t('studio.courseUnpublished', { default: 'Course unpublished' }) });
     } catch (unpublishError) {
       toast({ type: 'err', title: t('studio.unpublishFailed', { default: 'Unpublish failed' }), description: unpublishError instanceof Error ? unpublishError.message : undefined });
+    } finally {
+      setPublishing(false);
     }
   };
+
+  const draftMissingArabic = async () => {
+    await copyTranslate.basics.run('missing');
+    await copyTranslate.seo.run('missing');
+  };
+
+  const shownSaveState = useSaveState({
+    dirty: saveStatus === 'dirty',
+    saving: saveStatus === 'saving',
+    failed: saveStatus === 'error',
+  });
+  useFormGuard({
+    dirty: saveStatus === 'dirty' || saveStatus === 'error',
+    saving: saveStatus === 'saving',
+    onSave: () => void saveNow(),
+  });
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="size-6 animate-spin text-muted-foreground/70" /></div>;
@@ -547,99 +644,302 @@ export function CourseStudio({ slug }: { slug: string }) {
     );
   }
 
-  const stepContent = [
-    <StepBasics key="basics" course={course} update={update} locale={locale} />,
-    <CurriculumBuilder
-      key="curriculum"
-      sections={course.series}
-      locale={locale}
-      onReorder={handleReorder}
-      onAddSection={() => void addSection(t('studio.newSection', { default: 'New section' }))}
-      onRenameSection={renameSection}
-      onDeleteSection={(id) => void deleteSection(id)}
-      onAddLesson={(id) => void addLesson(id)}
-      onOpenLesson={openLesson}
-      onDeleteLesson={(id) => void deleteLesson(id)}
-      onDuplicateLesson={(id) => void duplicateLesson(id)}
-      onUpdateLesson={updateLessonLocal}
-      onUpdateSection={(id, patch) => {
-        const current = courseRef.current;
-        if (!current) return;
-        const next = {
-          ...current,
-          series: current.series.map((section) => {
-            if (section.id !== id) return section;
-            const resolved = typeof patch === 'function' ? patch(section) : patch;
-            return { ...section, ...resolved };
-          }),
-        };
-        courseRef.current = next;
-        update(next);
-      }}
-    />,
-    <StepMedia key="media" course={course} update={update} />,
-    <StepPricing key="pricing" course={course} update={update} />,
-    <StepLocalization key="localization" course={course} update={update} locale={locale} />,
-    <StepLive key="live" course={course} />,
-    <StepPublish key="publish" course={course} steps={steps} reasons={publishReasons} warnings={warnings} canPublish={canPublish} saving={publishing || publishCheckLoading} onPublish={() => void publish()} onRetryCheck={() => void syncPublish()} onPreviewCourse={() => openStudioPreview(firstLesson)} onToggleAutoIssue={(next) => update({ autoIssueCertificate: next })} />,
+  const ts = t as unknown as (key: string, values?: Record<string, string | number | Date>) => string;
+  const stepOf = (key: string) => steps.find((item) => item.key === key);
+  const isDone = (key: string) => Boolean(stepOf(key)?.done);
+  const lessonTotal = course.series.reduce((count, section) => count + section.lessons.length, 0);
+  const coverage = arabicCoverage(course);
+  const coveragePct = coverage.total ? Math.round((coverage.translated / coverage.total) * 100) : 100;
+  const arabicTitle = course.translations?.ar?.title?.trim();
+  const shownTitle = (locale === 'ar' && arabicTitle) || course.title || t('studio.summary.untitled', { default: 'Untitled course' });
+
+  const railSections: RailSection[] = [
+    { id: 'basics', label: t('studio.rail.basics'), state: isDone('basics') ? 'done' : 'todo' },
+    {
+      id: 'curriculum',
+      label: t('studio.rail.curriculum'),
+      state: isDone('curriculum') ? 'done' : 'todo',
+      meta: `${course.series.length} · ${lessonTotal}`,
+    },
+    { id: 'media', label: t('studio.rail.media'), state: isDone('media') ? 'done' : 'todo' },
+    { id: 'pricing', label: t('studio.rail.pricing'), state: isDone('pricing') ? 'done' : 'todo' },
+    { id: 'live', label: t('studio.rail.live'), state: 'idle' },
+    {
+      id: 'arabic',
+      label: t('studio.rail.arabic'),
+      state: coverage.total > 0 && coverage.translated >= coverage.total ? 'done' : 'idle',
+      meta: `${coveragePct}%`,
+    },
+    { id: 'localization', label: t('studio.rail.localization'), state: isDone('localization') ? 'done' : 'idle' },
+    { id: 'certificate', label: t('studio.rail.certificate'), state: course.autoIssueCertificate ? 'done' : 'idle' },
   ];
 
-  return (
-    <div className="min-h-screen bg-background" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      <StudioHeader
-        courseTitle={course.title}
-        steps={steps}
-        step={step}
-        setStep={(next) => setStep(next as StepKey)}
+  /**
+   * What the server refuses to publish without, plus the advice. The studio's own
+   * required steps come first; the validate endpoint's reasons follow, because the
+   * server is the one that decides. Advisory steps and warnings never block.
+   */
+  const stepChecks: EditorCheck[] = steps
+    .filter((item) => item.key !== 'publish' && item.key !== 'live')
+    .map((item) => ({
+      label: item.done ? stepLabel(item, ts) : stepHint(item, ts) ?? stepLabel(item, ts),
+      ok: item.done,
+      target: item.key,
+      optional: item.advisory,
+    }));
+  // A server reason for a section whose own step check already fails says the same
+  // thing twice ("Upload a thumbnail" from both), so only the step check is shown —
+  // and it becomes required, because the server refuses to publish without it even
+  // where the studio calls the step advisory (search title and description).
+  const reasonSections = new Set(
+    course.isPublished ? [] : publishReasons.map((reason) => reasonToSection(reason)),
+  );
+  for (const step of stepChecks) {
+    if (!step.ok && step.target && reasonSections.has(step.target)) step.optional = false;
+  }
+  const serverChecks: EditorCheck[] = course.isPublished
+    ? []
+    : publishReasons
+        .map((reason) => ({ label: reason, ok: false, target: reasonToSection(reason) }))
+        .filter((check) => !stepChecks.some((step) => !step.ok && step.target === check.target));
+  const warningChecks: EditorCheck[] = warnings.map((warning) => ({ label: warning, ok: false, optional: true }));
+  const checks = [...stepChecks, ...serverChecks];
+  const sheetChecks = [...checks, ...warningChecks];
+  const asideChecks: EditorCheck[] =
+    coverage.total > 0
+      ? [
+          ...checks,
+          {
+            label: tk('publish.arabicCoverage', { translated: coverage.translated, total: coverage.total }),
+            ok: coverage.translated >= coverage.total,
+            target: 'arabic',
+            optional: true,
+          },
+        ]
+      : checks;
+  const requiredChecks = checks.filter((check) => !check.optional);
+  const readyCount = requiredChecks.filter((check) => check.ok).length + (publishCheckOk || course.isPublished ? 1 : 0);
+  const readyTotal = stepChecks.filter((check) => !check.optional).length + 1;
+  const jump = (target: string) => {
+    const key = readStepKey(target);
+    if (key) setStep(key);
+  };
+
+  const subtitle = [
+    course.academy?.title,
+    tDifficulty(difficultyKey(course.difficulty), { default: difficultyFallback(course.difficulty) }),
+    course.estimatedHours ? t('studio.hoursValue', { count: course.estimatedHours }) : null,
+    t('studio.lessonCount', { count: lessonTotal }),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const selectedLesson = selectedId
+    ? course.series.flatMap((section) => section.lessons).find((lesson) => lesson.id === selectedId) ?? null
+    : null;
+  const selectedSectionIndex = selectedLesson ? course.series.findIndex((section) => section.id === selectedLesson.seriesId) : -1;
+  const selectedSection = selectedSectionIndex >= 0 ? course.series[selectedSectionIndex] : undefined;
+  const selectedPosition = selectedSection && selectedLesson
+    ? `${String(selectedSectionIndex + 1).padStart(2, '0')}.${String(selectedSection.lessons.findIndex((lesson) => lesson.id === selectedLesson.id) + 1).padStart(2, '0')}`
+    : '';
+  const showInspector = Boolean(step === 'curriculum' && wide && selectedLesson);
+
+  const stepContent: Record<StepKey, ReactNode> = {
+    basics: <StepBasics course={course} update={update} translate={copyTranslate.basics} />,
+    curriculum: (
+      <CurriculumBuilder
+        sections={course.series}
         locale={locale}
-        onLocaleChange={setLocale}
+        selectedLessonId={showInspector ? selectedId : null}
+        onReorder={handleReorder}
+        onAddSection={() => void addSection(t('studio.newSection', { default: 'New section' }))}
+        onRenameSection={renameSection}
+        onDeleteSection={(id) => void deleteSection(id)}
+        onAddLesson={(id) => void addLesson(id)}
+        onOpenLesson={openLesson}
+        onDeleteLesson={(id) => void deleteLesson(id)}
+        onDuplicateLesson={(id) => void duplicateLesson(id)}
+      />
+    ),
+    media: <StepMedia course={course} update={update} />,
+    pricing: <StepPricing course={course} update={update} />,
+    live: <StepLive course={course} />,
+    arabic: (
+      <StepArabic
+        course={course}
+        basics={copyTranslate.basics}
+        seo={copyTranslate.seo}
+        onUpdateLesson={updateLessonLocal}
+        onUpdateSection={updateSectionLocal}
+      />
+    ),
+    localization: <StepLocalization course={course} update={update} translate={copyTranslate.seo} />,
+    certificate: (
+      <StepPublish
+        course={course}
+        reasons={publishReasons}
+        warnings={warnings}
         canPublish={canPublish}
+        checking={publishCheckLoading}
+        onReview={() => setReviewOpen(true)}
+        onRetryCheck={() => void syncPublish()}
+        onPreviewCourse={() => openStudioPreview(firstLesson)}
+        onToggleAutoIssue={(next) => update({ autoIssueCertificate: next })}
+      />
+    ),
+  };
+
+  const secondaryButton =
+    'inline-flex min-h-10 items-center gap-2 rounded-full border border-border-strong bg-card px-4 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60';
+
+  return (
+    <div className="w-full">
+      <AdminCommandBar
+        trail={[
+          { label: t('studio.breadcrumb', { default: 'Courses' }), href: '/admin/courses' },
+          { label: course.title || t('studio.summary.untitled', { default: 'Untitled course' }) },
+        ]}
+        live={course.isPublished ? t('studio.published', { default: 'Published' }) : false}
+      />
+
+      <EditorHeader
+        status={{
+          tone: course.isArchived ? 'archived' : course.isPublished ? 'live' : 'draft',
+          label: course.isArchived
+            ? t('studio.summary.statusArchived')
+            : course.isPublished
+              ? t('studio.summary.statusPublished')
+              : t('studio.summary.statusDraft'),
+        }}
+        saveLine={<SaveStateLine state={shownSaveState} autosave onRetry={() => void saveNow()} />}
+        title={<span dir="auto">{shownTitle}</span>}
+        subtitle={subtitle}
+        extraActions={
+          <>
+            <button
+              type="button"
+              onClick={() => void saveNow()}
+              disabled={saveStatus === 'saving'}
+              className={secondaryButton}
+            >
+              <Save className="size-4" />
+              {tCommon('save', { default: 'Save' })}
+            </button>
+            <button type="button" onClick={() => openStudioPreview(firstLesson)} className={secondaryButton}>
+              <Eye className="size-4" />
+              {t('studio.previewAsLearner')}
+            </button>
+          </>
+        }
+        onReview={() => setReviewOpen(true)}
+        reviewLabel={course.isPublished ? tk('reviewLive') : tk('reviewAndPublish')}
+      />
+      {saveStatus === 'error' && saveError && (
+        <div
+          role="alert"
+          className="mx-auto mb-4 flex w-full max-w-[90rem] items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-13 text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <span className="min-w-0 flex-1 break-words">{saveError}</span>
+        </div>
+      )}
+
+      <EditorLayout
+        rail={
+          <EditorRail
+            sections={railSections}
+            active={step}
+            onSelect={(id) => jump(id)}
+            readiness={{ done: readyCount, total: readyTotal, note: tk('draftNote') }}
+          />
+        }
+        aside={
+          <>
+            {showInspector && selectedLesson && (
+              <LessonInspector
+                lesson={selectedLesson}
+                position={selectedPosition}
+                sectionTitle={selectedSection?.title ?? ''}
+                onPatch={(id, patch) => void patchLessonById(id, patch)}
+                onOpenFull={openFullEditor}
+                onClose={() => setSelectedId(null)}
+                onDuplicate={() => void duplicateLesson(selectedLesson.id)}
+                onDelete={() => {
+                  setSelectedId(null);
+                  void deleteLesson(selectedLesson.id);
+                }}
+              />
+            )}
+            {/* The inspector takes the card's place, so the sticky column still fits the screen. */}
+            {!showInspector && (
+              <AsideCard eyebrow={t('studio.courseCard')} meta={locale === 'ar' ? 'العربية' : tk('modeEnglish')}>
+                <CourseCardPreview course={course} arabic={locale === 'ar'} />
+              </AsideCard>
+            )}
+            <AsideCard
+              title={tk('beforePublish')}
+              meta={publishCheckLoading ? <Loader2 className="size-3.5 animate-spin" aria-label={t('studio.checkingPublish')} /> : undefined}
+            >
+              <CheckList checks={asideChecks} onJump={jump} />
+            </AsideCard>
+          </>
+        }
+      >
+        <Crossfade value={step} className="flex min-w-0 flex-col gap-5">
+          {stepContent[step]}
+        </Crossfade>
+      </EditorLayout>
+
+      <PublishSheet
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        eyebrow={`${t('studio.breadcrumb', { default: 'Courses' })} · ${course.title}`}
+        title={course.isPublished ? `${tk('publish.unpublish')} · ${course.title}` : course.title}
+        lead={publishCheckLoading ? t('studio.checkingPublish') : undefined}
+        checks={sheetChecks}
+        arabic={{
+          translated: coverage.translated,
+          total: coverage.total,
+          onDraft: () => void draftMissingArabic(),
+          drafting: copyTranslate.basics.busy || copyTranslate.seo.busy,
+        }}
+        arabicPreview={
+          <>
+            <span className="text-lg text-foreground">{arabicTitle || course.title}</span>
+            <span className="text-13 text-muted-foreground">{course.translations?.ar?.subtitle?.trim() || course.subtitle}</span>
+          </>
+        }
         isPublished={course.isPublished}
-        saveStatus={saveStatus}
-        saveError={saveError}
-        publishing={publishing}
-        publishReasons={publishReasons}
-        onBack={() => router.push('/admin/courses')}
-        onSave={() => void saveNow()}
-        onRetrySave={() => void saveNow()}
+        busy={publishing}
+        blocked={!canPublish}
         onPublish={() => void publish()}
         onUnpublish={() => void unpublish()}
-        onPreviewCourse={() => openStudioPreview(firstLesson)}
-        onPreviewLesson={() => {
-          if (!firstLesson) {
-            toast({ type: 'err', title: t('studio.addLessonBeforePreview', { default: 'Add a lesson before previewing' }) });
-            return;
-          }
-          openStudioPreview(firstLesson);
-        }}
+        onJump={jump}
       />
-      <main className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
-          <section className="min-w-0 rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-7 lg:p-8">
-            <Crossfade value={step}>
-              {stepContent[STEP_KEYS.indexOf(step)]}
-            </Crossfade>
-          </section>
-          <aside className="min-w-0 lg:sticky lg:top-44 lg:self-start">
-            <SummaryPanel course={course} steps={steps} saving={saveStatus === 'saving'} lastSavedAt={lastSavedAt} publishReasons={publishReasons} warnings={warnings} onJump={(index) => setStep(STEP_KEYS[index] ?? 'basics')} />
-          </aside>
-        </div>
-      </main>
       <StudioPreview open={previewOpen} course={course} lesson={previewLesson} locale={locale} onClose={() => setPreviewOpen(false)} onSelectLesson={setPreviewLesson} />
       <LessonDrawer
         open={drawerOpen}
-        lesson={drawerLesson}
+        lesson={selectedLesson}
         sections={course.series}
         locale={locale}
+        initialTab={drawerTab}
         onClose={() => setDrawerOpen(false)}
         onSave={patchLesson}
         onMoveSection={(sectionId) => void moveLessonToSection(sectionId)}
-        onDelete={() => { if (drawerLesson) { setDrawerOpen(false); void deleteLesson(drawerLesson.id); } }}
-        onDuplicate={() => { if (drawerLesson) void duplicateLesson(drawerLesson.id); }}
+        onDelete={() => {
+          if (selectedLesson) {
+            setDrawerOpen(false);
+            setSelectedId(null);
+            void deleteLesson(selectedLesson.id);
+          }
+        }}
+        onDuplicate={() => {
+          if (selectedLesson) void duplicateLesson(selectedLesson.id);
+        }}
         onContentBlocksChange={(contentBlocks: LessonContentDocument) => {
-          if (!drawerLesson) return;
-          pendingBlockDocsRef.current[drawerLesson.id] = contentBlocks;
-          updateLessonLocal(drawerLesson.id, { contentBlocks });
+          if (!selectedLesson) return;
+          pendingBlockDocsRef.current[selectedLesson.id] = contentBlocks;
+          updateLessonLocal(selectedLesson.id, { contentBlocks });
         }}
       />
     </div>

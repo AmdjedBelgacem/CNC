@@ -220,8 +220,14 @@ describe('small public controls meet the 24px minimum target size', () => {
     const island = readFileSync(resolve(__dirname, '../../../packages/shared/src/constants/island-style.ts'), 'utf8');
     expect(island).toMatch(/textLink: 'group inline-flex min-h-6/);
   });
-  it('the compact studio language toggle is wide enough and has an accessible name', () => {
-    expect(read('app/(admin)/admin/courses/studio/StudioHeader.tsx')).toMatch(/aria-label=\{item === 'ar' \? 'العربية' : 'English'\} className=\{cn\('relative min-h-6 min-w-7/);
+  it('the studio language toggle is wide enough and has an accessible name', () => {
+    // The Course Studio uses the editor kit's language toggle (inside EditorHeader) instead of its own.
+    const studio = read('app/(admin)/admin/courses/studio/CourseStudio.tsx');
+    expect(studio).toMatch(/<EditorHeader/);
+    expect(studio).not.toMatch(/bilingual=\{false\}/);
+    const kit = read('components/admin/editor/editor-kit.tsx');
+    expect(kit).toMatch(/role="group"\s+aria-label=\{t\('modeLabel'\)\}/);
+    expect(kit).toMatch(/'relative min-h-9 rounded-full px-3\.5/);
   });
 });
 

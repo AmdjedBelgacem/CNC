@@ -2,27 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { BookOpen, Languages, Layers } from 'lucide-react';
-import { COURSE_BASICS_FIELDS, type ContentLocale } from '@titan/shared';
-import {
-  Field,
-  FormSection,
-  TextField,
-  TextAreaField,
-  TextInput,
-  SelectInput,
-} from '@/components/admin/admin-form';
+import { Field, TextField, TextInput, SelectInput } from '@/components/admin/admin-form';
+import { BilingualField, EditorSection } from '@/components/admin/editor/editor-kit';
 import { DIFFICULTY_LEVELS, difficultyKey, difficultyFallback } from '@/lib/difficulty';
-import { AnimatePresence, m } from 'framer-motion';
-import { spring } from '@/lib/motion';
-import { Reveal } from '@/components/ui/motion';
 import { slugify } from './slugify';
 import type { CourseStudioData } from './types';
-import {
-  TranslateAction,
-  TranslationCoveragePanel,
-  useTranslateDraft,
-} from '@/components/admin/translation';
+import type { CopyTranslate } from './useCourseTranslate';
 
 interface AcademyOption {
   id: string;
@@ -30,74 +15,29 @@ interface AcademyOption {
   title: string;
 }
 
-function translationValue(
-  course: CourseStudioData,
-  locale: ContentLocale,
-  field: 'title' | 'subtitle' | 'description',
-) {
-  if (locale === 'en') return course[field] ?? '';
-  return course.translations?.[locale]?.[field] ?? '';
-}
+type CopyField = 'title' | 'subtitle' | 'description';
 
 /**
- * Seed the Arabic copy from the English columns.
+ * The course's name, summary and placement.
  *
- * Only offered on the English tab, because English is the source: the English values live at the
- * top level of the draft and the Arabic ones under `translations.ar`.
+ * English and Arabic sit side by side: English is written to the course columns,
+ * Arabic to `translations.ar`, exactly as the old one-language-at-a-time tabs did.
+ * Any Arabic field left empty falls back to English for visitors.
  */
-function applyArabicTranslation(course: CourseStudioData, translations: Record<string, string>) {
-  const current = course.translations?.ar ?? {};
-  // `?? current.x` rather than `?? english`: a field the model skipped keeps the Arabic an editor
-  // already reviewed instead of being reset to English.
-  const pick = (label: string, existing: string | null | undefined) =>
-    translations[label] ?? existing ?? '';
-  return {
-    translations: {
-      ...(course.translations ?? {}),
-      ar: {
-        ...current,
-        title: pick('Title', current.title),
-        subtitle: pick('Subtitle', current.subtitle),
-        description: pick('Description', current.description),
-      },
-    },
-  };
-}
-
 export function StepBasics({
   course,
   update,
-  locale,
+  translate,
 }: {
   course: CourseStudioData;
   update: (patch: Partial<CourseStudioData>) => void;
-  locale: ContentLocale;
+  translate: CopyTranslate;
 }) {
   const [academies, setAcademies] = useState<AcademyOption[] | null>(null);
-  const tTranslate = useTranslations('admin.translate');
-  const { busy, run, coverageFor } = useTranslateDraft({
-    entity: 'course copy',
-    descriptors: COURSE_BASICS_FIELDS,
-    groups: [
-      {
-        key: 'course',
-        fields: {
-          Title: course.title ?? '',
-          Subtitle: course.subtitle ?? '',
-          Description: course.description ?? '',
-        },
-      },
-    ],
-    onApply: (_key, translations) => update(applyArabicTranslation(course, translations)),
-    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
-  });
-  const basicsCoverage = coverageFor(course, course.translations?.ar);
   const t = useTranslations('courses');
   const tDifficulty = useTranslations('admin');
   const slug = course.slug || slugify(course.title || '');
-  const title = translationValue(course, locale, 'title');
-  const subtitle = translationValue(course, locale, 'subtitle');
-  const description = translationValue(course, locale, 'description');
+  const ar = course.translations?.ar ?? {};
 
   useEffect(() => {
     let cancelled = false;
@@ -118,201 +58,151 @@ export function StepBasics({
     };
   }, []);
 
-  const updateLocalized = (field: 'title' | 'subtitle' | 'description', value: string) => {
-    if (locale === 'en') {
-      update({ [field]: field === 'title' ? value : value || null });
-      return;
-    }
-    const current = course.translations?.[locale] ?? {};
+  const setEnglish = (field: CopyField, value: string) => {
+    update({ [field]: field === 'title' ? value : value || null });
+  };
+
+  const setArabic = (field: CopyField, value: string) => {
+    const current = course.translations?.ar ?? {};
     update({
       translations: {
         ...(course.translations ?? {}),
-        [locale]: {
+        ar: {
           ...current,
-          [field]: field === 'title' ? value.trim() || undefined : value || null,
+          // Not trimmed while typing: trimming here ate the space between words.
+          [field]: field === 'title' ? value || undefined : value || null,
         },
       },
     });
   };
 
+  const draft = () => void translate.run('missing');
+
   return (
-    <div className="space-y-6" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      <Reveal className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Languages className="size-4" />
-          </span>
-          <div>
-            <p className="text-13 font-medium text-foreground">
-              {t('studio.editingLanguage', { default: 'Editing language' })}
-            </p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              {locale === 'ar'
-                ? t('studio.arabicSourceHint', {
-                    default:
-                      'English is the source content. Any Arabic field left blank falls back to English.',
-                  })
-                : t('studio.englishSourceHint', {
-                    default:
-                      'English is the source content. Arabic fields can fall back to English until translated.',
-                  })}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-col items-start gap-2 self-start sm:self-auto sm:items-end">
-          <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border/80 bg-card px-3 py-1 text-xs font-medium text-foreground shadow-xs">
-            <Languages className="size-3.5 text-primary" />
-            {locale === 'ar' ? 'العربية' : 'English'}
-          </span>
-          {/* Always visible on the English tab so it can be found before any field is filled;
-              it disables itself when there is nothing to translate. */}
-          {locale === 'en' && basicsCoverage ? (
-            <div className="w-full space-y-2 sm:w-72">
-              <TranslateAction
-                coverage={basicsCoverage}
-                busy={busy}
-                onTranslate={(scope) => void run(scope)}
-              />
-              <TranslationCoveragePanel coverage={basicsCoverage} />
-            </div>
-          ) : null}
-        </div>
-      </Reveal>
-
-      <FormSection
+    <>
+      <EditorSection
+        id="basics"
         title={t('studio.basicsSection', { default: 'Identity' })}
-        icon={BookOpen}
-        description={t('studio.basicsSectionDesc', {
-          default: 'The name and summary learners see first.',
-        })}
+        hint={t('studio.basicsSectionDesc', { default: 'The name and summary learners see first.' })}
       >
-        <div className="space-y-4">
-          <TextField
-            label={t('studio.live.titleLabel', { default: 'Title' })}
-            required
-            dir="auto"
-            value={title}
-            onChange={(event) => updateLocalized('title', event.target.value)}
-            placeholder={t('studio.titlePlaceholder', { default: 'e.g. CNC Milling Fundamentals' })}
-          />
-          <Field
-            label={t('studio.slug', { default: 'Slug' })}
-            hint={t('studio.slugHint', { default: 'The public address of this course.' })}
-          >
-            {(field) => (
-              <TextInput
-                {...field}
-                dir="ltr"
-                readOnly
-                value={slug || t('studio.autoGenerated', { default: 'auto-generated' })}
-                className="font-mono"
-              />
-            )}
-          </Field>
-          <TextField
-            label={t('studio.subtitleLabel', { default: 'Subtitle' })}
-            dir="auto"
-            value={subtitle}
-            onChange={(event) => updateLocalized('subtitle', event.target.value)}
-            placeholder={t('studio.subtitlePlaceholder', {
-              default: 'Short marketing line shown under the title',
-            })}
-          />
-          <TextAreaField
-            label={t('studio.description', { default: 'Description' })}
-            dir="auto"
-            rows={5}
-            value={description}
-            onChange={(event) => updateLocalized('description', event.target.value)}
-            placeholder={t('studio.descriptionPlaceholder', {
-              default: 'What will learners walk away with?',
-            })}
-          />
-        </div>
-      </FormSection>
-
-      <AnimatePresence initial={false}>
-      {locale === 'ar' && !course.translations?.ar?.title && (
-        <m.p key="ar-title-empty" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={spring.smooth} role="status" className="rounded-lg border border-warning/25 bg-warning/5 px-4 py-3 text-xs leading-relaxed text-warning">
-          {t('studio.arabicTitleEmpty', {
-            default:
-              'Arabic title is empty; learners will see the English title until you add a translation.',
+        <BilingualField
+          id="course-title"
+          label={t('studio.live.titleLabel', { default: 'Title' })}
+          required
+          en={{
+            value: course.title ?? '',
+            onChange: (value) => setEnglish('title', value),
+            placeholder: t('studio.titlePlaceholder', { default: 'e.g. CNC Milling Fundamentals' }),
+          }}
+          ar={{ value: ar.title ?? '', onChange: (value) => setArabic('title', value) }}
+          onDraftArabic={draft}
+          drafting={translate.busy}
+        />
+        <Field
+          label={t('studio.slug', { default: 'Slug' })}
+          hint={t('studio.slugHint', { default: 'The public address of this course.' })}
+        >
+          {(field) => (
+            <TextInput
+              {...field}
+              dir="ltr"
+              readOnly
+              value={slug || t('studio.autoGenerated', { default: 'auto-generated' })}
+              className="min-h-11 font-mono"
+            />
+          )}
+        </Field>
+        <BilingualField
+          id="course-subtitle"
+          label={t('studio.subtitleLabel', { default: 'Subtitle' })}
+          en={{
+            value: course.subtitle ?? '',
+            onChange: (value) => setEnglish('subtitle', value),
+            placeholder: t('studio.subtitlePlaceholder', { default: 'Short marketing line shown under the title' }),
+          }}
+          ar={{ value: ar.subtitle ?? '', onChange: (value) => setArabic('subtitle', value) }}
+          onDraftArabic={draft}
+          drafting={translate.busy}
+        />
+        <BilingualField
+          id="course-description"
+          label={t('studio.description', { default: 'Description' })}
+          multiline
+          rows={5}
+          en={{
+            value: course.description ?? '',
+            onChange: (value) => setEnglish('description', value),
+            placeholder: t('studio.descriptionPlaceholder', { default: 'What will learners walk away with?' }),
+          }}
+          ar={{ value: ar.description ?? '', onChange: (value) => setArabic('description', value) }}
+          onDraftArabic={draft}
+          drafting={translate.busy}
+          hint={t('studio.arabicSourceHint', {
+            default: 'English is the source content. Any Arabic field left blank falls back to English.',
           })}
-        </m.p>
-      )}
-      </AnimatePresence>
+        />
+      </EditorSection>
 
-      <FormSection
+      <EditorSection
+        id="placement"
         title={t('studio.placementSection', { default: 'Placement & level' })}
-        icon={Layers}
-        description={t('studio.placementSectionDesc', {
-          default: 'Where this course appears and how hard it is.',
-        })}
+        hint={t('studio.placementSectionDesc', { default: 'Where this course appears and how hard it is.' })}
       >
-        <div className="space-y-4">
+        <Field
+          label={t('academyLabel', { default: 'Academy' })}
+          hint={t('studio.academyHint', {
+            default: 'Published courses appear in the academy catalog once assigned.',
+          })}
+        >
+          {(field) => (
+            <SelectInput
+              {...field}
+              disabled={academies === null}
+              value={course.academyId ?? ''}
+              className="min-h-11"
+              onChange={(event) => update({ academyId: event.target.value || null, academy: null })}
+            >
+              <option value="">{t('studio.noAcademy', { default: 'No academy — tenant course library only' })}</option>
+              {(academies ?? []).map((academy) => (
+                <option key={academy.id} value={academy.id}>
+                  {academy.title}
+                </option>
+              ))}
+            </SelectInput>
+          )}
+        </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
-            label={t('academyLabel', { default: 'Academy' })}
-            hint={t('studio.academyHint', {
-              default: 'Published courses appear in the academy catalog once assigned.',
-            })}
+            label={t('studio.difficulty', { default: 'Difficulty' })}
+            hint={t('studio.difficultyHint', { default: 'Shown on the course card and catalog.' })}
           >
             {(field) => (
               <SelectInput
                 {...field}
-                disabled={academies === null}
-                value={course.academyId ?? ''}
-                onChange={(event) =>
-                  update({ academyId: event.target.value || null, academy: null })
-                }
+                className="min-h-11"
+                value={String(course.difficulty)}
+                onChange={(event) => update({ difficulty: Number(event.target.value) })}
               >
-                <option value="">
-                  {t('studio.noAcademy', { default: 'No academy — tenant course library only' })}
-                </option>
-                {(academies ?? []).map((academy) => (
-                  <option key={academy.id} value={academy.id}>
-                    {academy.title}
+                {DIFFICULTY_LEVELS.map((difficulty) => (
+                  <option key={difficulty} value={difficulty}>
+                    {difficulty} — {tDifficulty(difficultyKey(difficulty), { default: difficultyFallback(difficulty) })}
                   </option>
                 ))}
               </SelectInput>
             )}
           </Field>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field
-              label={t('studio.difficulty', { default: 'Difficulty' })}
-              hint={t('studio.difficultyHint', {
-                default: 'Shown on the course card and catalog.',
-              })}
-            >
-              {(field) => (
-                <SelectInput
-                  {...field}
-                  value={String(course.difficulty)}
-                  onChange={(event) => update({ difficulty: Number(event.target.value) })}
-                >
-                  {DIFFICULTY_LEVELS.map((difficulty) => (
-                    <option key={difficulty} value={difficulty}>
-                      {difficulty} —{' '}
-                      {tDifficulty(difficultyKey(difficulty), {
-                        default: difficultyFallback(difficulty),
-                      })}
-                    </option>
-                  ))}
-                </SelectInput>
-              )}
-            </Field>
-            <TextField
-              label={t('studio.estimatedHours', { default: 'Estimated hours' })}
-              type="number"
-              min={0}
-              value={course.estimatedHours ?? ''}
-              onChange={(event) =>
-                update({ estimatedHours: event.target.value ? Number(event.target.value) : null })
-              }
-              placeholder={t('studio.hoursPlaceholder', { default: 'e.g. 12' })}
-            />
-          </div>
+          <TextField
+            label={t('studio.estimatedHours', { default: 'Estimated hours' })}
+            type="number"
+            min={0}
+            inputMode="decimal"
+            className="min-h-11"
+            value={course.estimatedHours ?? ''}
+            onChange={(event) => update({ estimatedHours: event.target.value ? Number(event.target.value) : null })}
+            placeholder={t('studio.hoursPlaceholder', { default: 'e.g. 12' })}
+          />
         </div>
-      </FormSection>
-    </div>
+      </EditorSection>
+    </>
   );
 }

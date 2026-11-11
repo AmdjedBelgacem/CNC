@@ -96,7 +96,10 @@ export function LessonDrawer({
   onDelete,
   onDuplicate,
   onContentBlocksChange,
+  initialTab = 'details',
 }: {
+  /** The tab to open on, e.g. Content when coming from the inspector's "Open full editor". */
+  initialTab?: 'details' | 'media' | 'content' | 'files';
   open: boolean;
   lesson: Lesson | null;
   sections: Section[];
@@ -160,7 +163,7 @@ export function LessonDrawer({
     setSectionId(lesson.seriesId);
     setUploading({});
     setAttempted(false);
-    setTab('details');
+    setTab(initialTab);
     setBase(
       snapshot({
         title: locale === 'en' ? lesson.title : translation.title ?? '',
@@ -172,7 +175,7 @@ export function LessonDrawer({
         attachments: lesson.attachments ?? [],
       }),
     );
-  }, [open, lesson?.id, locale, resetKey]);
+  }, [open, lesson?.id, locale, resetKey, initialTab]);
 
   const dirty =
     base !== null &&

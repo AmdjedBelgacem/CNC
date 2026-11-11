@@ -22,7 +22,8 @@ import {
   isCurrencyCode,
   type CurrencyCode,
 } from '@titan/shared';
-import { Field, FormSection, TextField, SelectInput } from '@/components/admin/admin-form';
+import { Field, TextField, SelectInput } from '@/components/admin/admin-form';
+import { StudioSection } from './StudioSection';
 import { StatusPill } from '@/components/admin/admin-ui';
 import { cn } from '@/lib/utils';
 import type { AccessMode, CourseStudioData } from './types';
@@ -102,7 +103,7 @@ export function StepPricing({
 
   return (
     <div className="space-y-6">
-      <FormSection
+      <StudioSection
         title={t('accessMode', { default: 'Access mode' })}
         icon={Globe}
         description={t('accessModeDesc', {
@@ -148,7 +149,7 @@ export function StepPricing({
             );
           })}
         </div>
-      </FormSection>
+      </StudioSection>
 
       <AnimatePresence initial={false} mode="popLayout">
       {course.accessMode === 'invite' && (
@@ -162,7 +163,7 @@ export function StepPricing({
 
       {course.accessMode === 'paid' && (
         <m.div key="paid" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }} transition={spring.smooth} className="space-y-6">
-          <FormSection
+          <StudioSection
             title={t('priceSection', { default: 'Price' })}
             icon={Wallet}
             description={t('priceSectionDesc', {
@@ -216,7 +217,7 @@ export function StepPricing({
                 )}
               </Field>
             </div>
-          </FormSection>
+          </StudioSection>
 
           {/* Conversion panel: SAR is the workspace's focus currency, so the
               editor needs to see what the chosen price is worth in it. */}

@@ -615,6 +615,12 @@ export function AnimatedNumber({
     if (!node || !inViewNow || reduce) return;
     if (played.current && !animateOnChange) return;
     played.current = true;
+    // A hidden tab gets no animation frames, so a count-up started there stalls on
+    // its first frame ("0") and never reaches the real value.
+    if (document.visibilityState !== 'visible') {
+      node.textContent = formatRef.current(value);
+      return;
+    }
     const controls = animate(0, value, {
       duration: durationSeconds,
       ease: ease.emerge,
@@ -622,7 +628,11 @@ export function AnimatedNumber({
         node.textContent = formatRef.current(v);
       },
     });
-    return () => controls.stop();
+    return () => {
+      controls.stop();
+      // An interrupted count-up must not leave a partial number on screen.
+      node.textContent = formatRef.current(value);
+    };
   }, [inViewNow, value, durationSeconds, animateOnChange, reduce]);
 
   return (

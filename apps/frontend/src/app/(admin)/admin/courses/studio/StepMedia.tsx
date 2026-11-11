@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, X, Paperclip, Upload, Loader2, Image as ImageIcon, Video } from 'lucide-react';
 import { AnimatePresence, m } from 'framer-motion';
-import { FormSection } from '@/components/admin/admin-form';
+import { StudioSection } from './StudioSection';
 import { spring } from '@/lib/motion';
 import type { CourseStudioData } from './types';
 import { toast } from '@/components/ui/toast';
@@ -117,7 +117,7 @@ export function StepMedia({
   return (
     <div className="space-y-6">
       {' '}
-      <FormSection
+      <StudioSection
         title={t('thumbnail', { default: 'Thumbnail' })}
         icon={ImageIcon}
         description={t('thumbnailDesc', { default: 'The cover image used on cards, the catalog and social shares. A 16:9 cover is recommended.' })}
@@ -125,6 +125,9 @@ export function StepMedia({
       <div className="space-y-1.5">
         {' '}
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); thumbInputRef.current?.click(); } }}
           onClick={() => thumbInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault();
@@ -178,7 +181,7 @@ export function StepMedia({
             <button
               type="button"
               onClick={() => { setThumbPreview(null); update({ thumbnailUrl: null }); }}
-              className="rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+              className="inline-flex min-h-10 items-center rounded-md px-3 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
             >
               {' '}
               {t('remove', { default: 'Remove' })}{' '}
@@ -187,9 +190,9 @@ export function StepMedia({
         ) : null}
         </AnimatePresence>
       </div>{' '}
-      </FormSection>{' '}
+      </StudioSection>{' '}
 
-      <FormSection
+      <StudioSection
         title={t('trailerVideo', { default: 'Trailer video' })}
         icon={Video}
         description={t('trailerDesc', { default: 'A short promo shown on the course page. Optional, but it lifts conversion.' })}
@@ -197,6 +200,9 @@ export function StepMedia({
       <div className="space-y-1.5">
         {' '}
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trailerInputRef.current?.click(); } }}
           onClick={() => trailerInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault();
@@ -249,7 +255,7 @@ export function StepMedia({
             <button
               type="button"
               onClick={() => { setTrailerPreview(null); update({ trailerUrl: null }); }}
-              className="shrink-0 rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+              className="shrink-0 inline-flex min-h-10 items-center rounded-md px-3 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
             >
               {' '}
               {t('remove', { default: 'Remove' })}{' '}
@@ -258,9 +264,9 @@ export function StepMedia({
         ) : null}
         </AnimatePresence>
       </div>{' '}
-      </FormSection>{' '}
+      </StudioSection>{' '}
 
-      <FormSection
+      <StudioSection
         title={t('courseResources', { default: 'Course resources' })}
         icon={Paperclip}
         description={t('resourcesDesc', { default: 'Downloadable files offered alongside the lessons.' })}
@@ -269,7 +275,7 @@ export function StepMedia({
           <button
             type="button"
             onClick={addResource}
-            className="flex items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.97]"
+            className="flex min-h-10 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 text-xs font-medium text-foreground shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.97]"
           >
             {' '}
             <Plus className="size-4" /> {t('addResource', { default: 'Add resource' })}{' '}
@@ -301,10 +307,11 @@ export function StepMedia({
               <input
                 value={r.name}
                 onChange={(e) => patchResource(r.id, { name: e.target.value })}
+                aria-label={t('label', { default: 'Label' })}
                 placeholder={t('label', { default: 'Label' })}
-                className="w-40 rounded-lg border border-border/80 bg-transparent px-3 py-1.5 font-sans text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+                className="min-h-10 w-32 min-w-0 rounded-lg border border-border/80 sm:w-40 bg-transparent px-3 py-1.5 font-sans text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
               />{' '}
-              <label className="flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center font-sans text-xs font-medium text-muted-foreground transition hover:border-border-strong hover:text-foreground">
+              <label className="flex min-h-10 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center font-sans text-xs font-medium text-muted-foreground transition hover:border-border-strong hover:text-foreground">
                 {resourceUploading === r.id ? t('uploading', { default: 'Uploading…' }) : r.url ? t('replaceUploadedFile', { default: 'Replace uploaded file' }) : t('chooseFileToUpload', { default: 'Choose file to upload' })}
                 <input
                   type="file"
@@ -320,7 +327,7 @@ export function StepMedia({
                 type="button"
                 onClick={() => removeResource(r.id)}
                 aria-label={t('removeResource', { default: 'Remove resource' })}
-                className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
               >
                 {' '}
                 <X className="size-4" />{' '}
@@ -330,7 +337,7 @@ export function StepMedia({
           </AnimatePresence>
         </div>{' '}
       </div>{' '}
-      </FormSection>{' '}
+      </StudioSection>{' '}
     </div>
   );
 }

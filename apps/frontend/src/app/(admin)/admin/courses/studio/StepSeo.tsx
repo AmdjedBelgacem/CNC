@@ -2,100 +2,52 @@
 
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, Languages, Link2, Loader2, Search, Share2, Upload } from 'lucide-react';
-import { COURSE_SEO_FIELDS, type ContentLocale } from '@titan/shared';
+import { Link2, Loader2, Upload } from 'lucide-react';
 import { AnimatePresence, m } from 'framer-motion';
-import { FormSection, TextField, TextAreaField } from '@/components/admin/admin-form';
+import { BilingualField, EditorSection } from '@/components/admin/editor/editor-kit';
 import { spring } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 import type { CourseStudioData } from './types';
 import { toast } from '@/components/ui/toast';
-import {
-  TranslateAction,
-  TranslationCoveragePanel,
-  useTranslateDraft,
-} from '@/components/admin/translation';
 import { uploadFileToStorage } from '@/lib/upload';
+import type { CopyTranslate } from './useCourseTranslate';
 
-function valueFor(
-  course: CourseStudioData,
-  locale: ContentLocale,
-  field: 'seoTitle' | 'seoDescription' | 'seoKeywords',
-) {
-  if (locale === 'en') return course[field] ?? '';
-  return course.translations?.[locale]?.[field] ?? '';
-}
+type SeoField = 'seoTitle' | 'seoDescription' | 'seoKeywords';
 
+/**
+ * Search and sharing: how the course reads in search results and link previews.
+ *
+ * Every field is an optional override that falls back to the course title and
+ * description. English writes the course columns, Arabic `translations.ar`.
+ */
 export function StepLocalization({
   course,
   update,
-  locale,
+  translate,
 }: {
   course: CourseStudioData;
   update: (patch: Partial<CourseStudioData>) => void;
-  locale: ContentLocale;
+  translate: CopyTranslate;
 }) {
   const [ogUploading, setOgUploading] = useState(false);
   const [ogDrag, setOgDrag] = useState(false);
   const t = useTranslations('courses');
   const tMedia = useTranslations('media');
   const inputRef = useRef<HTMLInputElement>(null);
-  const seoTitle = valueFor(course, locale, 'seoTitle');
-  const seoDescription = valueFor(course, locale, 'seoDescription');
-  const seoKeywords = valueFor(course, locale, 'seoKeywords');
+  const ar = course.translations?.ar ?? {};
+  const seoDescription = course.seoDescription ?? '';
 
-  /**
-   * Seed the Arabic SEO fields from the English ones with the configured AI provider.
-   *
-   * Only available while the English tab is showing, because the source is the English column —
-   * the English values live at the top level and the Arabic ones under `translations.ar`.
-   */
-  const tTranslate = useTranslations('admin.translate');
-  const { busy, run, coverageFor } = useTranslateDraft({
-    entity: 'course SEO metadata',
-    descriptors: COURSE_SEO_FIELDS,
-    groups: [
-      {
-        key: 'seo',
-        fields: {
-          'SEO title': course.seoTitle ?? '',
-          'SEO description': course.seoDescription ?? '',
-          'SEO keywords': course.seoKeywords ?? '',
-        },
-      },
-    ],
-    onApply: (_key, translations) => translateToArabic(translations),
-    confirmOverwrite: () => window.confirm(tTranslate('overwriteConfirm')),
-  });
-  const seoCoverage = coverageFor(course, course.translations?.ar);
-
-  const translateToArabic = (translations: Record<string, string>) => {
+  const setEnglish = (field: SeoField, value: string) => update({ [field]: value || null });
+  const setArabic = (field: SeoField, value: string) => {
     const current = course.translations?.ar ?? {};
     update({
       translations: {
         ...(course.translations ?? {}),
-        ar: {
-          ...current,
-          seoTitle: translations['SEO title'] ?? current.seoTitle ?? null,
-          seoDescription: translations['SEO description'] ?? current.seoDescription ?? null,
-          seoKeywords: translations['SEO keywords'] ?? current.seoKeywords ?? null,
-        },
+        ar: { ...current, [field]: value || null },
       },
     });
   };
-
-  const updateLocalized = (field: 'seoTitle' | 'seoDescription' | 'seoKeywords', value: string) => {
-    if (locale === 'en') {
-      update({ [field]: value || null });
-      return;
-    }
-    const current = course.translations?.[locale] ?? {};
-    update({
-      translations: {
-        ...(course.translations ?? {}),
-        [locale]: { ...current, [field]: value || null },
-      },
-    });
-  };
+  const draft = () => void translate.run('missing');
 
   const handleOgFile = async (file?: File | null) => {
     if (!file) return;
@@ -116,10 +68,7 @@ export function StepLocalization({
       toast({
         type: 'err',
         title: tMedia('uploadFailed', { default: 'Upload failed' }),
-        description:
-          error instanceof Error
-            ? error.message
-            : tMedia('tryAgain', { default: 'Please try again.' }),
+        description: error instanceof Error ? error.message : tMedia('tryAgain', { default: 'Please try again.' }),
       });
     } finally {
       setOgUploading(false);
@@ -127,137 +76,88 @@ export function StepLocalization({
   };
 
   return (
-    <div className="space-y-6" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="rounded-xl border border-border/70 bg-muted/30 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-display text-base font-medium tracking-[-0.01em] text-foreground">
-              {t('studio.languageAvailability', { default: 'Language availability' })}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t('studio.localeFieldsHint', {
-                default: 'Public responses include the resolved locale and any fallback fields.',
-              })}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(['en', 'ar'] as ContentLocale[]).map((item) => {
-              const available =
-                item === 'en' ||
-                Boolean(
-                  course.translations?.[item] &&
-                  Object.keys(course.translations[item] ?? {}).length,
-                );
-              const active = item === locale;
-              return (
-                <span
-                  key={item}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${active ? 'border-primary/40 bg-primary/10 text-primary' : available ? 'border-success/25 bg-success/10 text-success' : 'border-border/80 bg-card text-muted-foreground'}`}
-                >
-                  {available && <Check className="size-3.5" />}
-                  {item === 'ar' ? 'العربية' : 'English'}
-                  {!available && t('studio.fallbackSuffix', { default: ' · fallback' })}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-        {locale === 'en' ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/70 pt-4">
-            {seoCoverage && (
-              <TranslateAction
-                coverage={seoCoverage}
-                busy={busy}
-                onTranslate={(scope) => void run(scope)}
-              />
-            )}
-            {seoCoverage && <TranslationCoveragePanel coverage={seoCoverage} className="w-full" />}
-            <span className="text-xs text-muted-foreground">
-              {t('studio.translateHint', {
-                default: 'Seeds the Arabic tab from English. Review before saving.',
-              })}
-            </span>
-          </div>
-        ) : null}
-
-        <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground">
-          <Languages className="size-4 text-primary" />
-          {locale === 'ar'
-            ? t('studio.arabicFieldsNote', {
-                default:
-                  'Arabic fields are saved as translations; empty fields fall back to English.',
-              })
-            : t('studio.englishFieldsNote', {
-                default: 'English is the source language. Use the header toggle to edit Arabic.',
-              })}
-        </div>
-      </div>
-
-      <FormSection
+    <>
+      <EditorSection
+        id="localization"
         title={t('studio.searchSection', { default: 'Search appearance' })}
-        icon={Search}
-        description={t('studio.searchSectionDesc', {
-          default:
-            'Optional overrides. Anything left blank falls back to the course title and description.',
-        })}
+        hint={t('studio.optional', { default: 'Optional' })}
       >
-        <div className="space-y-4">
-          <TextField
-            label={t('studio.seoTitle', { default: 'SEO title' })}
-            dir="auto"
-            value={seoTitle}
-            onChange={(event) => updateLocalized('seoTitle', event.target.value)}
-            placeholder={t('studio.seoTitlePlaceholder', {
-              default: 'Appears in search results and browser tabs',
-            })}
-          />
-          <TextAreaField
-            label={t('studio.seoDescription', { default: 'SEO description' })}
-            dir="auto"
-            rows={3}
-            value={seoDescription}
-            onChange={(event) => updateLocalized('seoDescription', event.target.value)}
-            placeholder={t('studio.seoDescriptionPlaceholder', {
-              default: 'A concise summary for search engines',
-            })}
-            error={
-              seoDescription.length > 160
-                ? t('studio.seoTooLong', {
-                    count: seoDescription.length - 160,
-                    default:
-                      '{count} characters over the 160-character limit. Search engines will truncate it.',
-                  })
-                : undefined
-            }
-            hint={t('studio.seoDescHint', {
-              count: seoDescription.length,
-              default: '{count} of 160 characters used.',
-            })}
-          />
-          <TextField
-            label={t('studio.keywords', { default: 'Keywords' })}
-            dir="auto"
-            value={seoKeywords}
-            onChange={(event) => updateLocalized('seoKeywords', event.target.value)}
-            placeholder={t('studio.keywordsPlaceholder', {
-              default: 'cnc, machining, manufacturing',
-            })}
-          />
-        </div>
-      </FormSection>
+        <p className="-mt-3 text-13 leading-relaxed text-muted-foreground">
+          {t('studio.searchSectionDesc', {
+            default: 'Optional overrides. Anything left blank falls back to the course title and description.',
+          })}
+        </p>
+        <BilingualField
+          id="course-seo-title"
+          label={t('studio.seoTitle', { default: 'SEO title' })}
+          en={{
+            value: course.seoTitle ?? '',
+            onChange: (value) => setEnglish('seoTitle', value),
+            placeholder: t('studio.seoTitlePlaceholder', { default: 'Appears in search results and browser tabs' }),
+          }}
+          ar={{ value: ar.seoTitle ?? '', onChange: (value) => setArabic('seoTitle', value) }}
+          onDraftArabic={draft}
+          drafting={translate.busy}
+        />
+        <BilingualField
+          id="course-seo-description"
+          label={t('studio.seoDescription', { default: 'SEO description' })}
+          multiline
+          rows={3}
+          en={{
+            value: seoDescription,
+            onChange: (value) => setEnglish('seoDescription', value),
+            placeholder: t('studio.seoDescriptionPlaceholder', { default: 'A concise summary for search engines' }),
+          }}
+          ar={{ value: ar.seoDescription ?? '', onChange: (value) => setArabic('seoDescription', value) }}
+          onDraftArabic={draft}
+          drafting={translate.busy}
+          error={
+            seoDescription.length > 160
+              ? t('studio.seoTooLong', {
+                  count: seoDescription.length - 160,
+                  default: '{count} characters over the 160-character limit. Search engines will truncate it.',
+                })
+              : undefined
+          }
+          hint={t('studio.seoDescHint', { count: seoDescription.length, default: '{count} of 160 characters used.' })}
+        />
+        <BilingualField
+          id="course-seo-keywords"
+          label={t('studio.keywords', { default: 'Keywords' })}
+          en={{
+            value: course.seoKeywords ?? '',
+            onChange: (value) => setEnglish('seoKeywords', value),
+            placeholder: t('studio.keywordsPlaceholder', { default: 'cnc, machining, manufacturing' }),
+          }}
+          ar={{ value: ar.seoKeywords ?? '', onChange: (value) => setArabic('seoKeywords', value) }}
+          onDraftArabic={draft}
+          drafting={translate.busy}
+        />
+        <p className="flex min-w-0 flex-wrap items-center gap-2 text-13 text-muted-foreground">
+          <Link2 className="size-4 shrink-0 text-primary" aria-hidden />
+          {t('studio.finalUrl', { default: 'Final URL' })}
+          <bdi dir="ltr" className="min-w-0 break-all font-mono text-foreground">
+            /courses/{course.slug || 'slug'}
+          </bdi>
+        </p>
+      </EditorSection>
 
-      <FormSection
+      <EditorSection
+        id="social"
         title={t('studio.socialSection', { default: 'Social preview' })}
-        icon={Share2}
-        description={t('studio.socialSectionDesc', {
-          default: 'Shown when the course link is pasted into social apps and chat.',
-        })}
+        hint={t('studio.optional', { default: 'Optional' })}
       >
+        <p className="-mt-3 text-13 leading-relaxed text-muted-foreground">
+          {t('studio.socialSectionDesc', { default: 'Shown when the course link is pasted into social apps and chat.' })}
+        </p>
         <div className="space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">
+          <span id="studio-og-label" className="text-13 font-medium text-foreground">
             {t('studio.ogImage', { default: 'Social preview image (OG)' })}
           </span>
-          <div
+          <button
+            type="button"
+            aria-describedby="studio-og-label"
             onClick={() => inputRef.current?.click()}
             onDragOver={(event) => {
               event.preventDefault();
@@ -269,19 +169,22 @@ export function StepLocalization({
               setOgDrag(false);
               void handleOgFile(event.dataTransfer.files?.[0]);
             }}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center text-xs transition-colors ${ogDrag ? 'border-primary/60 bg-primary/5' : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40'}`}
+            className={cn(
+              'flex min-h-24 w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed px-4 py-7 text-center text-xs transition-colors',
+              ogDrag ? 'border-primary/60 bg-primary/5' : 'border-border bg-muted/20 hover:border-border-strong hover:bg-muted/40',
+            )}
           >
             {ogUploading ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             ) : (
               <Upload className="size-4 text-muted-foreground/70" />
             )}
-            <p className="font-sans text-muted-foreground">
+            <span className="font-sans text-muted-foreground">
               {ogDrag
                 ? tMedia('dropToUpload', { default: 'Drop to upload' })
                 : tMedia('dropImageHint', { default: 'Drag & drop an image, or click to upload' })}
-            </p>
-          </div>
+            </span>
+          </button>
           <input
             ref={inputRef}
             id="studio-og-image"
@@ -294,33 +197,34 @@ export function StepLocalization({
             }}
           />
           <AnimatePresence initial={false}>
-          {course.ogImageUrl && (
-            <m.div key="og" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.15 } }} transition={spring.smooth} className="mt-3 flex items-center justify-between gap-2">
-              <img
-                src={course.ogImageUrl}
-                alt=""
-                className="h-28 w-48 rounded-lg border border-border/70 object-cover shadow-xs"
-              />
-              <button
-                type="button"
-                onClick={() => update({ ogImageUrl: null })}
-                className="shrink-0 rounded-md px-2.5 py-1 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+            {course.ogImageUrl && (
+              <m.div
+                key="og"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                transition={spring.smooth}
+                className="mt-3 flex flex-wrap items-center justify-between gap-2"
               >
-                {tMedia('remove', { default: 'Remove' })}
-              </button>
-            </m.div>
-          )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={course.ogImageUrl}
+                  alt=""
+                  className="aspect-[1.91/1] w-full max-w-60 rounded-lg border border-border/70 object-cover shadow-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => update({ ogImageUrl: null })}
+                  className="inline-flex min-h-10 shrink-0 items-center rounded-md px-3 font-sans text-xs font-medium text-destructive transition hover:bg-destructive/10"
+                >
+                  {tMedia('remove', { default: 'Remove' })}
+                </button>
+              </m.div>
+            )}
           </AnimatePresence>
         </div>
-      </FormSection>
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        <Link2 className="size-4 shrink-0 text-primary" />
-        {t('studio.finalUrl', { default: 'Final URL' })}
-        <bdi dir="ltr" className="font-mono text-foreground">
-          /courses/{course.slug || 'slug'}
-        </bdi>
-      </div>
-    </div>
+      </EditorSection>
+    </>
   );
 }
 
