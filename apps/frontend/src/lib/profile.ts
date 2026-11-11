@@ -53,6 +53,14 @@ export async function fetchProfile(userId: string, viewer: ProfileViewer): Promi
   return getJson<Profile>(`/social/profile/${encodeURIComponent(userId)}`, viewer);
 }
 
+/**
+ * A profile looked up by its public @handle (`/u/<handle>`), which uses a different endpoint
+ * from the id-based social profile. Returns null when the handle does not resolve.
+ */
+export async function fetchProfileByHandle(handle: string, viewer: ProfileViewer): Promise<Profile | null> {
+  return getJson<Profile>(`/profile/${encodeURIComponent(handle)}`, viewer);
+}
+
 /** Public posts, newest first. */
 export async function fetchProfilePosts(
   userId: string,

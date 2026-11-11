@@ -214,3 +214,12 @@ describe('small public controls meet the 24px minimum target size', () => {
     expect(read('app/(admin)/admin/courses/studio/StudioHeader.tsx')).toMatch(/aria-label=\{item === 'ar' \? 'العربية' : 'English'\} className=\{cn\('relative min-h-6 min-w-7/);
   });
 });
+
+describe('public profile route names itself', () => {
+  const layout = read('app/(main)/(academy)/u/[username]/layout.tsx');
+  it('looks the profile up by handle, and does not index or name an unknown one', () => {
+    expect(layout).toMatch(/fetchProfileByHandle\(username, viewer\)/);
+    expect(layout).toMatch(/if \(!profile\) return \{ title: 'Profile', robots: \{ index: false, follow: false \} \}/);
+    expect(read('lib/profile.ts')).toMatch(/`\/profile\/\$\{encodeURIComponent\(handle\)\}`/);
+  });
+});

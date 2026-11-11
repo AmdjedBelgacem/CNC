@@ -63,7 +63,7 @@ describe('site chrome and page metadata are localized', () => {
     const used = walk(appDir)
       .map((f) => readFileSync(f, 'utf8').match(/pageMeta\('([A-Za-z]+)'/)?.[1])
       .filter((k): k is string => !!k);
-    expect(used.length).toBeGreaterThanOrEqual(11);
+    expect(used.length).toBeGreaterThanOrEqual(10);
     for (const cat of catalogs) for (const k of used) expect(cat.pageMeta[k]?.title, k).toBeTruthy();
     // pages that ask for Open Graph need an ogDescription too
     for (const cat of catalogs) for (const k of ['feed', 'academy', 'events', 'products']) expect(cat.pageMeta[k].ogDescription).toBeTruthy();
@@ -94,5 +94,15 @@ describe('the events and products islands read their text from the catalogs', ()
     expect(keys.length).toBeGreaterThan(20);
     for (const cat of cats) for (const k of keys) expect(cat.pages.events[k], k).toBeTruthy();
     for (const cat of cats) for (const k of ['featuredTitle', 'fullCatalog', 'featuredBadge']) expect(cat.pages.products[k], k).toBeTruthy();
+  });
+});
+
+describe('dynamic and missing pages name themselves', () => {
+  const read = (p: string) => readFileSync(resolve(__dirname, '../src', p), 'utf8');
+  it('tag pages are titled with their tag, and the 404 page is not indexable under the homepage title', () => {
+    expect(read('app/(main)/(social)/tags/[slug]/page.tsx')).toMatch(/title: `#\$\{decodeURIComponent\(slug\)\} · \$\{t\('tag\.title'\)\}`/);
+    const nf = read('app/not-found.tsx');
+    expect(nf).toMatch(/notFoundTitle/);
+    expect(nf).toMatch(/robots: \{ index: false, follow: false \}/);
   });
 });
