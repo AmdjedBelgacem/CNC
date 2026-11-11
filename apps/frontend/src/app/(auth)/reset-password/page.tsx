@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { m } from 'framer-motion';
 import { toast } from '@/components/ui/toast';
+import { meetsPasswordPolicy } from '@/lib/password-policy';
 import { spring } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import {
@@ -40,8 +41,8 @@ function ResetPasswordForm() {
       setError(t('passwordsDoNotMatch'));
       return;
     }
-    if (password.length < 8) {
-      setError(t('passwordMinLength'));
+    if (!meetsPasswordPolicy(password)) {
+      setError(t('passwordPolicy'));
       return;
     }
     setLoading(true);

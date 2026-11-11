@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { ReauthModal } from '@/components/auth/reauth-modal';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { toast } from '@/components/ui/toast';
+import { meetsPasswordPolicy } from '@/lib/password-policy';
 import {
   Shield,
   KeyRound,
@@ -99,6 +100,10 @@ export default function SecuritySettingsPage() {
       return;
     }
     setPwLoading(true);
+    if (!meetsPasswordPolicy(pwForm.newPassword)) {
+      setPwError(tSecurity('security.passwordPolicy'));
+      return;
+    }
     try {
       await changePassword(pwForm.currentPassword, pwForm.newPassword);
       setPwSuccess(tSecurity('security.pwChangedShort'));

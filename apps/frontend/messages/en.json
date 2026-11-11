@@ -187,6 +187,7 @@
     }
   },
   "auth": {
+    "passwordPolicy": "Use at least 8 characters, with an uppercase letter, a lowercase letter and a number.",
     "signIn": "Sign in",
     "signUp": "Sign up",
     "signInTitle": "Welcome back",
@@ -4501,6 +4502,7 @@
       "openCourse": "Open course"
     },
     "security": {
+      "passwordPolicy": "Use at least 8 characters, with an uppercase letter, a lowercase letter and a number.",
       "pageTitle": "Account Security",
       "pageSubtitle": "Manage your password, email, and security settings.",
       "pageTitleSimple": "Security",

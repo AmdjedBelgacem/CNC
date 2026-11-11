@@ -28,6 +28,7 @@ import { UploadService } from './services/upload.service';
 import { CookieService } from './services/cookie.service';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto, RegisterDto, ResetPasswordDto } from './dto/credentials.dto';
 import { ConfigService } from '../../config/config.service';
 import { providerAuthorizeUrl } from './strategies/provider-authorize-url';
 import { callbackOrigin } from './strategies/oauth-callback-url';
@@ -160,7 +161,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new account' })
   @Throttle({ default: { ttl: 3600000, limit: 3 } })
   async register(
-    @Body() body: { email: string; password: string; name: string; username?: string },
+    @Body() body: RegisterDto,
     @Req() req: any,
     @Res({ passthrough: true }) reply: any,
   ) {
@@ -481,7 +482,7 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
-  async resetPassword(@Body() body: { token: string; password: string }) {
+  async resetPassword(@Body() body: ResetPasswordDto) {
     const passwordHash = await this.auth.password.hash(body.password);
     await this.auth.emailVerification.resetPassword(body.token, passwordHash);
     return { message: 'Password reset successfully' };
@@ -492,7 +493,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Change password' })
   async changePassword(
     @CurrentUser() user: any,
-    @Body() body: { currentPassword: string; newPassword: string },
+    @Body() body: ChangePasswordDto,
   ) {
     await this.auth.changePassword(user.id, body.currentPassword, body.newPassword);
     return { message: 'Password changed successfully' };

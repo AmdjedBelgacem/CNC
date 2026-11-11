@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { meetsPasswordPolicy } from '@/lib/password-policy';
 // OAuth: fetch a CSRF state from the backend, then redirect with redirect=1
 import { trackSignUp } from '@/lib/analytics';
 import { toast } from '@/components/ui/toast';
@@ -62,8 +63,8 @@ export default function RegisterPage() {
       setError(t('passwordsDoNotMatch'));
       return;
     }
-    if (form.password.length < 8) {
-      setError(t('passwordMinLength'));
+    if (!meetsPasswordPolicy(form.password)) {
+      setError(t('passwordPolicy'));
       return;
     }
     setLoading(true);
