@@ -128,3 +128,34 @@ describe('admin screens agree with the rest of the platform', () => {
     expect(en.account.billing.stripeNote).not.toMatch(/stripe/i);
   });
 });
+
+describe('staff screen controls lead somewhere real', () => {
+  const staff = read('app/(admin)/admin/staff/page.tsx');
+  it('"View Audit Logs" opens the audit log, not the roles list', () => {
+    expect(staff).toMatch(/router\.push\('\/admin\/staff\/audit'\)/);
+    expect(read('app/(admin)/admin/staff/audit/page.tsx')).toMatch(/AuditLog/);
+  });
+  it('has no second button that only repeats Edit Permissions', () => {
+    expect(staff).not.toMatch(/access\.moreOptions/);
+  });
+  it('makes no cryptographic-signing claim the platform does not back', () => {
+    const en = readFileSync(resolve(__dirname, '../messages/en.json'), 'utf8');
+    expect(en).not.toMatch(/cryptographically signed|Telemetry Ledger/);
+  });
+});
+
+describe('admin drawers and cards do not offer what the server refuses or hide failures', () => {
+  it('a deleted learner cannot be impersonated, reset or deleted again from the drawer', () => {
+    const drawer = read('app/(admin)/admin/users/learner-drawer.tsx');
+    expect(drawer).toMatch(/const isDeleted = user\?\.accountStatus === 'deleted'/);
+    expect(drawer).toMatch(/canImpersonate && !isSelf && !isDeleted/);
+    expect(drawer).toMatch(/canForcePw && !isDeleted/);
+  });
+  it('a failed certificate PDF build says so instead of silently stopping the spinner', () => {
+    const page = read('app/(admin)/admin/certificates/page.tsx');
+    expect(page).toMatch(/regenerateFailed/);
+  });
+  it('the builder compares layouts by content, so edit-then-undo is not "unsaved"', () => {
+    expect(read('app/(admin)/admin/builder/builder-editor.tsx')).toMatch(/layoutFingerprint\(seeded\) !== layoutFingerprint\(baselineRef\.current\)/);
+  });
+});

@@ -407,6 +407,8 @@ export function LearnerDrawer({
   });
 
   const isSelf = myId !== '' && myId === userId;
+  /** The server refuses impersonation, resets and deletion of a deleted account, so the drawer does not offer them. */
+  const isDeleted = user?.accountStatus === 'deleted';
   const targetIsSuper = user?.role === 'super_admin';
   const editableRoles = !targetIsSuper || isSuper;
   const assignableRoles = useMemo(
@@ -592,7 +594,7 @@ export function LearnerDrawer({
               </div>
               <Separator />
               <div className="space-y-2">
-                {canForcePw && (
+                {canForcePw && !isDeleted && (
                   <ActionButton
                     label={tAdmin('drawer.forcePasswordReset', { default: 'Force password reset' })}
                     icon={KeyRound}
@@ -605,7 +607,7 @@ export function LearnerDrawer({
                     }
                   />
                 )}
-                {canImpersonate && !isSelf && (
+                {canImpersonate && !isSelf && !isDeleted && (
                   <ActionButton
                     label={tAdmin('learnerDrawer.impersonateLearner', { default: 'Impersonate learner' })}
                     icon={MonitorSmartphone}
@@ -646,7 +648,7 @@ export function LearnerDrawer({
                   />
                 )}
               </div>
-              {((canSuspend && user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted') || (canDelete && !isSelf)) && (
+              {((canSuspend && user.accountStatus !== 'suspended' && user.accountStatus !== 'deleted') || (canDelete && !isSelf && !isDeleted)) && (
                 <div className="space-y-2 rounded-lg border border-destructive/25 bg-destructive/[0.04] p-3">
                   <p className="font-sans text-xs font-medium text-destructive">
                     {tAdmin('drawer.dangerZone', { default: 'Danger zone' })}
@@ -669,7 +671,7 @@ export function LearnerDrawer({
                     }
                   />
                 )}
-                {canDelete && !isSelf && (
+                {canDelete && !isSelf && !isDeleted && (
                   <ActionButton
                     label={tAdmin('learnerDrawer.deleteLearner', { default: 'Delete learner' })}
                     icon={Trash2}

@@ -7,7 +7,6 @@ import {
   LayoutGrid,
   LayoutList,
   Lock,
-  MoreHorizontal,
   Pencil,
   RefreshCw,
   ShieldCheck,
@@ -922,15 +921,6 @@ export default function AdminStaffPage() {
                             >
                               <Pencil className="size-4" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => push({ focus: u.id })}
-                              aria-label={tAdmin('access.moreOptions', { default: 'More Options' })}
-                              title={tAdmin('access.moreOptions', { default: 'More Options' })}
-                              className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                            >
-                              <MoreHorizontal className="size-4" />
-                            </button>
                           </div>
                         </td>
                       </m.tr>
@@ -1086,7 +1076,7 @@ export default function AdminStaffPage() {
           </div>
           <button
             type="button"
-            onClick={() => router.push('/admin/staff/roles')}
+            onClick={() => router.push('/admin/staff/audit')}
             className="group inline-flex shrink-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
           >
             {tAdmin('access.viewAuditLogs', { default: 'View Audit Logs' })}

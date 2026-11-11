@@ -250,7 +250,11 @@ function CertificateCard({
                 .then(() => {
                   window.location.reload();
                 })
-                .catch(() => setRegenerating(null));
+                .catch(() => {
+                  setRegenerating(null);
+                  // Was swallowed: the spinner just stopped and nothing said the PDF was not built.
+                  toast({ type: 'err', title: t('regenerateFailed', { default: 'Could not build the PDF. Try again.' }) });
+                });
             }}
             disabled={regenerating === cert.id}
             className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"

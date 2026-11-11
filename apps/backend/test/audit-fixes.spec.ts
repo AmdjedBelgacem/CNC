@@ -77,3 +77,12 @@ describe('public routes that read the current user', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe('audit log endpoint paging', () => {
+  it('bounds limit and offset instead of passing NaN or unbounded values to the query', () => {
+    const controller = read('modules/admin/admin.controller.ts');
+    const body = controller.slice(controller.indexOf("@Get('audit-logs')"), controller.indexOf("@Get('sessions')"));
+    expect(body).toMatch(/Math\.min\(Math\.max\(parseInt\(limit \|\| '50', 10\) \|\| 50, 1\), 200\)/);
+    expect(body).toMatch(/Math\.max\(parseInt\(offset \|\| '0', 10\) \|\| 0, 0\)/);
+  });
+});

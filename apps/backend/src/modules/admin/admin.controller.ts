@@ -203,8 +203,9 @@ export class AdminController {
       userId,
       action,
       tenantId: tenant.id,
-      limit: parseInt(limit || '50'),
-      offset: parseInt(offset || '0'),
+      // A non-numeric or oversized value used to reach the query as NaN / unbounded.
+      limit: Math.min(Math.max(parseInt(limit || '50', 10) || 50, 1), 200),
+      offset: Math.max(parseInt(offset || '0', 10) || 0, 0),
     });
   }
 

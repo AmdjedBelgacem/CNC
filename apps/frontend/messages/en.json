@@ -480,7 +480,7 @@
       "selectedCount": "· {count} selected",
       "rowsPerPage": "Rows per page:",
       "pageOf": "Page {page} of {pages}",
-      "auditFootnote": "Audit Trail: Every permission change is cryptographically signed and stored in Machining Telemetry Ledger.",
+      "auditFootnote": "Audit trail: sign-ins, role changes and admin actions are recorded and can be reviewed in the audit log.",
       "viewAuditLogs": "View Audit Logs",
       "inviteStaffMember": "Invite staff member",
       "inviteStaffHint": "Creates a pending account in this tenant. Requires super_admin.",
@@ -1733,7 +1733,8 @@
       },
       "kpiExpired": "Expired",
       "view": "View",
-      "regenerate": "Build PDF"
+      "regenerate": "Build PDF",
+      "regenerateFailed": "Could not build the PDF. Try again."
     },
     "settingsPage": {
       "allSaved": "All changes saved",
@@ -2152,6 +2153,24 @@
       },
       "guidedTitle": "A guided flow, not a blank canvas.",
       "guidedBody": "You can always change the template, reorder content, and add Arabic translations later."
+    },
+    "auditLog": {
+      "title": "Audit log",
+      "description": "Who changed what, newest first. Recorded for every sign-in, role change and admin action.",
+      "filterLabel": "Filter by action",
+      "filterPlaceholder": "Exact action, e.g. user.login",
+      "apply": "Filter",
+      "clear": "Clear",
+      "loadFailed": "The audit log could not be loaded.",
+      "retry": "Try again",
+      "empty": "No activity has been recorded yet.",
+      "emptyFiltered": "No entries match that action.",
+      "actor": "Actor",
+      "system": "System",
+      "details": "Details",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {n}"
     },
     "quotes": {
       "title": "Quote requests",

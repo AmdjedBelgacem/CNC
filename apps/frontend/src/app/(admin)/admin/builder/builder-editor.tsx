@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { layoutFingerprint } from '@/lib/builder/layout-fingerprint';
 import { Puck, useGetPuck } from '@measured/puck';
 import type { Content, Data } from '@measured/puck';
 import { useTranslations } from 'next-intl';
@@ -641,7 +642,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
         baselineRef.current = seeded;
         setDirty(false);
       } else {
-        setDirty(JSON.stringify(seeded) !== JSON.stringify(baselineRef.current));
+        setDirty(layoutFingerprint(seeded) !== layoutFingerprint(baselineRef.current));
       }
       // Reflect the seed in the editor store itself (not just the save path):
       // otherwise the canvas shows an empty composed block while the saved and
