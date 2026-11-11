@@ -109,3 +109,22 @@ describe('messaging', () => {
     expect(read('components/builder/blocks/button-block.tsx')).toMatch(/href\.trim\(\) === '#' && !puck\?\.isEditing\) return null/);
   });
 });
+
+describe('admin screens agree with the rest of the platform', () => {
+  it('finance shows money in the platform currency, not a hard-coded USD default', () => {
+    const finance = read('app/(admin)/admin/finance/page.tsx');
+    expect(finance).not.toMatch(/formatMoney\(/);
+    expect(finance).toMatch(/DEFAULT_CURRENCY/);
+  });
+  it('partner decisions are offered only while an application is still open', () => {
+    const partners = read('app/(admin)/admin/partners/page.tsx');
+    expect(partners).toMatch(/OPEN_STATUSES = new Set\(\['pending', 'under_review', 'needs_info'\]\)/);
+    expect(partners).toMatch(/OPEN_STATUSES\.has\(String\(a\.status\)\)/);
+  });
+  it('billing makes no promise it cannot keep: no invented price, no Stripe claim', () => {
+    const billing = read('app/(main)/(academy)/settings/billing/page.tsx');
+    expect(billing).not.toContain('$29');
+    const en = JSON.parse(readFileSync(resolve(__dirname, '../messages/en.json'), 'utf8'));
+    expect(en.account.billing.stripeNote).not.toMatch(/stripe/i);
+  });
+});

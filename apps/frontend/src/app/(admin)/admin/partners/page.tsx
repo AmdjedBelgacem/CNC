@@ -107,6 +107,10 @@ function ReviewDialog({
   );
 }
 
+// Approved and rejected are final on the server (see partners.service VALID_TRANSITIONS), so
+// offering decisions on them only produced a 400 toast.
+const OPEN_STATUSES = new Set(['pending', 'under_review', 'needs_info']);
+
 export default function AdminPartnersPage() {
   const [items, setItems] = useState<any[]>([]);
   const [review, setReview] = useState<ReviewAction | null>(null);
@@ -165,11 +169,13 @@ export default function AdminPartnersPage() {
               </div>
               <p className="text-xs text-muted-foreground">{a.contactName} · {a.email} · {a.type}</p>
               <p className="max-w-prose text-sm leading-relaxed">{a.message}</p>
+              {OPEN_STATUSES.has(String(a.status)) ? (
               <div className="flex flex-wrap gap-2 pt-1">
                 <button className={ACTION} onClick={()=>act(a.id,'approve',{})}>Approve</button>
                 <button className={ACTION} onClick={()=>setReview({ id: a.id, company: a.companyName, kind: 'reject' })}>Reject</button>
                 <button className={ACTION} onClick={()=>setReview({ id: a.id, company: a.companyName, kind: 'request-info' })}>Request info</button>
               </div>
+              ) : null}
             </m.li>
           ))}
         </ul>

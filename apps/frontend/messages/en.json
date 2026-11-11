@@ -4643,7 +4643,7 @@
       "featureMentorship": "1:1 mentorship",
       "featurePrioritySupport": "Priority support",
       "popular": "Popular",
-      "stripeNote": "Billing is managed securely via Stripe. Invoices are emailed monthly.",
+      "stripeNote": "Paid plans are not available yet. Course and product purchases are paid securely at checkout, and each order receipt is emailed to you.",
       "invoices": "Invoices",
       "noInvoices": "No invoices yet",
       "noInvoicesHint": "Your payment history will appear here."

@@ -1,13 +1,14 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   RefreshCw, Plus, DollarSign, TrendingUp, Clock, Undo2, Trash2, Pencil,
 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatMoney } from '@/lib/api/normalize';
+import { formatMinorUnits } from '@/lib/money';
+import { DEFAULT_CURRENCY, type CurrencyCode } from '@titan/shared';
 import {
   AdminCommandBar, BarIconButton, BarPrimaryButton,
   AdminKpiCard, AdminPageHeader,
@@ -86,6 +87,11 @@ export default function AdminFinancePage() {
   const tAdmin = useTranslations('admin');
   const t = useTranslations('admin.financePage');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const money = useCallback(
+    (cents: number) => formatMinorUnits(cents, DEFAULT_CURRENCY as CurrencyCode, locale),
+    [locale],
+  );
   const [budgets, setBudgets] = useState<BudgetRow[] | null>(null);
   const [summary, setSummary] = useState<FinanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -217,8 +223,8 @@ export default function AdminFinancePage() {
           <AdminKpiCard
             icon={TrendingUp}
             label={t('revenue30d', { default: 'Revenue (30d)' })}
-            value={loading ? '—' : formatMoney(summary?.revenue30dCents ?? 0)}
-            sub={`7d: ${formatMoney(summary?.revenue7dCents ?? 0)}`}
+            value={loading ? '—' : money(summary?.revenue30dCents ?? 0)}
+            sub={`7d: ${money(summary?.revenue7dCents ?? 0)}`}
             tone="emerald"
           />
           </StaggerItem>
@@ -227,7 +233,7 @@ export default function AdminFinancePage() {
             icon={Clock}
             label={t('pending', { default: 'Pending' })}
             value={loading ? '—' : (summary?.pendingCount ?? 0)}
-            sub={formatMoney(summary?.pendingTotalCents ?? 0)}
+            sub={money(summary?.pendingTotalCents ?? 0)}
             tone="amber"
           />
           </StaggerItem>
@@ -235,7 +241,7 @@ export default function AdminFinancePage() {
           <AdminKpiCard
             icon={Undo2}
             label={t('refunded', { default: 'Refunded' })}
-            value={loading ? '—' : formatMoney(summary?.refundedTotalCents ?? 0)}
+            value={loading ? '—' : money(summary?.refundedTotalCents ?? 0)}
             sub={t('allTime', { default: 'All time' })}
             tone="rose"
           />
@@ -244,7 +250,7 @@ export default function AdminFinancePage() {
           <AdminKpiCard
             icon={DollarSign}
             label={t('avgOrder', { default: 'Avg order' })}
-            value={loading ? '—' : formatMoney(summary?.averageOrderCents ?? 0)}
+            value={loading ? '—' : money(summary?.averageOrderCents ?? 0)}
             sub={t('ordersCount', { count: summary?.totalOrders ?? 0, default: '{count} orders' })}
             tone="blue"
           />
@@ -373,10 +379,10 @@ export default function AdminFinancePage() {
                     default: CATEGORY_LABEL_DEFAULTS[b.category],
                   })}
                 </span>
-                <span className="col-span-2 text-end text-sm tabular-nums text-muted-foreground">{formatMoney(b.targetCents)}</span>
-                <span className="col-span-2 text-end text-sm font-medium tabular-nums">{formatMoney(b.actualCents)}</span>
+                <span className="col-span-2 text-end text-sm tabular-nums text-muted-foreground">{money(b.targetCents)}</span>
+                <span className="col-span-2 text-end text-sm font-medium tabular-nums">{money(b.actualCents)}</span>
                 <span className={`col-span-2 text-end text-sm font-medium tabular-nums ${b.varianceCents >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {b.varianceCents >= 0 ? '+' : ''}{formatMoney(b.varianceCents)}
+                  {b.varianceCents >= 0 ? '+' : ''}{money(b.varianceCents)}
                 </span>
                 <span className="col-span-2 flex justify-end gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                   <button

@@ -49,8 +49,7 @@ export default function BillingPage() {
             },
             {
               name: t('billing.planPro'),
-              price: '$29',
-              suffix: t('billing.perMonth'),
+              price: t('billing.comingSoon'),
               features: [
                 t('billing.featureUnlimitedCourses'),
                 t('billing.featureVerifiedCertificates'),
@@ -76,9 +75,6 @@ export default function BillingPage() {
                   <span className="font-display text-3xl font-medium tracking-[-0.02em] text-foreground">
                     {plan.price}
                   </span>
-                  {plan.suffix && (
-                    <span className="text-sm text-muted-foreground">{plan.suffix}</span>
-                  )}
                 </p>
                 <ul className="mt-5 space-y-2.5">
                   {plan.features.map((f) => (
@@ -95,7 +91,7 @@ export default function BillingPage() {
                   variant={plan.highlight ? 'default' : 'outline'}
                   disabled={plan.active || plan.highlight}
                 >
-                  {plan.highlight ? t('billing.comingSoon') : plan.cta}
+                  {plan.cta}
                 </Button>
               </HoverLift>
             </StaggerItem>
