@@ -1,5 +1,6 @@
 'use client';
 import { api } from '@/lib/api-client';
+import { CreateEntityDialog } from '@/components/admin/editor/create-entity';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -349,6 +350,8 @@ export default function AdminProductsPage() {
   const PAGE_SIZE = 12;
 
   const [rows, setRows] = useState<ProductRow[] | null>(null);
+  /** New opens the create dialog over the list rather than a separate page. */
+  const [createOpen, setCreateOpen] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [typeOptions, setTypeOptions] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
@@ -504,6 +507,7 @@ export default function AdminProductsPage() {
 
   return (
     <div className="w-full">
+      <CreateEntityDialog open={createOpen} onOpenChange={setCreateOpen} kind="product" />
       <AdminCommandBar
         trail={[{ label: 'Baroot CNC Solutions' }, { label: t('title', { default: 'Products' }) }]}
         count={loading ? null : total}
@@ -526,7 +530,7 @@ export default function AdminProductsPage() {
         primary={
           <BarPrimaryButton
             icon={<Plus className="size-4" strokeWidth={2.5} />}
-            onClick={() => router.push('/admin/products/new')}
+            onClick={() => setCreateOpen(true)}
           >
             {t('newProduct', { default: 'New product' })}
           </BarPrimaryButton>
@@ -738,7 +742,7 @@ export default function AdminProductsPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => router.push('/admin/products/new')}
+                    onClick={() => setCreateOpen(true)}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 active:scale-[0.98]"
                   >
                     <Plus className="size-4" />

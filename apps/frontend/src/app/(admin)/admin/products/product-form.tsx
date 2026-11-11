@@ -27,20 +27,19 @@ import {
   type InteractiveHotspot,
   type TranslationCoverage,
 } from '@titan/shared';
-import { Reveal } from '@/components/ui/motion';
 import { SlugField, type SectionNavItem } from '@/components/admin/form-page';
 import {
-  TranslateAction,
-  TranslationCoveragePanel,
-  useTranslateDraft,
-} from '@/components/admin/translation';
+  BilingualField,
+  EditorSection,
+  useLanguageMode,
+  type RailSection,
+} from '@/components/admin/editor/editor-kit';
+import { TranslateAction, useTranslateDraft } from '@/components/admin/translation';
 import {
   FieldGrid,
-  FormSection,
   SelectField,
   SwitchField,
   TextArea,
-  TextAreaField,
   TextField,
   TextInput,
 } from '@/components/admin/admin-form';
@@ -519,7 +518,7 @@ function SubHeading({ children, hint }: { children: ReactNode; hint?: ReactNode 
  * Lives with the form so the create and edit screens share one implementation: both used to
  * carry an identical copy of this hook and its coverage maths.
  */
-function useProductArabic(
+export function useProductArabic(
   value: ProductFormValue,
   set: <K extends keyof ProductFormValue>(
     key: K,
@@ -602,12 +601,41 @@ function useProductArabic(
   return { coverage: total, busy, run };
 }
 
+export type ProductArabic = ReturnType<typeof useProductArabic>;
+
+/** Which rail dot each section shows. */
+export function productRailSections(
+  t: (key: string) => string,
+  value: ProductFormValue,
+  arabic: ProductArabic,
+  errors: ProductFormErrors = {},
+): RailSection[] {
+  const priced =
+    value.pricingMode === 'request' || (value.priceCents.trim() !== '' && Number(value.priceCents) > 0);
+  const basicsDone = !!value.title.trim() && !!value.description.trim() && !!value.category.trim();
+  const missingArabic = arabic.coverage ? arabic.coverage.total - arabic.coverage.translated : 0;
+  return [
+    {
+      id: 'basics',
+      label: t('sectionBasics'),
+      state: errors.title ? 'error' : basicsDone ? (missingArabic > 0 ? 'todo' : 'done') : 'todo',
+      meta: missingArabic > 0 ? `AR ${arabic.coverage!.translated}/${arabic.coverage!.total}` : undefined,
+    },
+    { id: 'pricing', label: t('sectionPricingOnly'), state: errors.price ? 'error' : priced ? 'done' : 'todo' },
+    { id: 'inventory', label: t('sectionInventory'), state: 'idle' },
+    { id: 'media', label: t('sectionMediaGroup'), state: value.thumbnailUrl ? 'done' : 'todo' },
+    { id: 'details', label: t('sectionDetails'), state: value.academyId || value.courseId || value.documents.length ? 'done' : 'idle' },
+    { id: 'seo', label: t('sectionSeo'), state: value.seoTitle.trim() ? 'done' : 'idle' },
+  ];
+}
+
 export function ProductFormSections({
   value,
   set,
   mode = 'create',
   errors = {},
   gallery,
+  arabic,
 }: {
   value: ProductFormValue;
   set: <K extends keyof ProductFormValue>(
@@ -619,394 +647,428 @@ export function ProductFormSections({
   errors?: ProductFormErrors;
   /** The gallery manager, which only exists once the product has been saved. */
   gallery?: ReactNode;
+  /** Arabic coverage and the draft-from-English action, owned by the page. */
+  arabic: ProductArabic;
 }) {
   const t = useTranslations('admin.productForm');
-  const tForm = useTranslations('ui.adminForm');
   const { academies, courses } = useRelations();
-  const arabic = useProductArabic(value, set);
   const digits = fractionDigits(value.currency);
   const unit = digits === 0 ? t('minorUnitWhole', { default: 'minor units' }) : t('minorUnit', { default: 'cents' });
   const setAr = (patch: Partial<ProductFormValue['translationsAr']>) =>
     set('translationsAr', (prev) => ({ ...prev, ...patch }));
+  const draft = () => void arabic.run('missing');
 
   return (
     <>
-      <Reveal>
-        <FormSection
-          id="basics"
-          title={t('sectionBasics', { default: 'Basics' })}
-          icon={Package}
-          description={t('sectionBasicsDesc', { default: 'How this product appears in your catalog.' })}
-        >
-          <div className="space-y-5">
-            <TextField
-              id="pf-title"
-              label={t('fieldTitle', { default: 'Title' })}
-              required
-              value={value.title}
-              onChange={(e) => set('title', e.target.value)}
-              placeholder={t('titlePlaceholder', { default: 'e.g. Beginner End Mill Kit' })}
-              error={errors.title}
-              autoFocus={mode === 'create'}
-            />
-            <SlugField
-              label={t('fieldSlug', { default: 'Slug' })}
-              value={value.slug}
-              onChange={(next) => set('slug', next)}
-              prefix="/products/"
-              source={mode === 'create' ? value.title : undefined}
-              mode={mode}
-            />
-            <TextField
-              label={t('fieldTagline', { default: 'Tagline' })}
-              value={value.tagline}
-              onChange={(e) => set('tagline', e.target.value)}
-              placeholder={t('taglinePlaceholder', { default: 'Short subtitle' })}
-            />
-            <TextAreaField
-              id="pf-description"
-              label={t('fieldDescription', { default: 'Description' })}
-              rows={5}
-              value={value.description}
-              onChange={(e) => set('description', e.target.value)}
-            />
-            <FieldGrid>
-              <TextField
-                id="pf-category"
-                label={t('fieldCategory', { default: 'Category' })}
-                value={value.category}
-                onChange={(e) => set('category', e.target.value)}
-                placeholder={t('categoryPlaceholder', { default: 'e.g. Tool Kits, Workholding' })}
-              />
-              <TextField
-                label={t('fieldProductType', { default: 'Product type' })}
-                hint={t('fieldProductTypeHint', {
-                  default: 'The kind of product within the category, e.g. Vertical Machining Center.',
-                })}
-                value={value.productType}
-                onChange={(e) => set('productType', e.target.value)}
-                placeholder={t('productTypePlaceholder', {
-                  default: 'e.g. Vertical Machining Center, Collet Systems',
-                })}
-              />
-            </FieldGrid>
-            <TextField
-              label={t('fieldTags', { default: 'Tags' })}
-              hint={t('fieldTagsHint', { default: 'Comma separated.' })}
-              value={value.tags}
-              onChange={(e) => set('tags', e.target.value)}
-              placeholder="milling, endmill, starter"
-            />
-            <TextAreaField
-              label={t('fieldFeatures', { default: 'Features' })}
-              hint={t('fieldFeaturesHint', { default: 'One per line.' })}
-              rows={3}
-              value={value.features}
-              onChange={(e) => set('features', e.target.value)}
-            />
-          </div>
-        </FormSection>
-      </Reveal>
-
-      <Reveal delay={0.03}>
-        <FormSection
-          id="pricing"
-          title={t('sectionPricingOnly')}
-          icon={Tag}
-          description={t('sectionPricingOnlyDesc')}
-        >
-          <div className="space-y-5">
-            {/*
-              Pricing mode decides what the storefront shows and whether the cart is even
-              reachable, so it sits above the price field rather than being buried beside it.
-            */}
-            <SelectField
-              label={t('fieldPricingMode', { default: 'Pricing' })}
-              value={value.pricingMode}
-              onChange={(e) => set('pricingMode', e.target.value as 'fixed' | 'from' | 'request')}
-              hint={t('pricingModeHint', { default: 'How this product is priced on the storefront.' })}
-            >
-              <option value="fixed">{t('pricingFixed', { default: 'Fixed price' })}</option>
-              <option value="from">{t('pricingFrom', { default: 'From a price' })}</option>
-              <option value="request">{t('pricingRequest', { default: 'Request a quote' })}</option>
-            </SelectField>
-
-            {value.pricingMode === 'request' ? (
-              <p className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
-                {t('pricingRequestExplain', {
-                  default:
-                    'No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.',
-                })}
-              </p>
-            ) : null}
-
-            <FieldGrid cols={3}>
-              <TextField
-                id="pf-price"
-                label={t('fieldPriceOptional')}
-                type="number"
-                min={0}
-                inputMode="numeric"
-                dir="ltr"
-                value={value.priceCents}
-                onChange={(e) => set('priceCents', e.target.value)}
-                error={errors.price}
-                hint={
-                  value.pricingMode === 'from'
-                    ? t('fieldPriceHintFrom', {
-                        unit,
-                        default:
-                          'Used as the base. “From” is computed from the lowest option price across variants.',
-                      })
-                    : t('fieldPriceHint', { unit, default: 'Stored in {unit}.' })
-                }
-              />
-              <TextField
-                label={t('fieldCompareAt', { default: 'Compare-at price' })}
-                type="number"
-                min={0}
-                inputMode="numeric"
-                dir="ltr"
-                value={value.compareAtCents}
-                onChange={(e) => set('compareAtCents', e.target.value)}
-                hint={t('fieldCompareAtHint', { default: 'Shown struck through to signal a discount.' })}
-                error={
-                  value.compareAtCents && Number(value.compareAtCents) <= Number(value.priceCents)
-                    ? t('compareAtTooLow', { default: 'Must be higher than the price to show a discount.' })
-                    : undefined
-                }
-              />
-              <SelectField
-                label={t('fieldCurrency', { default: 'Currency' })}
-                value={value.currency}
-                onChange={(e) => set('currency', e.target.value)}
-              >
-                {CURRENCIES.map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </SelectField>
-            </FieldGrid>
-          </div>
-        </FormSection>
-      </Reveal>
-
-      <Reveal delay={0.04}>
-        <FormSection
-          id="inventory"
-          title={t('sectionInventory')}
-          icon={Boxes}
-          description={t('sectionInventoryDesc')}
-        >
-          <div className="space-y-5">
-            <FieldGrid>
-              <TextField
-                label={t('fieldInventory', { default: 'Inventory' })}
-                type="number"
-                min={0}
-                inputMode="numeric"
-                dir="ltr"
-                disabled={!value.trackInventory}
-                value={value.inventory}
-                onChange={(e) => set('inventory', e.target.value)}
-              />
-              <TextField
-                label={t('fieldSortOrder', { default: 'Sort order' })}
-                type="number"
-                inputMode="numeric"
-                dir="ltr"
-                value={value.sortOrder}
-                onChange={(e) => set('sortOrder', e.target.value)}
-                hint={t('fieldSortOrderHint', { default: 'Lower numbers appear first.' })}
-              />
-            </FieldGrid>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <SwitchField
-                label={t('trackInventory', { default: 'Track inventory' })}
-                description={t('trackInventoryDesc', { default: 'Decrease stock as orders are placed.' })}
-                checked={value.trackInventory}
-                onCheckedChange={(v) => set('trackInventory', v)}
-              />
-              <SwitchField
-                label={t('allowBackorder', { default: 'Allow backorder' })}
-                description={t('allowBackorderDesc', { default: 'Keep selling when stock reaches zero.' })}
-                checked={value.allowBackorder}
-                onCheckedChange={(v) => set('allowBackorder', v)}
-              />
-              <SwitchField
-                label={t('isDigital', { default: 'Digital product' })}
-                description={t('isDigitalDesc', { default: 'No shipping required after checkout.' })}
-                checked={value.isDigital}
-                onCheckedChange={(v) => set('isDigital', v)}
-              />
-              <SwitchField
-                label={t('featured', { default: 'Featured' })}
-                description={t('featuredDesc', { default: 'Highlight this product in the storefront.' })}
-                checked={value.featured}
-                onCheckedChange={(v) => set('featured', v)}
-              />
-            </div>
-          </div>
-        </FormSection>
-      </Reveal>
-
-      <Reveal delay={0.05}>
-        <FormSection
-          id="media"
-          title={t('sectionMediaGroup')}
-          icon={ImageIcon}
-          description={t('sectionMediaGroupDesc')}
-        >
-          <ImageUploadField
-            id="pf-thumbnail"
-            label={t('fieldThumbnail', { default: 'Product thumbnail' })}
-            hint={t('thumbnailHint', { default: 'Square recommended · JPG, PNG, WebP, AVIF · up to 25 MB' })}
-            previewUrl={value.thumbnailUrl}
-            onSelect={(file) => {
-              uploadImage(file, 'covers')
-                .then(({ url }) => set('thumbnailUrl', url))
-                .catch((e) =>
-                  toast({ type: 'err', title: t('uploadFailed'), description: e instanceof Error ? e.message : undefined }),
-                );
-            }}
-            onClear={() => set('thumbnailUrl', null)}
+      <EditorSection
+        id="basics"
+        title={t('sectionBasics', { default: 'Basics' })}
+        hint={t('sectionBasicsDesc', { default: 'How this product appears in your catalog.' })}
+        actions={
+          <TranslateAction coverage={arabic.coverage} busy={arabic.busy} onTranslate={(scope) => void arabic.run(scope)} />
+        }
+      >
+        <BilingualField
+          id="pf-title"
+          label={t('fieldTitle', { default: 'Title' })}
+          required
+          error={errors.title}
+          en={{
+            value: value.title,
+            onChange: (next) => set('title', next),
+            placeholder: t('titlePlaceholder', { default: 'e.g. Beginner End Mill Kit' }),
+            autoFocus: mode === 'create',
+          }}
+          ar={{ value: value.translationsAr.title, onChange: (next) => setAr({ title: next }) }}
+          onDraftArabic={draft}
+          drafting={arabic.busy}
+        />
+        <SlugField
+          label={t('fieldSlug', { default: 'Slug' })}
+          value={value.slug}
+          onChange={(next) => set('slug', next)}
+          prefix="/products/"
+          source={mode === 'create' ? value.title : undefined}
+          mode={mode}
+        />
+        <BilingualField
+          id="pf-tagline"
+          label={t('fieldTagline', { default: 'Tagline' })}
+          en={{
+            value: value.tagline,
+            onChange: (next) => set('tagline', next),
+            placeholder: t('taglinePlaceholder', { default: 'Short subtitle' }),
+          }}
+          ar={{ value: value.translationsAr.tagline, onChange: (next) => setAr({ tagline: next }) }}
+          onDraftArabic={draft}
+          drafting={arabic.busy}
+        />
+        <BilingualField
+          id="pf-description"
+          label={t('fieldDescription', { default: 'Description' })}
+          multiline
+          rows={5}
+          en={{ value: value.description, onChange: (next) => set('description', next) }}
+          ar={{ value: value.translationsAr.description, onChange: (next) => setAr({ description: next }) }}
+          onDraftArabic={draft}
+          drafting={arabic.busy}
+        />
+        <BilingualField
+          id="pf-features"
+          label={t('fieldFeatures', { default: 'Features' })}
+          hint={t('fieldFeaturesHint', { default: 'One per line.' })}
+          multiline
+          rows={3}
+          en={{ value: value.features, onChange: (next) => set('features', next) }}
+          ar={{ value: value.translationsAr.features, onChange: (next) => setAr({ features: next }) }}
+          onDraftArabic={draft}
+          drafting={arabic.busy}
+        />
+        <FieldGrid cols={3}>
+          <TextField
+            id="pf-category"
+            label={t('fieldCategory', { default: 'Category' })}
+            value={value.category}
+            onChange={(e) => set('category', e.target.value)}
+            placeholder={t('categoryPlaceholder', { default: 'e.g. Tool Kits, Workholding' })}
           />
-
-          <SubHeading hint={gallery ? t('galleryHint') : t('galleryAfterCreate')}>
-            {t('galleryTitle', { default: 'Gallery' })}
-          </SubHeading>
-          {gallery ?? null}
-
-          <SubHeading hint={t('sectionHotspotsDesc')}>{t('sectionHotspots')}</SubHeading>
-          <ProductHotspotsEditor
-            imageUrl={value.thumbnailUrl}
-            pinpoints={value.pinpoints}
-            onChange={(next) => set('pinpoints', next)}
+          <TextField
+            label={t('fieldProductType', { default: 'Product type' })}
+            value={value.productType}
+            onChange={(e) => set('productType', e.target.value)}
+            placeholder={t('productTypePlaceholder', { default: 'e.g. Vertical Machining Center, Collet Systems' })}
           />
-        </FormSection>
-      </Reveal>
-
-      <Reveal delay={0.06}>
-        <FormSection
-          id="details"
-          title={t('sectionDetails')}
-          icon={FileText}
-          description={t('sectionDetailsDesc')}
-        >
-          <div className="space-y-5">
-            <FieldGrid>
-              <SelectField
-                label={t('fieldAcademy', { default: 'Academy' })}
-                value={value.academyId}
-                onChange={(e) => set('academyId', e.target.value)}
-              >
-                <option value="">{t('none', { default: 'None' })}</option>
-                {academies.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.title}
-                  </option>
-                ))}
-              </SelectField>
-              <SelectField
-                label={t('fieldCourse', { default: 'Course' })}
-                value={value.courseId}
-                onChange={(e) => set('courseId', e.target.value)}
-              >
-                <option value="">{t('none', { default: 'None' })}</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </SelectField>
-            </FieldGrid>
-            <p className="-mt-2 text-xs text-muted-foreground">
-              {t('sectionRelationsDesc', { default: 'Optionally surface this product inside an academy or course.' })}
-            </p>
-          </div>
-          <SubHeading hint={t('sectionDocsDesc')}>{t('sectionDocs')}</SubHeading>
-          <ProductDocumentsField
-            documents={value.documents}
-            onChange={(next) => set('documents', next)}
+          <TextField
+            label={t('fieldTags', { default: 'Tags' })}
+            hint={t('fieldTagsHint', { default: 'Comma separated.' })}
+            value={value.tags}
+            onChange={(e) => set('tags', e.target.value)}
+            placeholder="milling, endmill, starter"
           />
-        </FormSection>
-      </Reveal>
+        </FieldGrid>
+      </EditorSection>
 
-      <Reveal delay={0.07}>
-        <FormSection
-          id="arabic"
-          title={t('arabicCopy', { default: 'Arabic copy' })}
-          icon={Languages}
-          badge={tForm('optional')}
-          description={t('arabicCopyHint', {
-            default: 'Shown to Arabic visitors. Leave blank to fall back to English.',
-          })}
-          actions={
-            <TranslateAction
-              coverage={arabic.coverage}
-              busy={arabic.busy}
-              onTranslate={(scope) => void arabic.run(scope)}
-            />
-          }
-        >
-          {arabic.coverage && <TranslationCoveragePanel coverage={arabic.coverage} className="mb-4" />}
-          <div className="grid gap-4" dir="rtl">
-            <TextField
-              label={t('arabicTitle', { default: 'Arabic title' })}
-              value={value.translationsAr.title}
-              onChange={(e) => setAr({ title: e.target.value })}
-            />
-            <TextField
-              label={t('arabicTagline', { default: 'Arabic tagline' })}
-              value={value.translationsAr.tagline}
-              onChange={(e) => setAr({ tagline: e.target.value })}
-            />
-            <TextAreaField
-              label={t('arabicDescription', { default: 'Arabic description' })}
-              value={value.translationsAr.description}
-              onChange={(e) => setAr({ description: e.target.value })}
-              rows={5}
-            />
-            <TextAreaField
-              label={t('arabicFeatures', { default: 'Arabic bullet points (one per line)' })}
-              value={value.translationsAr.features}
-              onChange={(e) => setAr({ features: e.target.value })}
-              rows={4}
-            />
+      <EditorSection id="pricing" title={t('sectionPricingOnly')} hint={t('sectionPricingOnlyDesc')}>
+        {/*
+          Pricing mode decides what the storefront shows and whether the cart is even
+          reachable, so it is the first choice in the section, as three cards rather
+          than a select whose options nobody opens.
+        */}
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-13 font-medium text-foreground">
+            {t('fieldPricingMode', { default: 'Pricing' })}
+          </legend>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {(
+              [
+                ['fixed', t('pricingFixed', { default: 'Fixed price' })],
+                ['from', t('pricingFrom', { default: 'From a price' })],
+                ['request', t('pricingRequest', { default: 'Request a quote' })],
+              ] as const
+            ).map(([mode, label]) => (
+              <label
+                key={mode}
+                className={cn(
+                  'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border p-3.5 text-sm transition',
+                  value.pricingMode === mode
+                    ? 'border-primary bg-primary/5 font-medium text-foreground ring-1 ring-primary'
+                    : 'border-border text-foreground/90 hover:border-border-strong',
+                )}
+              >
+                <input
+                  type="radio"
+                  name="pf-pricing-mode"
+                  checked={value.pricingMode === mode}
+                  onChange={() => set('pricingMode', mode)}
+                  className="accent-primary"
+                />
+                {label}
+              </label>
+            ))}
           </div>
-        </FormSection>
-      </Reveal>
+        </fieldset>
+        {value.pricingMode === 'request' ? (
+          <p className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+            {t('pricingRequestExplain', {
+              default:
+                'No price is shown and customers send a quote request instead of adding to the cart. Any price left below is kept but not displayed.',
+            })}
+          </p>
+        ) : null}
+        <FieldGrid cols={3}>
+          <TextField
+            id="pf-price"
+            label={t('fieldPriceOptional')}
+            type="number"
+            min={0}
+            inputMode="numeric"
+            dir="ltr"
+            value={value.priceCents}
+            onChange={(e) => set('priceCents', e.target.value)}
+            error={errors.price}
+            hint={
+              value.pricingMode === 'from'
+                ? t('fieldPriceHintFrom', {
+                    unit,
+                    default: 'Used as the base. “From” is computed from the lowest option price across variants.',
+                  })
+                : t('fieldPriceHint', { unit, default: 'Stored in {unit}.' })
+            }
+          />
+          <TextField
+            label={t('fieldCompareAt', { default: 'Compare-at price' })}
+            type="number"
+            min={0}
+            inputMode="numeric"
+            dir="ltr"
+            value={value.compareAtCents}
+            onChange={(e) => set('compareAtCents', e.target.value)}
+            hint={t('fieldCompareAtHint', { default: 'Shown struck through to signal a discount.' })}
+            error={
+              value.compareAtCents && Number(value.compareAtCents) <= Number(value.priceCents)
+                ? t('compareAtTooLow', { default: 'Must be higher than the price to show a discount.' })
+                : undefined
+            }
+          />
+          <SelectField
+            label={t('fieldCurrency', { default: 'Currency' })}
+            value={value.currency}
+            onChange={(e) => set('currency', e.target.value)}
+          >
+            {CURRENCIES.map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </SelectField>
+        </FieldGrid>
+      </EditorSection>
 
-      <Reveal delay={0.08}>
-        <FormSection
-          id="seo"
-          title={t('sectionSeo', { default: 'SEO' })}
-          icon={Search}
-          badge={tForm('optional')}
-          description={t('sectionSeoDesc', { default: 'Overrides for search results. Leave blank to use the title and description above.' })}
-        >
-          <div className="space-y-5">
-            <TextField
-              label={t('fieldSeoTitle', { default: 'SEO title' })}
-              value={value.seoTitle}
-              onChange={(e) => set('seoTitle', e.target.value)}
-              placeholder={t('seoTitlePlaceholder', { default: 'Custom title for search results' })}
-            />
-            <TextAreaField
-              label={t('fieldSeoDescription', { default: 'SEO description' })}
-              rows={3}
-              value={value.seoDescription}
-              onChange={(e) => set('seoDescription', e.target.value)}
-              placeholder={t('seoDescriptionPlaceholder', { default: 'Meta description for search' })}
-            />
-          </div>
-        </FormSection>
-      </Reveal>
+      <EditorSection id="inventory" title={t('sectionInventory')} hint={t('sectionInventoryDesc')}>
+        <FieldGrid>
+          <TextField
+            label={t('fieldInventory', { default: 'Inventory' })}
+            type="number"
+            min={0}
+            inputMode="numeric"
+            dir="ltr"
+            disabled={!value.trackInventory}
+            value={value.inventory}
+            onChange={(e) => set('inventory', e.target.value)}
+          />
+          <TextField
+            label={t('fieldSortOrder', { default: 'Sort order' })}
+            type="number"
+            inputMode="numeric"
+            dir="ltr"
+            value={value.sortOrder}
+            onChange={(e) => set('sortOrder', e.target.value)}
+            hint={t('fieldSortOrderHint', { default: 'Lower numbers appear first.' })}
+          />
+        </FieldGrid>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <SwitchField
+            label={t('trackInventory', { default: 'Track inventory' })}
+            description={t('trackInventoryDesc', { default: 'Decrease stock as orders are placed.' })}
+            checked={value.trackInventory}
+            onCheckedChange={(v) => set('trackInventory', v)}
+          />
+          <SwitchField
+            label={t('allowBackorder', { default: 'Allow backorder' })}
+            description={t('allowBackorderDesc', { default: 'Keep selling when stock reaches zero.' })}
+            checked={value.allowBackorder}
+            onCheckedChange={(v) => set('allowBackorder', v)}
+          />
+          <SwitchField
+            label={t('isDigital', { default: 'Digital product' })}
+            description={t('isDigitalDesc', { default: 'No shipping required after checkout.' })}
+            checked={value.isDigital}
+            onCheckedChange={(v) => set('isDigital', v)}
+          />
+          <SwitchField
+            label={t('featured', { default: 'Featured' })}
+            description={t('featuredDesc', { default: 'Highlight this product in the storefront.' })}
+            checked={value.featured}
+            onCheckedChange={(v) => set('featured', v)}
+          />
+        </div>
+      </EditorSection>
+
+      <EditorSection id="media" title={t('sectionMediaGroup')} hint={t('sectionMediaGroupDesc')}>
+        <ImageUploadField
+          id="pf-thumbnail"
+          label={t('fieldThumbnail', { default: 'Product thumbnail' })}
+          hint={t('thumbnailHint', { default: 'Square recommended · JPG, PNG, WebP, AVIF · up to 25 MB' })}
+          previewUrl={value.thumbnailUrl}
+          onSelect={(file) => {
+            uploadImage(file, 'covers')
+              .then(({ url }) => set('thumbnailUrl', url))
+              .catch((e) =>
+                toast({ type: 'err', title: t('uploadFailed'), description: e instanceof Error ? e.message : undefined }),
+              );
+          }}
+          onClear={() => set('thumbnailUrl', null)}
+        />
+        <SubHeading hint={gallery ? t('galleryHint') : t('galleryAfterCreate')}>
+          {t('galleryTitle', { default: 'Gallery' })}
+        </SubHeading>
+        {gallery ?? null}
+        <SubHeading hint={t('sectionHotspotsDesc')}>{t('sectionHotspots')}</SubHeading>
+        <ProductHotspotsEditor
+          imageUrl={value.thumbnailUrl}
+          pinpoints={value.pinpoints}
+          onChange={(next) => set('pinpoints', next)}
+        />
+      </EditorSection>
+
+      <EditorSection id="details" title={t('sectionDetails')} hint={t('sectionDetailsDesc')}>
+        <FieldGrid>
+          <SelectField
+            label={t('fieldAcademy', { default: 'Academy' })}
+            value={value.academyId}
+            onChange={(e) => set('academyId', e.target.value)}
+          >
+            <option value="">{t('none', { default: 'None' })}</option>
+            {academies.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.title}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label={t('fieldCourse', { default: 'Course' })}
+            value={value.courseId}
+            onChange={(e) => set('courseId', e.target.value)}
+          >
+            <option value="">{t('none', { default: 'None' })}</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </SelectField>
+        </FieldGrid>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          {t('sectionRelationsDesc', { default: 'Optionally surface this product inside an academy or course.' })}
+        </p>
+        <SubHeading hint={t('sectionDocsDesc')}>{t('sectionDocs')}</SubHeading>
+        <ProductDocumentsField documents={value.documents} onChange={(next) => set('documents', next)} />
+      </EditorSection>
+
+      <EditorSection
+        id="seo"
+        title={t('sectionSeo', { default: 'SEO' })}
+        hint={t('sectionSeoDesc', { default: 'Overrides for search results. Leave blank to use the title and description above.' })}
+      >
+        <SearchPreview
+          title={value.seoTitle.trim() || value.title.trim()}
+          description={value.seoDescription.trim() || value.description.trim()}
+          path={`products/${value.slug || slugify(value.title)}`}
+        />
+        <BilingualField
+          id="pf-seo-title"
+          label={t('fieldSeoTitle', { default: 'SEO title' })}
+          en={{
+            value: value.seoTitle,
+            onChange: (next) => set('seoTitle', next),
+            placeholder: t('seoTitlePlaceholder', { default: 'Custom title for search results' }),
+          }}
+          ar={{ value: value.translationsAr.seoTitle, onChange: (next) => setAr({ seoTitle: next }) }}
+          onDraftArabic={draft}
+          drafting={arabic.busy}
+        />
+        <BilingualField
+          id="pf-seo-description"
+          label={t('fieldSeoDescription', { default: 'SEO description' })}
+          multiline
+          rows={3}
+          en={{
+            value: value.seoDescription,
+            onChange: (next) => set('seoDescription', next),
+            placeholder: t('seoDescriptionPlaceholder', { default: 'Meta description for search' }),
+          }}
+          ar={{ value: value.translationsAr.seoDescription, onChange: (next) => setAr({ seoDescription: next }) }}
+          onDraftArabic={draft}
+          drafting={arabic.busy}
+        />
+      </EditorSection>
     </>
   );
 }
 
+/** How the page reads in a search result, filled from the copy until overridden. */
+function SearchPreview({ title, description, path }: { title: string; description: string; path: string }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-xl border border-border/70 bg-background p-4" dir="ltr">
+      <span className="truncate text-xs text-success">{`barootcnc.com › ${path.replace(/\//g, ' › ')}`}</span>
+      <span className="truncate text-lg leading-snug text-info">{title || '—'}</span>
+      <span className="line-clamp-2 text-13 leading-relaxed text-muted-foreground">{description || '—'}</span>
+    </div>
+  );
+}
+
+/**
+ * The product as a store card, in the language the editor is looking at.
+ * Arabic falls back to English field by field, exactly as the storefront does.
+ */
+export function ProductCardPreview({ value }: { value: ProductFormValue }) {
+  const t = useTranslations('admin.productForm');
+  const { mode } = useLanguageMode();
+  const ar = mode === 'ar';
+  const title = (ar && value.translationsAr.title.trim()) || value.title.trim() || t('untitled', { default: 'Untitled product' });
+  const tagline = (ar && value.translationsAr.tagline.trim()) || value.tagline.trim();
+  const price = value.priceCents.trim() ? Number(value.priceCents) : null;
+  const compare = value.compareAtCents.trim() ? Number(value.compareAtCents) : null;
+  const fmt = (minor: number) => {
+    try {
+      return new Intl.NumberFormat(ar ? 'ar-SA' : 'en-US', {
+        style: 'currency',
+        currency: isCurrencyCode(value.currency) ? value.currency : 'SAR',
+        maximumFractionDigits: fractionDigits(value.currency),
+      }).format(minor / 10 ** fractionDigits(value.currency));
+    } catch {
+      return String(minor);
+    }
+  };
+  const off = price && compare && compare > price ? Math.round((1 - price / compare) * 100) : null;
+  return (
+    <div dir={ar ? 'rtl' : 'ltr'} lang={ar ? 'ar' : 'en'} className="overflow-hidden rounded-2xl border border-border/70 bg-background">
+      <div className="relative flex aspect-[4/3] items-center justify-center bg-muted text-xs text-muted-foreground">
+        {value.thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value.thumbnailUrl} alt="" className="absolute inset-0 size-full object-cover" />
+        ) : (
+          <ImageIcon className="size-6" aria-hidden="true" />
+        )}
+        {off ? (
+          <span className="absolute start-2.5 top-2.5 rounded-full bg-primary px-2 py-0.5 text-2xs font-medium text-primary-foreground">
+            −{off}%
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-1 p-3.5">
+        {value.category.trim() && <span className="text-2xs text-muted-foreground">{value.category}</span>}
+        <span className={cn('text-base leading-snug text-foreground', !ar && 'font-display')}>{title}</span>
+        {tagline && <span className="text-13 text-muted-foreground">{tagline}</span>}
+        <div className="mt-1 flex items-baseline gap-2" dir="ltr">
+          {value.pricingMode === 'request' ? (
+            <span className="text-sm font-medium text-foreground">{t('pricingRequest', { default: 'Request a quote' })}</span>
+          ) : price !== null ? (
+            <>
+              <span className="text-[0.9375rem] font-semibold tabular-nums text-foreground">
+                {value.pricingMode === 'from' ? `${t('fromPrefix', { default: 'From' })} ` : ''}
+                {fmt(price)}
+              </span>
+              {off ? <span className="text-xs tabular-nums text-muted-foreground line-through">{fmt(compare!)}</span> : null}
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export { ErrorBanner, isCurrencyCode };
 

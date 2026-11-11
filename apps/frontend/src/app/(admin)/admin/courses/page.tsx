@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CreateEntityDialog } from '@/components/admin/editor/create-entity';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
@@ -331,6 +332,8 @@ export default function AdminCoursesPage() {
 
   const [academyOptions, setAcademyOptions] = useState<{ slug: string; title: string }[]>([]);
   const [rows, setRows] = useState<CourseRow[] | null>(null);
+  /** New opens the create dialog over the list rather than a separate page. */
+  const [createOpen, setCreateOpen] = useState(false);
   const [total, setTotal] = useState(0);
   const [facets, setFacets] = useState<Record<string, number> | null>(null);
   const [facetTotal, setFacetTotal] = useState(0);
@@ -453,6 +456,7 @@ export default function AdminCoursesPage() {
 
   return (
     <div className="w-full">
+      <CreateEntityDialog open={createOpen} onOpenChange={setCreateOpen} kind="course" />
       <AdminCommandBar
         trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('courses', { default: 'Courses' })}]}
         count={loading ? null : total}
@@ -475,7 +479,7 @@ export default function AdminCoursesPage() {
         primary={
           <BarPrimaryButton
             icon={<Plus className="size-4" strokeWidth={2.5} />}
-            onClick={() => router.push('/admin/courses/new')}
+            onClick={() => setCreateOpen(true)}
           >
             {t('newCourse', { default: 'New course' })}
           </BarPrimaryButton>
@@ -704,7 +708,7 @@ export default function AdminCoursesPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => router.push('/admin/courses/new')}
+                    onClick={() => setCreateOpen(true)}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
                   >
                     <Plus className="size-4" />
