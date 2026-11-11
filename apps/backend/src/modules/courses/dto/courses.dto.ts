@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, Min, Max, MaxLength, IsUUID, IsIn, IsObject, IsArray, IsInt, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface, registerDecorator, ValidationArguments } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, Min, Max, MaxLength, IsUUID, IsIn, IsObject, Matches, IsArray, IsInt, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface, registerDecorator, ValidationArguments } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { type LessonVideoMeta } from '../../../database/schema/courses';
@@ -80,8 +80,15 @@ function IsUploadedCourseMetadata() {
   };
 }
 
+/**
+ * Slugs become URL segments. An unvalidated slug let an admin save "aerospace machining-101", which
+ * published fine and then 404'd for every learner (and made the course unreachable from the home page).
+ */
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SLUG_MESSAGE = 'slug may only contain lowercase letters, numbers and single hyphens';
+
 export class CreateCourseDto {
-  @ApiProperty() @IsString() slug: string;
+  @ApiProperty() @IsString() @MaxLength(100) @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE }) slug: string;
   @ApiProperty() @IsString() title: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() academyId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() subtitle?: string;
@@ -106,7 +113,7 @@ export class CreateCourseDto {
 }
 
 export class UpdateCourseDto {
-  @ApiPropertyOptional() @IsOptional() @IsString() slug?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE }) slug?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() title?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() academyId?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsString() subtitle?: string;
@@ -132,7 +139,7 @@ export class UpdateCourseDto {
 
 export class CreateSeriesDto {
   @ApiProperty() @IsUUID() courseId: string;
-  @ApiProperty() @IsString() slug: string;
+  @ApiProperty() @IsString() @MaxLength(100) @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE }) slug: string;
   @ApiProperty() @IsString() title: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsLessonZodSchema(seriesTranslationsSchema) translations?: Partial<Record<'en' | 'ar', SeriesContentTranslation>> | null;
@@ -143,7 +150,7 @@ export class CreateSeriesDto {
 }
 
 export class UpdateSeriesDto {
-  @ApiPropertyOptional() @IsOptional() @IsString() slug?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE }) slug?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() title?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsObject() @IsLessonZodSchema(seriesTranslationsSchema) translations?: Partial<Record<'en' | 'ar', SeriesContentTranslation>> | null;
@@ -163,7 +170,7 @@ class UploadedAttachmentDto {
 
 export class CreateLessonDto {
   @ApiProperty() @IsUUID() seriesId: string;
-  @ApiProperty() @IsString() slug: string;
+  @ApiProperty() @IsString() @MaxLength(100) @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE }) slug: string;
   @ApiProperty() @IsString() title: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() videoUrl?: string;
@@ -182,7 +189,7 @@ export class CreateLessonDto {
 }
 
 export class UpdateLessonDto {
-  @ApiPropertyOptional() @IsOptional() @IsString() slug?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) @Matches(SLUG_PATTERN, { message: SLUG_MESSAGE }) slug?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() title?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) @IsUploadedMediaUrl() videoUrl?: string;

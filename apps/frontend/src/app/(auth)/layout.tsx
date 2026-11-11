@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { BrandMark } from '@/components/layout/brand';
+import { BRAND_NAME } from '@/lib/brand';
 
 /**
  * Every route in this group is an authentication or credential-verification screen:
@@ -16,9 +17,11 @@ import { BrandMark } from '@/components/layout/brand';
  * and only a server layout can export `metadata`.
  */
 export const metadata: Metadata = {
+  // The template used to end in "Sign in" instead of the brand, so every screen read like the
+  // login page. Each screen now names itself and the brand follows, like everywhere else.
   title: {
     default: 'Sign in',
-    template: '%s | Sign in',
+    template: `%s | ${BRAND_NAME}`,
   },
   robots: { index: false, follow: false, nocache: true },
 };
