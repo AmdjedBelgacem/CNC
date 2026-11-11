@@ -1,5 +1,5 @@
 import { localizeEventFields, resolveContentLocale } from '../courses/lesson-content';
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DrizzleService } from '../../database/drizzle.service';
 import { events, eventAttendees } from '../../database/schema/events';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
@@ -98,9 +98,17 @@ export class EventsService {
     return localizeEventFields(event as unknown as Record<string, any>, resolveContentLocale(localeInput)).value;
   }
 
-  async register(eventId: string, userId: string, tenantId: string) {
+  /**
+   * `opts.fulfilledPayment` is for the payment pipeline, which has already taken the money. A
+   * priced event cannot be joined any other way: the page used to POST here directly, so the
+   * ticket price was only a label.
+   */
+  async register(eventId: string, userId: string, tenantId: string, opts: { fulfilledPayment?: boolean } = {}) {
     const event = await this.findById(eventId, tenantId);
     if (!event.isPublished) throw new BadRequestException('Event is not published');
+    if (!opts.fulfilledPayment && (event.price ?? 0) > 0) {
+      throw new ForbiddenException('This event requires a ticket purchase');
+    }
 
     const existing = await this.drizzle.db.query.eventAttendees.findFirst({
       where: and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)),

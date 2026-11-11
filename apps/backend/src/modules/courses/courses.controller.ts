@@ -310,13 +310,13 @@ export class CoursesController {
   @ApiOperation({ summary: 'Upsert lesson progress (watch time, complete)' })
   updateProgress(
     @CurrentTenant() tenant: { id: string },
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { id: string; role: string; tenantId: string },
     @Body() dto: UpdateProgressDto,
   ) {
     return this.courses.upsertProgress(user.id, dto.lessonId, tenant.id, {
       watchTimeSeconds: dto.watchTimeSeconds,
       completed: dto.completed,
       quizScore: dto.quizScore,
-    });
+    }, user);
   }
 }

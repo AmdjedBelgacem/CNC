@@ -3299,6 +3299,7 @@
     }
   },
   "events": {
+    "purchaseUnavailable": "شراء التذاكر غير متاح حاليًا",
     "title": "الفعاليات",
     "subtitle": "ورش عمل وندوات ولقاءات مباشرة",
     "upcoming": "القادمة",
@@ -5029,6 +5030,7 @@
       "proceedToCheckout": "المتابعة إلى الدفع"
     },
     "eventDetail": {
+      "buyTicket": "شراء تذكرة",
       "notFound": "لم يُعثر على الفعالية.",
       "virtual": "افتراضية",
       "full": "ممتلئة",

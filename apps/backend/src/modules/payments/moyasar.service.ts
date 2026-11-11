@@ -983,11 +983,13 @@ export class MoyasarService {
   ): Promise<void> {
     if (line.itemType === 'course') {
       // Delegates to the single enrolment path the free flow already uses.
-      await this.courses.enrollUser(tenantId, userId, line.refId!);
+      // The order is paid by the time this runs, so the access-mode gate must not block it.
+      await this.courses.enrollUser(tenantId, userId, line.refId!, { fulfilledPayment: true });
       return;
     }
     if (line.itemType === 'event_ticket') {
-      await this.events.register(line.refId!, userId, tenantId);
+      // Paid for by now, so the ticket-price gate in register() must not block it.
+      await this.events.register(line.refId!, userId, tenantId, { fulfilledPayment: true });
       return;
     }
 

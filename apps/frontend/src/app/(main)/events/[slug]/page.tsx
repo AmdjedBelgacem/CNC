@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { api } from '@/lib/api-client';
 import { formatDate as formatDateInLocale } from '@/lib/format';
+import { formatMoney } from '@/lib/api/normalize';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/stores/auth-store';
+import { useBuyAndCheckout, usePaymentConfig } from '@/hooks/use-payments';
 import {
   Calendar,
   MapPin,
@@ -53,6 +55,8 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { buy } = useBuyAndCheckout();
+  const { data: payments } = usePaymentConfig(isAuthenticated);
   const fetchEvent = () => {
     api.get<EventDetail>(`/events/${slug}`, { locale })
       .then(setEvent)
@@ -62,14 +66,31 @@ export default function EventDetailPage() {
   useEffect(() => {
     fetchEvent();
   }, [slug]);
+  const isPaid = (event?.price ?? 0) > 0;
   const handleRegister = async () => {
     if (!event) return;
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
-    setRegistering(true);
     const wasRegistered = !!event.userRegistration;
+    // A priced event is a ticket: it goes through the same payment gateway as a course or product,
+    // because the server refuses to register anyone for it any other way.
+    if (!wasRegistered && (event.price ?? 0) > 0) {
+      if (!payments?.data?.enabled) {
+        toast({ type: 'err', title: t('purchaseUnavailable') });
+        return;
+      }
+      setRegistering(true);
+      try {
+        await buy([{ itemType: 'event_ticket', refId: event.id, quantity: 1 }]);
+      } catch (error) {
+        toast({ type: 'err', title: (error as Error)?.message ?? t('registerFailed') });
+        setRegistering(false);
+      }
+      return;
+    }
+    setRegistering(true);
     try {
       const res = await fetch(`/api/proxy/events/${event.id}/register`, {
         method: wasRegistered ? 'DELETE' : 'POST',
@@ -260,7 +281,7 @@ export default function EventDetailPage() {
                     <DollarSign className="size-4" />
                   </span>
                   <span className="font-display text-xl font-medium tabular-nums text-foreground">
-                    ${(event.price / 100).toFixed(2)}
+                    {formatMoney(event.price, 'SAR', locale)}
                   </span>
                 </div>
               )}
@@ -283,7 +304,7 @@ export default function EventDetailPage() {
               >
                 <AnimatePresence mode="wait" initial={false}>
                   <m.span
-                    key={registering ? 'busy' : isRegistered ? 'cancel' : event.isFull ? 'full' : 'register'}
+                    key={registering ? 'busy' : isRegistered ? 'cancel' : event.isFull ? 'full' : isPaid ? 'buy' : 'register'}
                     className="inline-flex items-center"
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0, transition: transition.enter }}
@@ -299,7 +320,7 @@ export default function EventDetailPage() {
                       td('eventFull')
                     ) : (
                       <>
-                        <CheckCircle className="me-2 size-4" /> {td('registerNow')}
+                        <CheckCircle className="me-2 size-4" /> {isPaid ? td('buyTicket') : td('registerNow')}
                       </>
                     )}
                   </m.span>

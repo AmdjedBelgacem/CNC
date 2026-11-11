@@ -1493,7 +1493,7 @@ export class CoursesService {
       })
       .returning();
     await this.cleanupQuizAttempts(tenantId, viewer.id, lesson.id, quizId, attemptNumber);
-    await this.upsertProgress(viewer.id, lesson.id, tenantId, {});
+    await this.upsertProgress(viewer.id, lesson.id, tenantId, {}, viewer);
     return {
       attemptId: attempt?.id ?? attemptId,
       lessonId: lesson.id,
@@ -1520,19 +1520,32 @@ export class CoursesService {
   }
 
   // --- Enrollments ---
-  async enrollUser(tenantId: string, userId: string, courseId: string) {
+  /**
+   * `opts.fulfilledPayment` is for the payment pipeline only: it has already taken the money, so
+   * the access-mode rule below must not apply to it. Everything else is a learner enrolling
+   * themselves, and a paid or invite-only course is not theirs to open without paying or an
+   * invitation. The button hides this today, but a direct API call did not.
+   */
+  async enrollUser(tenantId: string, userId: string, courseId: string, opts: { fulfilledPayment?: boolean } = {}) {
     // The course must belong to the caller's resolved tenant. Without this check a
     // learner could enrol into another tenant's course (and the insert would stamp the
     // wrong tenantId on the enrollment row).
     const course = await this.drizzle.db.query.courses.findFirst({
       where: eq(courses.id, courseId),
-      columns: { id: true, tenantId: true, isPublished: true, isArchived: true, slug: true, title: true },
+      columns: { id: true, tenantId: true, isPublished: true, isArchived: true, slug: true, title: true, accessMode: true, priceCents: true },
     });
     if (!course || String(course.tenantId) !== String(tenantId)) {
       throw new NotFoundException('Course not found');
     }
     if (!course.isPublished || course.isArchived) {
       throw new BadRequestException('Course is not available for enrollment');
+    }
+    if (!opts.fulfilledPayment) {
+      const mode = (course.accessMode ?? 'open') as string;
+      if (mode === 'paid' && (course.priceCents ?? 0) > 0) {
+        throw new ForbiddenException('This course has to be purchased before you can enroll');
+      }
+      if (mode === 'invite') throw new ForbiddenException('This course is available by invitation only');
     }
 
     const existing = await this.drizzle.db.query.enrollments.findFirst({
@@ -1606,10 +1619,29 @@ export class CoursesService {
     };
   }
 
+  /**
+   * Recording progress needs the same access as playing the lesson. This endpoint used to take
+   * any lesson id in the tenant, so a learner who never enrolled or paid could mark every
+   * lesson complete and be auto-issued a certificate for a paid course. The quiz endpoint
+   * already enforced this; progress did not.
+   */
+  private async assertCanRecordProgress(tenantId: string, lessonId: string, viewer: LessonViewer) {
+    const lesson = await this.drizzle.db.query.lessons.findFirst({
+      where: and(eq(lessons.id, lessonId), eq(lessons.tenantId, tenantId)),
+      columns: { freePreview: true },
+      with: { series: { columns: { courseId: true } } },
+    });
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    const allowed = await this.canAccessLesson(tenantId, (lesson as any).series?.courseId, lesson.freePreview, viewer);
+    if (!allowed) throw new ForbiddenException('Enroll in the course to track your progress');
+  }
+
   async upsertProgress(
     userId: string, lessonId: string, tenantId: string,
     data: { watchTimeSeconds?: number; completed?: boolean; quizScore?: number },
+    viewer?: LessonViewer,
   ) {
+    await this.assertCanRecordProgress(tenantId, lessonId, viewer ?? { id: userId, role: 'learner', tenantId });
     const existing = await this.getLessonProgress(userId, lessonId, tenantId);
     const quizState = await this.progressQuizState(userId, lessonId, tenantId);
     const requestedCompleted = data.completed;

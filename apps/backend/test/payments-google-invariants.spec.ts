@@ -157,8 +157,9 @@ describe('Moyasar fulfillment', () => {
   });
 
   it('reuses the existing enrolment and registration paths', () => {
-    expect(moyasar).toMatch(/this\.courses\.enrollUser\(tenantId, userId, line\.refId!\)/);
-    expect(moyasar).toMatch(/this\.events\.register\(line\.refId!, userId, tenantId\)/);
+    // `fulfilledPayment` marks this as the paid path, so the access-mode gate does not apply.
+    expect(moyasar).toMatch(/this\.courses\.enrollUser\(tenantId, userId, line\.refId!, \{ fulfilledPayment: true \}\)/);
+    expect(moyasar).toMatch(/this\.events\.register\(line\.refId!, userId, tenantId, \{ fulfilledPayment: true \}\)/);
   });
 
   it('decrements stock only for products that track it', () => {

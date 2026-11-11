@@ -3300,6 +3300,7 @@
     }
   },
   "events": {
+    "purchaseUnavailable": "Tickets are not available for purchase right now",
     "title": "Events",
     "subtitle": "Live workshops, webinars and meetups",
     "upcoming": "Upcoming",
@@ -5030,6 +5031,7 @@
       "proceedToCheckout": "Proceed to Checkout"
     },
     "eventDetail": {
+      "buyTicket": "Buy ticket",
       "notFound": "Event not found.",
       "virtual": "Virtual",
       "full": "Full",
