@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { BadgeCheck } from 'lucide-react';
 import { Reveal } from '@/components/ui/motion';
 
 export default function VerifyIndexPage() {
   const router = useRouter();
+  const t = useTranslations('verifyIndex');
   const [number, setNumber] = useState('');
   return (
     <div className="relative isolate">
@@ -19,10 +21,10 @@ export default function VerifyIndexPage() {
             <BadgeCheck className="size-7" />
           </span>
           <h1 className="text-balance font-display text-4xl font-medium tracking-[-0.025em]">
-            Verify a certificate
+            {t('title')}
           </h1>
           <p className="mb-8 mt-4 text-pretty leading-relaxed text-muted-foreground">
-            Enter the certificate number (e.g. TMF-2026-000001) to check a real issued credential.
+            {t('body')}
           </p>
         </Reveal>
         <Reveal delay={0.06}>
@@ -38,13 +40,15 @@ export default function VerifyIndexPage() {
               value={number}
               onChange={(e) => setNumber(e.target.value)}
               placeholder="TMF-2026-000001"
+              aria-label={t('inputLabel')}
+              dir="ltr"
               className="w-full bg-transparent px-3 py-2 font-mono text-sm outline-none placeholder:text-muted-foreground/70"
             />
             <button
               type="submit"
               className="pressable shrink-0 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
             >
-              Verify
+              {t('submit')}
             </button>
           </form>
         </Reveal>

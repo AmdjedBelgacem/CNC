@@ -5234,9 +5234,28 @@
     }
   },
   "partners": {
+    "formType": "النوع",
+    "formCompany": "الشركة",
+    "formContactName": "اسم جهة الاتصال",
+    "formEmail": "البريد الإلكتروني",
+    "formMessage": "الرسالة",
+    "formSubmit": "إرسال الطلب",
+    "formSubmitting": "جارٍ الإرسال…",
+    "formReference": "المرجع",
+    "typeSponsor": "راعٍ",
+    "typeDistributor": "موزّع",
+    "typeTrainingCenter": "مركز تدريب",
+    "typeAffiliate": "شريك تسويقي",
+    "typeOther": "أخرى",
     "submitted": "تم إرسال الطلب",
     "submitFailed": "تعذّر إرسال الطلب",
     "successTitle": "شكرًا لك",
     "successBody": "لقد استلمنا طلبك."
+  },
+  "verifyIndex": {
+      "title": "التحقق من شهادة",
+      "body": "أدخل رقم الشهادة (مثل TMF-2026-000001) للتحقق من شهادة صادرة فعليًا.",
+      "inputLabel": "رقم الشهادة",
+      "submit": "تحقق"
   }
 }

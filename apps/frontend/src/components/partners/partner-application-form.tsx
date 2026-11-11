@@ -10,7 +10,14 @@ import { Input, Textarea } from '@/components/ui/input';
 import { Crossfade } from '@/components/ui/motion';
 import { spring } from '@/lib/motion';
 
-const TYPES = ['sponsor', 'distributor', 'training_center', 'affiliate', 'other'];
+const TYPES = ['sponsor', 'distributor', 'training_center', 'affiliate', 'other'] as const;
+const TYPE_KEYS: Record<(typeof TYPES)[number], string> = {
+  sponsor: 'typeSponsor',
+  distributor: 'typeDistributor',
+  training_center: 'typeTrainingCenter',
+  affiliate: 'typeAffiliate',
+  other: 'typeOther',
+};
 
 export default function PartnerApplicationForm() {
   const t = useTranslations('partners');
@@ -66,7 +73,7 @@ export default function PartnerApplicationForm() {
             {t('successBody', { default: 'We received your application.' })}
           </p>
           <p className="mt-4 text-xs text-muted-foreground">
-            Ref: <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono">{reference}</span>
+            {t('formReference')}: <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono">{reference}</span>
           </p>
         </div>
       ) : (
@@ -75,7 +82,7 @@ export default function PartnerApplicationForm() {
           className="space-y-5 rounded-2xl border border-border/70 bg-card p-6 shadow-sm sm:p-8"
         >
           <label className="block text-sm font-medium">
-            Type
+            {t('formType')}
             <select
               className={`${field} flex h-10 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-xs transition-[border-color,box-shadow] hover:border-border-strong focus-visible:border-ring/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15`}
               value={form.type}
@@ -83,14 +90,14 @@ export default function PartnerApplicationForm() {
             >
               {TYPES.map((v) => (
                 <option key={v} value={v}>
-                  {v}
+                  {t(TYPE_KEYS[v])}
                 </option>
               ))}
             </select>
           </label>
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block text-sm font-medium">
-              Company
+              {t('formCompany')}
               <Input
                 required
                 className={field}
@@ -99,7 +106,7 @@ export default function PartnerApplicationForm() {
               />
             </label>
             <label className="block text-sm font-medium">
-              Contact name
+              {t('formContactName')}
               <Input
                 required
                 className={field}
@@ -109,7 +116,7 @@ export default function PartnerApplicationForm() {
             </label>
           </div>
           <label className="block text-sm font-medium">
-            Email
+            {t('formEmail')}
             <Input
               type="email"
               required
@@ -119,7 +126,7 @@ export default function PartnerApplicationForm() {
             />
           </label>
           <label className="block text-sm font-medium">
-            Message
+            {t('formMessage')}
             <Textarea
               required
               rows={5}
@@ -136,7 +143,7 @@ export default function PartnerApplicationForm() {
                   className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
               )}
-              {busy ? 'Submitting…' : 'Submit application'}
+              {busy ? t('formSubmitting') : t('formSubmit')}
             </Button>
           </div>
         </form>

@@ -5235,9 +5235,28 @@
     }
   },
   "partners": {
+    "formType": "Type",
+    "formCompany": "Company",
+    "formContactName": "Contact name",
+    "formEmail": "Email",
+    "formMessage": "Message",
+    "formSubmit": "Submit application",
+    "formSubmitting": "Submitting…",
+    "formReference": "Ref",
+    "typeSponsor": "Sponsor",
+    "typeDistributor": "Distributor",
+    "typeTrainingCenter": "Training center",
+    "typeAffiliate": "Affiliate",
+    "typeOther": "Other",
     "submitted": "Application submitted",
     "submitFailed": "Submission failed",
     "successTitle": "Thank you",
     "successBody": "We received your application."
+  },
+  "verifyIndex": {
+      "title": "Verify a certificate",
+      "body": "Enter the certificate number (e.g. TMF-2026-000001) to check a real issued credential.",
+      "inputLabel": "Certificate number",
+      "submit": "Verify"
   }
 }
