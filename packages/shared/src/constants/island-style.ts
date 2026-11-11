@@ -68,7 +68,7 @@ export const ISLAND_HEAD = {
   /** Side note aligned to the right of a title row. */
   aside: 'max-w-sm text-sm leading-relaxed text-muted-foreground',
   /** Text link beside a title (events "Full board"). */
-  textLink: 'group inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline',
+  textLink: 'group inline-flex min-h-6 items-center gap-1 text-sm font-medium text-primary hover:underline',
   /** Pill link beside a title (products "Full catalog"). */
   pillLink: 'link-pill group',
 } as const;

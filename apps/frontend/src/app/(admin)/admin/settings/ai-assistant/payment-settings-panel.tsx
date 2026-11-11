@@ -246,7 +246,7 @@ export function PaymentSettingsPanel() {
                 </p>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="pay-pk">{t('publishableKey')}</Label>
                   <Input
@@ -395,7 +395,7 @@ export function PaymentSettingsPanel() {
                       {expanded === order.id && orderDetail && (
                         <tr className="border-t border-border/70 bg-muted/40">
                           <td colSpan={4} className="py-3">
-                            <dl className="grid gap-1.5 text-2xs text-muted-foreground sm:grid-cols-3">
+                            <dl className="grid grid-cols-1 gap-1.5 text-2xs text-muted-foreground sm:grid-cols-3">
                               <div>
                                 <dt className="font-medium text-foreground">{t('providerPaymentId')}</dt>
                                 <dd className="font-mono">

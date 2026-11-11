@@ -271,7 +271,7 @@ export function StepLive({ course }: { course: CourseStudioData }) {
           icon={Video}
           description={t('formHint', { default: 'Dates are interpreted in your local timezone and stored in UTC. Times are shown to learners in the session timezone.' })}
         >
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField
               label={t('titleLabel', { default: 'Title' })}
               value={draft.title}

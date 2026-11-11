@@ -426,12 +426,12 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-[132px] rounded-xl" />
           ))}
         </div>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <SkeletonPanel key={i} />
           ))}
@@ -595,7 +595,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
 
         <div className={cn('space-y-6 transition-opacity duration-300', isFetching && 'pointer-events-none opacity-60')}>
           {/* KPI grid */}
-          <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {kpis.map((k, index) => (
               <StaggerItem key={k.key} index={index}>
               <AdminKpiCard
@@ -613,7 +613,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
           </Stagger>
 
           {/* Trends */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <TrendChart
               title={t('signupsOverTime', { default: 'Signups Over Time' })}
               description={t('signupsOverTimeDesc', {
@@ -678,7 +678,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
           </div>
 
           {/* Top lists */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <PanelCard
               title={
                 <span className="flex items-center gap-2">
@@ -839,13 +839,13 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
               bodyClassName="p-4"
             >
               {isFetching ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <Skeleton key={i} className="h-28 rounded-xl" />
                   ))}
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <InsightCard
                     icon={Trophy}
                     title={t('zeroEnrollmentCourses', { default: 'Zero-enrollment courses' })}
@@ -908,7 +908,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                     </p>
                     <Link
                       href="/admin/users?suspended=true"
-                      className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      className="mt-auto inline-flex min-h-6 items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
                       {t('reviewUsers', { default: 'Review users' })}
                     </Link>
@@ -986,7 +986,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
                         )}
                       />
                       <div className="min-w-0 flex-1">
-                        <Link href={item.href} className="group flex items-center gap-1 truncate text-sm text-foreground underline-offset-4 hover:underline">
+                        <Link href={item.href} className="group flex min-h-6 items-center gap-1 truncate text-sm text-foreground underline-offset-4 hover:underline">
                           <span className="truncate font-medium">{item.title}</span>
                         </Link>
                         <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>

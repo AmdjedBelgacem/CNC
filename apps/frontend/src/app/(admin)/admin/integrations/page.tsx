@@ -34,7 +34,7 @@ async function IntegrationsSkeleton() {
   const t = await getTranslations('admin.integrations');
   return (
     <div
-      className="grid gap-4 sm:grid-cols-2"
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2"
       role="status"
       aria-busy="true"
       aria-label={t('loading')}

@@ -162,7 +162,7 @@ export function IntegrationsPanel() {
       ) : query.isError ? (
         <ErrorState title={tAdmin('loadFailed')} onRetry={() => void query.refetch()} />
       ) : (
-        <Stagger className="grid gap-4 lg:grid-cols-2">
+        <Stagger className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {services.map((service, index) => (
             <StaggerItem key={service.service} index={index} className="h-full">
             <Card className="h-full transition-shadow duration-200 hover:shadow-md">

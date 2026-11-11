@@ -197,7 +197,7 @@ export function StepPublish({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
           <div className="flex items-center gap-2">
             {reasons.length ? <Lock className="size-4 text-destructive" /> : <CheckCircle2 className="size-4 text-success" />}
@@ -232,7 +232,7 @@ export function StepPublish({
           <Info className="size-4 text-primary" />
           <h3 className="font-display text-base font-medium tracking-[-0.01em] text-foreground">{t('studio.studioChecklist', { default: 'Studio checklist' })}</h3>
         </div>
-        <Stagger className="mt-4 grid gap-2 sm:grid-cols-2">
+        <Stagger className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {steps.map((step, index) => {
             const hint = stepHint(step, t);
             return (

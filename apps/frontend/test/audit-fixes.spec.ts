@@ -167,3 +167,50 @@ describe('learner drawer reflects an action once it has happened', () => {
     expect(body).toMatch(/onChanged\(okMessage\);[\s\S]*if \(method !== 'DELETE'\) void loadAll\(\);/);
   });
 });
+
+describe('admin screens fit a phone and keep small controls tappable', () => {
+  const adminFiles = (() => {
+    const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+    const { join } = require('node:path') as typeof import('node:path');
+    const walk = (dir: string): string[] =>
+      readdirSync(dir).flatMap((n: string) => {
+        const full = join(dir, n);
+        return statSync(full).isDirectory() ? walk(full) : full.endsWith('.tsx') ? [full] : [];
+      });
+    return [...walk(resolve(__dirname, '../src/app/(admin)')), ...walk(resolve(__dirname, '../src/components/admin'))];
+  })();
+
+  it('every responsive grid also defines a base column, so one column cannot size to its widest content', () => {
+    const offenders: string[] = [];
+    for (const file of adminFiles) {
+      const src = readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/className="([^"\n]*)"/g)) {
+        const toks = m[1]!.split(/\s+/);
+        if (!toks.includes('grid')) continue;
+        if (!toks.some((t) => /^(sm|md|lg|xl|2xl):grid-cols-/.test(t))) continue;
+        if (!toks.some((t) => /^grid-cols-/.test(t))) offenders.push(`${file.split('/src/')[1]}: ${m[1]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('the shared breadcrumb link and the date filters have a usable hit area', () => {
+    expect(read('components/admin/admin-chrome.tsx')).toMatch(/inline-flex min-h-6 items-center rounded-sm font-medium text-muted-foreground/);
+    for (const page of ['app/(admin)/admin/users/page.tsx', 'app/(admin)/admin/certificates/page.tsx']) {
+      expect(read(page).match(/className="h-full bg-transparent text-xs outline-none/g)).toHaveLength(2);
+    }
+  });
+});
+
+describe('small public controls meet the 24px minimum target size', () => {
+  it('feed tag chips, the settings back link and the shared island text link have room to tap', () => {
+    const feed = read('components/feed/feed-stream.tsx');
+    expect(feed.match(/shrink-0 rounded-full border px-2\.5 py-1 text-xs font-medium/g)).toHaveLength(2);
+    expect(read('app/(main)/(academy)/settings/layout.tsx')).toMatch(/mb-3 inline-flex min-h-6 items-center/);
+    const island = readFileSync(resolve(__dirname, '../../../packages/shared/src/constants/island-style.ts'), 'utf8');
+    expect(island).toMatch(/textLink: 'group inline-flex min-h-6/);
+  });
+  it('the compact studio language toggle is wide enough and has an accessible name', () => {
+    expect(read('app/(admin)/admin/courses/studio/StudioHeader.tsx')).toMatch(/aria-label=\{item === 'ar' \? 'العربية' : 'English'\} className=\{cn\('relative min-h-6 min-w-7/);
+  });
+});

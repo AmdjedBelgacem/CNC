@@ -109,7 +109,7 @@ export function StepPricing({
           default: 'Who can enroll in this course, and whether it costs anything.',
         })}
       >
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {MODES.map((mode) => {
             const Icon = mode.icon;
             const selected = course.accessMode === mode.value;
@@ -169,7 +169,7 @@ export function StepPricing({
               default: 'A one-time purchase for lifetime access to this course.',
             })}
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <TextField
                 label={t('priceLabel', { default: 'Price' })}
                 type="number"

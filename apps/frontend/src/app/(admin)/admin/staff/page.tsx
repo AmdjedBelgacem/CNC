@@ -965,7 +965,7 @@ export default function AdminStaffPage() {
             </div>
           </Reveal>
         ) : (
-          <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {rows.map((u, cardIndex) => {
               const active = focusId === u.id;
               const displayName = u.name || u.email.split('@')[0];
@@ -1077,7 +1077,7 @@ export default function AdminStaffPage() {
           <button
             type="button"
             onClick={() => router.push('/admin/staff/audit')}
-            className="group inline-flex shrink-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+            className="group inline-flex min-h-6 shrink-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
           >
             {tAdmin('access.viewAuditLogs', { default: 'View Audit Logs' })}
             <ArrowRight className="flip-rtl size-3.5 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />

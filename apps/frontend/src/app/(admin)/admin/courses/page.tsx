@@ -665,7 +665,7 @@ export default function AdminCoursesPage() {
 
         <Crossfade value={loading ? 'loading' : !rows || rows.length === 0 ? 'empty' : view} distance={6}>
         {loading ? (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <CourseCardSkeleton key={i} />
             ))}
@@ -715,7 +715,7 @@ export default function AdminCoursesPage() {
             />
           </div>
         ) : view === 'grid' ? (
-          <Stagger className="grid gap-4 lg:grid-cols-2">
+          <Stagger className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {rows.map((c, index) => (
               <StaggerItem key={c.id} index={index} className="min-w-0">
                 <CourseCard

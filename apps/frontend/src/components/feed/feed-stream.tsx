@@ -192,7 +192,7 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
             onClick={() => setTag(undefined)}
             aria-pressed={!activeTag}
             className={cn(
-              'shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
+              'shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
               !activeTag
                 ? 'border-primary/30 bg-primary/10 text-primary'
                 : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',
@@ -207,7 +207,7 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
               onClick={() => setTag(activeTag === tag.slug ? undefined : tag.slug)}
               aria-pressed={activeTag === tag.slug}
               className={cn(
-                'shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
+                'shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
                 activeTag === tag.slug
                   ? 'border-primary/30 bg-primary/10 text-primary'
                   : 'border-border/70 bg-card text-muted-foreground hover:border-border-strong hover:text-foreground',

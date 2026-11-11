@@ -715,7 +715,7 @@ export default function AdminCertificatesPage() {
                   max={to || undefined}
                   onChange={(e) => setParam({ from: e.target.value || null })}
                   aria-label={t('fromDate', { default: 'Issued from' })}
-                  className="bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
+                  className="h-full bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
                 />
                 <span className="text-xs text-muted-foreground" aria-hidden="true">
                   –
@@ -726,7 +726,7 @@ export default function AdminCertificatesPage() {
                   min={from || undefined}
                   onChange={(e) => setParam({ to: e.target.value || null })}
                   aria-label={t('toDate', { default: 'Issued to' })}
-                  className="bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
+                  className="h-full bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
                 />
               </div>
 
@@ -742,7 +742,7 @@ export default function AdminCertificatesPage() {
             </Toolbar>
 
             {loading ? (
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
                     <div className="flex gap-4">
@@ -783,7 +783,7 @@ export default function AdminCertificatesPage() {
                 />
               )
             ) : view === 'grid' ? (
-              <Stagger className="grid gap-4 lg:grid-cols-2">
+              <Stagger className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {rows.map((c, i) => (
                   <StaggerItem key={c.id} index={i} className="h-full">
                     <CertificateCard cert={c} onOpen={() => setFocusId(c.id)} t={t} />

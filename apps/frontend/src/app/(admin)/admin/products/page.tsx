@@ -700,7 +700,7 @@ export default function AdminProductsPage() {
         </Toolbar>
 
         {loading ? (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
@@ -749,7 +749,7 @@ export default function AdminProductsPage() {
             />
           </div>
         ) : view === 'grid' ? (
-          <Stagger key={`grid-${page}-${status}-${q}`} className="grid gap-4 lg:grid-cols-2">
+          <Stagger key={`grid-${page}-${status}-${q}`} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {rows.map((p, i) => (
               <StaggerItem key={p.id} index={i}>
               <ProductCard

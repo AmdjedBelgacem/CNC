@@ -490,7 +490,7 @@ export function CurriculumBuilder({
           </div>
         </m.div>
       ) : (
-        <div className="grid items-start gap-6 xl:grid-cols-[200px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[200px_minmax(0,1fr)]">
           <nav aria-label={t('curriculum', { default: 'Curriculum' })} className="hidden xl:sticky xl:top-48 xl:block">
             <ol className="space-y-0.5 border-s border-border/70">
               {items.map((s, index) => {

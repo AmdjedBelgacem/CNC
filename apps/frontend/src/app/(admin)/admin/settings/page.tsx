@@ -432,7 +432,7 @@ export default function AdminSettingsPage() {
               })}
               bodyClassName="p-0"
             >
-              <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <div className="space-y-6 p-4 sm:p-5">
                   <FieldGrid cols={2}>
                     <TextField
@@ -595,7 +595,7 @@ export default function AdminSettingsPage() {
               })}
               bodyClassName="p-3"
             >
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <IntegrationCard
                   href="/admin/settings/ai-assistant"
                   icon={Bot}

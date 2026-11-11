@@ -275,7 +275,7 @@ export function ProductGalleryManager({
           {t('empty', { default: 'No images yet. The storefront falls back to a placeholder.' })}
         </p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <AnimatePresence initial={false}>
           {images.map((image, index) => (
             <m.li

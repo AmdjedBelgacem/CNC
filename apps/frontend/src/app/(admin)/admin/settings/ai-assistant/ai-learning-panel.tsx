@@ -171,7 +171,7 @@ export function AiLearningPanel() {
             <ErrorState title={ta('loadFailed')} onRetry={() => void webSearch.refetch()} compact />
           ) : !form ? null : (
             <>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="ai-search-provider">{t('searchProvider')}</Label>
                   <select
@@ -243,7 +243,7 @@ export function AiLearningPanel() {
                 </div>
               </fieldset>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="ai-search-max">{t('searchMaxResults')}</Label>
                   <Input
@@ -335,7 +335,7 @@ export function AiLearningPanel() {
           ) : !summary || summary.total === 0 ? (
             <p className="text-sm text-muted-foreground">{t('feedbackNoData')}</p>
           ) : (
-            <Stagger className="grid gap-3 sm:grid-cols-4">
+            <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-4">
               <StaggerItem index={0}>
                 <Stat label={t('feedbackTotal')} value={String(summary.total)} />
               </StaggerItem>

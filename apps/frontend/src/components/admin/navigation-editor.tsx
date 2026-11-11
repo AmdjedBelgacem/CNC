@@ -383,7 +383,7 @@ export function NavigationEditor() {
             <Skeleton className="h-9 w-56" />
             <Skeleton className="h-4 w-80" />
           </div>
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="space-y-2 rounded-xl border border-border/70 bg-card p-5 shadow-xs">
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-14 w-full rounded-xl" />
@@ -446,7 +446,7 @@ export function NavigationEditor() {
           )}
         </AnimatePresence>
 
-        <div className="mx-auto grid w-full max-w-6xl items-start gap-6 pb-28 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="mx-auto grid grid-cols-1 w-full max-w-6xl items-start gap-6 pb-28 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <NavCtx.Provider value={ctx}>
             <Reveal className="min-w-0 xl:order-1">
               <FormSection
@@ -486,7 +486,7 @@ export function NavigationEditor() {
                     <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-muted-foreground">
                       {t('empty')}
                     </p>
-                    <div className="mx-auto mt-6 grid max-w-md gap-3 sm:grid-cols-2">
+                    <div className="mx-auto mt-6 grid grid-cols-1 max-w-md gap-3 sm:grid-cols-2">
                       <button
                         type="button"
                         onClick={() => addNode(null, { id: newId(), label: '', type: 'url', href: '' })}
@@ -809,7 +809,7 @@ function ItemFields({ node }: { node: NavNode }) {
 
   return (
     <div className="space-y-4">
-      <div ref={focusRef} className="grid gap-4 sm:grid-cols-2">
+      <div ref={focusRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={t('labelEn')} required error={err?.label ? t(err.label) : undefined}>
           {(a) => (
             <TextInput

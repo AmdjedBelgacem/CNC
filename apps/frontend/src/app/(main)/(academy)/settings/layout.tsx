@@ -191,7 +191,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           <div className="min-w-0 flex-1">
             <Link
               href="/account"
-              className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-3 inline-flex min-h-6 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronLeft className="flip-rtl size-3.5" /> {t('nav.dashboard')}
             </Link>

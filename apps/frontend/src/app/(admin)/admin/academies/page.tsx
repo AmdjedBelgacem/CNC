@@ -642,7 +642,7 @@ export default function AdminAcademiesPage() {
 
         {loading ? (
           view === 'gallery' ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <AcademyCardSkeleton key={i} />
               ))}
@@ -697,7 +697,7 @@ export default function AdminAcademiesPage() {
             />
           </div>
         ) : view === 'gallery' ? (
-          <Stagger key={`gallery-${page}-${status}-${q}`} className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <Stagger key={`gallery-${page}-${status}-${q}`} className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {rows.map((a, i) => (
               <StaggerItem key={a.id} index={i}>
               <AcademyCard

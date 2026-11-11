@@ -440,7 +440,7 @@ export default function AcademyEditorPage() {
     return (
       <div className="mx-auto w-full max-w-6xl space-y-6 pt-6">
         <Skeleton className="h-9 w-72 rounded-lg" />
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17rem] xl:gap-8">
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17rem] xl:gap-8">
           <div className="space-y-6">
             <div className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
               <FormSkeleton fields={4} />
@@ -669,7 +669,7 @@ export default function AcademyEditorPage() {
                   value={accentValue}
                   onChange={(next) => setForm((f) => ({ ...f, accentColor: next }))}
                 />
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                   <AcademyImageField
                     label={t('heroBanner', { default: 'Hero banner' })}
                     hint={t('heroHint', {

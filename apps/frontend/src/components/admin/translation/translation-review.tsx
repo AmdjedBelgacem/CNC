@@ -118,7 +118,7 @@ export function TranslationReviewDialog({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: ease.emerge, delay: Math.min(index * 0.035, 0.4) }}
-              className="relative grid gap-x-7 gap-y-3 overflow-hidden rounded-xl border border-border/70 bg-card py-3.5 pe-4 ps-5 shadow-xs transition-[border-color,box-shadow] hover:border-border hover:shadow-sm sm:grid-cols-2"
+              className="relative grid grid-cols-1 gap-x-7 gap-y-3 overflow-hidden rounded-xl border border-border/70 bg-card py-3.5 pe-4 ps-5 shadow-xs transition-[border-color,box-shadow] hover:border-border hover:shadow-sm sm:grid-cols-2"
             >
               <StatusRail missing={item.missing} />
 

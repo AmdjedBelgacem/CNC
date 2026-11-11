@@ -292,7 +292,7 @@ export default function AdminUsersPage() {
               max={to || undefined}
               onChange={(e) => push({ from: e.target.value || null })}
               aria-label={tAdmin('learnerAccess.fromDate', { default: 'From date' })}
-              className="bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
+              className="h-full bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
             />
             <span className="text-xs text-muted-foreground" aria-hidden="true">
               –
@@ -303,7 +303,7 @@ export default function AdminUsersPage() {
               min={from || undefined}
               onChange={(e) => push({ to: e.target.value || null })}
               aria-label={tAdmin('learnerAccess.toDate', { default: 'To date' })}
-              className="bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
+              className="h-full bg-transparent text-xs outline-none [color-scheme:light] dark:[color-scheme:dark]"
             />
           </div>
 

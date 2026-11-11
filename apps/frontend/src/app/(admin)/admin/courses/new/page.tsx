@@ -255,7 +255,7 @@ export default function NewCoursePage() {
               description={t('startHint')}
               badge={tForm('optional')}
             >
-              <Stagger className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={t('chooseTemplate')}>
+              <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-3" role="radiogroup" aria-label={t('chooseTemplate')}>
                 {templates.map((item, index) => {
                   const Icon = item.icon;
                   const active = template === item.id;

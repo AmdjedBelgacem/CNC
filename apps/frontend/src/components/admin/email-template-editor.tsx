@@ -490,7 +490,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
             <Skeleton className="h-9 w-72" />
             <Skeleton className="h-4 w-48" />
           </div>
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
             <FormSkeleton fields={3} />
             <Skeleton className="h-[28rem] w-full rounded-xl" />
           </div>
@@ -617,7 +617,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
           />
         </div>
 
-        <div className="mx-auto grid w-full max-w-[1500px] items-start gap-6 pb-28 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <div className="mx-auto grid grid-cols-1 w-full max-w-[1500px] items-start gap-6 pb-28 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
           {/* -------------------------------------------------- editing pane */}
           <div className={cn('min-w-0 flex-col gap-6', pane === 'edit' ? 'flex' : 'hidden xl:flex')}>
             <Reveal>
@@ -635,7 +635,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
                     </Meta>
                     <Meta label={t('colUpdated')}>{new Date(template.updatedAt).toLocaleDateString()}</Meta>
                   </dl>
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <TextField
                       label={t('subject')}
                       value={subject}
@@ -1223,7 +1223,7 @@ function BlockFields({
             disabled={readOnly}
             onChange={(e) => onChange({ text: e.target.value })}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField
               label={t('labelLevel')}
               value={String(p.level ?? 2)}
@@ -1286,7 +1286,7 @@ function BlockFields({
             onChange={(e) => onChange({ url: e.target.value })}
             className="font-mono text-xs"
           />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField
               label={t('labelVariant')}
               value={String(p.variant ?? 'primary')}
@@ -1322,7 +1322,7 @@ function BlockFields({
             disabled={readOnly}
             onChange={(e) => onChange({ alt: e.target.value })}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField
               label={t('labelWidth')}
               type="number"
@@ -1373,7 +1373,7 @@ function BlockFields({
             className="font-mono text-xs"
             placeholder="order.items"
           />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField
               label={t('labelMode')}
               value={String(p.mode ?? 'columns')}

@@ -614,7 +614,7 @@ export function CourseStudio({ slug }: { slug: string }) {
         }}
       />
       <main className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
           <section className="min-w-0 rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-7 lg:p-8">
             <Crossfade value={step}>
               {stepContent[STEP_KEYS.indexOf(step)]}

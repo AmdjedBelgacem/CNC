@@ -198,7 +198,7 @@ export default function PlatformAlertsPage() {
         )}
 
         {/* Severity strip: what needs attention, and how urgently. */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {(['critical', 'warning', 'info'] as PlatformSeverity[]).map((level, index) => {
             const total = overview?.severity?.[level] ?? 0;
             const unread = overview?.unreadBySeverity?.[level] ?? 0;

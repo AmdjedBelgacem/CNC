@@ -212,7 +212,7 @@ export function AdminCommandBar({
                 {item.href ? (
                   <a
                     href={item.href}
-                    className="rounded-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    className="inline-flex min-h-6 items-center rounded-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
                     {item.label}
                   </a>

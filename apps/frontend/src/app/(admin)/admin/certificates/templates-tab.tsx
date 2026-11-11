@@ -888,7 +888,7 @@ function CertificateArt({
       {/* content */}{' '}
       {loading ? (
         view === 'grid' ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {' '}
             {[0, 1, 2, 3, 4, 5].map((i) => (
               <CardSkeleton key={i} />
@@ -1000,7 +1000,7 @@ function CertificateArt({
           </div>{' '}
         </Reveal>
       ) : view === 'grid' ? (
-        <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((tpl, tplIndex) => (
             <StaggerItem key={tpl.id} index={tplIndex} className="h-full">
             <article
@@ -1563,7 +1563,7 @@ function defaultFields(): TemplateField[] {
             <CertificateArt template={template} showAnchors={showAnchors} />
           </div>
           {(template.fields ?? []).length > 0 && (
-            <Stagger className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <Stagger className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {(template.fields ?? []).map((f, i) => (
                 <StaggerItem
                   key={f.key}
@@ -1842,7 +1842,7 @@ function TemplateStudioSheet({
           <Sparkles className="size-3.5 text-primary" />{' '}
           {t('starterPresets', { default: 'Starter presets — one click' })}{' '}
         </p>{' '}
-        <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
+        <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {' '}
           {PRESETS.map((p) => {
             const active =
@@ -1918,7 +1918,7 @@ function TemplateStudioSheet({
           ))}{' '}
         </div>{' '}
       </div>{' '}
-      <div className="grid gap-0 lg:grid-cols-[400px_1fr]">
+      <div className="grid grid-cols-1 gap-0 lg:grid-cols-[400px_1fr]">
         {' '}
         {/* form column */}{' '}
         <div className="space-y-5 p-4 sm:p-6">

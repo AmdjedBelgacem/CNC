@@ -174,7 +174,7 @@ export function StudioHeader({
           <div className="flex shrink-0 items-center rounded-lg border border-border/70 bg-muted/50 p-0.5 sm:hidden" role="group" aria-label={t('studio.editingLanguage', { default: 'Editing language' })}>
             <Languages className="mx-1 size-3.5 text-muted-foreground" />
             {(['en', 'ar'] as ContentLocale[]).map((item) => (
-              <button key={item} type="button" onClick={() => onLocaleChange(item)} aria-pressed={locale === item} className={cn('relative rounded-md px-2 py-1 text-[11px] font-medium', locale === item ? 'text-foreground' : 'text-muted-foreground')}>
+              <button key={item} type="button" onClick={() => onLocaleChange(item)} aria-pressed={locale === item} aria-label={item === 'ar' ? 'العربية' : 'English'} className={cn('relative min-h-6 min-w-7 rounded-md px-2 py-1 text-[11px] font-medium', locale === item ? 'text-foreground' : 'text-muted-foreground')}>
                 {locale === item && <m.span layoutId="studio-locale-pill-sm" transition={spring.snappy} className="absolute inset-0 rounded-md bg-card shadow-xs ring-1 ring-border/70" aria-hidden />}
                 <span className="relative">{item === 'ar' ? 'ع' : 'EN'}</span>
               </button>

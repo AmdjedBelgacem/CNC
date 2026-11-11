@@ -475,7 +475,7 @@ const buildPayload = (): AiSettingsUpdate => {
             )}
           </AnimatePresence>
 
-          <Stagger className="grid gap-4 sm:grid-cols-3">
+          <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StaggerItem index={0}>
               <Card className="h-full p-5">
                 <p className="text-xs font-medium text-muted-foreground">{t('providerStatus')}</p>
@@ -737,7 +737,7 @@ const buildPayload = (): AiSettingsUpdate => {
               description={t('indexDescription')}
             >
               <div className="space-y-6">
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   {(
                     [
                       ['documents', corpus.documents],
@@ -755,7 +755,7 @@ const buildPayload = (): AiSettingsUpdate => {
                     </div>
                   ))}
                 </div>
-                <div className="grid gap-4 text-sm sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">{t('lastIndex')}</p>
                     <p className="mt-1">

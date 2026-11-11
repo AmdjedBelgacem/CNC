@@ -736,7 +736,7 @@ export function DashboardView() {
         )}
         </AnimatePresence>
 
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
             {/* Attention rail */}
             <Panel
@@ -819,7 +819,7 @@ export function DashboardView() {
               action={
                 <Link
                   href="/admin/analytics"
-                  className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
+                  className="inline-flex min-h-6 items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
                 >
                   {t('fullAnalytics')}
                   <ExternalLink className="size-3" aria-hidden="true" />
@@ -866,7 +866,7 @@ export function DashboardView() {
                 isManager ? (
                   <Link
                     href="/admin/courses"
-                    className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
+                    className="inline-flex min-h-6 items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
                   >
                     {t('viewAll')}
                     <ExternalLink className="size-3" aria-hidden="true" />
@@ -969,7 +969,7 @@ export function DashboardView() {
                 isManager ? (
                   <Link
                     href="/admin/users"
-                    className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
+                    className="inline-flex min-h-6 items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 transition hover:underline"
                   >
                     {t('viewAll')}
                     <ExternalLink className="size-3" aria-hidden="true" />
