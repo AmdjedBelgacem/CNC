@@ -1050,7 +1050,7 @@ export function ProductCardPreview({ value }: { value: ProductFormValue }) {
         {value.category.trim() && <span className="text-2xs text-muted-foreground">{value.category}</span>}
         <span className={cn('text-base leading-snug text-foreground', !ar && 'font-display')}>{title}</span>
         {tagline && <span className="text-13 text-muted-foreground">{tagline}</span>}
-        <div className="mt-1 flex items-baseline gap-2" dir="ltr">
+        <div className="mt-1 flex items-baseline gap-2">
           {value.pricingMode === 'request' ? (
             <span className="text-sm font-medium text-foreground">{t('pricingRequest', { default: 'Request a quote' })}</span>
           ) : price !== null ? (

@@ -205,14 +205,14 @@ export function BilingualField({
         {...common}
         rows={rows}
         invalid={lang === 'en' && !!error}
-        autoFocus={lang === 'en' ? en.autoFocus : undefined}
+        autoFocus={lang === 'en' ? en.autoFocus : arOpen}
         onChange={(e) => field.onChange(e.target.value)}
       />
     ) : (
       <TextInput
         {...common}
         invalid={lang === 'en' && !!error}
-        autoFocus={lang === 'en' ? en.autoFocus : undefined}
+        autoFocus={lang === 'en' ? en.autoFocus : arOpen}
         onChange={(e) => field.onChange(e.target.value)}
       />
     );
@@ -488,8 +488,8 @@ export function EditorHeader({
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 
 /**
- * Rail, form, aside. Three columns on wide screens; the aside drops under the
- * form below `2xl`, and the rail turns into a scrolling row on a phone.
+ * Rail, form, aside. Three columns from `xl` (1280px); the aside drops under the
+ * form below that, and the rail turns into a scrolling row on a phone.
  */
 export function EditorLayout({
   rail,
@@ -505,7 +505,7 @@ export function EditorLayout({
       className={cn(
         'mx-auto grid w-full max-w-[90rem] grid-cols-1 gap-6 pb-28',
         rail && 'lg:grid-cols-[13.5rem_minmax(0,1fr)]',
-        rail && aside && '2xl:grid-cols-[13.5rem_minmax(0,1fr)_21rem]',
+        rail && aside && 'xl:grid-cols-[13rem_minmax(0,1fr)_19rem] 2xl:grid-cols-[13.5rem_minmax(0,1fr)_21rem]',
       )}
     >
       {rail && (
@@ -515,8 +515,8 @@ export function EditorLayout({
       )}
       <div className="flex min-w-0 flex-col gap-5">{children}</div>
       {aside && (
-        <aside className="min-w-0 lg:col-start-2 2xl:col-start-3 2xl:row-start-1">
-          <div className="flex flex-col gap-4 2xl:sticky 2xl:top-20">{aside}</div>
+        <aside className="min-w-0 lg:col-start-2 xl:col-start-3 xl:row-start-1">
+          <div className="flex flex-col gap-4 xl:sticky xl:top-20">{aside}</div>
         </aside>
       )}
     </div>
