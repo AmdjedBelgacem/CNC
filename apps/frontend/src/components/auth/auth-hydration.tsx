@@ -1,25 +1,22 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
-import { api } from '@/lib/api-client';
+import { probeSession } from '@/lib/session-probe';
 
 /**
  * Restores the client session on app load.
  *
- * Asks GET /auth/me rather than /auth/session. An expired access cookie makes /auth/session
- * answer `{ authenticated: false }` with a 200, which never triggers the API client's
- * refresh, so a valid refresh cookie would read as signed out. The 401 from /auth/me is what
- * starts the rotation. The cost is that an anonymous visitor logs a 401 from /auth/me and
- * another from /auth/refresh on each page load.
+ * Asks GET /auth/session, which answers 200 whether or not anybody is signed in, so an
+ * anonymous visitor makes one request that does not fail. When the access cookie has expired
+ * but a refresh cookie is still live, the answer says so and the probe rotates the session
+ * once before deciding. Nothing here relies on a 401, so nothing is logged as an error.
  *
  * Marks the store hydrated either way so `hasHydrated` gates (nav menus, admin gate) can
  * render correctly.
  *
- * The retry covers a genuine race, not the common case: the access cookie lives 15 minutes,
- * so a cold load after it expires has to rotate before the session resolves. If that rotation
- * loses to a blip, or to a cookie another tab is mid-way through replacing, one attempt reads
- * as "signed out" and bounces the user to /login mid-session. Retrying once lets it settle;
- * only after both attempts fail is the session really gone.
+ * The retry covers a transport failure only (a network blip, a 5xx), never an anonymous
+ * answer: one attempt that fails reads as "signed out" and would bounce the user to /login
+ * mid-session, so a failure is retried once before the session is treated as gone.
  */
 const HYDRATION_RETRY_DELAY_MS = 700;
 
@@ -28,30 +25,14 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const [done, setDone] = useState(false);
 
-  const revalidate = async () => {
-    try {
-      const user = await api.get<any>('/auth/me');
-      if (user && user.id) setUser(user);
-      else setUser(null);
-      setHydrated(true);
-    } catch {
-      // 401 after refresh failure means genuinely signed out.
-      setUser(null);
-      setHydrated(true);
-    }
-  };
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const user = await api.get<any>('/auth/me');
+          const user = await probeSession();
           if (cancelled) return;
-          if (user && user.id) setUser(user);
-          else {
-            setUser(null);
-          }
+          setUser(user && user.id ? (user as never) : null);
           setHydrated(true);
           break;
         } catch {
@@ -67,6 +48,17 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
       }
       if (!cancelled) setDone(true);
     })();
+
+    // Re-check when the tab returns to the foreground, so a session ended elsewhere shows up.
+    const revalidate = async () => {
+      try {
+        const user = await probeSession();
+        setUser(user && user.id ? (user as never) : null);
+      } catch {
+        // A transport failure says nothing about the session; keep what we have.
+      }
+      setHydrated(true);
+    };
     const onFocus = () => void revalidate();
     const onVisibility = () => {
       if (document.visibilityState === 'visible') void revalidate();
@@ -82,9 +74,8 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
 
   return (
     <>
-      {' '}
-      {children} {/* Hidden marker for tests */}{' '}
-      <span data-auth-hydrated={done ? 'true' : 'false'} hidden />{' '}
+      {children}
+      <span data-auth-hydrated={done ? 'true' : 'false'} hidden />
     </>
   );
 }

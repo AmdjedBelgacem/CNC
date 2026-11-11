@@ -71,7 +71,7 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
     const t = setTimeout(async () => {
       try {
         const res = await fetch(
-          `/api/proxy/admin/users?limit=20&q=${encodeURIComponent(userQuery)}`,
+          `/api/proxy/admin/users?limit=20&search=${encodeURIComponent(userQuery)}`,
           { credentials: 'include' },
         );
         const data = await res.json().catch(() => null);

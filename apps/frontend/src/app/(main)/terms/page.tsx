@@ -5,7 +5,7 @@ import { LegalDocument } from '@/components/layout/legal-document';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 export const metadata: Metadata = {
-  title: 'Terms of Service | Baroot CNC Solutions',
+  title: 'Terms of Service',
   description:
     'Review the terms and conditions governing your use of the Baroot CNC Solutions platform.',
   alternates: { canonical: '/terms' },

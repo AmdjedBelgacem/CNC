@@ -285,7 +285,7 @@ export default function CheckoutSuccessPage() {
             {t('checkAgain')}
           </Button>
           <Button asChild variant="outline">
-            <Link href="/account/orders">{t('viewOrders')}</Link>
+            <Link href="/account">{t('viewOrders')}</Link>
           </Button>
         </div>
       </Panel>
@@ -300,7 +300,7 @@ export default function CheckoutSuccessPage() {
       >
         <p className="text-[15px] text-muted-foreground">{t('refundedHint')}</p>
         <Button asChild variant="outline" className="mt-2">
-          <Link href="/account/orders">{t('viewOrders')}</Link>
+          <Link href="/account">{t('viewOrders')}</Link>
         </Button>
       </Panel>
     );
@@ -363,7 +363,7 @@ export default function CheckoutSuccessPage() {
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link href="/account/orders">{t('viewOrders')}</Link>
+            <Link href="/account">{t('viewOrders')}</Link>
           </Button>
         </div>
       </Panel>

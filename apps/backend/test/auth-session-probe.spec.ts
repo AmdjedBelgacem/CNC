@@ -44,14 +44,31 @@ describe('session probe answers without failing', () => {
     expect(authController).not.toMatch(/@Get\('session'\)/);
   });
 
-  it('is not what the client hydrates from, because only a 401 starts a token refresh', () => {
-    // Commit 6298527 moved hydration back to /auth/me: /auth/session answers an expired access
-    // cookie with a 200, so the API client never refreshes and the user reads as signed out.
+  it('tells the client when an expired session can be refreshed', () => {
+    const controller = read('modules/auth/auth-session.controller.ts');
+    expect(controller).toMatch(/refreshable/);
+    // All three refresh cookie names the refresh endpoint accepts.
+    for (const name of ['refresh-token', '__Host-refresh', '__refresh-fallback']) {
+      expect(controller).toContain(name);
+    }
+  });
+
+  it('hydrates from /auth/session, so an anonymous visitor makes no failing request', () => {
     const hydration = readFileSync(
       resolve(__dirname, '../../frontend/src/components/auth/auth-hydration.tsx'),
       'utf8',
     );
-    expect(hydration).toMatch(/api\.get<[^>]*>\('\/auth\/me'\)/);
-    expect(hydration).not.toMatch(/api\.get<[^>]*>\('\/auth\/session'\)/);
+    expect(hydration).toMatch(/probeSession/);
+    expect(hydration).not.toMatch(/'\/auth\/me'/);
+    const probe = readFileSync(resolve(__dirname, '../../frontend/src/lib/session-probe.ts'), 'utf8');
+    expect(probe).toMatch(/'\/auth\/session'/);
+    // Rotates only when the server says there is something to rotate.
+    expect(probe).toMatch(/session\.refreshable && \(await refreshSession\(\)\)/);
+  });
+
+  it('does not try to refresh a session after a credential endpoint answers 401', () => {
+    const client = readFileSync(resolve(__dirname, '../../frontend/src/lib/api-client.ts'), 'utf8');
+    expect(client).toMatch(/isCredentialCall/);
+    expect(client).toMatch(/res\.status === 401 && !_retry && !isCredentialCall/);
   });
 });

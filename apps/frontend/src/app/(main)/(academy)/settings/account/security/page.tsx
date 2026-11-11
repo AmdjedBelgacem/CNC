@@ -133,7 +133,7 @@ export default function SecuritySettingsPage() {
       toast({ type: 'ok', title: tSecurity('security.emailVerificationSentShort') });
       setEmailForm({ newEmail: '', password: '' });
     } catch (err) {
-      const message = err instanceof Error ? err.message : tSecurity('account.unknownError');
+      const message = err instanceof Error ? err.message : tSecurity('unknownError');
       setEmailError(message);
       toast({ type: 'err', title: tSecurity('security.emailChangeFailed'), description: message });
     } finally {
@@ -515,16 +515,16 @@ export default function SecuritySettingsPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium flex items-center gap-2">
-                          {session.deviceInfo || tSecurity('account.unknownDevice')}
+                          {session.deviceInfo || tSecurity('unknownDevice')}
                           {session.isCurrent && (
                             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
-                              {tSecurity('account.currentBadge')}
+                              {tSecurity('currentBadge')}
                             </span>
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {session.ip && `${session.ip} · `}
-                          {tSecurity('account.lastActive')}
+                          {tSecurity('lastActive')}
                           {new Date(session.lastActiveAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -597,7 +597,7 @@ export default function SecuritySettingsPage() {
           </div>
           <div className="p-6">
             {loginHistoryLoading ? (
-              <p className="text-sm text-muted-foreground">{tSecurity('account.loading')}</p>
+              <p className="text-sm text-muted-foreground">{tSecurity('loading')}</p>
             ) : loginHistory.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {tSecurity('security.noLoginHistory')}
@@ -680,7 +680,7 @@ export default function SecuritySettingsPage() {
                 })
                 .catch((e) => {
                   const message =
-                    e instanceof Error ? e.message : tSecurity('account.unknownError');
+                    e instanceof Error ? e.message : tSecurity('unknownError');
                   toast({
                     type: 'err',
                     title: tSecurity('security.twoFactorDisableFailed'),

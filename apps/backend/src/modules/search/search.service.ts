@@ -496,6 +496,8 @@ export class SearchService {
       ];
       const response = await index.search<SearchDocument>(query, {
         filter: filters,
+        // Without this Meilisearch returns no facetDistribution, and every per-type count was 0.
+        facets: ['type'],
         limit: pageSize,
         offset: (page - 1) * pageSize,
         sort: sort === 'relevance' ? undefined : sort === 'title' ? ['title:asc'] : ['updatedAt:desc'],

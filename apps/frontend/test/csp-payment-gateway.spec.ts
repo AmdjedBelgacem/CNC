@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
  * Allowing a named host for the gateway does not weaken that, and must not be "fixed" by
  * reintroducing `'unsafe-inline'`.
  */
-const src = readFileSync(resolve(__dirname, '../src/middleware.ts'), 'utf8');
+const src = readFileSync(resolve(__dirname, '../src/proxy.ts'), 'utf8');
 const body = src.slice(src.indexOf('function buildCsp'), src.indexOf('function buildCsp') + 5000);
 
 describe('content security policy allows the payment gateway', () => {

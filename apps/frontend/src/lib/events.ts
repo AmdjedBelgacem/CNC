@@ -61,3 +61,23 @@ export async function fetchCatalogEvents(
     return [];
   }
 }
+
+/** Server-side: one published event by slug, or null when it does not exist. */
+export async function fetchEventBySlug(
+  tenantSlug: string,
+  slug: string,
+  locale?: string,
+): Promise<CatalogEvent | null> {
+  try {
+    const query = locale ? `?locale=${coerceLocale(locale)}` : '';
+    const res = await fetch(`${API_BASE}/events/${encodeURIComponent(slug)}${query}`, {
+      headers: tenantHeaders(tenantSlug, locale),
+      next: { revalidate: REVALIDATE },
+    });
+    if (!res.ok) return null;
+    const event = (await res.json()) as CatalogEvent;
+    return event && event.isPublished !== false ? event : null;
+  } catch {
+    return null;
+  }
+}

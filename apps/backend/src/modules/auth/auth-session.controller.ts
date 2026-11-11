@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthService } from './services/auth.service';
@@ -37,11 +37,23 @@ export class AuthSessionController {
       properties: {
         authenticated: { type: 'boolean' },
         user: { type: 'object', additionalProperties: true, nullable: true },
+        refreshable: {
+          type: 'boolean',
+          description: 'No valid access token, but a refresh cookie is present: refresh before treating the caller as signed out.',
+        },
       },
     },
   })
-  async getSession(@CurrentUser() user: any) {
-    if (!user?.id) return { authenticated: false, user: null };
-    return { authenticated: true, user: await this.auth.getProfile(user.id) };
+  async getSession(@CurrentUser() user: any, @Req() req: { cookies?: Record<string, string | undefined> }) {
+    if (!user?.id) {
+      // An expired access token with a live refresh cookie is a session that needs rotating,
+      // not an anonymous visitor. Saying so lets the client refresh only when it can succeed,
+      // instead of probing a 401 route and refreshing blind on every page load.
+      const refreshable = Boolean(
+        req.cookies?.['refresh-token'] || req.cookies?.['__Host-refresh'] || req.cookies?.['__refresh-fallback'],
+      );
+      return { authenticated: false, user: null, refreshable };
+    }
+    return { authenticated: true, user: await this.auth.getProfile(user.id), refreshable: false };
   }
 }

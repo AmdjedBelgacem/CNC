@@ -585,8 +585,15 @@ export class FeedService {
   async deletePost(tenantId: string, postId: string, userId: string) {
     const post = await this.findPost(tenantId, postId);
     if (String(post.userId) !== String(userId)) throw new ForbiddenException('Not your post');
-    // post_tags and post_likes cascade; comments cascade from the post.
-    await this.drizzle.db.delete(posts).where(eq(posts.id, postId));
+    // Only post_tags cascade at the database level. comments.post_id and post_likes.post_id are
+    // NO ACTION, so deleting the post row first fails (500) for any post that has been commented
+    // on or voted on. Clear the dependents in the same transaction. Replies and comment votes
+    // cascade from their comment.
+    await this.drizzle.db.transaction(async (tx) => {
+      await tx.delete(comments).where(eq(comments.postId, postId));
+      await tx.delete(postVotes).where(eq(postVotes.postId, postId));
+      await tx.delete(posts).where(eq(posts.id, postId));
+    });
     if (post.tenantId) void this.search?.removeEntity(post.tenantId, 'post', postId);
     await this.refreshTagCounts(tenantId);
   }

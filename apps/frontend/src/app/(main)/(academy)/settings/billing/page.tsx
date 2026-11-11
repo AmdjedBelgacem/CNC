@@ -1,5 +1,5 @@
 'use client';
-import { CreditCard, Check, Zap, Crown, ArrowRight } from 'lucide-react';
+import { CreditCard, Check, Zap, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { HoverLift, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
@@ -93,9 +93,9 @@ export default function BillingPage() {
                 <Button
                   className="mt-6 w-full rounded-full"
                   variant={plan.highlight ? 'default' : 'outline'}
-                  disabled={plan.active}
+                  disabled={plan.active || plan.highlight}
                 >
-                  {plan.cta} {plan.highlight && <ArrowRight className="flip-rtl ms-1 size-3.5" />}
+                  {plan.highlight ? t('billing.comingSoon') : plan.cta}
                 </Button>
               </HoverLift>
             </StaggerItem>

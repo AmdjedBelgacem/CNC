@@ -7,7 +7,7 @@ import { QuotesInbox } from './quotes-inbox';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('admin.quotes');
-  return { title: `${t('title')} | Baroot CNC Solutions` };
+  return { title: `${t('title')}` };
 }
 
 export default async function AdminQuotesPage() {

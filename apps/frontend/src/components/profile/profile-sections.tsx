@@ -375,7 +375,7 @@ export function ProfileLearning({
                     </span>
                   )}
                   <Button variant="link" size="xs" asChild>
-                    <Link href={`/certificates/verify/${certificate.certificateNumber}`}>
+                    <Link href={`/verify/${certificate.certificateNumber}`}>
                       {t('verify')}
                     </Link>
                   </Button>

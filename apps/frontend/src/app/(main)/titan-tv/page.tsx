@@ -1,7 +1,7 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Play, Clock, Film, ChevronRight } from 'lucide-react';
+import { Play, Clock, Film } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getImageSrc } from '@/lib/images';
 import { Reveal } from '@/components/ui/motion';
@@ -30,13 +30,19 @@ function formatDuration(sec: number | null): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 function VideoCard({ video }: { video: Video }) {
+  // A video with no URL is shown, but not as a link: an anchor to `#` would look clickable and do nothing.
+  const className =
+    'group w-72 shrink-0 snap-start rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-4 focus-visible:ring-offset-background';
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    video.videoUrl ? (
+      <a href={video.videoUrl} target="_blank" rel="noopener noreferrer" className={className}>
+        {children}
+      </a>
+    ) : (
+      <div className={className}>{children}</div>
+    );
   return (
-    <a
-      href={video.videoUrl || '#'}
-      target={video.videoUrl ? '_blank' : undefined}
-      rel="noopener noreferrer"
-      className="group w-72 shrink-0 snap-start rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-    >
+    <Wrapper>
       <div className="relative aspect-video overflow-hidden rounded-2xl bg-muted shadow-xs ring-1 ring-inset ring-border/70 transition-shadow duration-300 group-hover:shadow-lg">
         <img
           src={getImageSrc(video.thumbnailUrl, 'video')}
@@ -57,12 +63,11 @@ function VideoCard({ video }: { video: Video }) {
       <h4 className="mt-3 line-clamp-2 font-display text-base font-medium leading-snug tracking-[-0.01em] transition-colors group-hover:text-primary">
         {video.title}
       </h4>
-    </a>
+    </Wrapper>
   );
 }
 export default function TitanTvPage() {
   const t = useTranslations('pages.titanTv');
-  const tCommon = useTranslations('common');
   const { data, isLoading, error } = useQuery<{ data: Series[] }>({
     queryKey: ['titan-tv'],
     queryFn: () =>
@@ -134,13 +139,6 @@ export default function TitanTvPage() {
                     <h2 className="font-display text-2xl font-medium tracking-[-0.018em] md:text-3xl">
                       {series.title}
                     </h2>
-                    <a
-                      href="#"
-                      className="group flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
-                    >
-                      {tCommon('viewAll')}{' '}
-                      <ChevronRight className="flip-rtl size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                    </a>
                   </div>
                   {series.description && (
                     <p className="mb-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">

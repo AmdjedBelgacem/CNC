@@ -128,7 +128,10 @@ async function fetchApi<T>(path: string, options: FetchOptions = {}): Promise<T>
     headers.set('x-csrf-token', csrfToken);
   }
   let res = await fetch(`${API_BASE}${path}`, { ...fetchOpts, headers, credentials: 'include' });
-  if (res.status === 401 && !_retry) {
+  // A 401 from a credential endpoint means "wrong credentials", not "expired session", so there
+  // is nothing to refresh: retrying would only add a second failing request.
+  const isCredentialCall = /^\/auth\/(login|register|refresh|2fa\/verify|forgot-password|reset-password)(\?|$)/.test(path);
+  if (res.status === 401 && !_retry && !isCredentialCall) {
     if (!refreshPromise) {
       refreshPromise = refreshAccessToken();
     }
@@ -199,6 +202,18 @@ async function fetchCsrfToken(): Promise<void> {
  * `fetch` instead of using `api.*` should use this so the double-submit pair the
  * backend compares (`csrfCookie === csrfHeader`) is always consistent.
  */
+/**
+ * Rotate the session cookies once, however many callers ask at the same moment.
+ * Resolves true when the refresh cookie was accepted.
+ */
+export function refreshSession(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
 export async function ensureCsrfToken(): Promise<string | null> {
   if (!csrfToken) await fetchCsrfToken();
   return csrfToken;

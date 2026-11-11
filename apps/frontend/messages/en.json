@@ -3371,7 +3371,7 @@
     "tipTwoHint": "Narrow results by course, product, event, or community content.",
     "tipThreeTitle": "Press ⌘K from anywhere",
     "tipThreeHint": "The command surface keeps your place while you move through the site.",
-    "resultsFor": "RESULTS FOR",
+    "resultsFor": "RESULTS FOR “{query}”",
     "results": "results",
     "engineLabel": "Search engine",
     "openCommand": "Open search",
@@ -4614,6 +4614,7 @@
     "billing": {
       "pageTitle": "Billing",
       "pageSubtitle": "Manage your subscription, invoices, and payment methods.",
+      "comingSoon": "Coming soon",
       "upgradeToPro": "Upgrade to Pro",
       "proSubtitle": "Unlock unlimited courses, certificates, and priority support. Cancel anytime.",
       "planStarter": "Starter",

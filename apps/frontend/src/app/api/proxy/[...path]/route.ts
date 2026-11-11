@@ -180,7 +180,10 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
       }
     }
   }
-  const data = await response.text();
+  // Bytes, not text: decoding a PDF or image as UTF-8 replaces invalid sequences and corrupts
+  // the file. Status codes that forbid a body must be sent with none.
+  const noBody = [101, 204, 205, 304].includes(response.status) || method === 'HEAD';
+  const data = noBody ? null : await response.arrayBuffer();
   // Forward Set-Cookie headers from backend to client.
   //
   // Content-Type is taken from upstream rather than hardcoded to application/json:
@@ -190,6 +193,8 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
   const responseHeaders: Record<string, string> = {
     'Content-Type': response.headers.get('content-type') || 'application/json',
   };
+  const disposition = response.headers.get('content-disposition');
+  if (disposition) responseHeaders['Content-Disposition'] = disposition;
   const upstreamLocation = response.headers.get('location');
   if (upstreamLocation) responseHeaders['Location'] = upstreamLocation;
   const setCookie = response.headers.getSetCookie?.() || [];

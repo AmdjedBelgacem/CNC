@@ -5,7 +5,7 @@ import { LegalDocument } from '@/components/layout/legal-document';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 export const metadata: Metadata = {
-  title: 'Refund Policy | Baroot CNC Solutions',
+  title: 'Refund Policy',
   description:
     'Our refund and return policy for digital courses, physical products, and institutional purchases.',
   alternates: { canonical: '/refunds' },

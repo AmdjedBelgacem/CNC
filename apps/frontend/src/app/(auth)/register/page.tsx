@@ -22,17 +22,22 @@ import {
   authLinkClass,
 } from '@/components/auth/auth-kit';
 // so the callback sets httpOnly cookies and redirects back to the app.
+// The navigation goes through /api/proxy/*, the only API route the Next app serves.
 async function oauthRedirect(provider: 'google') {
   try {
     const res = await fetch('/api/proxy/auth/oauth/state', { credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
       if (data?.state) {
-        window.location.href = `/api/auth/oauth/${provider}?state=${encodeURIComponent(data.state)}&redirect=1`;
+        window.location.href = `/api/proxy/auth/oauth/${provider}?state=${encodeURIComponent(data.state)}&redirect=1`;
         return;
       }
     }
-  } catch {} // Fallback: direct navigation (backend may still accept, or shows error) window.location.href = `/api/auth/oauth/${provider}?redirect=1`;
+  } catch {
+    // Fall through to the direct navigation below.
+  }
+  // No state could be fetched: navigate directly, and the backend answers with its own error.
+  window.location.href = `/api/proxy/auth/oauth/${provider}?redirect=1`;
 }
 export default function RegisterPage() {
   const t = useTranslations('auth');

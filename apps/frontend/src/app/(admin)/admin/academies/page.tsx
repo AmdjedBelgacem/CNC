@@ -275,7 +275,7 @@ function AcademyCard({
           {t('manage', { default: 'Manage' })}
         </button>
         <a
-          href={`/academies/${academy.slug}`}
+          href={`/academy/${academy.slug}`}
           target="_blank"
           rel="noreferrer noopener"
           className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"

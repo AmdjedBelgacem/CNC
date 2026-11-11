@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { TagView } from '@/components/feed/tag-views';
 
 export const metadata: Metadata = {
-  title: 'Tag | Baroot CNC Solutions',
+  title: 'Tag',
   description: 'Community posts filed under this tag.',
 };
 

@@ -89,7 +89,7 @@ export class ProfileController {
     @Param('username') username: string,
     @CurrentUser() currentUser: any,
   ) {
-    if (!currentUser?.id) return { isFollowing: false };
+    if (!currentUser?.id) return { isFollowing: false, targetUserId: null };
     const target = await this.drizzle.db.query.users.findFirst({
       where: eq(users.username, username),
     });
@@ -97,7 +97,7 @@ export class ProfileController {
     const follow = await this.drizzle.db.query.follows.findFirst({
       where: and(eq(follows.followerId, currentUser.id), eq(follows.followingId, target.id)),
     });
-    return { isFollowing: !!follow };
+    return { isFollowing: !!follow, targetUserId: target.id };
   }
 
   @UseGuards(JwtAuthGuard)

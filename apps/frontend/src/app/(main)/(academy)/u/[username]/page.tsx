@@ -61,7 +61,7 @@ interface ProfileData {
 }
 interface FollowStatus {
   isFollowing: boolean;
-  targetUserId: string;
+  targetUserId?: string | null;
 }
 function getInitials(name: string): string {
   return name
@@ -264,7 +264,7 @@ export default function ProfilePage() {
     if (!followStatus || followLoading) return;
     try {
       setFollowLoading(true);
-      const res = await fetch(`/api/proxy/profile/${followStatus.targetUserId}/follow`, { credentials: 'include', method: 'POST' });
+      const res = await fetch(`/api/proxy/profile/${profile?.id ?? followStatus.targetUserId}/follow`, { credentials: 'include', method: 'POST' });
       if (!res.ok) throw new Error(tProfile('followFailed'));
       const wasFollowing = followStatus.isFollowing;
       setFollowStatus((prev) => (prev ? { ...prev, isFollowing: !prev.isFollowing } : null));
@@ -290,7 +290,7 @@ export default function ProfilePage() {
     } finally {
       setFollowLoading(false);
     }
-  }, [followStatus, followLoading, tProfile]);
+  }, [followStatus, followLoading, tProfile, profile?.id]);
   if (loading) return <LoadingSkeleton />;
   if (!profile) {
     return (
@@ -351,9 +351,6 @@ export default function ProfilePage() {
                   {followStatus.isFollowing ? tProfile('following') : tProfile('follow')}
                 </Button>
               )}
-              <Button variant="outline" className="rounded-full">
-                <MessageSquare className="me-1 size-4" /> {tp('message')}
-              </Button>
             </div>
           )}
         </div>

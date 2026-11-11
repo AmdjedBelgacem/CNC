@@ -5,7 +5,7 @@ import { LegalDocument } from '@/components/layout/legal-document';
 import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Baroot CNC Solutions',
+  title: 'Privacy Policy',
   description:
     'Read our privacy policy to understand how we collect, use, and protect your personal information.',
   alternates: { canonical: '/privacy' },

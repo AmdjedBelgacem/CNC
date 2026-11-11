@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('integrations');
   const tAdmin = await getTranslations('admin.integrations');
   return {
-    title: `${t('title')} | Baroot CNC Solutions`,
+    title: `${t('title')}`,
     description: tAdmin('metaDescription'),
   };
 }
