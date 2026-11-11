@@ -57,11 +57,11 @@ export async function ProductsFeatured({
                 <div>
                   <p className={ISLAND_HEAD.eyebrow}>{t('featuredHeading')}</p>
                   <h2 className={ISLAND_HEAD.titleLg}>
-                    Featured this week
+                    {t('featuredTitle')}
                   </h2>
                 </div>
                 <a href="#inventory" className={ISLAND_HEAD.pillLink}>
-                  Full catalog
+                  {t('fullCatalog')}
                   <ArrowRight className="flip-rtl size-3.5 transition-transform group-hover:translate-x-0.5" />
                 </a>
               </Reveal>
@@ -82,7 +82,7 @@ export async function ProductsFeatured({
                   className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                 />
                 <span className="absolute start-3 top-3 rounded-full bg-card/90 px-2.5 py-0.5 text-[11px] font-medium text-foreground shadow-xs ring-1 ring-border/60 backdrop-blur-sm">
-                  Featured
+                  {t('featuredBadge')}
                 </span>
               </div>
               <div className="flex flex-1 flex-col gap-1.5 border-t border-border/60 p-4">

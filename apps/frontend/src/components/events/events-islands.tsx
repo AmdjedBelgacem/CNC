@@ -120,7 +120,7 @@ function ScheduleRow({ event, locale, t }: { event: CatalogEvent; locale: string
           {event.isVirtual ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-border/70 px-2 py-0.5 text-xs font-medium text-muted-foreground">
               <Monitor className="size-3" />
-              Online
+              {t('online')}
             </span>
           ) : null}
         </div>
@@ -149,7 +149,7 @@ function ScheduleRow({ event, locale, t }: { event: CatalogEvent; locale: string
         </div>
       </div>
       <span className="mt-2 hidden shrink-0 -translate-x-1 items-center gap-1 text-sm font-medium text-primary opacity-0 transition duration-200 group-hover:translate-x-0 group-hover:opacity-100 rtl:translate-x-1 sm:inline-flex">
-        Details
+        {t('detailsLink')}
         <ArrowRight className="size-3.5 rtl:rotate-180" />
       </span>
     </Link>
@@ -189,7 +189,7 @@ function NextUpCard({ event, locale, t }: { event: CatalogEvent; locale: string;
             {event.eventType}
           </span>
           <span className="eyebrow">
-            Next up
+            {t('nextUpEyebrow')}
           </span>
         </div>
         <h3 className="text-balance font-display text-2xl font-medium leading-snug tracking-[-0.018em] text-foreground transition-colors group-hover:text-primary md:text-3xl">
@@ -219,7 +219,7 @@ function NextUpCard({ event, locale, t }: { event: CatalogEvent; locale: string;
           </span>
         </div>
         <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary">
-          View &amp; register
+          {t('viewRegister')}
           <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
         </span>
       </div>
@@ -307,7 +307,7 @@ export async function EventsNextUp({
                   href="#browse"
                   className={ISLAND_HEAD.textLink}
                 >
-                  Full board
+                  {t('fullBoardLink')}
                   <ArrowRight className="flip-rtl size-3.5" />
                 </a>
               </Reveal>
@@ -368,12 +368,12 @@ export async function EventsSchedule({
           ) : (
             header ?? (
               <Reveal className="mb-8 max-w-2xl">
-                <p className={ISLAND_HEAD.eyebrow}>Schedule</p>
+                <p className={ISLAND_HEAD.eyebrow}>{t('scheduleEyebrow')}</p>
                 <h2 className={ISLAND_HEAD.titleLg}>
-                  What&apos;s coming up
+                  {t('scheduleTitle')}
                 </h2>
                 <p className={ISLAND_HEAD.lead}>
-                  Ordered by date — workshops, webinars, and meets as they land on the board.
+                  {t('scheduleLead')}
                 </p>
               </Reveal>
             )
@@ -381,7 +381,7 @@ export async function EventsSchedule({
 
           {groups.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card/60 px-6 py-14 text-center text-sm text-muted-foreground">
-              Nothing scheduled yet — check the full board or past events below.
+              {t('scheduleEmpty')}
             </div>
           ) : (
             <Stagger inViewOnly className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
@@ -408,14 +408,14 @@ export async function EventsSchedule({
         <aside className="space-y-4 lg:sticky lg:top-24">
           <Reveal className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
             <h3 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
-              Board status
+              {t('boardStatus')}
             </h3>
             <ul className="mt-3 divide-y divide-border/60">
               {[
-                { label: 'Upcoming', value: list.length },
-                { label: 'Past listed', value: past.length },
-                { label: 'Formats', value: typeCount },
-                { label: 'Free events', value: freeCount },
+                { label: t('boardUpcoming'), value: list.length },
+                { label: t('boardPast'), value: past.length },
+                { label: t('boardFormats'), value: typeCount },
+                { label: t('boardFree'), value: freeCount },
               ].map((row) => (
                 <li
                   key={row.label}
@@ -433,7 +433,7 @@ export async function EventsSchedule({
           {past.length > 0 ? (
             <Reveal delay={0.05} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
               <h3 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
-                Recently past
+                {t('recentlyPast')}
               </h3>
               <ul className="mt-3 space-y-0.5">
                 {past.slice(0, 5).map((event) => (
@@ -464,13 +464,13 @@ export async function EventsSchedule({
 
           <Reveal delay={0.1} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
             <h3 className="font-display text-lg font-medium tracking-[-0.015em] text-foreground">
-              Take it further
+              {t('takeItFurther')}
             </h3>
             <ul className="mt-3 space-y-0.5">
               {[
-                { href: '/academy', label: 'Academy pathways' },
-                { href: '/products', label: 'Tool crib' },
-                { href: '/feed', label: 'Community wire' },
+                { href: '/academy', label: t('linkAcademy') },
+                { href: '/products', label: t('linkToolCrib') },
+                { href: '/feed', label: t('linkCommunity') },
               ].map((link) => (
                 <li key={link.href}>
                   <Link
@@ -491,7 +491,8 @@ export async function EventsSchedule({
 }
 
 /** Full events board island — the `events-browse` island. */
-export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
+export async function EventsBrowse({ header, bodyOnly }: IslandChrome) {
+  const t = await getTranslations('pages.events');
   return (
     <section
       id="browse"
@@ -506,13 +507,12 @@ export function EventsBrowse({ header, bodyOnly }: IslandChrome) {
           ? null
           : header ?? (
               <Reveal className="mb-8 max-w-2xl">
-                <p className={ISLAND_HEAD.eyebrow}>Full board</p>
+                <p className={ISLAND_HEAD.eyebrow}>{t('browseEyebrow')}</p>
                 <h2 className={ISLAND_HEAD.titleLg}>
-                  Browse every event
+                  {t('browseTitle')}
                 </h2>
                 <p className={ISLAND_HEAD.lead}>
-                  Filter by format, toggle upcoming vs past, search by city or title — live from
-                  the events API.
+                  {t('browseLead')}
                 </p>
               </Reveal>
             )}

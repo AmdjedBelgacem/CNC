@@ -5244,7 +5244,28 @@
       "statUpcoming": "قادمة",
       "statFormats": "الصيغ",
       "statCities": "المدن",
-      "statFreeSeats": "مقاعد مجانية"
+      "statFreeSeats": "مقاعد مجانية",
+      "detailsLink": "التفاصيل",
+      "nextUpEyebrow": "التالي",
+      "viewRegister": "عرض والتسجيل",
+      "fullBoardLink": "كل الفعاليات",
+      "scheduleEyebrow": "الجدول",
+      "scheduleTitle": "ما هو قادم",
+      "scheduleLead": "مرتبة حسب التاريخ — ورش وندوات ولقاءات فور إضافتها إلى اللوحة.",
+      "scheduleEmpty": "لا يوجد شيء مجدول بعد — تصفّح كل الفعاليات أو الفعاليات السابقة أدناه.",
+      "boardStatus": "حالة اللوحة",
+      "boardUpcoming": "القادمة",
+      "boardPast": "السابقة المدرجة",
+      "boardFormats": "الأنواع",
+      "boardFree": "فعاليات مجانية",
+      "recentlyPast": "فعاليات سابقة حديثًا",
+      "takeItFurther": "اذهب أبعد",
+      "linkAcademy": "مسارات الأكاديمية",
+      "linkToolCrib": "مخزن الأدوات",
+      "linkCommunity": "خلاصة المجتمع",
+      "browseEyebrow": "كل الفعاليات",
+      "browseTitle": "تصفّح كل الفعاليات",
+      "browseLead": "صفِّ حسب النوع، وبدّل بين القادمة والسابقة، وابحث بالمدينة أو العنوان — مباشرةً من بيانات الفعاليات."
     },
     "products": {
       "featuredHeading": "على الطاولة",
@@ -5254,7 +5275,10 @@
       "statDepartments": "الأقسام",
       "statPriceRange": "نطاق الأسعار",
       "statFreeShipping": "شحن مجاني",
-      "freeShippingThreshold": "للطلبات فوق ٩٩ $"
+      "freeShippingThreshold": "للطلبات فوق ٩٩ $",
+      "featuredTitle": "مختارات هذا الأسبوع",
+      "fullCatalog": "الكتالوج الكامل",
+      "featuredBadge": "مميّز"
     }
   },
   "partners": {

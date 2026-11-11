@@ -76,3 +76,23 @@ describe('site chrome and page metadata are localized', () => {
     }
   });
 });
+
+describe('the events and products islands read their text from the catalogs', () => {
+  const read = (p: string) => readFileSync(resolve(__dirname, '../src', p), 'utf8');
+  it('has no hard-coded English headings left in the events islands', () => {
+    const events = read('components/events/events-islands.tsx');
+    for (const literal of ['Board status', 'Recently past', 'Take it further', 'Academy pathways', 'Tool crib', 'Browse every event', 'Nothing scheduled yet', 'View &amp; register']) {
+      expect(events, literal).not.toContain(literal);
+    }
+    const products = read('components/store/products-islands.tsx');
+    for (const literal of ['Featured this week', 'Full catalog']) expect(products, literal).not.toContain(literal);
+  });
+  it('every key they use exists in both languages', () => {
+    const cats = ['en', 'ar'].map((l) => JSON.parse(readFileSync(resolve(__dirname, `../messages/${l}.json`), 'utf8')));
+    const events = read('components/events/events-islands.tsx');
+    const keys = [...events.matchAll(/\bt\('([A-Za-z]+)'/g)].map((m) => m[1]!);
+    expect(keys.length).toBeGreaterThan(20);
+    for (const cat of cats) for (const k of keys) expect(cat.pages.events[k], k).toBeTruthy();
+    for (const cat of cats) for (const k of ['featuredTitle', 'fullCatalog', 'featuredBadge']) expect(cat.pages.products[k], k).toBeTruthy();
+  });
+});

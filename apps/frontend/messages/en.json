@@ -5245,7 +5245,28 @@
       "statUpcoming": "Upcoming",
       "statFormats": "Formats",
       "statCities": "Cities",
-      "statFreeSeats": "Free seats"
+      "statFreeSeats": "Free seats",
+      "detailsLink": "Details",
+      "nextUpEyebrow": "Next up",
+      "viewRegister": "View & register",
+      "fullBoardLink": "Full board",
+      "scheduleEyebrow": "Schedule",
+      "scheduleTitle": "What's coming up",
+      "scheduleLead": "Ordered by date — workshops, webinars, and meets as they land on the board.",
+      "scheduleEmpty": "Nothing scheduled yet — check the full board or past events below.",
+      "boardStatus": "Board status",
+      "boardUpcoming": "Upcoming",
+      "boardPast": "Past listed",
+      "boardFormats": "Formats",
+      "boardFree": "Free events",
+      "recentlyPast": "Recently past",
+      "takeItFurther": "Take it further",
+      "linkAcademy": "Academy pathways",
+      "linkToolCrib": "Tool crib",
+      "linkCommunity": "Community wire",
+      "browseEyebrow": "Full board",
+      "browseTitle": "Browse every event",
+      "browseLead": "Filter by format, toggle upcoming vs past, search by city or title — live from the events API."
     },
     "products": {
       "featuredHeading": "On the bench",
@@ -5255,7 +5276,10 @@
       "statDepartments": "Departments",
       "statPriceRange": "Price range",
       "statFreeShipping": "Free ship",
-      "freeShippingThreshold": "over $99"
+      "freeShippingThreshold": "over $99",
+      "featuredTitle": "Featured this week",
+      "fullCatalog": "Full catalog",
+      "featuredBadge": "Featured"
     }
   },
   "partners": {
