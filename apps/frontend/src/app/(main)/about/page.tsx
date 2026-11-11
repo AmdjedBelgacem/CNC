@@ -13,7 +13,9 @@ import { aboutJsonLd } from '@/lib/schema';
 import { serializeJsonLd } from '@/lib/json-ld';
 
 export const metadata: Metadata = {
-  title: `About ${BRAND_NAME}`,
+  // `absolute` skips the root `%s | Brand` template, which would otherwise repeat the brand
+  // ("About Baroot CNC Solutions | Baroot CNC Solutions").
+  title: { absolute: `About ${BRAND_NAME}` },
   description: `${BRAND_NAME} teaches CNC machining through simulation-first courses and industry-recognised certification, serving machinists, engineers and manufacturing teams.`,
   // Was the relative '/about', which resolved against the wrong metadataBase and produced
   // a canonical pointing at a different origin than the one serving the page.
