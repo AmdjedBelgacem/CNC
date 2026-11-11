@@ -159,3 +159,11 @@ describe('admin drawers and cards do not offer what the server refuses or hide f
     expect(read('app/(admin)/admin/builder/builder-editor.tsx')).toMatch(/layoutFingerprint\(seeded\) !== layoutFingerprint\(baselineRef\.current\)/);
   });
 });
+
+describe('learner drawer reflects an action once it has happened', () => {
+  it('reloads the learner after a successful action (but not after a delete, which closes it)', () => {
+    const drawer = read('app/(admin)/admin/users/learner-drawer.tsx');
+    const body = drawer.slice(drawer.indexOf('const mutate = async'), drawer.indexOf('const suspendReason'));
+    expect(body).toMatch(/onChanged\(okMessage\);[\s\S]*if \(method !== 'DELETE'\) void loadAll\(\);/);
+  });
+});

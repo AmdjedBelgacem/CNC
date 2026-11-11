@@ -400,6 +400,10 @@ export function LearnerDrawer({
       throw new Error(msg);
     }
     onChanged(okMessage);
+    // The parent only refreshes its list. Without reloading here the drawer kept showing the old
+    // status: a suspended learner still read "Active" and offered Suspend instead of Unsuspend.
+    // A deleted account closes the drawer, so there is nothing to reload.
+    if (method !== 'DELETE') void loadAll();
   };
 
   const suspendReason = tAdmin('learnerDrawer.suspendReason', {
