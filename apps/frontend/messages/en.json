@@ -914,6 +914,7 @@
       "document": "Document",
       "downloadPdf": "Download PDF",
       "noDocument": "Not generated yet",
+      "noDocumentRevoked": "Not available for a revoked certificate",
       "renderedFields": "Rendered fields (immutable snapshot)",
       "usedDefaultLayout": "Template had no fields, so the built-in layout was used."
     },
@@ -4491,6 +4492,8 @@
       "automatic": "Auto-issued",
       "download": "Download PDF",
       "downloadFailed": "Download failed",
+      "print": "Print",
+      "printFailed": "Could not open the certificate for printing",
       "downloadStarted": "Certificate download started",
       "emptyBody": "Finish a course that issues a certificate and it will appear here.",
       "emptyTitle": "No certificates yet",

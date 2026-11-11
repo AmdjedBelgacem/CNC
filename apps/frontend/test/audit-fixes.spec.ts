@@ -151,9 +151,19 @@ describe('admin drawers and cards do not offer what the server refuses or hide f
     expect(drawer).toMatch(/canImpersonate && !isSelf && !isDeleted/);
     expect(drawer).toMatch(/canForcePw && !isDeleted/);
   });
-  it('a failed certificate PDF build says so instead of silently stopping the spinner', () => {
+  it('a valid certificate always offers its PDF, with no separate build step', () => {
+    // The server builds the document on demand when no stored copy exists, so the
+    // "Build PDF" step (and its silent-failure path) is gone.
     const page = read('app/(admin)/admin/certificates/page.tsx');
-    expect(page).toMatch(/regenerateFailed/);
+    expect(page).toMatch(/st !== 'revoked' && \(\s*<a\s+href=\{`\/api\/proxy\/admin\/certifications\/\$\{cert\.id\}\/download`\}/);
+    expect(page).not.toMatch(/regenerate-pdf/);
+    const detail = read('app/(admin)/admin/certificates/certificate-detail.tsx');
+    expect(detail).toMatch(/!isRevoked \? \(/);
+  });
+  it('learners can print a certificate directly', () => {
+    const list = read('components/certificates/certificate-list.tsx');
+    expect(list).toMatch(/const print = async/);
+    expect(list).toMatch(/contentWindow\?\.print\(\)/);
   });
   it('the builder compares layouts by content, so edit-then-undo is not "unsaved"', () => {
     expect(read('app/(admin)/admin/builder/builder-editor.tsx')).toMatch(/layoutFingerprint\(seeded\) !== layoutFingerprint\(baselineRef\.current\)/);

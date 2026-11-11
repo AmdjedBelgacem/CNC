@@ -16,11 +16,8 @@ import {
   RefreshCw,
   ShieldOff,
   Download,
-  Wand2,
-  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { AnimatePresence, m } from 'framer-motion';
@@ -117,7 +114,6 @@ function CertificateCard({
   const st = certStatus(cert);
   const locale = useLocale();
   const soon = expiresSoon(cert);
-  const [regenerating, setRegenerating] = useState<string | null>(null);
 
   return (
     <article
@@ -230,7 +226,10 @@ function CertificateCard({
         {/* Download goes through the authorized admin route: the stored
             pdfUrl is a presigned capability URL that expires, and a revoked
             certificate must stop yielding a file. */}
-        {cert.pdfUrl || cert.pdfStorageKey ? (
+        {/* Always offered for a valid certificate: the server streams the stored file,
+            or builds it from the record when none is stored. A "Build PDF" step used
+            to stand in front of it whenever storage had no copy. */}
+        {st !== 'revoked' && (
           <a
             href={`/api/proxy/admin/certifications/${cert.id}/download`}
             onClick={(e) => e.stopPropagation()}
@@ -239,33 +238,6 @@ function CertificateCard({
             <Download className="size-3.5" />
             {t('pdf', { default: 'PDF' })}
           </a>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setRegenerating(cert.id);
-              void api
-                .post(`/admin/certifications/${cert.id}/regenerate-pdf`)
-                .then(() => {
-                  window.location.reload();
-                })
-                .catch(() => {
-                  setRegenerating(null);
-                  // Was swallowed: the spinner just stopped and nothing said the PDF was not built.
-                  toast({ type: 'err', title: t('regenerateFailed', { default: 'Could not build the PDF. Try again.' }) });
-                });
-            }}
-            disabled={regenerating === cert.id}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
-          >
-            {regenerating === cert.id ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Wand2 className="size-3.5" />
-            )}
-            {t('regenerate', { default: 'Build PDF' })}
-          </button>
         )}
       </div>
     </article>

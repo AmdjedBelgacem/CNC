@@ -234,7 +234,9 @@ export function CertificateDetailDialog({
                       : t('sourceAutomatic', { default: 'Automatic (completion)' })}
                   </DetailRow>
                   <DetailRow label={t('document', { default: 'Document' })}>
-                    {cert.pdfStorageKey || cert.pdfUrl ? (
+                    {/* Built on demand when no stored copy exists, so a valid certificate
+                      always has a document. Revoked ones never yield a file. */}
+                    {!isRevoked ? (
                       <a
                         href={`/api/proxy/admin/certifications/${cert.id}/download`}
                         className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
@@ -244,7 +246,7 @@ export function CertificateDetailDialog({
                       </a>
                     ) : (
                       <span className="text-muted-foreground">
-                        {t('noDocument', { default: 'Not generated yet' })}
+                        {t('noDocumentRevoked', { default: 'Not available for a revoked certificate' })}
                       </span>
                     )}
                   </DetailRow>

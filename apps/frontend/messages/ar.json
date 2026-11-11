@@ -914,6 +914,7 @@
       "document": "المستند",
       "downloadPdf": "تنزيل PDF",
       "noDocument": "لم يُنشأ بعد",
+      "noDocumentRevoked": "غير متاحة لشهادة ملغاة",
       "renderedFields": "الحقول المعروضة (لقطة ثابتة)",
       "usedDefaultLayout": "لم يحتوِ القالب على حقول، لذا استُخدم التخطيط الافتراضي المدمج."
     },
@@ -4494,6 +4495,8 @@
       "issuedOn": "صدرت في {date}",
       "revokedReason": "ملغاة: {reason}",
       "downloadFailed": "فشل التنزيل",
+      "print": "طباعة",
+      "printFailed": "تعذّر فتح الشهادة للطباعة",
       "downloadStarted": "بدأ تنزيل الشهادة",
       "untitledCourse": "دورة",
       "emptyTitle": "لا توجد شهادات بعد",

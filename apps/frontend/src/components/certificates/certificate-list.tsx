@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Award, Download, ExternalLink, Loader2, ShieldCheck, Ban } from 'lucide-react';
+import { Award, Download, ExternalLink, Loader2, Printer, ShieldCheck, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
@@ -35,6 +35,7 @@ export interface MyCertificate {
 export function CertificateList({ className }: { className?: string }) {
   const t = useTranslations('certificates.mine');
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [printing, setPrinting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -46,27 +47,28 @@ export function CertificateList({ className }: { className?: string }) {
       }),
   });
 
+  const fetchPdf = async (id: string): Promise<Blob> => {
+    const res = await fetch(`/api/proxy/certifications/my/${id}/download`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.message ?? `HTTP ${res.status}`);
+    }
+    return res.blob();
+  };
+
   const download = async (id: string, certificateNumber: string) => {
     setDownloading(id);
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/certifications/my/${id}/download`, {
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.message ?? `HTTP ${res.status}`);
-      }
-      const blob = await res.blob();
-      // Name the file from the certificate number we already hold. The
-      // server's Content-Disposition is authoritative, but the Next proxy does
-      // not forward it, so a header-based name silently degraded to the row id.
-      const disposition = res.headers.get('content-disposition') ?? '';
-      const match = /filename="?([^";]+)"?/.exec(disposition);
+      const blob = await fetchPdf(id);
+      // Named from the certificate number we already hold rather than the response
+      // headers, which the Next proxy does not always forward.
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = match?.[1] ?? `certificate-${certificateNumber}.pdf`;
+      a.download = `certificate-${certificateNumber}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -78,6 +80,55 @@ export function CertificateList({ className }: { className?: string }) {
       toast({ type: 'err', title: t('downloadFailed'), description: message });
     } finally {
       setDownloading(null);
+    }
+  };
+
+  /**
+   * Print the certificate without making the learner download and open it first.
+   *
+   * The PDF is loaded into an off-screen frame and that frame's print dialog is opened.
+   * Browsers that cannot print a PDF frame (Safari, some mobile browsers) get the PDF
+   * in a new tab instead, where their own print button works.
+   */
+  const print = async (id: string) => {
+    setPrinting(id);
+    setError(null);
+    // Opened before the await so the browser treats it as part of the click and does
+    // not block it as a pop-up; it is only used as the fallback.
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const fallback = isSafari ? window.open('', '_blank') : null;
+    try {
+      const blob = await fetchPdf(id);
+      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      if (fallback) {
+        fallback.location.href = url;
+        return;
+      }
+      const frame = document.createElement('iframe');
+      frame.setAttribute('aria-hidden', 'true');
+      frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+      frame.src = url;
+      frame.onload = () => {
+        try {
+          frame.contentWindow?.focus();
+          frame.contentWindow?.print();
+        } catch {
+          window.open(url, '_blank', 'noopener');
+        }
+        // Long enough for the print dialog to have read the document.
+        setTimeout(() => {
+          frame.remove();
+          URL.revokeObjectURL(url);
+        }, 60_000);
+      };
+      document.body.appendChild(frame);
+    } catch (e: any) {
+      fallback?.close();
+      const message = e?.message ?? t('printFailed', { default: 'Could not open the certificate for printing' });
+      setError(message);
+      toast({ type: 'err', title: t('printFailed', { default: 'Could not open the certificate for printing' }), description: message });
+    } finally {
+      setPrinting(null);
     }
   };
 
@@ -206,10 +257,26 @@ export function CertificateList({ className }: { className?: string }) {
                   {t('revoked', { default: 'Revoked' })}
                 </span>
               ) : (
+                <>
+                <button
+                  type="button"
+                  onClick={() => void print(cert.id)}
+                  disabled={printing === cert.id}
+                  aria-label={t('print', { default: 'Print' })}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground transition hover:border-border-strong hover:bg-muted disabled:opacity-60"
+                >
+                  {printing === cert.id ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Printer className="size-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{t('print', { default: 'Print' })}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => void download(cert.id, cert.certificateNumber)}
                   disabled={downloading === cert.id}
+                  aria-label={t('download', { default: 'Download PDF' })}
                   className="pressable inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90 disabled:opacity-60"
                 >
                   {downloading === cert.id ? (
@@ -221,6 +288,7 @@ export function CertificateList({ className }: { className?: string }) {
                     {t('download', { default: 'Download PDF' })}
                   </span>
                 </button>
+                </>
               )}
             </div>
           </StaggerItem>

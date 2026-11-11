@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import PDFDocument from 'pdfkit';
 
 /**
@@ -124,6 +126,130 @@ export function resolveVariables(
 /** A4 landscape, the same aspect the Studio previews at (1.414). */
 const PAGE_WIDTH = 841.89;
 const PAGE_HEIGHT = 595.28;
+/** Designer font size → points: the canvas renders `fontSize / 640` of its width. */
+const DESIGNER_SCALE = PAGE_WIDTH / 640;
+/** Keep centred text this far from the page edge. */
+const FIELD_MARGIN = 36;
+
+/**
+ * Draw a check mark as a path.
+ *
+ * The built-in PDF fonts are WinAnsi-encoded and have no ✓ glyph, so `text('✓')`
+ * printed a stray quote mark inside the seal.
+ */
+function drawCheck(doc: PDFKit.PDFDocument, cx: number, cy: number, r: number, color: string) {
+  doc
+    .save()
+    .lineWidth(Math.max(1.2, r * 0.16))
+    .lineCap('round')
+    .lineJoin('round')
+    .strokeColor(color)
+    .moveTo(cx - r * 0.42, cy + r * 0.02)
+    .lineTo(cx - r * 0.1, cy + r * 0.34)
+    .lineTo(cx + r * 0.46, cy - r * 0.3)
+    .stroke()
+    .restore();
+}
+
+/**
+ * Arabic text support.
+ *
+ * The standard PDF fonts are Latin-only, so an Arabic learner name, course or academy
+ * title came out as empty boxes or nonsense. Noto Sans Arabic (SIL OFL) is shipped as a
+ * dependency and used for any field containing Arabic; `rtla` makes fontkit lay the
+ * shaped glyphs out right-to-left.
+ */
+const ARABIC = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+let arabicFontDir: string | null | undefined;
+function arabicFontFile(bold: boolean): string | null {
+  if (arabicFontDir === undefined) {
+    try {
+      // The package's `exports` only expose CSS, so resolve a file it does export and
+      // walk to the font folder from there.
+      const license = require.resolve('@fontsource/noto-sans-arabic/LICENSE');
+      arabicFontDir = path.join(path.dirname(license), 'files');
+    } catch {
+      arabicFontDir = null;
+    }
+  }
+  if (!arabicFontDir) return null;
+  const file = path.join(arabicFontDir, `noto-sans-arabic-arabic-${bold ? 700 : 400}-normal.woff`);
+  return fs.existsSync(file) ? file : null;
+}
+export function hasArabic(value: string): boolean {
+  return ARABIC.test(value);
+}
+
+/** Y of the classic layout's top seal; the heading sits below it. */
+const CLASSIC_SEAL_Y = 58;
+
+type TextRun = { text: string; font: string; rtl: boolean };
+
+/**
+ * Split text into same-script runs.
+ *
+ * The Arabic font has no Latin letters and the standard fonts have no Arabic, so a
+ * course title like "أساسيات CNC" needs each part drawn in its own font. Spaces and
+ * punctuation stay with the run they follow.
+ */
+export function scriptRuns(value: string, latinFont: string, bold: boolean): TextRun[] {
+  const arabicFont = hasArabic(value) ? arabicFontFile(bold) : null;
+  if (!arabicFont) return [{ text: value, font: latinFont, rtl: false }];
+  const runs: TextRun[] = [];
+  for (const ch of value) {
+    const isArabic = ARABIC.test(ch);
+    const isLatin = /[A-Za-z0-9\u00C0-\u024F]/.test(ch);
+    const last = runs[runs.length - 1];
+    if (!last) {
+      // A leading space or mark opens an Arabic run: the line is right-to-left anyway.
+      const rtl = isArabic || !isLatin;
+      runs.push({ text: ch, font: rtl ? arabicFont : latinFont, rtl });
+    } else if ((isArabic && !last.rtl) || (isLatin && last.rtl)) {
+      runs.push({ text: ch, font: isArabic ? arabicFont : latinFont, rtl: isArabic });
+    } else {
+      last.text += ch;
+    }
+  }
+  return runs;
+}
+
+function runOptions(run: TextRun) {
+  return run.rtl ? { features: ['rtla'] as PDFKit.Mixins.OpenTypeFeatures[], lineBreak: false } : { lineBreak: false };
+}
+
+function measureRuns(doc: PDFKit.PDFDocument, runs: TextRun[], size: number): number {
+  let total = 0;
+  for (const run of runs) total += doc.font(run.font).fontSize(size).widthOfString(run.text, runOptions(run));
+  return total;
+}
+
+/**
+ * Draw runs centred on `cx`.
+ *
+ * Text containing Arabic is laid out right-to-left: the first logical run sits on the
+ * right. Pure Latin text is a single run, so it is unaffected.
+ */
+function drawRuns(doc: PDFKit.PDFDocument, runs: TextRun[], cx: number, top: number, size: number, color: string) {
+  const total = measureRuns(doc, runs, size);
+  const rtlLine = runs.some((r) => r.rtl);
+  let cursor = rtlLine ? cx + total / 2 : cx - total / 2;
+  doc.fillColor(color);
+  for (const run of runs) {
+    const w = doc.font(run.font).fontSize(size).widthOfString(run.text, runOptions(run));
+    const left = rtlLine ? cursor - w : cursor;
+    // No `width`: with one, PDFKit still breaks at hyphens even with `lineBreak: false`.
+    // Every run shares one alphabetic baseline, so Latin inside Arabic does not float
+    // above it (the two fonts have different ascents).
+    doc.text(run.text, left, top + size * 0.8, { ...runOptions(run), baseline: 'alphabetic' });
+    cursor = rtlLine ? cursor - w : cursor + w;
+  }
+}
+
+/** Public verification URL printed on the certificate, e.g. `barootcnc.com/verify/TMF-…`. */
+export function verificationLabel(certificateNumber: string, siteUrl = process.env.FRONTEND_URL): string {
+  const host = (siteUrl || '').replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  return host ? `${host}/verify/${certificateNumber}` : `Certificate no. ${certificateNumber}`;
+}
 
 function fontFamilyToStd(name: string): 'Helvetica' | 'Helvetica-Bold' | 'Times-Roman' {
   const lower = (name || '').toLowerCase();
@@ -182,10 +308,10 @@ export function renderCertificatePdf(
       doc.lineWidth(3).strokeColor(primary).rect(18, 18, PAGE_WIDTH - 36, PAGE_HEIGHT - 36).stroke();
       doc.lineWidth(1).strokeOpacity(0.6).rect(26, 26, PAGE_WIDTH - 52, PAGE_HEIGHT - 52).stroke();
       doc.strokeOpacity(1);
-      // Centred seal
-      doc.circle(PAGE_WIDTH / 2, 96, 26).fill(primary);
-      doc.fillColor('#FFFFFF').fontSize(18).font('Helvetica-Bold')
-        .text('✓', 0, 88, { width: PAGE_WIDTH, align: 'center' });
+      // Centred seal, above the heading. It used to sit at y=96 with a 26pt radius,
+      // straight across the heading line at y=74.
+      doc.circle(PAGE_WIDTH / 2, CLASSIC_SEAL_Y, 20).fill(primary);
+      drawCheck(doc, PAGE_WIDTH / 2, CLASSIC_SEAL_Y, 20, '#FFFFFF');
     } else {
       // minimal: hairline frame only
       doc.lineWidth(0.75).strokeColor(secondary).rect(24, 24, PAGE_WIDTH - 48, PAGE_HEIGHT - 48).stroke();
@@ -197,34 +323,37 @@ export function renderCertificatePdf(
       .fillColor(secondary)
       .font(headingFont)
       .fontSize(13)
-      .text((template.name || 'Certificate of Completion').toUpperCase(), 0, 74, {
+      .text((template.name || 'Certificate of Completion').toUpperCase(), 0, layout === 'classic' ? 94 : 74, {
         width: PAGE_WIDTH,
         align: 'center',
         characterSpacing: 2.2,
       });
 
-    // Designer fields, positioned by percentage
+    // Designer fields. The Studio canvas anchors each field at its CENTRE
+    // (`left: x%; top: y%; transform: translate(-50%, -50%)`), so the text box here is
+    // centred on the anchor too. It used to start AT the anchor and run 90% of the page
+    // wide, which pushed every centred field half a page to the right and clipped it.
     for (const field of fields) {
       const x = (Math.min(Math.max(field.x, 0), 100) / 100) * PAGE_WIDTH;
       const y = (Math.min(Math.max(field.y, 0), 100) / 100) * PAGE_HEIGHT;
-      const size = Math.min(Math.max(field.fontSize, 6), 96);
-      const font =
-        String(field.fontWeight) === '700' || String(field.fontWeight) === 'bold'
-          ? 'Helvetica-Bold'
-          : baseFont;
-      doc
-        .fillColor(safeColor(field.color, '#191B1F'))
-        .font(font)
-        .fontSize(size)
-        .text(field.value, x, y - size / 2, {
-          width: PAGE_WIDTH * 0.9,
-          align: field.key === 'learnerName' ? 'center' : 'center',
-          lineBreak: false,
-        });
+      const weight = String(field.fontWeight);
+      const bold = weight === '700' || weight === 'bold' || weight === '600';
+      // The canvas sizes text at `fontSize / 64 * 10` container-width units, i.e.
+      // fontSize / 640 of the page width. Matching that keeps the PDF looking like
+      // the preview the admin approved.
+      let size = Math.min(Math.max(field.fontSize * DESIGNER_SCALE, 6), 120);
+      // Widest box that stays centred on the anchor and inside the page margins.
+      const half = Math.max(Math.min(x, PAGE_WIDTH - x) - FIELD_MARGIN, 40);
+      const latin = bold ? 'Helvetica-Bold' : baseFont;
+      const runs = scriptRuns(field.value, latin, bold);
+      // Shrink long names and titles to fit on one line instead of wrapping or clipping.
+      const natural = measureRuns(doc, runs, size);
+      if (natural > half * 2) size = Math.max(6, size * ((half * 2) / natural));
+      drawRuns(doc, runs, x, y - size * 0.6, size, safeColor(field.color, '#191B1F'));
     }
 
-    // Footer: signature line, seal, date
-    const footerY = PAGE_HEIGHT - 62;
+    // Footer: signature line, seal, date. Kept clear of the classic and minimal frames.
+    const footerY = PAGE_HEIGHT - 80;
     doc.lineWidth(0.75).strokeColor(secondary).strokeOpacity(0.35);
     doc.moveTo(90, footerY).lineTo(210, footerY).stroke();
     doc.moveTo(PAGE_WIDTH - 210, footerY).lineTo(PAGE_WIDTH - 90, footerY).stroke();
@@ -242,33 +371,21 @@ export function renderCertificatePdf(
       { width: 120, align: 'center', characterSpacing: 0.6 },
     );
 
-    // Seal with the certificate number
-    doc.circle(PAGE_WIDTH / 2, footerY + 8, 15).fill(primary);
-    doc
-      .fillColor('#FFFFFF')
-      .font('Helvetica-Bold')
-      .fontSize(9)
-      .text('✓', 0, footerY + 2, { width: PAGE_WIDTH, align: 'center' });
-    doc
-      .fillColor('#94A3B8')
-      .font('Helvetica')
-      .fontSize(6)
-      .text(`#${variables.certificateNumber}`, 0, footerY + 28, {
-        width: PAGE_WIDTH,
-        align: 'center',
-      });
+    // Seal
+    doc.circle(PAGE_WIDTH / 2, footerY + 6, 15).fill(primary);
+    drawCheck(doc, PAGE_WIDTH / 2, footerY + 6, 15, '#FFFFFF');
 
-    // Verification line: the number is the public verification handle, so print it.
+    // Verification line: the number is the public verification handle, so print it
+    // with the address that checks it. Was "Verify at <tenant name> · <number>",
+    // which named no place to verify.
     doc
       .fillColor('#94A3B8')
       .font('Helvetica')
       .fontSize(6.5)
-      .text(
-        `Verify at ${variables.tenantName} · ${variables.certificateNumber}`,
-        0,
-        PAGE_HEIGHT - 24,
-        { width: PAGE_WIDTH, align: 'center' },
-      );
+      .text(`Verify at ${verificationLabel(variables.certificateNumber)}`, 0, footerY + 30, {
+        width: PAGE_WIDTH,
+        align: 'center',
+      });
 
     doc.end();
   });

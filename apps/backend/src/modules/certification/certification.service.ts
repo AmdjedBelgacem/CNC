@@ -380,11 +380,31 @@ export class CertificationService {
    * presigned object the viewer has no business holding, and it stays valid
    * after a revoke. Streaming server-side also works for the local-disk driver,
    * which has no public URL at all.
+   *
+   * The document is drawn fresh from the immutable snapshot on every request
+   * (a few milliseconds). Serving the stored copy first meant every certificate
+   * issued before a renderer fix kept printing the old, broken layout forever, and
+   * a storage outage meant no document at all. The stored copy is now the fallback
+   * for when rendering is unavailable.
    */
   async loadDocument(cert: typeof certifications.$inferSelect): Promise<Buffer | null> {
+    // A revoked certificate must stop yielding a printable document, whether or not
+    // a copy was stored before the revoke.
+    if (cert.revokedAt) return null;
+    if (this.renderer) {
+      try {
+        return (await this.renderRecord(cert.id, cert.tenantId)).buffer;
+      } catch (error: any) {
+        this.logger.error(`Render failed for ${cert.certificateNumber}: ${error?.message}`);
+      }
+    }
     if (cert.pdfStorageKey && this.storage) {
-      const bytes = await this.storage.getObjectBytes(cert.pdfStorageKey);
-      if (bytes) return bytes;
+      try {
+        const bytes = await this.storage.getObjectBytes(cert.pdfStorageKey);
+        if (bytes) return bytes;
+      } catch (error: any) {
+        this.logger.warn(`Stored document unreadable for ${cert.certificateNumber}: ${error?.message}`);
+      }
     }
     // Fall back to whatever URL was recorded at issue time.
     if (cert.pdfUrl && /^https?:\/\//.test(cert.pdfUrl)) {
@@ -399,19 +419,46 @@ export class CertificationService {
   }
 
   /**
-   * Regenerate a certificate PDF from its immutable payload snapshot.
+   * Draw a certificate from its immutable payload snapshot, without storing anything.
    *
    * The snapshot records the resolved values and layout exactly as issued, so a
    * re-render is faithful even after the template has been edited or deleted.
+   *
+   * A certificate issued before snapshots existed has none. Its snapshot is built once
+   * from the record (learner, course, issue date, the course's current template) and
+   * saved, so it renders the same way every time after that.
    */
-  async regeneratePdf(certId: string, tenantId: string) {
-    const cert = await this.drizzle.db.query.certifications.findFirst({
+  private async renderRecord(certId: string, tenantId: string) {
+    let cert = await this.drizzle.db.query.certifications.findFirst({
       where: and(eq(certifications.id, certId), eq(certifications.tenantId, tenantId)),
     });
     if (!cert) throw new NotFoundException('Certificate not found');
-    const payload = cert.payload;
-    if (!payload) throw new BadRequestException('This certificate predates PDF rendering');
     if (!this.renderer) throw new BadRequestException('Renderer unavailable');
+    if (!cert.payload) {
+      const template = await this.findActiveTemplateForCourse(tenantId, cert.courseId).catch(() => null);
+      const artifact = await this.buildArtifact(
+        tenantId,
+        cert.userId,
+        cert.courseId,
+        cert.certificateNumber,
+        template,
+        cert.issuedAt,
+      );
+      await this.drizzle.db
+        .update(certifications)
+        .set({
+          payload: artifact.payload,
+          ...(artifact.pdfStorageKey
+            ? { pdfStorageKey: artifact.pdfStorageKey, pdfUrl: artifact.pdfUrl }
+            : {}),
+        })
+        .where(and(eq(certifications.id, certId), isNull(certifications.payload)));
+      cert = {
+        ...cert,
+        payload: artifact.payload as NonNullable<(typeof certifications.$inferSelect)['payload']>,
+      };
+    }
+    const payload = cert.payload!;
 
     const style: CertificateStyle = {
       id: payload.templateId,
@@ -429,17 +476,32 @@ export class CertificationService {
       style,
       payload.variables as CertificateVariables,
     );
+    return { cert, buffer };
+  }
 
+  /**
+   * Re-draw a certificate from its snapshot and store the result as the archived copy.
+   */
+  async regeneratePdf(certId: string, tenantId: string) {
+    const { cert, buffer } = await this.renderRecord(certId, tenantId);
     let key = cert.pdfStorageKey;
     let url = cert.pdfUrl;
     if (this.storage?.isConfigured) {
-      key = key ?? `tenants/${tenantId}/certificates/${cert.certificateNumber}.pdf`;
-      await this.storage.putObject(key, buffer, 'application/pdf');
-      url = await this.storage.resolvePlaybackUrl(key, 60 * 60 * 24 * 7);
-      await this.drizzle.db
-        .update(certifications)
-        .set({ pdfStorageKey: key, pdfUrl: url })
-        .where(eq(certifications.id, certId));
+      // Best effort: the caller already has the bytes, so a storage outage must not turn
+      // a working render into a failed download.
+      try {
+        const nextKey = key ?? `tenants/${tenantId}/certificates/${cert.certificateNumber}.pdf`;
+        await this.storage.putObject(nextKey, buffer, 'application/pdf');
+        const nextUrl = await this.storage.resolvePlaybackUrl(nextKey, 60 * 60 * 24 * 7);
+        await this.drizzle.db
+          .update(certifications)
+          .set({ pdfStorageKey: nextKey, pdfUrl: nextUrl })
+          .where(eq(certifications.id, certId));
+        key = nextKey;
+        url = nextUrl;
+      } catch (error: any) {
+        this.logger.warn(`Could not store rebuilt PDF for ${cert.certificateNumber}: ${error?.message}`);
+      }
     }
     return { key, url, bytes: buffer.length, buffer };
   }
@@ -512,7 +574,9 @@ export class CertificationService {
       ]);
       if (!user) return;
       const frontendUrl = process.env.FRONTEND_URL || 'https://titansofmanufacturing.com';
-      const verifyLink = `${frontendUrl.replace(/\/$/, '')}/certificates/verify/${cert.certificateNumber}`;
+      // The public page is `/verify/[number]`. The link used to carry a `certificates`
+      // prefix that no route has, so every emailed verification link was a 404.
+      const verifyLink = `${frontendUrl.replace(/\/$/, '')}/verify/${encodeURIComponent(cert.certificateNumber)}`;
       const courseTitle = course?.title ?? 'the course';
       const tenantName = (tenant as any)?.name ?? 'TITANS';
 
