@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/page-title';
 import { cookies } from 'next/headers';
 import { HomeBuilder } from '@/components/home/home-builder';
 import { FeedTicker, FeedTopics, FeedWire, feedHeroStats } from '@/components/feed/feed-islands';
@@ -9,18 +9,7 @@ import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
 
-export const metadata: Metadata = {
-  title: 'Community Feed',
-  description:
-    'Post setups, ask questions, and learn from machinists worldwide — the community feed where shop knowledge gets shared.',
-  alternates: { canonical: '/feed' },
-  openGraph: {
-    title: 'Community Feed | Baroot CNC Solutions',
-    description: 'Real machinists posting real setups — join the conversation.',
-    type: 'website',
-    url: '/feed',
-  },
-};
+export const generateMetadata = pageMeta('feed', { canonical: '/feed', og: true });
 
 export default async function FeedPage() {
   const tFeed = await getTranslations('pages.feed');

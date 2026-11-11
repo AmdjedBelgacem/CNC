@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/page-title';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
 import type { ContentLocale } from '@titan/shared';
@@ -19,18 +19,7 @@ import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
 
-export const metadata: Metadata = {
-  title: 'Products',
-  description:
-    'Shop precision tooling, workholding, and shop essentials curated for aerospace, medical, and production machining.',
-  alternates: { canonical: '/products' },
-  openGraph: {
-    title: 'Products | Baroot CNC Solutions',
-    description: 'Precision tooling and shop essentials with free shipping on orders over $99.',
-    type: 'website',
-    url: '/products',
-  },
-};
+export const generateMetadata = pageMeta('products', { canonical: '/products', og: true });
 
 export default async function ProductsPage() {
   const tProducts = await getTranslations('pages.products');

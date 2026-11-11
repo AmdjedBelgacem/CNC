@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
 
 /**
@@ -5,13 +6,14 @@ import type { Metadata } from 'next';
  * robots.txt but were still indexable, and a cart page has no content worth an index
  * entry.
  */
-export const metadata: Metadata = {
-  title: {
-    default: 'Cart',
-    template: '%s | Cart',
-  },
-  robots: { index: false, follow: false, nocache: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pageMeta');
+  const title = t('cart.title');
+  return {
+    title: { default: title, template: `%s | ${title}` },
+    robots: { index: false, follow: false, nocache: true },
+  };
+}
 
 export default function CartLayout({ children }: { children: React.ReactNode }) {
   return children;

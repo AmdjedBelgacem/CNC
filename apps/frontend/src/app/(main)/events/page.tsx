@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/page-title';
 import { cookies } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { HomeBuilder } from '@/components/home/home-builder';
@@ -15,18 +15,7 @@ import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
 
-export const metadata: Metadata = {
-  title: 'Events',
-  description:
-    'Hands-on workshops, expert webinars, community meetups, and industry conferences for machinists who learn best shoulder-to-shoulder.',
-  alternates: { canonical: '/events' },
-  openGraph: {
-    title: 'Events | Baroot CNC Solutions',
-    description: 'Workshops, webinars, competitions, and summits — virtual and in-person.',
-    type: 'website',
-    url: '/events',
-  },
-};
+export const generateMetadata = pageMeta('events', { canonical: '/events', og: true });
 
 export default async function EventsPage() {
   const tEvents = await getTranslations('pages.events');

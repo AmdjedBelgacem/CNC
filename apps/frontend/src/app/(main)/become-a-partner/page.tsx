@@ -1,11 +1,8 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/page-title';
 import PartnerApplicationForm from '@/components/partners/partner-application-form';
 import { Reveal } from '@/components/ui/motion';
 
-export const metadata: Metadata = {
-  title: 'Become a partner',
-  description: 'Partner with Baroot CNC Solutions.',
-};
+export const generateMetadata = pageMeta('becomePartner');
 
 export default function BecomeAPartnerPage() {
   return (

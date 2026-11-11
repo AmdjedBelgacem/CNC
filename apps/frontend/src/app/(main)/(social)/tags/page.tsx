@@ -1,10 +1,7 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/page-title';
 import { TagIndex } from '@/components/feed/tag-views';
 
-export const metadata: Metadata = {
-  title: 'Tags',
-  description: 'Every topic the community is posting about.',
-};
+export const generateMetadata = pageMeta('tags');
 
 export default function TagsPage() {
   return <TagIndex />;

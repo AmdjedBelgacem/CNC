@@ -42,7 +42,7 @@ describe('every page offers a way past the navigation', () => {
 
   it('the auth skip link precedes the back link and brand', () => {
     const skipAt = auth.indexOf('href="#main"');
-    const backAt = auth.indexOf('&larr; Back');
+    const backAt = auth.indexOf("t('back')");
     expect(skipAt).toBeGreaterThan(-1);
     expect(backAt).toBeGreaterThan(skipAt);
   });
@@ -68,7 +68,7 @@ describe('landmarks exist on the auth routes', () => {
 
   it('highlights are a real list', () => {
     expect(auth).toMatch(/<ul className="space-y-3"/);
-    expect(auth).toMatch(/<li key=\{title\}/);
+    expect(auth).toMatch(/<li key=\{key\}/);
   });
 });
 

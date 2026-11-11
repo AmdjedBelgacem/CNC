@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/page-title';
 import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
 import { HomeBuilder } from '@/components/home/home-builder';
@@ -10,18 +10,7 @@ import { resolvePageLayout } from '@/lib/builder/theme';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
 
-export const metadata: Metadata = {
-  title: 'Academies',
-  description:
-    'Browse branded academies — each with its own courses, hero art, and SEO-optimized landing page.',
-  alternates: { canonical: '/academy' },
-  openGraph: {
-    title: 'Academies | Baroot CNC Solutions',
-    description: 'Branded academy destinations with courses, hero art, and learning paths.',
-    type: 'website',
-    url: '/academy',
-  },
-};
+export const generateMetadata = pageMeta('academy', { canonical: '/academy', og: true });
 
 export default async function AcademyPage() {
   const locale = await getLocale();

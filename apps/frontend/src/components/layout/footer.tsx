@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '@/lib/brand';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
@@ -32,6 +33,7 @@ export async function Footer() {
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const t = await getTranslations('nav');
   const tc = await getTranslations('common');
+  const tChrome = await getTranslations('chrome');
 
   // Live academy links: real slugs/titles for this tenant. Falls back to the
   // academy index rather than guessing slugs.
@@ -71,8 +73,7 @@ export async function Footer() {
         <Reveal className="lg:col-span-5 lg:pe-12">
           <BrandMark />
           <p className="mt-6 max-w-sm text-balance font-display text-xl font-normal leading-snug tracking-[-0.01em] text-foreground/85">
-            Precision manufacturing education — academies, products and a community built for modern
-            machinists and engineers.
+            {tChrome('footerTagline')}
           </p>
         </Reveal>
 
@@ -102,7 +103,7 @@ export async function Footer() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="hairline" aria-hidden />
         <div className="flex flex-col items-center justify-between gap-4 py-6 text-xs text-muted-foreground sm:flex-row">
-          <span>© {new Date().getFullYear()} Baroot CNC Solutions. All rights reserved.</span>
+          <span>{tChrome('rights', { year: new Date().getFullYear(), brand: BRAND_NAME })}</span>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             <Link href="/privacy" className="transition-colors hover:text-foreground">
               Privacy

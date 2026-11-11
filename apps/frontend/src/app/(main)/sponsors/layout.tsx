@@ -1,9 +1,5 @@
-import type { Metadata } from 'next';
-export const metadata: Metadata = {
-  title: 'Our Partners',
-  description:
-    'Free manufacturing education is made possible by the generous support of our industry partners.',
-};
+import { pageMeta } from '@/lib/page-title';
+export const generateMetadata = pageMeta('sponsors');
 export default function SponsorsLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

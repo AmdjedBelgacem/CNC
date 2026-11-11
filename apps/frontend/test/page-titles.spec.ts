@@ -47,3 +47,32 @@ describe('title helper keeps the brand suffix for nested routes', () => {
     expect(auth).toMatch(/template: `%s \| \$\{BRAND_NAME\}`/);
   });
 });
+
+describe('site chrome and page metadata are localized', () => {
+  const read = (p: string) => readFileSync(resolve(__dirname, '../src', p), 'utf8');
+  const catalogs = ['en', 'ar'].map((l) => JSON.parse(readFileSync(resolve(__dirname, `../messages/${l}.json`), 'utf8')));
+
+  it('the announcement bar, footer tagline and auth panel no longer hard-code English', () => {
+    expect(read('components/layout/announcement-bar.tsx')).not.toMatch(/New academies are live/);
+    expect(read('components/layout/footer.tsx')).not.toMatch(/Precision manufacturing education/);
+    expect(read('components/layout/footer.tsx')).not.toMatch(/All rights reserved/);
+    expect(read('app/(auth)/layout.tsx')).not.toMatch(/Platform Highlights|Skip to main content/);
+  });
+
+  it('every pageMeta key used by a page exists in both languages with a title', () => {
+    const used = walk(appDir)
+      .map((f) => readFileSync(f, 'utf8').match(/pageMeta\('([A-Za-z]+)'/)?.[1])
+      .filter((k): k is string => !!k);
+    expect(used.length).toBeGreaterThanOrEqual(11);
+    for (const cat of catalogs) for (const k of used) expect(cat.pageMeta[k]?.title, k).toBeTruthy();
+    // pages that ask for Open Graph need an ogDescription too
+    for (const cat of catalogs) for (const k of ['feed', 'academy', 'events', 'products']) expect(cat.pageMeta[k].ogDescription).toBeTruthy();
+  });
+
+  it('chrome keys are present in both catalogs', () => {
+    for (const cat of catalogs) {
+      expect(cat.chrome.footerTagline && cat.chrome.rights && cat.chrome.auth.signIn).toBeTruthy();
+      expect(Object.keys(cat.chrome.auth.highlights)).toHaveLength(4);
+    }
+  });
+});

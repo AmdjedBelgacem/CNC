@@ -5277,6 +5277,45 @@
     "successTitle": "Thank you",
     "successBody": "We received your application."
   },
+  "chrome": {
+    "announcement": {
+      "promoAcademies": "New academies are live — browse courses and start learning",
+      "promoTools": "Explore industry-grade CNC tools and workholding",
+      "promoCommunity": "Join the manufacturing community",
+      "show": "Show announcement {n}",
+      "dismiss": "Dismiss announcement"
+    },
+    "rights": "© {year} {brand}. All rights reserved.",
+    "footerTagline": "Precision manufacturing education — academies, products and a community built for modern machinists and engineers.",
+    "auth": {
+      "signIn": "Sign in",
+      "skip": "Skip to main content",
+      "back": "Back",
+      "aboutLabel": "About {brand}",
+      "eyebrow": "Platform Highlights",
+      "description": "Expert-led CNC manufacturing education, professional certifications, and a community of modern machinists.",
+      "highlights": {
+        "academic": { "title": "Academic", "desc": "Structured CNC curriculum from fundamentals to advanced" },
+        "handsOn": { "title": "Hands-on", "desc": "Real-world projects with toolpath simulations" },
+        "certified": { "title": "Certified", "desc": "Industry-recognized CNC certifications" },
+        "community": { "title": "Community", "desc": "Connect with machinists and instructors worldwide" }
+      }
+    }
+  },
+  "pageMeta": {
+    "tags": { "title": "Tags", "description": "Every topic the community is posting about." },
+    "tag": { "title": "Tag", "description": "Community posts filed under this tag." },
+    "feed": { "title": "Community Feed", "description": "Post setups, ask questions, and learn from machinists worldwide — the community feed where shop knowledge gets shared.", "ogDescription": "Real machinists posting real setups — join the conversation." },
+    "notifications": { "title": "Notifications" },
+    "becomePartner": { "title": "Become a partner", "description": "Partner with Baroot CNC Solutions." },
+    "titanTv": { "title": "TITAN TV — Video Library", "description": "Watch machine builds, tooling demos, and educational series." },
+    "groups": { "title": "Study Groups", "description": "Learn together. Connect with CNC machinists in your area for hands-on study sessions." },
+    "sponsors": { "title": "Our Partners", "description": "Free manufacturing education is made possible by the generous support of our industry partners." },
+    "academy": { "title": "Academies", "description": "Browse branded academies — each with its own courses, hero art, and SEO-optimized landing page.", "ogDescription": "Branded academy destinations with courses, hero art, and learning paths." },
+    "events": { "title": "Events", "description": "Hands-on workshops, expert webinars, community meetups, and industry conferences for machinists who learn best shoulder-to-shoulder.", "ogDescription": "Workshops, webinars, competitions, and summits — virtual and in-person." },
+    "products": { "title": "Products", "description": "Shop precision tooling, workholding, and shop essentials curated for aerospace, medical, and production machining.", "ogDescription": "Precision tooling and shop essentials with free shipping on orders over $99." },
+    "cart": { "title": "Cart" }
+  },
   "pageTitles": {
     "learning": "My learning",
     "account": "My account",

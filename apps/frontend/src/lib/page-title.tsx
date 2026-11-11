@@ -35,3 +35,32 @@ export function brandedTitle(text: string): Metadata {
 export function PassThroughLayout({ children }: { children: ReactNode }) {
   return children;
 }
+
+/**
+ * Localized title + description (and, optionally, canonical and Open Graph) for a server page.
+ * These pages exported a static English `metadata` object, so an Arabic visitor got an English
+ * tab title, search snippet and link preview. Strings live under `pageMeta.<key>`.
+ */
+export function pageMeta(
+  key: string,
+  opts: { canonical?: string; noindex?: boolean; og?: boolean; description?: boolean } = {},
+) {
+  const withDescription = opts.description !== false;
+  return async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('pageMeta');
+    const title = t(`${key}.title`);
+    const meta: Metadata = { title };
+    if (withDescription) meta.description = t(`${key}.description`);
+    if (opts.canonical) meta.alternates = { canonical: opts.canonical };
+    if (opts.noindex) meta.robots = { index: false, follow: false, nocache: true };
+    if (opts.og) {
+      meta.openGraph = {
+        title: `${title} | ${BRAND_NAME}`,
+        description: t(`${key}.ogDescription`),
+        type: 'website',
+        url: opts.canonical,
+      };
+    }
+    return meta;
+  };
+}

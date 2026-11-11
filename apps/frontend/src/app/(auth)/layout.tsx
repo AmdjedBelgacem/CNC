@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { BrandMark } from '@/components/layout/brand';
 import { BRAND_NAME } from '@/lib/brand';
 
@@ -16,24 +17,20 @@ import { BRAND_NAME } from '@/lib/brand';
  * Set here rather than per page because every screen in the group is a client component,
  * and only a server layout can export `metadata`.
  */
-export const metadata: Metadata = {
-  // The template used to end in "Sign in" instead of the brand, so every screen read like the
-  // login page. Each screen now names itself and the brand follows, like everywhere else.
-  title: {
-    default: 'Sign in',
-    template: `%s | ${BRAND_NAME}`,
-  },
-  robots: { index: false, follow: false, nocache: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('chrome.auth');
+  return {
+    // The template used to end in "Sign in" instead of the brand, so every screen read like the
+    // login page. Each screen now names itself and the brand follows, like everywhere else.
+    title: { default: t('signIn'), template: `%s | ${BRAND_NAME}` },
+    robots: { index: false, follow: false, nocache: true },
+  };
+}
 
-const HIGHLIGHTS: [string, string][] = [
-  ['Academic', 'Structured CNC curriculum from fundamentals to advanced'],
-  ['Hands-on', 'Real-world projects with toolpath simulations'],
-  ['Certified', 'Industry-recognized CNC certifications'],
-  ['Community', 'Connect with machinists and instructors worldwide'],
-];
+const HIGHLIGHT_KEYS = ['academic', 'handsOn', 'certified', 'community'] as const;
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations('chrome.auth');
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
       {/* Paper: a faint dot field under a warm clay/sage bloom. Purely decorative. */}
@@ -45,7 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         href="#main"
         className="sr-only z-[100] focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lg"
       >
-        Skip to main content
+        {t('skip')}
       </a>
       <div className="relative mx-auto flex min-h-screen max-w-[1200px] flex-col px-4 py-5 sm:px-6 sm:py-6">
         <div className="flex items-center justify-between">
@@ -53,7 +50,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             href="/"
             className="group inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
           >
-            &larr; Back
+            <span aria-hidden className="inline-block rtl:-scale-x-100">&larr;</span> {t('back')}
           </Link>
           <BrandMark compact />
         </div>
@@ -67,30 +64,29 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               The aside is complementary, so it sits outside `main` rather than inside it.
             */}
             <aside
-              aria-label="About Baroot CNC Solutions"
+              aria-label={t('aboutLabel', { brand: BRAND_NAME })}
               className="hidden animate-fade-in-up lg:order-none lg:block"
             >
               <div className="max-w-md">
-                <p id="platform-highlights" className="eyebrow">Platform Highlights</p>
+                <p id="platform-highlights" className="eyebrow">{t('eyebrow')}</p>
                 <p className="mt-5 text-balance font-display text-[44px] font-medium leading-[1.04] tracking-[-0.025em] text-foreground xl:text-[52px]">
                   Baroot <br /> CNC Solutions
                 </p>
                 <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-muted-foreground">
-                  Expert-led CNC manufacturing education, professional certifications, and a
-                  community of modern machinists.
+                  {t('description')}
                 </p>
                 <div className="hairline mt-9 max-w-sm" aria-hidden />
                 <div className="mt-8">
                 <ul className="space-y-3" aria-labelledby="platform-highlights">
-                  {HIGHLIGHTS.map(([title, desc]) => (
-                    <li key={title} className="group flex gap-3.5 py-1">
+                  {HIGHLIGHT_KEYS.map((key) => (
+                    <li key={key} className="group flex gap-3.5 py-1">
                       <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/15 transition-colors group-hover:bg-primary/15">
                         <Check className="size-3.5" strokeWidth={2.5} />
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{title}</p>
+                        <p className="text-sm font-medium text-foreground">{t(`highlights.${key}.title`)}</p>
                         <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
-                          {desc}
+                          {t(`highlights.${key}.desc`)}
                         </p>
                       </div>
                     </li>

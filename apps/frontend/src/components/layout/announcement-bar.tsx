@@ -1,22 +1,22 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, m } from 'framer-motion';
 import { spring, transition } from '@/lib/motion';
 
-// Static promo slots (brand copy only — no metrics, no guessed academy slugs).
+// Static promo slots (brand copy only — no metrics, no guessed academy slugs). The text comes from
+// the catalog by key: it was hard-coded English, so an Arabic visitor saw it on every page.
 const PROMOS = [
-  { text: 'New academies are live — browse courses and start learning', link: '/academy' },
-  {
-    text: 'Explore industry-grade CNC tools and workholding',
-    link: '/products?category=Workholding',
-  },
-  { text: 'Join the manufacturing community', link: '/feed' },
-];
+  { key: 'promoAcademies', link: '/academy' },
+  { key: 'promoTools', link: '/products?category=Workholding' },
+  { key: 'promoCommunity', link: '/feed' },
+] as const;
 
 export function AnnouncementBar() {
+  const t = useTranslations('chrome.announcement');
   const [idx, setIdx] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
@@ -58,7 +58,7 @@ export function AnnouncementBar() {
                     aria-hidden
                     className="size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_0_3px_rgb(var(--c-primary)/0.15)]"
                   />
-                  <span className="truncate">{PROMOS[idx]!.text}</span>
+                  <span className="truncate">{t(PROMOS[idx]!.key)}</span>
                   <ChevronRight className="size-3.5 shrink-0 text-primary transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
                 </Link>
               </m.div>
@@ -71,7 +71,7 @@ export function AnnouncementBar() {
                     key={i}
                     type="button"
                     onClick={() => setIdx(i)}
-                    aria-label={`Show announcement ${i + 1}`}
+                    aria-label={t('show', { n: i + 1 })}
                     className="flex h-4 items-center"
                   >
                     {/* The active dot's width animates as a spring rather than a
@@ -91,7 +91,7 @@ export function AnnouncementBar() {
               <button
                 type="button"
                 onClick={() => setDismissed(true)}
-                aria-label="Dismiss announcement"
+                aria-label={t('dismiss')}
                 className="grid size-6 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-3.5" />
