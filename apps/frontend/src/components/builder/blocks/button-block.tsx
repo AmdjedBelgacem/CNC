@@ -46,7 +46,7 @@ const SIZES: Record<'sm' | 'md' | 'lg', string> = {
   md: 'px-6 py-3',
   lg: 'px-8 py-3.5',
 };
-export function ButtonBlock({ props }: BlockComponentProps<ButtonProps>) {
+export function ButtonBlock({ props, puck }: BlockComponentProps<ButtonProps>) {
   const {
     label = '',
     href,
@@ -57,6 +57,10 @@ export function ButtonBlock({ props }: BlockComponentProps<ButtonProps>) {
     width = 'auto',
     className,
   } = props;
+  // An href of exactly "#" is a placeholder someone left in (the seeded FAQ ended with a "Contact
+  // Technical Support" button that went nowhere). Visitors get nothing rather than a control that
+  // looks clickable and does nothing; the editor still shows it so it can be given a destination.
+  if (typeof href === 'string' && href.trim() === '#' && !puck?.isEditing) return null;
   const sizeClass = SIZED.has(variant) ? (SIZES[size] ?? SIZES.md) : '';
   const variantClass = (BTN_VARIANTS[variant] ?? BTN_VARIANTS.primary).replace(
     'px-10 py-4',

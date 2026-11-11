@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   BookOpen,
+  MessageSquare,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -47,6 +48,7 @@ export function NavMain({ items }: { items: NavItemView[] }) {
   const router = useRouter();
   const t = useTranslations('nav');
   const tp = useTranslations('products');
+  const tMessages = useTranslations('messages');
   const tEndImpersonation = useTranslations('nav.impersonation');
   // Shallow-compared rather than a whole-store read: the navbar sits in every
   // public layout, so re-rendering it on unrelated auth writes is the most
@@ -240,6 +242,10 @@ export function NavMain({ items }: { items: NavItemView[] }) {
                       </span>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => router.push('/messages')}>
+                      <MessageSquare />
+                      {tMessages('nav')}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => router.push('/learning')}>
                       <BookOpen />
                       {t('myLearning')}

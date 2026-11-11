@@ -51,7 +51,16 @@ describe('localized content (integration)', () => {
       // A visitor can only ever reach what is published, so that is the set that
       // must be complete. Unpublished rows are drafts and placeholder titles.
       const reachable = rows.filter(
-        (row: any) => row.title && row.title !== 'Untitled course' && row.isPublished !== false,
+        (row: any) =>
+          row.title &&
+          row.title !== 'Untitled course' &&
+          row.isPublished !== false &&
+          // Specs that run in parallel create short-lived fixtures (slug `qa-…`, title `QA …`). They are
+          // not content a visitor can reach, and counting them made this check depend on run order.
+          // Anything younger than ten minutes is another spec's fixture still being cleaned up.
+          !(row.createdAt && Date.now() - new Date(row.createdAt).getTime() < 10 * 60 * 1000) &&
+          !/^qa[-_ ]/i.test(String(row.slug ?? row.title ?? '')) &&
+          !/^QA /.test(String(row.title)),
       );
       const missing = reachable.filter((row: any) => !hasArabic((row.translations as any)?.ar?.title));
       expect(

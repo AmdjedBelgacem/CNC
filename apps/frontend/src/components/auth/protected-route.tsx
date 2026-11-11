@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { Skeleton } from '@/components/ui/skeleton';
 // `/cart` is intentionally public: the cart is local (persisted zustand) and guests
 // must be able to review it. Sign-in happens at `/checkout`.
-export const AUTH_ONLY_ROUTES = ['/account', '/checkout', '/notifications'];
+export const AUTH_ONLY_ROUTES = ['/account', '/checkout', '/notifications', '/messages'];
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // Narrow selector: subscribing to the whole store re-renders this guard on
   // every auth write, including ones that do not touch `isAuthenticated`.

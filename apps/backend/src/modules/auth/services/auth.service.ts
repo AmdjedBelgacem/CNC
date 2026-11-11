@@ -19,6 +19,7 @@ import { SearchService } from '../../search/search.service';
 import { eq, and, isNull, gte, lte, or, ilike, sql, gt, desc } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { SupabaseAuthClient, SupabaseAuthError, type SupabaseSession } from '../supabase-auth.client';
+import { ROLE_PRIVILEGE } from '../../rbac/rbac.constants';
 
 /**
  * Roles whose compromise is a platform problem rather than one tenant's
@@ -889,6 +890,12 @@ export class AuthService {
   async adminChangeUserRole(adminUserId: string, targetUserId: string, newRole: string): Promise<void> {
     const user = await this.drizzle.db.query.users.findFirst({ where: eq(users.id, targetUserId) });
     if (!user) throw new BadRequestException('User not found');
+    // This sets the coarse system role the @Roles checks read. An arbitrary string used to be stored
+    // as-is ("emperor"), leaving the user with a role nothing recognises; custom roles are assigned
+    // through the roles API, not here.
+    if (!Object.prototype.hasOwnProperty.call(ROLE_PRIVILEGE, newRole)) {
+      throw new BadRequestException(`role must be one of: ${Object.keys(ROLE_PRIVILEGE).join(', ')}`);
+    }
     const oldRole = user.role;
     await this.drizzle.db.update(users).set({ role: newRole }).where(eq(users.id, targetUserId));
     await this.auditService.log({

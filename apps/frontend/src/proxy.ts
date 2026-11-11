@@ -77,7 +77,7 @@ function resolveTenantSlug(hostHeader: string): string {
 
 // `/cart` is deliberately public: the cart lives in local storage, so guests browse
 // and review it freely and only authenticate at `/checkout`.
-const PROTECTED_ROUTES = ['/account', '/checkout', '/notifications', '/admin'];
+const PROTECTED_ROUTES = ['/account', '/checkout', '/notifications', '/messages', '/admin'];
 /**
  * Paths that belong to the backend and must never be handled by Next.js.
  *

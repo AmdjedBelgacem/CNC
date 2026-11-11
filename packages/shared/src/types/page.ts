@@ -121,7 +121,7 @@ export const RESERVED_SLUGS: readonly string[] = [
   'offline',
   // reserved without a folder today, but the app must never grow one by accident
   'admin', 'api', 'login', 'logout', 'signup', 'settings',
-  'cart', 'checkout', 'payments', 'orders', 'search', 'notifications',
+  'cart', 'checkout', 'payments', 'orders', 'search', 'notifications', 'messages',
   '_next', 'static', 'assets', 'well-known', 'favicon.ico', 'robots.txt', 'sitemap.xml',
   'wp-admin', 'wp-login.php',
 ];

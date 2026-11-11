@@ -187,6 +187,11 @@
     }
   },
   "auth": {
+    "oauthDenied": "Sign-in was cancelled.",
+    "oauthInvalidState": "That sign-in link expired. Please try again.",
+    "oauthUnverifiedEmail": "Your provider did not confirm your email address, so we could not sign you in.",
+    "oauthFailed": "Sign-in with that provider failed. Please try again or use your email and password.",
+    "oauthUnavailable": "Sign-in with that provider is not available right now.",
     "passwordPolicy": "Use at least 8 characters, with an uppercase letter, a lowercase letter and a number.",
     "signIn": "Sign in",
     "signUp": "Sign up",
@@ -5258,5 +5263,20 @@
       "body": "Enter the certificate number (e.g. TMF-2026-000001) to check a real issued credential.",
       "inputLabel": "Certificate number",
       "submit": "Verify"
+  },
+  "messages": {
+      "title": "Messages",
+      "empty": "No conversations yet",
+      "emptyHint": "Open someone's profile and choose Message to start one.",
+      "selectPrompt": "Select a conversation to read it.",
+      "placeholder": "Write a message…",
+      "send": "Send",
+      "back": "Back to conversations",
+      "you": "You",
+      "threadEmpty": "No messages yet. Say hello.",
+      "loadFailed": "Could not load messages",
+      "sendFailed": "Message not sent",
+      "startFailed": "Could not start the conversation",
+      "nav": "Messages"
   }
 }

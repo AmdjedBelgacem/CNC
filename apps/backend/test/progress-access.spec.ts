@@ -69,3 +69,24 @@ describe('a priced event is a ticket, not a label', () => {
     expect(page).not.toMatch(/\$\{\(event\.price \/ 100\)/);
   });
 });
+
+describe('roles stay valid', () => {
+  it('changing a user role only accepts a built-in role', () => {
+    const auth = read('modules/auth/services/auth.service.ts');
+    const body = auth.slice(auth.indexOf('async adminChangeUserRole'), auth.indexOf('async adminSuspendUser'));
+    expect(body).toMatch(/hasOwnProperty\.call\(ROLE_PRIVILEGE, newRole\)/);
+    expect(body).toMatch(/BadRequestException\(`role must be one of/);
+  });
+
+  it('deleting a role repairs the primary role of the users who held it', () => {
+    const rbac = read('modules/rbac/rbac.service.ts');
+    const body = rbac.slice(rbac.indexOf('async deleteRole'), rbac.indexOf('async deleteRole') + 2200);
+    expect(body).toMatch(/for \(const \{ userId \} of holders\)/);
+    expect(body).toMatch(/pickSystemRole\(remaining\) \?\? 'learner'/);
+  });
+
+  it('removing every role falls back to learner instead of keeping a stale key', () => {
+    const rbac = read('modules/rbac/rbac.service.ts');
+    expect(rbac).toMatch(/const coarse = this\.pickSystemRole\(roleRows\) \?\? 'learner'/);
+  });
+});

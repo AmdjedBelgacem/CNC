@@ -93,3 +93,19 @@ describe('phone layout and honest states', () => {
     expect(layout).toMatch(/robots: \{ index: false/);
   });
 });
+
+describe('messaging', () => {
+  it('the profile Message button opens a conversation instead of doing nothing', () => {
+    const profile = read('app/(main)/(academy)/u/[username]/page.tsx');
+    expect(profile).toMatch(/'\/dm\/conversations', \{ peerId: profile\.id \}/);
+    expect(profile).toMatch(/onClick=\{handleMessage\}/);
+  });
+  it('the messages page is signed-in only and reserved so a builder page cannot shadow it', () => {
+    expect(read('components/auth/protected-route.tsx')).toMatch(/'\/messages'/);
+    expect(read('proxy.ts')).toMatch(/'\/messages'/);
+    expect(read('app/(main)/(social)/messages/page.tsx')).toMatch(/\/dm\/messages/);
+  });
+  it('placeholder-link buttons are hidden from visitors', () => {
+    expect(read('components/builder/blocks/button-block.tsx')).toMatch(/href\.trim\(\) === '#' && !puck\?\.isEditing\) return null/);
+  });
+});

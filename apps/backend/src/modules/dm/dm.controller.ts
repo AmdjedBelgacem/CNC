@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { DmService } from './dm.service';
+import { CreateConversationDto, MarkReadDto, SendMessageDto } from './dto/dm.dto';
 
 @ApiTags('dm')
 @Controller('dm')
@@ -12,7 +13,7 @@ export class DmController {
 
   @Post('conversations')
   @ApiOperation({ summary: 'Idempotent 1:1 conversation create' })
-  createConversation(@CurrentUser() user: { id: string; tenantId: string }, @Body() body: { peerId: string }) {
+  createConversation(@CurrentUser() user: { id: string; tenantId: string }, @Body() body: CreateConversationDto) {
     return this.dm.createOrGetConversation(user.tenantId, user.id, body.peerId);
   }
 
@@ -34,7 +35,7 @@ export class DmController {
 
   @Post('messages')
   @ApiOperation({ summary: 'Send a DM message (block + membership checked)' })
-  sendMessage(@CurrentUser() user: { id: string; tenantId: string }, @Body() body: { conversationId: string; body: string }) {
+  sendMessage(@CurrentUser() user: { id: string; tenantId: string }, @Body() body: SendMessageDto) {
     return this.dm.sendMessage(user.tenantId, user.id, body.conversationId, body.body);
   }
 
@@ -42,7 +43,7 @@ export class DmController {
   @ApiOperation({ summary: 'Mark conversation as read up to messageId' })
   markRead(
     @CurrentUser() user: { id: string; tenantId: string },
-    @Body() body: { conversationId: string; messageId: string },
+    @Body() body: MarkReadDto,
   ) {
     return this.dm.markRead(user.tenantId, user.id, body.conversationId, body.messageId);
   }

@@ -143,11 +143,30 @@ export class RbacService {
   async deleteRole(actor: { id: string }, tenantId: string, roleId: string) {
     const role = await this.requireRole(tenantId, roleId);
     if (role.isSystem) throw new ForbiddenException('System roles cannot be deleted');
+    const holders = await this.drizzle.db
+      .select({ userId: userRoles.userId })
+      .from(userRoles)
+      .where(and(eq(userRoles.roleId, roleId), eq(userRoles.tenantId, tenantId)));
     await this.drizzle.db
       .delete(userRoles)
       .where(and(eq(userRoles.roleId, roleId), eq(userRoles.tenantId, tenantId)));
     await this.drizzle.db.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
     await this.drizzle.db.delete(roles).where(eq(roles.id, roleId));
+    // A user whose primary role was the one just deleted would be left holding a key that no longer
+    // exists. Fall back to their best remaining role, or to learner.
+    for (const { userId } of holders) {
+      const current = await this.drizzle.db.query.users.findFirst({ where: eq(users.id, userId), columns: { role: true } });
+      if (current?.role !== role.key) continue;
+      const remaining = await this.drizzle.db
+        .select({ key: roles.key })
+        .from(userRoles)
+        .innerJoin(roles, eq(roles.id, userRoles.roleId))
+        .where(and(eq(userRoles.userId, userId), eq(userRoles.tenantId, tenantId)));
+      await this.drizzle.db
+        .update(users)
+        .set({ role: this.pickSystemRole(remaining) ?? 'learner', updatedAt: new Date() })
+        .where(eq(users.id, userId));
+    }
     await this.audit(actor.id, 'role.delete', 'role', roleId, { key: role.key, name: role.name }, tenantId);
     return { message: 'Role deleted' };
   }
@@ -240,10 +259,10 @@ export class RbacService {
     }
 
     // Keep the legacy users.role column in sync (backward compat with @Roles checks).
-    const coarse = this.pickCoarseRole(roleRows);
-    if (coarse) {
-      await this.drizzle.db.update(users).set({ role: coarse, updatedAt: new Date() }).where(eq(users.id, userId));
-    }
+    // Only a system role can be the coarse role. With no system role left (all roles removed, or
+    // only custom ones assigned) the user is a learner, rather than keeping whatever key they held.
+    const coarse = this.pickSystemRole(roleRows) ?? 'learner';
+    await this.drizzle.db.update(users).set({ role: coarse, updatedAt: new Date() }).where(eq(users.id, userId));
 
     await this.audit(actor.id, 'user.roles.update', 'user', userId, {
       roleIds,
@@ -283,6 +302,11 @@ export class RbacService {
   }
 
   /** Pick the legacy coarse role to store on users.role: highest-privilege assigned system role. */
+  /** The most privileged built-in role among these, or null when none of them is a built-in. */
+  private pickSystemRole(roleRows: { key: string }[]): string | null {
+    return this.pickCoarseRole(roleRows.filter((r) => Object.prototype.hasOwnProperty.call(ROLE_PRIVILEGE, r.key)));
+  }
+
   private pickCoarseRole(roleRows: { key: string }[]): string | null {
     let best: string | null = null;
     let bestP = -1;

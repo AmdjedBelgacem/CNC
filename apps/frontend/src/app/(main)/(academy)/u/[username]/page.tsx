@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton, SkeletonCircle } from '@/components/ui/skeleton';
 import { Placeholder } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
+import { api } from '@/lib/api-client';
 import {
   MapPin,
   Users,
@@ -20,7 +21,7 @@ import {
   ExternalLink,
   Loader2,
 } from 'lucide-react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { getImageSrc } from '@/lib/images';
 import { m } from 'framer-motion';
 import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
@@ -214,6 +215,9 @@ export default function ProfilePage() {
   const tp = useTranslations('pages.publicProfile');
   const tProfile = useTranslations('profile');
   const params = useParams();
+  const router = useRouter();
+  const tMessages = useTranslations('messages');
+  const [messaging, setMessaging] = useState(false);
   const username = params.username as string;
   const { user, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -260,6 +264,18 @@ export default function ProfilePage() {
       cancelled = true;
     };
   }, [username]);
+  const handleMessage = async () => {
+    if (!profile || messaging) return;
+    setMessaging(true);
+    try {
+      // Idempotent: opens the existing conversation when there already is one.
+      const conversation = await api.post<{ id: string }>('/dm/conversations', { peerId: profile.id });
+      router.push(`/messages?c=${conversation.id}`);
+    } catch (err) {
+      toast({ type: 'err', title: tMessages('startFailed'), description: err instanceof Error ? err.message : undefined });
+      setMessaging(false);
+    }
+  };
   const handleFollowToggle = useCallback(async () => {
     if (!followStatus || followLoading) return;
     try {
@@ -349,6 +365,11 @@ export default function ProfilePage() {
                 >
                   {followLoading && <Loader2 className="me-1 size-4 animate-spin" />}
                   {followStatus.isFollowing ? tProfile('following') : tProfile('follow')}
+                </Button>
+              )}
+              {isAuthenticated && (
+                <Button variant="outline" className="rounded-full" onClick={handleMessage} disabled={messaging}>
+                  {messaging ? <Loader2 className="me-1 size-4 animate-spin" /> : <MessageSquare className="me-1 size-4" />} {tp('message')}
                 </Button>
               )}
             </div>

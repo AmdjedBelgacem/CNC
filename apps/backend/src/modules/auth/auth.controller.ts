@@ -2,6 +2,7 @@ import {
   Controller, Post, Get, Patch, Put, Body, HttpCode, HttpStatus, UseGuards, Req, Res,
   Query, Inject, UnauthorizedException, BadRequestException, NotFoundException,
   ServiceUnavailableException,
+  UseFilters,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -30,8 +31,9 @@ import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto, RegisterDto, ResetPasswordDto } from './dto/credentials.dto';
 import { ConfigService } from '../../config/config.service';
-import { providerAuthorizeUrl } from './strategies/provider-authorize-url';
+import { isProviderConfigured, providerAuthorizeUrl } from './strategies/provider-authorize-url';
 import { callbackOrigin } from './strategies/oauth-callback-url';
+import { OauthFailureFilter, oauthFailureUrl } from './strategies/oauth-failure.filter';
 import { SupabaseAuthClient, SupabaseAuthError } from './supabase-auth.client';
 import { AuditService } from './services/audit.service';
 import { EmailOnlyDto, VerifyEmailDto } from './dto/email-verification.dto';
@@ -811,12 +813,17 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth login' })
   async googleAuth(@Query('state') state: string | undefined, @Res() reply: any) {
     // Fastify-native redirect; see providerAuthorizeUrl for why passport cannot be used.
+    // Unconfigured: Google/GitHub would show their own "invalid client" page for `client_id=missing`.
+    if (!isProviderConfigured(this.config, 'google')) {
+      return reply.redirect(oauthFailureUrl(process.env.FRONTEND_URL || 'http://localhost:3000', 'unavailable'), 302);
+    }
     return reply.redirect(providerAuthorizeUrl(this.config, 'google', state, callbackOrigin(this.config)), 302);
   }
 
   @Public()
   @Get('oauth/google/callback')
   @ApiOperation({ summary: 'Google OAuth callback — sets cookies and redirects to the app' })
+  @UseFilters(OauthFailureFilter)
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(
     @Req() req: any,
@@ -830,12 +837,17 @@ export class AuthController {
   @Get('oauth/github')
   @ApiOperation({ summary: 'GitHub OAuth login' })
   async githubAuth(@Query('state') state: string | undefined, @Res() reply: any) {
+    // Unconfigured: Google/GitHub would show their own "invalid client" page for `client_id=missing`.
+    if (!isProviderConfigured(this.config, 'github')) {
+      return reply.redirect(oauthFailureUrl(process.env.FRONTEND_URL || 'http://localhost:3000', 'unavailable'), 302);
+    }
     return reply.redirect(providerAuthorizeUrl(this.config, 'github', state, callbackOrigin(this.config)), 302);
   }
 
   @Public()
   @Get('oauth/github/callback')
   @ApiOperation({ summary: 'GitHub OAuth callback — sets cookies and redirects to the app' })
+  @UseFilters(OauthFailureFilter)
   @UseGuards(AuthGuard('github'))
   async githubAuthCallback(
     @Req() req: any,

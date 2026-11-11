@@ -33,3 +33,8 @@ export function providerAuthorizeUrl(
   if (state) url.searchParams.set('state', state);
   return url.toString();
 }
+/** Whether the provider has credentials at all. Without them the URL above carries `client_id=missing`. */
+export function isProviderConfigured(config: ConfigService, provider: 'google' | 'github'): boolean {
+  const id = provider === 'google' ? config.get('GOOGLE_CLIENT_ID') : config.get('GITHUB_CLIENT_ID');
+  return typeof id === 'string' && id.trim() !== '' && id !== 'missing';
+}

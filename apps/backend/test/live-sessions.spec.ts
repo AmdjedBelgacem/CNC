@@ -38,19 +38,18 @@ describe('live sessions (integration)', () => {
       log: () => Promise.resolve(),
     } as never);
 
-    const tenantRows = await drizzle.db.select({ id: tenants.id }).from(tenants).limit(1);
-    if (!tenantRows.length) throw new Error('live-sessions spec needs a seeded tenant');
-    tenantId = tenantRows[0].id;
-    actor.tenantId = tenantId;
-
+    // Take the tenant from the course, not the other way round: in a database that has been used for
+    // other specs the first tenant is not necessarily the one that owns the fixture course.
     const courseRow = await drizzle.db.query.courses.findFirst({
       where: eq(courses.slug, 'cnc-milling-fundamentals'),
     }) ?? (await drizzle.db.select().from(courses).limit(1))[0];
     if (!courseRow) throw new Error('live-sessions spec needs a seeded course');
     courseId = courseRow.id;
+    tenantId = courseRow.tenantId;
+    actor.tenantId = tenantId;
 
-    const userRows = await drizzle.db.select({ id: users.id }).from(users).limit(2);
-    if (userRows.length < 2) throw new Error('live-sessions spec needs at least two seeded users');
+    const userRows = await drizzle.db.select({ id: users.id }).from(users).where(eq(users.tenantId, tenantId)).limit(2);
+    if (userRows.length < 2) throw new Error('live-sessions spec needs at least two seeded users in the course tenant');
     enrolledUserId = userRows[0].id;
     strangerUserId = userRows[1].id;
   });

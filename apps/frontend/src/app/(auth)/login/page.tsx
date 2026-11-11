@@ -1,5 +1,5 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -51,6 +51,20 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [rememberDevice, setRememberDevice] = useState(false);
   const [error, setError] = useState('');
+  // The OAuth callback sends the browser back here with a reason when sign-in did not complete.
+  const oauthError = searchParams.get('error');
+  useEffect(() => {
+    const reasons: Record<string, string> = {
+      oauth_denied: 'oauthDenied',
+      oauth_invalid_state: 'oauthInvalidState',
+      oauth_unverified_email: 'oauthUnverifiedEmail',
+      oauth_failed: 'oauthFailed',
+      oauth_unavailable: 'oauthUnavailable',
+    };
+    const key = oauthError ? reasons[oauthError] : undefined;
+    if (key) setError(t(key));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oauthError]);
   const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);

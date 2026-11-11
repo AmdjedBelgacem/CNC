@@ -44,7 +44,7 @@ describe('middleware session signal', () => {
   });
 
   it('still protects the account and checkout routes', () => {
-    expect(src).toMatch(/const PROTECTED_ROUTES = \['\/account', '\/checkout', '\/notifications', '\/admin'\]/);
+    expect(src).toMatch(/const PROTECTED_ROUTES = \['\/account', '\/checkout', '\/notifications', '\/messages', '\/admin'\]/);
   });
 
   it('leaves /cart public so guests can review their cart', () => {
