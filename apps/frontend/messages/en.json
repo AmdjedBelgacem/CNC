@@ -1810,6 +1810,7 @@
     },
     "alerts": "Platform alerts",
     "platformAlerts": {
+      "noAccess": "Platform alerts are visible to super admins only.",
       "appliesImmediately": "Applies immediately",
       "title": "Platform alerts",
       "subtitle": "Operational signals from every tenant: money, security, signups and system health. Your personal notifications are separate.",

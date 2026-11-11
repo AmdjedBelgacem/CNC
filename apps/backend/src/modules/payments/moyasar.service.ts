@@ -7,7 +7,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { ConfigService } from '../../config/config.service';
 import { DrizzleService } from '../../database/drizzle.service';
 import {
@@ -1427,7 +1427,9 @@ export class MoyasarService {
         and(
           eq(orders.tenantId, tenantId),
           eq(orders.status, 'pending'),
-          sql`${orders.createdAt} < ${cutoff}`,
+          // Not a raw sql`` template: it skips the column's date serializer, so the Date reached the
+          // driver untyped and the query failed on every run.
+          lt(orders.createdAt, cutoff),
           sql`${orders.providerPaymentId} is null`,
         ),
       );

@@ -103,7 +103,7 @@ export default function PlatformAlertsPage() {
         fetch('/api/proxy/admin/platform-alerts/overview', { credentials: 'include' }),
       ]);
       if (feed.status === 403) {
-        throw new Error(t('noAccess', { default: 'Platform alerts are visible to super admins only.' }));
+        throw new Error(t('noAccess'));
       }
       if (!feed.ok) throw new Error(`HTTP ${feed.status}`);
       const data = await feed.json();

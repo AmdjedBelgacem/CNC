@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../database/drizzle.service';
@@ -245,7 +245,7 @@ export class EmailOutboxDispatcherService implements OnModuleInit {
       .from(emailOutbox)
       .where(and(eq(emailOutbox.id, id), eq(emailOutbox.tenantId, tenantId)))
       .limit(1);
-    if (!row) throw new Error('Email not found');
+    if (!row) throw new NotFoundException('Email not found');
     await this.drizzle.db
       .update(emailOutbox)
       .set({

@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../database/drizzle.service';
 import { partnerApplications, PARTNER_APPLICATION_TYPES } from '../../database/schema/partner-applications';
 import { auditLogs } from '../../database/schema/auth';
@@ -52,7 +52,7 @@ export class PartnersService {
     const audienceSize = input.audienceSize ? sanitize(input.audienceSize) : null;
 
     // duplicate open application
-    const openStatuses = ['pending', 'under_review', 'needs_info'];
+    const openStatuses: Array<typeof partnerApplications.$inferSelect['status']> = ['pending', 'under_review', 'needs_info'];
     const existing = await this.drizzle.db
       .select({ id: partnerApplications.id, status: partnerApplications.status })
       .from(partnerApplications)
@@ -60,7 +60,8 @@ export class PartnersService {
         and(
           eq(partnerApplications.tenantId, tenantId),
           eq(partnerApplications.email, email),
-          sql`${partnerApplications.status} = ANY(${openStatuses})`,
+          // `= ANY(${array})` expands to a tuple, which Postgres rejects, so every application 500'd.
+          inArray(partnerApplications.status, openStatuses),
         ),
       )
       .limit(1);

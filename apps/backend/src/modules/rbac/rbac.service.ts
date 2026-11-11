@@ -100,6 +100,7 @@ export class RbacService {
     tenantId: string,
     body: { name: string; description?: string; key?: string },
   ) {
+    if (typeof body?.name !== 'string' || !body.name.trim()) throw new BadRequestException('name should not be empty');
     const roleKey = (body.key || this.slugify(body.name)).toLowerCase();
     if (PROTECTED_ROLE_KEYS.includes(roleKey)) throw new BadRequestException('Reserved role key');
     const existing = await this.drizzle.db.query.roles.findFirst({

@@ -25,7 +25,7 @@ import { resolve } from 'node:path';
  * test runner of its own.
  */
 describe('middleware session signal', () => {
-  const src = readFileSync(resolve(__dirname, '../../frontend/src/middleware.ts'), 'utf8');
+  const src = readFileSync(resolve(__dirname, '../../frontend/src/proxy.ts'), 'utf8');
 
   it('consults the refresh cookie, not just the access cookie', () => {
     expect(src).toMatch(/request\.cookies\.get\('refresh-token'\)/);

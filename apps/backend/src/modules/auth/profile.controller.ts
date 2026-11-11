@@ -325,6 +325,7 @@ export class ProfileController {
     @CurrentUser() user: any,
     @Body() body: { items: { id: string; sortOrder: number }[] },
   ) {
+    if (!Array.isArray(body?.items)) throw new BadRequestException('items must be an array');
     for (const item of body.items) {
       await this.drizzle.db.update(userPortfolioItems)
         .set({ sortOrder: item.sortOrder, updatedAt: new Date() })

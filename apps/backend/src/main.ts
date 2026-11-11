@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { DatabaseExceptionFilter } from './common/http/database-exception.filter';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -227,6 +228,9 @@ export async function createApp(): Promise<NestFastifyApplication> {
     allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-slug', 'x-2fa-verified', 'x-csrf-token', 'stripe-signature'],
     exposedHeaders: ['x-tenant-slug', 'x-csrf-token'],
   });
+
+  // Constraint and type violations from the database are the caller's mistake: answer 4xx, not 500.
+  app.useGlobalFilters(new DatabaseExceptionFilter(app.get(HttpAdapterHost).httpAdapter));
 
   app.useGlobalPipes(
     new ValidationPipe({
