@@ -66,3 +66,30 @@ describe('page titles carry the brand once', () => {
     expect(layout).toMatch(/notFound\(\)/);
   });
 });
+
+describe('phone layout and honest states', () => {
+  it('the header fits a 375px screen: tight gaps below sm', () => {
+    const nav = read('components/layout/nav-main.tsx');
+    expect(nav).toMatch(/gap-2 px-3 sm:gap-6 sm:px-6/);
+    expect(nav).toMatch(/gap-0 sm:gap-1/);
+  });
+  it('platform alerts never say "All clear" when the alerts failed to load', () => {
+    const page = read('app/(admin)/admin/alerts/page.tsx');
+    expect(page).toMatch(/error\s*\n?\s*\? undefined/);
+    expect(page).toMatch(/\) : error \? null : \(items\?\.length/);
+  });
+  it('feed toasts confirm the action instead of repeating the button label', () => {
+    const stream = read('components/feed/feed-stream.tsx');
+    expect(stream).toMatch(/t\('postDeleted'\)/);
+    expect(stream).toMatch(/t\('postCreated'\)/);
+    expect(stream).not.toMatch(/title: t\('deletePost'\)/);
+  });
+  it('credential endpoints do not trigger a token refresh on 401', () => {
+    expect(read('lib/api-client.ts')).toMatch(/isCredentialCall/);
+  });
+  it('admin tabs share one title template and stay out of search indexes', () => {
+    const layout = read('app/(admin)/admin/layout.tsx');
+    expect(layout).toMatch(/template: `%s \| Admin \| \$\{BRAND_NAME\}`/);
+    expect(layout).toMatch(/robots: \{ index: false/);
+  });
+});

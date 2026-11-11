@@ -4,7 +4,7 @@ import { EmailTemplatesList } from '@/components/admin/email-templates-list';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('admin.email');
-  return { title: `${t('templatesTitle')} | Baroot Admin` };
+  return { title: t('templatesTitle') };
 }
 
 export default async function AdminEmailPage() {

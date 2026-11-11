@@ -4,7 +4,7 @@ import { NavigationEditor } from '@/components/admin/navigation-editor';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('admin.navigation');
-  return { title: `${t('title')} | TITANS Admin` };
+  return { title: t('title') };
 }
 
 // The editor owns its own header, preview and save dock.

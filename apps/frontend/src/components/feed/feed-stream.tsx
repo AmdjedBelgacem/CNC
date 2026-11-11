@@ -70,8 +70,8 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
   const onVote = (postId: string, value: number) => votePost.mutate({ postId, value });
   const onDelete = (postId: string) =>
     deletePost.mutate(postId, {
-      onSuccess: () => toast({ type: 'ok', title: t('deletePost') }),
-      onError: () => toast({ type: 'err', title: t('loadFailed') }),
+      onSuccess: () => toast({ type: 'ok', title: t('postDeleted') }),
+      onError: () => toast({ type: 'err', title: t('deleteFailed') }),
     });
 
   const submit = async () => {
@@ -82,9 +82,9 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
       setDraft('');
       setDraftTags([]);
       setComposerOpen(false);
-      toast({ type: 'ok', title: t('post') });
+      toast({ type: 'ok', title: t('postCreated') });
     } catch {
-      toast({ type: 'err', title: t('loadFailed') });
+      toast({ type: 'err', title: t('postFailed') });
     }
   };
 

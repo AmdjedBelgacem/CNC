@@ -1,7 +1,16 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { AdminGate } from './admin-gate';
 import { AdminRail } from '@/components/admin/admin-rail';
+import { BRAND_NAME } from '@/lib/brand';
+
+// Every admin tab reads "<page> | Admin | <brand>" (pages that set no title read "Admin | <brand>"),
+// and none of it belongs in a search index.
+export const metadata: Metadata = {
+  title: { default: 'Admin', template: `%s | Admin | ${BRAND_NAME}` },
+  robots: { index: false, follow: false },
+};
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Fast path: no session cookie AT ALL -> login. Real role verification happens
   // client-side in <AdminGate>, which can refresh an expired access token and re-sync

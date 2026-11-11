@@ -6,6 +6,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { TenantScoped } from '../../common/decorators/tenant-scoped.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -52,6 +53,10 @@ export class EventsController {
   }
 
   @Public()
+  // Optional, not required: anonymous visitors still read the event, but a signed-in one must be
+  // identified or `userRegistration` is always null and the page offers "Register" to someone who
+  // already has (and no way to cancel).
+  @UseGuards(OptionalAuthGuard)
   @TenantScoped()
   @Get(':slug')
   @ApiOperation({ summary: 'Get event by slug' })

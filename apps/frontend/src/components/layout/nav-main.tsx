@@ -149,13 +149,14 @@ export function NavMain({ items }: { items: NavItemView[] }) {
               : 'border-b border-transparent bg-background',
         )}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-6 sm:px-6 lg:px-8">
           <BrandMark />
 
           {/* Desktop nav: managed tree with a sliding hover pill and clay active rule. */}
           <SiteNavDesktop items={items} />
 
-          <div className="ms-auto flex items-center gap-1">
+          {/* Tight on phones: six 40px controls plus a roomy gap pushed the page 19px past a 375px screen. */}
+          <div className="ms-auto flex items-center gap-0 sm:gap-1">
             <NavbarSearch />
 
             <LocaleSwitcher />

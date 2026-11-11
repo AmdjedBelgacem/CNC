@@ -102,6 +102,9 @@ export default function PlatformAlertsPage() {
         fetch(`/api/proxy/admin/platform-alerts?${qs.toString()}`, { credentials: 'include' }),
         fetch('/api/proxy/admin/platform-alerts/overview', { credentials: 'include' }),
       ]);
+      if (feed.status === 403) {
+        throw new Error(t('noAccess', { default: 'Platform alerts are visible to super admins only.' }));
+      }
       if (!feed.ok) throw new Error(`HTTP ${feed.status}`);
       const data = await feed.json();
       setItems(data.items ?? []);
@@ -158,7 +161,10 @@ export default function PlatformAlertsPage() {
       <AdminCommandBar
         trail={[{ label: 'Baroot CNC Solutions' }, { label: tAdmin('alerts') }]}
         live={
-          overview && overview.unread > 0
+          // Never claim "All clear" when the alerts could not be loaded at all.
+          error
+            ? undefined
+            : overview && overview.unread > 0
             ? t('unreadCount', { count: overview.unread, default: '{count} unread' })
             : t('allClear', { default: 'All clear' })
         }
@@ -287,7 +293,7 @@ export default function PlatformAlertsPage() {
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
             <SkeletonRows rows={5} columns={3} />
           </div>
-        ) : (items?.length ?? 0) === 0 ? (
+        ) : error ? null : (items?.length ?? 0) === 0 ? (
           <EmptyState
             icon={Activity}
             tone={overview?.unread ? 'amber' : 'blue'}
