@@ -13,7 +13,7 @@ import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { serializeJsonLd } from '@/lib/json-ld';
 import { BRAND_NAME, OG_IMAGE, SITE_URL, absoluteUrl, organizationJsonLd, webSiteJsonLd } from '@/lib/brand';
 import { faqJsonLd, breadcrumbJsonLd } from '@/lib/schema';
-import { HOMEPAGE_FAQ } from '@/lib/faq-content';
+import { homepageFaq } from '@/lib/faq-content';
 import { HomeFaqSection, HomeGuidesSection } from '@/components/home/home-extras';
 import { liveIslandHeader, liveIslandSlot } from '@/components/home/live-island-header';
 import { ProductsFeatured } from '@/components/store/products-islands';
@@ -99,7 +99,7 @@ export default async function HomePage() {
   };
   const websiteNode = { '@context': 'https://schema.org', ...webSiteJsonLd() };
   // Question/answer pairs, so answer engines can lift a clean Q->A instead of scraping prose.
-  const faqNode = { '@context': 'https://schema.org', ...faqJsonLd(HOMEPAGE_FAQ) };
+  const faqNode = { '@context': 'https://schema.org', ...faqJsonLd(homepageFaq(locale)) };
   const breadcrumbNode = {
     '@context': 'https://schema.org',
     ...breadcrumbJsonLd([{ name: 'Home', path: '/' }]),

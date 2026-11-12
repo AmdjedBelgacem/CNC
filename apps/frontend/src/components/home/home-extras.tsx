@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { HOMEPAGE_FAQ } from '@/lib/faq-content';
+import { useLocale } from 'next-intl';
+import { homepageFaq } from '@/lib/faq-content';
 import { BRAND_NAME } from '@/lib/brand';
 import { ArrowUpRight } from 'lucide-react';
 import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
@@ -24,10 +25,38 @@ type IslandSlots = {
   footer?: ReactNode;
 };
 
+/** Default copy for the fixed sections, per page language. */
+const COPY = {
+  en: {
+    faqTitle: 'Frequently asked questions about CNC machining training',
+    guidesTitle: 'CNC solutions, training and practical guides',
+    guidesBody:
+      'Start with our CNC training materials, then review CNC solutions, implementation guidance and partner options for your shop or learning centre.',
+    guides: ['CNC guides', 'CNC courses', 'CNC tools', 'Become a partner'],
+    aboutTitle: `About ${BRAND_NAME}`,
+    aboutIntro: `${BRAND_NAME} is a manufacturing-education company. The following describes what it teaches and who it serves.`,
+  },
+  ar: {
+    faqTitle: 'أسئلة شائعة حول التدريب على التشغيل بماكينات CNC',
+    guidesTitle: 'حلول CNC والتدريب والأدلة العملية',
+    guidesBody:
+      'ابدأ بمواد التدريب على CNC لدينا، ثم استعرض حلول CNC وإرشادات التطبيق وخيارات الشراكة لورشتك أو مركز التدريب لديك.',
+    guides: ['أدلة CNC', 'دورات CNC', 'أدوات CNC', 'كن شريكًا'],
+    aboutTitle: 'عن باروت لحلول CNC',
+    aboutIntro: 'باروت لحلول CNC شركة متخصصة في التعليم الصناعي. فيما يلي ما تعلّمه ومن تخدمه.',
+  },
+} as const;
+
+function useCopy() {
+  const locale = useLocale();
+  return { locale, copy: locale === 'ar' ? COPY.ar : COPY.en };
+}
+
 export function HomeFaqSection({ header, items }: IslandSlots) {
+  const { locale, copy } = useCopy();
   return (
     <section
-      aria-label={header ? 'Frequently asked questions about CNC machining training' : undefined}
+      aria-label={header ? copy.faqTitle : undefined}
       aria-labelledby={header ? undefined : 'faq-heading'}
       className="mx-auto max-w-3xl px-4 py-20 sm:px-6 md:py-28 lg:px-8"
     >
@@ -37,7 +66,7 @@ export function HomeFaqSection({ header, items }: IslandSlots) {
             id="faq-heading"
             className="text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl"
           >
-            Frequently asked questions about CNC machining training
+            {copy.faqTitle}
           </h2>
         )}
       </Reveal>
@@ -45,7 +74,7 @@ export function HomeFaqSection({ header, items }: IslandSlots) {
         <div className="fixed-island-items mt-12 flex flex-col gap-8">{items}</div>
       ) : (
         <dl className="fixed-island-items mt-12 flex flex-col gap-8">
-          {HOMEPAGE_FAQ.map((item) => (
+          {homepageFaq(locale).map((item) => (
             <Reveal
               key={item.question}
               className="fixed-island-item border-b border-border/70 pb-8"
@@ -72,9 +101,10 @@ const GUIDE_LINKS = [
 ] as const;
 
 export function HomeGuidesSection({ header }: IslandSlots) {
+  const { copy } = useCopy();
   return (
     <section
-      aria-label={header ? 'CNC solutions, training and practical guides' : undefined}
+      aria-label={header ? copy.guidesTitle : undefined}
       aria-labelledby={header ? undefined : 'cnc-guides-heading'}
       className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 md:pb-32 lg:px-8"
     >
@@ -89,17 +119,16 @@ export function HomeGuidesSection({ header }: IslandSlots) {
               id="cnc-guides-heading"
               className="max-w-2xl text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl"
             >
-              CNC solutions, training and practical guides
+              {copy.guidesTitle}
             </h2>
             <p className="mt-4 max-w-2xl text-pretty text-base leading-7 text-muted-foreground">
-              Start with our CNC training materials, then review CNC solutions, implementation
-              guidance and partner options for your shop or learning centre.
+              {copy.guidesBody}
             </p>
             <Stagger as="ul" className="mt-8 flex flex-wrap gap-2.5" inViewOnly>
               {GUIDE_LINKS.map((link, i) => (
                 <StaggerItem as="li" key={link.href} index={i}>
                   <Link href={link.href} className="link-pill group">
-                    {link.label}
+                    {copy.guides[i] ?? link.label}
                     <ArrowUpRight
                       aria-hidden
                       className="size-3.5 opacity-60 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100 rtl:-scale-x-100"
