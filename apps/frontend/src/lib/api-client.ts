@@ -76,33 +76,77 @@ async function csrfHeaderToken(): Promise<string | null> {
   return csrfToken;
 }
 
-async function refreshAccessToken(): Promise<boolean> {
+async function postRefresh(): Promise<Response> {
+  const post = (token: string | null) =>
+    fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'x-csrf-token': token } : {}),
+      },
+      credentials: 'include',
+    });
+  let res = await post(await csrfHeaderToken());
+  // A stale in-memory token can still lose to a cookie another tab rotated. Mint a
+  // fresh pair and try once more rather than declaring the session dead.
+  if (res.status === 403) {
+    await fetchCsrfToken();
+    res = await post(csrfToken);
+  }
+  return res;
+}
+
+/** True when the cookies the browser holds right now carry a live session. */
+async function sessionIsLive(): Promise<boolean> {
   try {
-    const post = (token: string | null) =>
-      fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'x-csrf-token': token } : {}),
-        },
-        credentials: 'include',
-      });
-
-    let res = await post(await csrfHeaderToken());
-
-    // A stale in-memory token can still lose to a cookie another tab rotated. Mint a
-    // fresh pair and try once more rather than declaring the session dead.
-    if (res.status === 403) {
-      await fetchCsrfToken();
-      res = await post(csrfToken);
-    }
-
+    const res = await fetch(`${API_BASE}/auth/session`, { credentials: 'include', cache: 'no-store' });
     if (!res.ok) return false;
-    // New cookies are set via Set-Cookie header, no body tokens needed
-    return true;
+    const body = (await res.json()) as { authenticated?: boolean };
+    return body.authenticated === true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Rotate the session, safely across tabs.
+ *
+ * The refresh token is single-use. When two tabs (or a page and its prefetch) refreshed at
+ * the same moment, one won and the other was told 401 — and that 401 was read as "signed
+ * out", so the losing tab logged the user out of a session that had just been renewed. That
+ * is the "website keeps logging me off" report. Two guards close it:
+ *
+ *  1. A Web Lock serialises refreshes across every tab of the origin. The tab that waits
+ *     re-checks the session first and finds it already renewed by the tab that went first.
+ *  2. If a refresh is refused anyway (an older browser without Web Locks, a server-side
+ *     refresh racing the browser), the session is checked again after the winner's cookies
+ *     have had time to land, and only an empty answer counts as signed out.
+ */
+async function refreshAccessToken(): Promise<boolean> {
+  const run = async (): Promise<boolean> => {
+    try {
+      // Another tab may have rotated while this one waited for the lock.
+      if (await sessionIsLive()) return true;
+      const res = await postRefresh();
+      if (res.ok) return true;
+      if (res.status === 401 || res.status === 409) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        return sessionIsLive();
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+  const locks = typeof navigator !== 'undefined' ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
+  if (locks?.request) {
+    try {
+      return await locks.request('titan-auth-refresh', run);
+    } catch {
+      return run();
+    }
+  }
+  return run();
 }
 interface FetchOptions extends RequestInit {
   tenantSlug?: string;

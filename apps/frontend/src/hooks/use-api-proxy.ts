@@ -12,7 +12,7 @@
  * proves same-origin execution in a way the proxy cannot fake on the caller's behalf.
  */
 
-import { getActiveLocale } from '@/lib/api-client';
+import { getActiveLocale, refreshSession } from '@/lib/api-client';
 
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
@@ -55,7 +55,7 @@ export function useApiProxy() {
       headers['Content-Type'] = 'application/json';
     }
     Object.assign(headers, localeHeaders(), await csrfHeaders(init?.method));
-    return fetch(input, { ...init, headers, credentials: 'include' });
+    return fetchWithRefresh(input, { ...init, headers, credentials: 'include' });
   }
   return { fetch: proxyFetch };
 }
@@ -66,5 +66,23 @@ export async function apiProxyFetch(input: string | URL | Request, init?: Reques
     headers['Content-Type'] = 'application/json';
   }
   Object.assign(headers, await csrfHeaders(init?.method));
-  return fetch(input, { ...init, headers, credentials: 'include' });
+  return fetchWithRefresh(input, { ...init, headers, credentials: 'include' });
+}
+
+/**
+ * Fetch, and on a 401 rotate the session once and replay.
+ *
+ * The access cookie lives 15 minutes and the browser deletes it on expiry. These helpers
+ * never refreshed, so every admin screen built on them started failing — and bouncing to
+ * the sign-in page — a quarter of an hour into a session, while `api.*` calls on the same
+ * page refreshed and carried on. Bodies here are strings or absent, so a replay is safe.
+ */
+async function fetchWithRefresh(input: string | URL | Request, init: RequestInit): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status !== 401 || typeof window === 'undefined') return res;
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  // A 401 from a credential endpoint is a wrong password, not an expired session.
+  if (/\/auth\/(login|register|refresh|2fa\/verify|forgot-password|reset-password)(\?|$)/.test(url)) return res;
+  if (!(await refreshSession())) return res;
+  return fetch(input, init);
 }
