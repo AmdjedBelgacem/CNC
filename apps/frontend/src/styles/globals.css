@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * A builder stack reads its responsive direction from --stack-direction. Custom properties
+ * inherit by default, so a column stack placed inside a row stack picked up "row" from its
+ * parent and laid its children out side by side (a heading, paragraph and button squeezed into
+ * three narrow columns). Each stack sets the variable on itself, so it must not inherit.
+ */
+@property --stack-direction {
+  syntax: '*';
+  inherits: false;
+}
+
 /* ==========================================================================
    Design tokens
    --------------------------------------------------------------------------

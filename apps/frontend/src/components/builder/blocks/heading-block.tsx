@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { HeadingProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
-import { layoutStyle } from '@/components/builder/layout-style';
+import { colorProp, layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Base treatment per tag (applied when no size is set). */
 const HEADING_BASE: Record<string, string> = {
   h1: 'font-display font-medium tracking-[-0.022em] text-balance text-text-primary',
@@ -46,7 +46,8 @@ const LEADING_CLASS: Record<string, string> = {
 export function HeadingBlock({ props }: BlockComponentProps<HeadingProps>) {
   const { as = 'h2', text = '', align, color, size, tracking, leading, accentText, suffixText, className } = props;
   const Tag = as;
-  const style: CSSProperties = { ...layoutStyle(props) };
+  const tint = colorProp(color);
+  const style: CSSProperties = { ...layoutStyle(props), ...tint.style };
   if (align) style.textAlign = align;
   const sizing = size ? HEADING_SIZE[size] : HEADING_BASE[as];
   const isHero = size === 'hero';
@@ -54,7 +55,7 @@ export function HeadingBlock({ props }: BlockComponentProps<HeadingProps>) {
     <Tag
       className={cn(
         sizing,
-        color ?? 'text-text-primary',
+        color ? tint.className : 'text-text-primary',
         tracking && tracking !== 'none' && TRACKING_CLASS[tracking],
         leading && leading !== 'none' && LEADING_CLASS[leading],
         className,

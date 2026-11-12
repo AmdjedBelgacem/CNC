@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { TextProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
-import { layoutStyle } from '@/components/builder/layout-style';
+import { colorProp, layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { useBuilderLivePreview } from '@/components/builder/live-preview-context'; /** Mockup label/body treatments: 2xs = 10px, xs = 11px, sm = 12px, md = 16px, lg = 18px. */
 const TEXT_SIZE: Record<string, string> = {
@@ -62,7 +62,7 @@ export function TextBlock({ props, puck }: BlockComponentProps<TextProps>) {
       : text;
   const style: CSSProperties = { ...layoutStyle(props) };
   if (opacity !== undefined) style.opacity = opacity / 100;
-  const isHex = color?.startsWith('#');
+  const isHex = Boolean(color && colorProp(color).style.color);
   if (isHex) style.color = color;
   return (
     <p

@@ -1,7 +1,7 @@
 import type { BadgeProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/ui/icon';
-import { layoutStyle } from '@/components/builder/layout-style';
+import { colorProp, layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index'; /** Mockup pill treatments: glow (hero eyebrow), primary, secondary (with icon), neutral, card (level pill). */
 const BADGE_VARIANTS: Record<string, string> = {
   // Hero eyebrow: a paper pill with a clay dot — quiet, sentence-case, editorial.
@@ -15,11 +15,14 @@ const BADGE_VARIANTS: Record<string, string> = {
   card: 'inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary',
 };
 export function BadgeBlock({ props }: BlockComponentProps<BadgeProps>) {
-  const { text = '', variant = 'glow', uppercase, icon, iconSize = 12, pulse, className } = props;
+  const { text = '', variant = 'glow', uppercase, icon, iconSize = 12, pulse, className, color } = props;
+  // The schema has always offered a colour; the badge ignored it, so a copied design's
+  // eyebrow kept the theme colour instead.
+  const tint = colorProp(color);
   return (
     <span
-      className={cn(BADGE_VARIANTS[variant] ?? BADGE_VARIANTS.glow, pulse && 'inline-flex items-center gap-2', uppercase && 'uppercase', className)}
-      style={layoutStyle(props)}
+      className={cn(BADGE_VARIANTS[variant] ?? BADGE_VARIANTS.glow, pulse && 'inline-flex items-center gap-2', uppercase && 'uppercase', tint.className, className)}
+      style={{ ...layoutStyle(props), ...tint.style }}
     >
       {' '}
       {pulse ? (

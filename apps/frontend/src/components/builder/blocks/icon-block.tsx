@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type { IconProps } from '@titan/shared';
 import { resolveIconName } from '@titan/shared';
 import { cn } from '@/lib/utils';
-import { layoutStyle } from '@/components/builder/layout-style';
+import { colorProp, layoutStyle } from '@/components/builder/layout-style';
 import { isInternalHref } from '@/lib/builder/href';
 import type { BlockComponentProps } from './index'; /** Icon tile treatments from the mockup. */
 import { Icon } from '@/components/ui/icon';
@@ -16,7 +16,7 @@ const ICON_BOX: Record<string, string> = {
 export function IconBlock({ props }: BlockComponentProps<IconProps>) {
   const { icon: rawIcon, size = 24, color, box = 'none', href, className } = props;
   const icon = resolveIconName(rawIcon);
-  const isHex = color?.startsWith('#');
+  const isHex = Boolean(color && colorProp(color).style.color);
   const style: CSSProperties = {
     fontSize: size,
     ...(isHex ? { color } : {}),

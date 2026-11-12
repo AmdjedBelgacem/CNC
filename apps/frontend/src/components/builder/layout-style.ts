@@ -17,3 +17,20 @@ export function layoutStyle(props: Partial<LayoutProps> | undefined): CSSPropert
   if (props?.minHeight) style.minHeight = props.minHeight;
   return style;
 }
+
+/**
+ * Splits a block's `color` prop into a class or an inline colour.
+ *
+ * The schema accepts either a theme class (`text-primary`) or a literal colour, but the heading
+ * only knew the first: `#1c1917` landed in the class list, did nothing, and the heading fell back
+ * to the theme's light text — invisible on a light band. Text and icon only knew hex, so
+ * `rgb()`/`hsl()` values were dropped the same way. Every text-like block uses this now.
+ */
+const LITERAL_COLOR = /^(#|rgba?\(|hsla?\(|oklch\(|oklab\(|lab\(|lch\(|hwb\(|color-mix\(|var\(--)/i;
+
+export function colorProp(color: string | undefined | null): { className?: string; style: CSSProperties } {
+  if (!color) return { style: {} };
+  const value = color.trim();
+  if (LITERAL_COLOR.test(value)) return { style: { color: value } };
+  return { className: value, style: {} };
+}
