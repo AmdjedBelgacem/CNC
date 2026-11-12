@@ -122,20 +122,28 @@ async function sessionIsLive(): Promise<boolean> {
  *     refresh racing the browser), the session is checked again after the winner's cookies
  *     have had time to land, and only an empty answer counts as signed out.
  */
-async function refreshAccessToken(): Promise<boolean> {
-  const run = async (): Promise<boolean> => {
+export type RefreshOutcome = 'renewed' | 'signed-out' | 'unavailable';
+
+/** True when the server is busy or unreachable rather than saying the session is over. */
+const isTransientStatus = (status: number) => status === 429 || status >= 500;
+
+async function refreshOutcome(): Promise<RefreshOutcome> {
+  const run = async (): Promise<RefreshOutcome> => {
     try {
       // Another tab may have rotated while this one waited for the lock.
-      if (await sessionIsLive()) return true;
+      if (await sessionIsLive()) return 'renewed';
       const res = await postRefresh();
-      if (res.ok) return true;
+      if (res.ok) return 'renewed';
+      // A rate limit or a server error says nothing about the session. Treating it as a sign-out
+      // is what logged people out of the builder when the site was busy.
+      if (isTransientStatus(res.status)) return 'unavailable';
       if (res.status === 401 || res.status === 409) {
         await new Promise((resolve) => setTimeout(resolve, 600));
-        return sessionIsLive();
+        return (await sessionIsLive()) ? 'renewed' : 'signed-out';
       }
-      return false;
+      return 'signed-out';
     } catch {
-      return false;
+      return 'unavailable';
     }
   };
   const locks = typeof navigator !== 'undefined' ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
@@ -148,6 +156,33 @@ async function refreshAccessToken(): Promise<boolean> {
   }
   return run();
 }
+
+/**
+ * Rotate the session, safely across tabs.
+ *
+ * The refresh token is single-use. When two tabs (or a page and its prefetch) refreshed at
+ * the same moment, one won and the other was told 401 — and that 401 was read as "signed
+ * out", so the losing tab logged the user out of a session that had just been renewed. A Web
+ * Lock serialises refreshes across tabs, the waiting tab re-checks the session first, a refused
+ * refresh is re-checked once the winner's cookies have landed, and a busy or unreachable server
+ * is reported as such rather than as a sign-out.
+ */
+async function refreshAccessToken(): Promise<boolean> {
+  return (await refreshOutcome()) === 'renewed';
+}
+
+let outcomePromise: Promise<RefreshOutcome> | null = null;
+
+/** Like `refreshSession`, but says whether a failure was a real sign-out or a busy server. */
+export function refreshSessionOutcome(): Promise<RefreshOutcome> {
+  if (!outcomePromise) {
+    outcomePromise = refreshOutcome().finally(() => {
+      outcomePromise = null;
+    });
+  }
+  return outcomePromise;
+}
+
 interface FetchOptions extends RequestInit {
   tenantSlug?: string;
   locale?: string;

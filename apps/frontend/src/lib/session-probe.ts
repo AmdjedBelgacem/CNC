@@ -1,4 +1,4 @@
-import { api, refreshSession } from '@/lib/api-client';
+import { api, refreshSessionOutcome } from '@/lib/api-client';
 
 interface SessionResponse {
   authenticated: boolean;
@@ -16,9 +16,15 @@ async function readSession(): Promise<SessionUser> {
   if (session.authenticated) return session.user;
   // Only rotate when there is something to rotate. A truly anonymous visitor makes one
   // request that answers 200, so nothing fails and nothing is logged.
-  if (session.refreshable && (await refreshSession())) {
-    session = await api.get<SessionResponse>('/auth/session');
-    if (session.authenticated) return session.user;
+  if (session.refreshable) {
+    const outcome = await refreshSessionOutcome();
+    // A busy or unreachable server is not a sign-out: reject, so callers keep the current user
+    // and try again, instead of clearing the session and bouncing to /login.
+    if (outcome === 'unavailable') throw new Error('Session check unavailable');
+    if (outcome === 'renewed') {
+      session = await api.get<SessionResponse>('/auth/session');
+      if (session.authenticated) return session.user;
+    }
   }
   return null;
 }

@@ -28,7 +28,9 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      for (let attempt = 0; attempt < 2; attempt++) {
+      // Four tries with a growing delay: a rate-limited or restarting server must not read as a
+      // sign-out on the first page an admin opens.
+      for (let attempt = 0; attempt < 4; attempt++) {
         try {
           const user = await probeSession();
           if (cancelled) return;
@@ -37,8 +39,8 @@ export function AuthHydration({ children }: { children?: React.ReactNode }) {
           break;
         } catch {
           if (cancelled) return;
-          if (attempt === 0) {
-            await new Promise((r) => setTimeout(r, HYDRATION_RETRY_DELAY_MS));
+          if (attempt < 3) {
+            await new Promise((r) => setTimeout(r, HYDRATION_RETRY_DELAY_MS * (attempt + 1)));
             continue;
           }
           // Both attempts failed — treat as genuinely unauthenticated.

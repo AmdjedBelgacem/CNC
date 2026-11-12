@@ -1,3 +1,4 @@
+import { Throttle } from '@nestjs/throttler';
 import { Controller, Get, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -27,6 +28,8 @@ import { OptionalAuthGuard } from './guards/optional-auth.guard';
 export class AuthSessionController {
   constructor(private readonly auth: AuthService) {}
 
+  // Called on every page view; its own ceiling keeps a busy page from reading as signed out.
+  @Throttle({ default: { ttl: 60_000, limit: 300 } })
   @Get('session')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()

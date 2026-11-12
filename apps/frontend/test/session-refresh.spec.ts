@@ -111,3 +111,41 @@ describe('admin fetch helper', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/auth/refresh'))).toBe(false);
   });
 });
+
+describe('a busy server is not a sign-out', () => {
+  it('reports a rate-limited refresh as unavailable, not signed out', async () => {
+    installBrowser((url) => {
+      if (url.endsWith('/auth/session')) return json(200, { authenticated: false });
+      if (url.endsWith('/auth/refresh')) return json(429, { message: 'Too Many Requests' });
+      return json(404, {});
+    });
+    const { refreshSessionOutcome } = await import('../src/lib/api-client');
+    await expect(refreshSessionOutcome()).resolves.toBe('unavailable');
+  });
+
+  it('keeps the session when the session probe hits a busy server', async () => {
+    installBrowser((url) => {
+      if (url.endsWith('/auth/session')) return json(200, { authenticated: false, refreshable: true });
+      if (url.endsWith('/auth/refresh')) return json(503, {});
+      return json(404, {});
+    });
+    const { probeSession } = await import('../src/lib/session-probe');
+    // Rejecting (rather than resolving null) is what stops the app from clearing the user.
+    await expect(probeSession()).rejects.toThrow();
+  });
+
+  it('forwards the visitor address so rate limits are per visitor, not site-wide', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const proxy = readFileSync(resolve(__dirname, '../src/app/api/proxy/[...path]/route.ts'), 'utf8');
+    expect(proxy).toContain("headers['x-forwarded-for'] = clientIp");
+  });
+
+  it('the admin gate retries a busy server instead of redirecting', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const gate = readFileSync(resolve(__dirname, '../src/app/(admin)/admin/admin-gate.tsx'), 'utf8');
+    expect(gate).toContain('if (status === 401)');
+    expect(gate).not.toContain("setStatus(isAuthenticated ? 'denied' : 'anon')");
+  });
+});

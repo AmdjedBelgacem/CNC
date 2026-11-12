@@ -141,6 +141,9 @@ export class AuthController {
   }
 
   @Public()
+  // Session plumbing is cheap and called on every page view and token rotation; it gets its own
+  // ceiling so a busy page never reads as "signed out" because the generic limit ran out.
+  @Throttle({ default: { ttl: 60_000, limit: 300 } })
   @Get('csrf-token')
   @SkipCsrf()
   @HttpCode(HttpStatus.OK)
@@ -356,6 +359,9 @@ export class AuthController {
   }
 
   @Public()
+  // Session plumbing is cheap and called on every page view and token rotation; it gets its own
+  // ceiling so a busy page never reads as "signed out" because the generic limit ran out.
+  @Throttle({ default: { ttl: 60_000, limit: 120 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
@@ -521,6 +527,9 @@ export class AuthController {
     return { message: 'Email address changed successfully' };
   }
 
+  // Session plumbing is cheap and called on every page view and token rotation; it gets its own
+  // ceiling so a busy page never reads as "signed out" because the generic limit ran out.
+  @Throttle({ default: { ttl: 60_000, limit: 300 } })
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get current user profile' })

@@ -26,13 +26,28 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
         if (!cancelled) setStatus('anon');
         return;
       }
-      try {
-        // api.get auto-refreshes expired tokens and re-syncs the access-token
-        // cookie, so a stale cookie from a previous visit is fine here.
-        const me = await api.get<{ role: string }>('/auth/me');
-        if (!cancelled) setStatus(ADMIN_ROLES.includes(me.role) ? 'ok' : 'denied');
-      } catch {
-        if (!cancelled) setStatus(isAuthenticated ? 'denied' : 'anon');
+      // api.get auto-refreshes expired tokens and re-syncs the access-token cookie, so a stale
+      // cookie from a previous visit is fine here. Only a definite answer moves the gate: a busy
+      // server (429), a server error or a network blip used to land on 'denied' and send an
+      // admin to the homepage mid-session — on the builder, which loads many requests at once,
+      // that read as being logged out. Those are retried with a growing delay instead.
+      for (let attempt = 0; attempt < 6 && !cancelled; attempt += 1) {
+        try {
+          const me = await api.get<{ role: string }>('/auth/me');
+          if (!cancelled) setStatus(ADMIN_ROLES.includes(me.role) ? 'ok' : 'denied');
+          return;
+        } catch (error) {
+          const status = (error as { status?: number }).status;
+          if (status === 401) {
+            if (!cancelled) setStatus('anon');
+            return;
+          }
+          if (status === 403) {
+            if (!cancelled) setStatus('denied');
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+        }
       }
     })();
     return () => {

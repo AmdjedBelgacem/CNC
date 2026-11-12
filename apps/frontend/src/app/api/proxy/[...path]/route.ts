@@ -122,6 +122,17 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
   if (body && body.length > 0) {
     headers['Content-Type'] = 'application/json';
   }
+  // Forward the visitor's address. Without it the backend saw every proxied request as coming
+  // from this server, so its per-address rate limit (100 a minute) was shared by the whole site:
+  // a busy page — the builder loads a dozen requests and polls — pushed everyone over it, and the
+  // 429 on /auth/me or /auth/refresh read as "signed out". Caddy overwrites X-Forwarded-For with
+  // the real client address (it trusts no upstream proxies), so the value here is not spoofable.
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip')?.trim();
+  if (clientIp) {
+    headers['x-forwarded-for'] = clientIp;
+    headers['x-real-ip'] = clientIp;
+  }
   // Forward all cookies (including httpOnly access/refresh) to backend
   const cookieHeader = request.headers.get('cookie');
   if (cookieHeader) {
