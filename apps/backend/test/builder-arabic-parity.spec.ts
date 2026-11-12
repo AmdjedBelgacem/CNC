@@ -94,3 +94,41 @@ describe('publish-time Arabic fill', () => {
     expect(translateFields).not.toHaveBeenCalled();
   });
 });
+
+describe('public page endpoint in Arabic', () => {
+  // The live site reads `content/pages/:slug`, not the builder endpoint. It used to serve the
+  // stored copy or plain English without the dictionary, so "Shop by department" stayed English
+  // for visitors while the builder's Arabic preview showed it translated.
+  async function publicPage(translations: Record<string, unknown> | null, locale: string) {
+    const { ContentService } = await import('../src/modules/content/content.service');
+    const layout = english('Shop by department');
+    const drizzle = {
+      db: {
+        query: {
+          pages: { findFirst: vi.fn(async () => ({ id: 'p1', tenantId: 't1', slug: 'products', title: 'Products', status: 'published', version: 3, publishedAt: null, translations })) },
+          pageVersions: { findFirst: vi.fn(async () => ({ version: 3, status: 'published', layout })) },
+        },
+      },
+    };
+    const page = await new ContentService(drizzle as never).getPublishedPage('t1', 'products', locale);
+    const kids = page.layout.content[0]!.props!.content as Array<{ props: Record<string, unknown> }>;
+    return { page, heading: kids[0]!.props.text };
+  }
+
+  it('fills built-in text from the dictionary when there is no Arabic copy', async () => {
+    const { page, heading } = await publicPage(null, 'ar');
+    expect(heading).toBe('تسوّق حسب القسم');
+    expect(page.resolvedLocale).toBe('ar');
+  });
+
+  it('fills text the stored Arabic copy is missing', async () => {
+    const stored = { root: { props: {} }, content: [{ type: 'section', props: { id: 's1', content: [] } }] };
+    const { heading } = await publicPage({ ar: { layout: stored } }, 'ar');
+    expect(heading).toBe('تسوّق حسب القسم');
+  });
+
+  it('leaves English visitors on English', async () => {
+    const { heading } = await publicPage(null, 'en');
+    expect(heading).toBe('Shop by department');
+  });
+});

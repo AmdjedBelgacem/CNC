@@ -5494,6 +5494,7 @@
       "reactions": "التفاعلات"
     },
     "events": {
+      "nextUpTitle": "لا تفوّت الفعالية القادمة",
       "tickerHeading": "على جدول الفعاليات",
       "nextUpHeading": "التالي على الجدول",
       "online": "عبر الإنترنت",

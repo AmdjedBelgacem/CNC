@@ -27,7 +27,27 @@ import { RedisService } from './redis.service';
  * Outside it, aggressive family revocation is unchanged. Set to 0 to restore the
  * previous always-revoke behaviour.
  */
-const REFRESH_REUSE_GRACE_MS = Number(process.env.REFRESH_REUSE_GRACE_MS ?? 10_000);
+const REFRESH_REUSE_GRACE_MS = Number(process.env.REFRESH_REUSE_GRACE_MS ?? 30_000);
+
+/**
+ * Rotation is idempotent inside the grace window: the pair a token was rotated into is kept in
+ * Redis for the window, and presenting the old token again returns that same pair.
+ *
+ * Denying the second presentation (the old behaviour) still signed people out. When a refresh
+ * is cut off by a page load — opening the builder is a full navigation — the server has already
+ * rotated, the browser never receives the new cookies, and the next page presents the old token.
+ * It was refused, the browser held no live token any more, and the admin was bounced to /login.
+ * Supabase's refresh-token reuse interval works the same way.
+ */
+const successorKey = (tokenHash: string) => `refresh:successor:${tokenHash}`;
+
+type RotatedPair = {
+  accessToken: string;
+  refreshToken: string;
+  user: { id: string; email: string; role: string; tenantId: string };
+  /** The token was issued with "Keep me signed in"; its cookie keeps the longer lifetime. */
+  remember: boolean;
+};
 
 @Injectable()
 export class TokenService {
@@ -108,11 +128,7 @@ export class TokenService {
     deviceInfo?: string,
     ip?: string,
     userAgent?: string,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: { id: string; email: string; role: string; tenantId: string };
-  }> {
+  ): Promise<RotatedPair> {
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
 
     const existing = await this.drizzle.db.query.refreshTokens.findFirst({
@@ -132,7 +148,10 @@ export class TokenService {
       const withinGrace = rotatedAt > 0 && Date.now() - rotatedAt < REFRESH_REUSE_GRACE_MS;
       if (!withinGrace) {
         await this.handleReusedToken(existing.userId, existing.id);
+        throw new UnauthorizedException('Refresh token has been revoked');
       }
+      const successor = await this.readSuccessor(tokenHash);
+      if (successor) return successor;
       throw new UnauthorizedException('Refresh token has been revoked');
     }
 
@@ -151,6 +170,9 @@ export class TokenService {
     // makes it a compare-and-swap, so exactly one caller wins and mints the replacement.
     // The loser is a benign race, NOT theft — deny it without touching the family.
     if (!(await this.claimRefreshToken(rawToken))) {
+      // A simultaneous refresh won the claim; hand back the pair it is minting.
+      const successor = await this.awaitSuccessor(tokenHash);
+      if (successor) return successor;
       throw new UnauthorizedException('Refresh token has been revoked');
     }
 
@@ -162,9 +184,44 @@ export class TokenService {
     const accessToken = this.generateAccessToken({
       sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId,
     });
-    const refreshToken = await this.generateRefreshToken(user.id, deviceInfo, ip, userAgent);
+    // "Keep me signed in" survives rotation: a token issued with the longer lifetime is replaced
+    // by one with the same lifetime. Rotation used to fall back to the short expiry every time.
+    const remember =
+      new Date(existing.expiresAt).getTime() - new Date(existing.createdAt).getTime() >
+      this.parseExpiryToMs(this.config.get('JWT_REFRESH_EXPIRY')) + 60_000;
+    const refreshToken = await this.generateRefreshToken(user.id, deviceInfo, ip, userAgent, remember);
 
-    return { accessToken, refreshToken, user };
+    const result = { accessToken, refreshToken, user, remember };
+    await this.writeSuccessor(tokenHash, result);
+    return result;
+  }
+
+  private async writeSuccessor(tokenHash: string, pair: RotatedPair): Promise<void> {
+    if (REFRESH_REUSE_GRACE_MS <= 0) return;
+    try {
+      await this.redisService.setex(successorKey(tokenHash), Math.ceil(REFRESH_REUSE_GRACE_MS / 1000), JSON.stringify(pair));
+    } catch {
+      // Without Redis the old token is simply refused inside the window, as before.
+    }
+  }
+
+  private async readSuccessor(tokenHash: string): Promise<RotatedPair | null> {
+    try {
+      const raw = await this.redisService.get(successorKey(tokenHash));
+      return raw ? (JSON.parse(raw) as RotatedPair) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The claim winner writes its pair a few milliseconds after claiming; wait that long. */
+  private async awaitSuccessor(tokenHash: string): Promise<RotatedPair | null> {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const pair = await this.readSuccessor(tokenHash);
+      if (pair) return pair;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return null;
   }
 
   private async handleReusedToken(userId: string, _revokedTokenId: string): Promise<void> {

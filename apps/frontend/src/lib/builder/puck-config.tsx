@@ -207,10 +207,16 @@ const render = (type: string) => (editorProps: any) => {
     // height (zero) so the canvas matches the public page; the CSS dropzone
     // styles give them a visible target only while a drag is active.
     const allow = definition?.zones?.[slotName]?.allow;
+    // The public renderer emits slot children straight into the parent with no wrapper. Puck
+    // wraps them in a <div>, and when a block did not hand that wrapper its own layout, the
+    // div became one grid or flex item holding every child: a four-column stat row stacked
+    // into one column, a button row wrapped, and the canvas no longer matched the live page.
+    // `builder-slot-flow` makes such a wrapper layout-transparent (display: contents); an empty
+    // slot keeps a box so it can still take a drop (see puck.css).
     return createElement(Slot, {
       ...(allow ? { allow } : {}),
       minEmptyHeight: 0,
-      className: options?.className,
+      className: options?.className ?? 'builder-slot-flow',
       style: options?.style,
     });
   };

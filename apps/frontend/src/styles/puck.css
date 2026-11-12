@@ -2014,3 +2014,24 @@ body:has(._DropZone--isAnimating_1i2sv_68:empty) [data-puck-overlay] {
   --puck-color-grey-11: #f4f2ec;
   --puck-color-grey-12: #faf9f5;
 }
+
+/* Slot wrappers whose block gave them no layout: the children join the parent's layout exactly as
+   they do on the public page (see renderSlot in lib/builder/puck-config.tsx). An empty slot keeps
+   a box, so it still has a drop target while dragging. */
+.builder-slot-flow {
+  display: contents;
+}
+.builder-slot-flow:empty {
+  display: block;
+}
+
+/* The canvas scrolls without a scrollbar gutter. A classic scrollbar took 11px off the canvas, so
+   the page inside was 1269px wide where a visitor at 1280px gets the `xl` layout, and embedded
+   live sections (their own iframes) dropped a breakpoint: four columns became three. Visitors on
+   overlay-scrollbar systems get the full width, and so does the canvas now. */
+html:has(#frame-root) {
+  scrollbar-width: none;
+}
+html:has(#frame-root)::-webkit-scrollbar {
+  display: none;
+}

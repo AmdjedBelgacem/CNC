@@ -257,6 +257,66 @@ describe('runs', () => {
     expect(job.result?.layout?.content).toHaveLength(1);
   });
 
+  // The model is not limited to the designed blocks: anything they cannot express becomes a new
+  // element (its own tag, CSS, phone and hover rules, nested children). Unsafe values are dropped.
+  it('creates a brand-new element the block list does not have', async () => {
+    const table = {
+      type: 'element',
+      tag: 'table',
+      css: 'width: 100%; border-collapse: collapse; background: url(javascript:alert(1)); color: rgb(var(--c-foreground))',
+      cssMobile: 'font-size: 13px',
+      content: [
+        {
+          type: 'element',
+          tag: 'tr',
+          content: [
+            { type: 'element', tag: 'th', text: 'Plan', css: 'text-align: start; padding: 12px' },
+            { type: 'element', tag: 'th', text: 'Seats', css: 'padding: 12px' },
+          ],
+        },
+        {
+          type: 'element',
+          tag: 'tr',
+          cssHover: 'background: rgb(var(--c-primary) / 0.08)',
+          content: [
+            { type: 'element', tag: 'td', text: 'Team', css: 'padding: 12px' },
+            { type: 'element', tag: 'td', text: '10', css: 'padding: 12px' },
+          ],
+        },
+      ],
+    };
+    const link = { type: 'element', tag: 'a', text: 'Compare plans', href: 'javascript:alert(1)' };
+    const { service } = makeService([
+      JSON.stringify({
+        intent: 'edit',
+        reply: 'Added a comparison table.',
+        operations: [
+          { op: 'insert', parent: 's1', slot: 'content', index: 2, node: table },
+          { op: 'insert', parent: 's1', slot: 'content', index: 3, node: link },
+        ],
+      }),
+    ]);
+    const { id } = service.start('t', actor, { prompt: 'add a plan comparison table', pageSlug: 'home', layout: page() as never });
+    const job = await finish(service, id);
+    expect(job.status).toBe('done');
+    const kids = (job.result?.layout as PageLayout).content[0]!.props!.content as Array<{ type: string; props: Record<string, unknown> }>;
+    const added = kids[2]!;
+    expect(added.type).toBe('element');
+    expect(added.props.tag).toBe('table');
+    // The theme colour survives; the javascript: background does not.
+    expect(added.props.css).toContain('rgb(var(--c-foreground))');
+    expect(String(added.props.css)).not.toContain('javascript');
+    expect(added.props.cssMobile).toBe('font-size: 13px');
+    const rows = added.props.content as Array<{ props: Record<string, unknown> }>;
+    expect(rows).toHaveLength(2);
+    expect(rows[1]!.props.cssHover).toContain('--c-primary');
+    const cells = rows[0]!.props.content as Array<{ props: Record<string, unknown> }>;
+    expect(cells.map((cell) => cell.props.text)).toEqual(['Plan', 'Seats']);
+    // A link the model points at script is kept as text with no unsafe href.
+    expect(String(kids[3]!.props.href ?? '')).not.toContain('javascript');
+    expect(layoutIssues(job.result?.layout as PageLayout)).toEqual([]);
+  });
+
   it('creates a new page as a draft', async () => {
     const { service, builder } = makeService([
       JSON.stringify({ intent: 'new_page', page: { slug: 'home', title: 'Showroom' }, sections: [{ brief: 'hero' }] }),

@@ -1154,3 +1154,14 @@
 [dir='rtl'] .flip-rtl {
   transform: scaleX(-1);
 }
+
+/* A builder stat whose live count is 0 is hidden on the page (see element-block.tsx); while
+   editing it stays visible but marked so it can still be selected. */
+[class*='tel-']:has(> [data-count-zero]) {
+  display: none;
+}
+[data-count-zero-editing] {
+  opacity: 0.45;
+  outline: 1px dashed rgb(var(--c-border));
+  outline-offset: 2px;
+}

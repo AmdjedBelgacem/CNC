@@ -6,6 +6,7 @@ import { pages, pageVersions } from '../../database/schema/pages';
 import { themes, themeVersions } from '../../database/schema/themes';
 import { tenants } from '../../database/schema/tenants';
 import {
+  arabicPageLayout,
   expandHeroConsoleLayout,
   mergeLayoutStructure,
   migrateLegacyLayout,
@@ -108,17 +109,25 @@ export class ContentService {
       // that still exists. New blocks appear in their English position, with
       // English copy, instead of silently disappearing for Arabic visitors.
       const arabicLayout = expandHeroConsoleLayout(migrateLegacyLayout(copy.layout as PageLayout));
-      const layout = mergeLayoutStructure(englishLayout, arabicLayout);
+      // Same function the builder's Arabic preview uses, so built-in text the stored copy is
+      // missing reads in Arabic here too instead of falling back to English.
+      const layout =
+        locale === 'ar'
+          ? arabicPageLayout(englishLayout, arabicLayout)
+          : mergeLayoutStructure(englishLayout, arabicLayout);
       return { ...base, title: copy.title ?? page.title, layout, locale, resolvedLocale: locale };
     }
+    // No Arabic copy yet: built-in text still reads in Arabic from the shipped dictionary,
+    // exactly as the builder's Arabic preview shows it.
+    const layout = locale === 'ar' ? arabicPageLayout(englishLayout) : englishLayout;
     return {
       ...base,
       published: true,
       title: page.title,
       // Draft edits live on `pages.layout`; customers only receive this snapshot.
-      layout: englishLayout,
+      layout,
       locale,
-      resolvedLocale: 'en' as const,
+      resolvedLocale: layout === englishLayout ? ('en' as const) : locale,
     };
   }
 

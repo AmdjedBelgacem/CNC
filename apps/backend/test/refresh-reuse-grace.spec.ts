@@ -90,10 +90,32 @@ describe('refresh-token reuse grace window', () => {
     expect(spy.revokes).toBe(0);
   });
 
-  it('grace window is configurable and defaults to 10s', async () => {
+  it('grace window is configurable and defaults to 30s', async () => {
     const src = await import('node:fs').then((fs) =>
       fs.readFileSync(new URL('../src/modules/auth/services/token.service.ts', import.meta.url), 'utf8'),
     );
-    expect(src).toMatch(/REFRESH_REUSE_GRACE_MS\s*=\s*Number\(process\.env\.REFRESH_REUSE_GRACE_MS \?\? 10_000\)/);
+    expect(src).toMatch(/REFRESH_REUSE_GRACE_MS\s*=\s*Number\(process\.env\.REFRESH_REUSE_GRACE_MS \?\? 30_000\)/);
+  });
+
+  // Opening the builder is a full page load. A refresh cut off by it has already rotated on the
+  // server, so the next page presents the old token. It must get the pair the token was rotated
+  // into, or the admin is signed out with a perfectly good session.
+  it('a token presented again inside the window gets the pair it was rotated into', async () => {
+    const spy = { revokes: 0 };
+    const pair = { accessToken: 'a2', refreshToken: 'r2', user: USER, remember: true };
+    const redis = { get: async (key: string) => (key.startsWith('refresh:successor:') ? JSON.stringify(pair) : null) };
+    const svc = new TokenService({} as any, makeDrizzle(revokedToken(new Date()), spy), { get: () => '15m' } as any, redis as any);
+    await expect(svc.verifyAndRotateRefreshToken(RAW)).resolves.toEqual(pair);
+    expect(spy.revokes).toBe(0);
+  });
+
+  it('outside the window a cached pair is never handed out', async () => {
+    const spy = { revokes: 0 };
+    const pair = { accessToken: 'a2', refreshToken: 'r2', user: USER, remember: false };
+    const redis = { get: async () => JSON.stringify(pair) };
+    const old = new Date(Date.now() - 10 * 60 * 1000);
+    const svc = new TokenService({} as any, makeDrizzle(revokedToken(old), spy), { get: () => '15m' } as any, redis as any);
+    await expect(svc.verifyAndRotateRefreshToken(RAW)).rejects.toThrow('Refresh token has been revoked');
+    expect(spy.revokes).toBeGreaterThan(0);
   });
 });

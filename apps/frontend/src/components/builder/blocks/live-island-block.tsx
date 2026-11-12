@@ -110,6 +110,11 @@ const ISLAND_HEADER_WRAPPER: Record<string, string> = {
   'events-browse': `px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['events-browse'].top}`,
 };
 
+/** Asks an island preview frame to report its content height (see PreviewHeightReporter). */
+function requestIslandHeight(frame: HTMLIFrameElement | null) {
+  frame?.contentWindow?.postMessage({ type: 'builder-island-measure' }, window.location.origin);
+}
+
 export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandProps>) {
   const { variant } = props;
   const { locale: canvasLocale } = useCanvasLocale();
@@ -150,6 +155,9 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
     };
 
     window.addEventListener('message', onMessage);
+    // The frame may have reported before this listener existed; ask it again. Until a report
+    // arrives the frame sits at a fallback height, and the canvas no longer matched the page.
+    requestIslandHeight(frameRef.current);
     return () => {
       window.removeEventListener('message', onMessage);
     };
@@ -275,6 +283,7 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
           }`}
           className="pointer-events-none block w-full border-0"
           style={{ height: height || 420 }}
+          onLoad={(event) => requestIslandHeight(event.currentTarget)}
           scrolling="no"
           tabIndex={-1}
         />

@@ -658,11 +658,17 @@ export function AuditRowsSkeleton({ rows = 10 }: { rows?: number }) {
       <Repeat count={rows}>
         {(i) => (
           <div key={i} className="px-4 py-3">
+            {/* Same three lines as an entry: action and time, the actor line, the "details" toggle. */}
             <div className="flex h-5 items-center justify-between gap-4">
               <Skeleton className={cn('h-3', ['w-40', 'w-32', 'w-48', 'w-36'][i % 4])} />
               <Skeleton className="h-2.5 w-28" />
             </div>
-            <Skeleton className="mt-1.5 h-2.5 w-1/3" />
+            <div className="mt-0.5 flex h-4 items-center">
+              <Skeleton className="h-2.5 w-1/3" />
+            </div>
+            <div className="mt-1.5 flex h-4 items-center">
+              <Skeleton className="h-2.5 w-12 bg-primary/20" shimmer={false} />
+            </div>
           </div>
         )}
       </Repeat>
@@ -1158,7 +1164,29 @@ export function ThemeEditorSkeleton() {
               </>
             }
           >
-            <FormSectionSkeleton rows={['grid2', 'grid2']} />
+            {/* Typography: heading and body font pickers side by side, each a 2×2 grid of "Ag" tiles. */}
+            <FormSectionSkeleton>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Repeat count={2}>
+                  {(group) => (
+                    <div key={group} className="space-y-2">
+                      <Skeleton className="h-3 w-24" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Repeat count={4}>
+                          {(i) => (
+                            <div key={i} className="flex h-[81px] flex-col items-start gap-1.5 rounded-xl border border-border/70 px-3 py-2.5">
+                              <Skeleton className="h-6 w-7" />
+                              <Skeleton className="h-2.5 w-14" />
+                              <Skeleton className="h-2 w-10" shimmer={false} />
+                            </div>
+                          )}
+                        </Repeat>
+                      </div>
+                    </div>
+                  )}
+                </Repeat>
+              </div>
+            </FormSectionSkeleton>
             <FormSectionSkeleton rows={['grid3', 'grid3']} />
             <FormSectionSkeleton rows={['color', 'color', 'color', 'color']} />
           </FormLayoutSkeleton>
@@ -1195,7 +1223,8 @@ export function AdminEmailSkeleton() {
     <ListPage bar={{ crumbs: ['w-12', 'w-24'], live: false, count: true, primary: 'w-36' }}>
       <PageHeaderSkeleton titleWidth="w-40 sm:w-52" />
       <div className="flex flex-wrap gap-1.5">
-        <Repeat count={5}>{(i) => <Skeleton key={i} className="h-[26px] w-20 rounded-full border border-border/70 bg-card" />}</Repeat>
+        {/* "All" plus one chip per template category (learning, commerce, community, system, guidance, auth). */}
+        <Repeat count={7}>{(i) => <Skeleton key={i} className="h-[26px] w-20 rounded-full border border-border/70 bg-card" />}</Repeat>
       </div>
       <EmailTemplateRowsSkeleton />
     </ListPage>

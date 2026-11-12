@@ -3,6 +3,8 @@ import {
   getBlockDefinition,
   isNodeArray,
   sanitizeAiClassName,
+  safeElementHref,
+  safeElementSrc,
   sanitizeElementCss,
   slotNamesFor,
   validatePageLayout,
@@ -170,6 +172,24 @@ export function fromAiNode(raw: unknown, ctx: BuildContext): PuckNode | null {
         const clean = sanitizeElementCss(props[key]);
         if (clean) props[key] = clean;
         else delete props[key];
+      }
+    }
+    // A link or image the model points at script or an unknown scheme is dropped here, not just
+    // skipped at render, so it is never stored in the page.
+    if ('href' in props) {
+      const href = safeElementHref(props.href);
+      if (href) props.href = href;
+      else {
+        delete props.href;
+        warn(ctx, 'element: dropped an unsafe link.');
+      }
+    }
+    if ('src' in props) {
+      const src = safeElementSrc(props.src);
+      if (src) props.src = src;
+      else {
+        delete props.src;
+        warn(ctx, 'element: dropped an unsafe image source.');
       }
     }
   }

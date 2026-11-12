@@ -299,9 +299,7 @@ export async function EventsNextUp({
               <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className={ISLAND_HEAD.eyebrow}>{t('nextUpHeading')}</p>
-                  <h2 className={ISLAND_HEAD.titleMd}>
-                    Don&apos;t miss the next one
-                  </h2>
+                  <h2 className={ISLAND_HEAD.titleMd}>{t('nextUpTitle')}</h2>
                 </div>
                 <a
                   href="#browse"

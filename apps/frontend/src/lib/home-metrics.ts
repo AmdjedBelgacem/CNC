@@ -137,6 +137,8 @@ export function applyLiveHomeMetrics(layout: PageLayout, metrics: LiveHomeMetric
     nodes.map((node) => {
       const props = { ...(node.props ?? {}) };
       if (node.type === 'element' && typeof props.text === 'string' && props.text.includes('{{')) {
+        // The public page bakes the count in, so the zero marker travels as a prop.
+        if (isZeroCountToken(props.text, metrics.counts)) props.countZero = true;
         props.text = fillCountTokens(props.text, metrics.counts);
       }
       if (node.type === 'avatar-stack') {
@@ -180,4 +182,11 @@ export function applyLiveHomeMetrics(layout: PageLayout, metrics: LiveHomeMetric
 export function fillCountTokens(text: string, counts: Record<string, string> | undefined): string {
   if (!counts) return text;
   return text.replace(/\{\{\s*([a-z]+)\s*\}\}/g, (match, key: string) => counts[key] ?? match);
+}
+
+/** True when the text is only a count placeholder (`{{courses}}`) whose live value is 0. */
+export function isZeroCountToken(text: unknown, counts: Record<string, string> | undefined): boolean {
+  if (typeof text !== 'string' || !counts) return false;
+  const match = /^\s*\{\{\s*([a-z]+)\s*\}\}\s*$/.exec(text);
+  return Boolean(match?.[1] && counts[match[1]] === '0');
 }

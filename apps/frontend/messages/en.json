@@ -5495,6 +5495,7 @@
       "reactions": "Reactions"
     },
     "events": {
+      "nextUpTitle": "Don't miss the next one",
       "tickerHeading": "On the board",
       "nextUpHeading": "Next on the board",
       "online": "Online",

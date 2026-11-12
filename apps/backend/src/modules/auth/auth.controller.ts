@@ -394,8 +394,8 @@ export class AuthController {
     );
     // Rotate cookies
     try {
-      const remember = false; // refresh keeps original expiry; frontend sends rememberDevice only on login
-      this.cookieService.setAuthCookies(reply, result.accessToken, result.refreshToken, remember);
+      // A "Keep me signed in" session keeps its 30-day cookie across rotations.
+      this.cookieService.setAuthCookies(reply, result.accessToken, result.refreshToken, result.remember === true);
     } catch {}
     return result;
   }
