@@ -37,6 +37,14 @@ export const layoutPropsSchema = z.object({
 });
 export type LayoutProps = z.infer<typeof layoutPropsSchema>;
 
+/**
+ * An exact colour for a one-off design: hex, rgb()/hsl()/oklch(), a CSS variable or a named
+ * colour. Rendered as an inline style, so it cannot be a class Tailwind never compiled. Braces,
+ * semicolons and angle brackets are refused so a value can never break out of its declaration.
+ */
+export const cssColorSchema = z.string().max(100).regex(/^[^;{}<>]*$/, 'Not a CSS colour');
+
+
 export const iconKeySchema = z.enum(ICON_KEYS);
 
 // ------------------------------------------------------------------
@@ -124,6 +132,10 @@ export const buttonPropsSchema = layoutPropsSchema.extend({
   size: z.enum(['sm', 'md', 'lg']).default('md'),
   /** Full-width button (block-level) vs. natural width. */
   width: z.enum(['auto', 'full']).default('auto'),
+  /** Exact colours, layered over the variant (used to match a copied design). */
+  bgColor: cssColorSchema.optional(),
+  textColor: cssColorSchema.optional(),
+  borderColor: cssColorSchema.optional(),
 });
 export type ButtonProps = z.infer<typeof buttonPropsSchema>;
 
@@ -312,6 +324,10 @@ export const cardPropsSchema = layoutPropsSchema.extend({
   accent: z.boolean().optional().default(false),
   /** Accent bar color (accent mode only). */
   accentColor: z.enum(['bg-primary', 'bg-secondary', 'bg-accent']).optional(),
+  /** Exact colours, layered over the `bg` preset (used to match a copied design). */
+  bgColor: cssColorSchema.optional(),
+  textColor: cssColorSchema.optional(),
+  borderColor: cssColorSchema.optional(),
 });
 export type CardProps = z.infer<typeof cardPropsSchema>;
 

@@ -4,11 +4,13 @@ import { BuilderController } from './builder.controller';
 import { BuilderService } from './builder.service';
 import { NavigationService } from './navigation.service';
 import { SearchModule } from '../search/search.module';
+import { BuilderAiController } from './ai/builder-ai.controller';
+import { BuilderAiService } from './ai/builder-ai.service';
 
 @Module({
   imports: [AuthModule, SearchModule],
-  controllers: [BuilderController],
-  providers: [BuilderService, NavigationService],
+  controllers: [BuilderController, BuilderAiController],
+  providers: [BuilderService, NavigationService, BuilderAiService],
   // ContentModule reads the public navigation tree, so it has to be exported.
   exports: [BuilderService, NavigationService],
 })

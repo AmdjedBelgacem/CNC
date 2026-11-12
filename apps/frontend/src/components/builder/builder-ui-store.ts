@@ -33,6 +33,8 @@ interface BuilderUIState {
   structureOpen: boolean;
   inspectorOpen: boolean;
   publishOpen: boolean;
+  /** The AI builder panel, docked where the inspector sits. */
+  aiOpen: boolean;
   resetOpen: boolean;
   sectionDialog: SectionDialogState;
   setStatus: (status: StatusInfo | null) => void;
@@ -42,6 +44,7 @@ interface BuilderUIState {
   toggleStructure: () => void;
   setInspectorOpen: (open: boolean) => void;
   setPublishOpen: (open: boolean) => void;
+  setAiOpen: (open: boolean) => void;
   setResetOpen: (open: boolean) => void;
   setSectionDialog: (dialog: SectionDialogState) => void;
 }
@@ -53,6 +56,7 @@ export const useBuilderUI = create<BuilderUIState>((set) => ({
   structureOpen: true,
   inspectorOpen: true,
   publishOpen: false,
+  aiOpen: false,
   resetOpen: false,
   sectionDialog: null,
   setStatus: (status) => set({ status }),
@@ -62,6 +66,7 @@ export const useBuilderUI = create<BuilderUIState>((set) => ({
   toggleStructure: () => set((s) => ({ structureOpen: !s.structureOpen })),
   setInspectorOpen: (inspectorOpen) => set({ inspectorOpen }),
   setPublishOpen: (publishOpen) => set({ publishOpen }),
+  setAiOpen: (aiOpen) => set({ aiOpen }),
   setResetOpen: (resetOpen) => set({ resetOpen }),
   setSectionDialog: (sectionDialog) => set({ sectionDialog }),
 }));

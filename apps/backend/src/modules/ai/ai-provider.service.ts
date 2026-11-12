@@ -3,12 +3,19 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { ConfigService } from '../../config/config.service';
 
+/** OpenAI-style multimodal content. Only vision-capable models accept `image_url` parts. */
+export type AiMessageContent =
+  | string
+  | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
+
 export interface AiProviderCompletionInput {
   baseUrl: string;
   apiKey: string;
   model: string;
   fallbackModel?: string | null;
-  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: AiMessageContent }>;
+  /** Ask for a JSON object reply (OpenAI `response_format`). Providers that ignore it are unaffected. */
+  json?: boolean;
   maxTokens: number;
   temperature: number;
   timeoutMs: number;
@@ -21,6 +28,8 @@ export interface AiProviderCompletionResult {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+  /** Input tokens served from the provider's prompt cache (0 when the provider does not say). */
+  cachedTokens?: number;
 }
 
 export interface AiProviderEmbeddingInput {
@@ -222,6 +231,7 @@ export class AiProviderService {
       max_tokens: Math.min(Math.max(Math.floor(input.maxTokens), 1), 8000),
       temperature: Math.min(Math.max(Number(input.temperature), 0), 2),
       stream: false,
+      ...(input.json ? { response_format: { type: 'json_object' } } : {}),
     }, input.apiKey, input.timeoutMs);
     const choices = body && typeof body === 'object' && Array.isArray((body as { choices?: unknown }).choices)
       ? (body as { choices: Array<{ message?: { content?: unknown; reasoning_content?: unknown }; finish_reason?: unknown }> }).choices
@@ -241,7 +251,12 @@ export class AiProviderService {
     const inputTokens = this.safeNumber(usage?.prompt_tokens ?? usage?.input_tokens);
     const outputTokens = this.safeNumber(usage?.completion_tokens ?? usage?.output_tokens);
     const totalTokens = this.safeNumber(usage?.total_tokens) || inputTokens + outputTokens;
-    return { content, inputTokens, outputTokens, totalTokens };
+    // DeepSeek reports prefix-cache hits separately; they bill at a fraction of normal input.
+    const cachedTokens = this.safeNumber(
+      usage?.prompt_cache_hit_tokens ??
+        (usage?.prompt_tokens_details as Record<string, unknown> | undefined)?.cached_tokens,
+    );
+    return { content, inputTokens, outputTokens, totalTokens, cachedTokens };
   }
 
   private async requestJson(

@@ -23,6 +23,7 @@ import { useBuilderPuck } from '@/lib/builder/use-builder-puck';
 import { AnchorPanel } from '@/components/builder/anchor-panel';
 import { cn } from '@/lib/utils';
 import { spring, transition } from '@/lib/motion';
+import { useBuilderUI } from './builder-ui-store';
 
 type PublishIssue = ReturnType<typeof collectPublishIssues>[number];
 
@@ -230,6 +231,13 @@ export function useBuilderShortcuts(options: { onDeleteSelected?: () => void } =
     };
 
     const onKey = (event: KeyboardEvent) => {
+      // ⌘J / Ctrl+J toggles the AI builder, from anywhere including text fields.
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'j') {
+        event.preventDefault();
+        const ui = useBuilderUI.getState();
+        ui.setAiOpen(!ui.aiOpen);
+        return;
+      }
       // Suppressed inside text fields, so Backspace still deletes a character
       // rather than the block the cursor happens to be in.
       if (isTyping(event.target)) return;
@@ -240,7 +248,34 @@ export function useBuilderShortcuts(options: { onDeleteSelected?: () => void } =
     };
 
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+
+    // Clicking a block moves focus into the canvas iframe, whose key events never reach this
+    // document, so ⌘J did nothing right after selecting something. The iframe is created and
+    // replaced by Puck, so bound documents are tracked and new frames picked up as they appear.
+    const bound = new Set<Document>();
+    const onFrameKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'j') {
+        event.preventDefault();
+        const ui = useBuilderUI.getState();
+        ui.setAiOpen(!ui.aiOpen);
+      }
+    };
+    const bindFrames = () => {
+      for (const frame of Array.from(document.querySelectorAll('iframe'))) {
+        const doc = frame.contentDocument;
+        if (doc && !bound.has(doc)) {
+          doc.addEventListener('keydown', onFrameKey);
+          bound.add(doc);
+        }
+      }
+    };
+    bindFrames();
+    const timer = window.setInterval(bindFrames, 1500);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      window.clearInterval(timer);
+      for (const doc of bound) doc.removeEventListener('keydown', onFrameKey);
+    };
   }, [onDeleteSelected]);
 }
 

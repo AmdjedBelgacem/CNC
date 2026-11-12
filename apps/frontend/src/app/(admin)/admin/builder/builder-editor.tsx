@@ -39,6 +39,7 @@ import { builderActions } from '@/components/builder/builder-actions';
 import { useBuilderUI } from '@/components/builder/builder-ui-store';
 import { StructureSidebar } from '@/components/builder/structure-sidebar';
 import { InspectorPanel } from '@/components/builder/inspector-panel';
+import { AiBuilderPanel } from '@/components/builder/ai/ai-builder-panel';
 import { CanvasControls } from '@/components/builder/canvas-controls';
 import { useMediaQuery, IS_DESKTOP_QUERY } from '@/lib/use-media-query';
 import { NoPageSelected } from '@/components/builder/builder-shell';
@@ -251,6 +252,7 @@ function BuilderPuckShell({
 }) {
   const structureOpen = useBuilderUI((s) => s.structureOpen);
   const inspectorOpen = useBuilderUI((s) => s.inspectorOpen);
+  const aiOpen = useBuilderUI((s) => s.aiOpen);
 
   return (
     <>
@@ -268,8 +270,12 @@ function BuilderPuckShell({
             {children}
             <CanvasControls />
           </div>
-          <AnimatePresence initial={false}>
-            {inspectorOpen && <InspectorPanel key="inspector" />}
+          <AnimatePresence initial={false} mode="popLayout">
+            {aiOpen ? (
+              <AiBuilderPanel key="ai" />
+            ) : (
+              inspectorOpen && <InspectorPanel key="inspector" />
+            )}
           </AnimatePresence>
         </div>
       </div>
@@ -328,6 +334,9 @@ export function BuilderEditor() {
     [slug, page?.title],
   );
   const [showTranslation, setShowTranslation] = useState(false);
+  // The Arabic-version pill floats over the bottom-end corner, exactly where the AI panel's
+  // composer sits, so it steps aside while the panel is open.
+  const aiPanelOpen = useBuilderUI((s) => s.aiOpen);
   const [data, setData] = useState<Data | null>(null);
   /**
    * The page the canvas is currently mounted against, and the `key` that keeps
@@ -966,6 +975,37 @@ Stable registration callback (unstable identity would re-run the bridge effect o
     },
     [slug, syncStore, setSaving, setDirty, setStatus, setVersionsOpen, tb],
   );
+  /**
+   * An AI result enters the canvas like any other edit: through Puck's store with history
+   * recorded, so ⌘Z undoes it and the page is marked unsaved. Every node id in it is marked as
+   * already seen first; otherwise `ensureSeeded` would treat the AI's deliberately empty slots
+   * as fresh inserts and fill them with the registry's demo content.
+   */
+  const applyAiLayout = useCallback(
+    (next: unknown) => {
+      const previous = liveRef.current;
+      const layout = ensureNodeIds(next as PageLayout) as unknown as Data;
+      let seen = seenIds.current.get(slug);
+      if (!seen) {
+        seen = new Set();
+        seenIds.current.set(slug, seen);
+      }
+      walkLayoutNodes(layout as unknown as PageLayout, (node) => {
+        const id = node.props?.id;
+        if (typeof id === 'string') seen!.add(id);
+      });
+      liveRef.current = layout;
+      const dispatch = puckDispatch.current;
+      if (dispatch) {
+        dispatch({ type: 'setData', data: () => layout, recordHistory: true } as never);
+      } else {
+        pendingLayout.current = { layout, clearSelection: false };
+      }
+      setDirty(layoutFingerprint(layout) !== layoutFingerprint(baselineRef.current));
+      return previous;
+    },
+    [slug, setDirty],
+  );
   /** Expose page operations to components inside Puck's tree (header etc.). */
   useEffect(() => {
     builderActions.current = {
@@ -975,6 +1015,8 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       publish,
       reset,
       revert,
+      applyAiLayout,
+      getLiveLayout: () => liveRef.current,
     };
   });
   /** ⌘S / ⌃S — save the draft. */
@@ -1045,7 +1087,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
                 </MotionConfig>
               </BuilderLivePreviewProvider>
             </div>{' '}
-            {page && data && (
+            {page && data && !aiPanelOpen && (
               // A page's Arabic copy is a separate layout, so it lives outside the canvas rather
               // than as an inspector tab that would be lost the moment the canvas is remounted.
               // Anchored bottom-end and grown upward by its own content, this panel had no height

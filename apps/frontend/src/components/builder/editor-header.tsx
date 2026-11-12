@@ -44,6 +44,7 @@ import {
   RotateCcw,
   Save,
   Smartphone,
+  Sparkles,
   Tablet,
   Undo2,
 } from 'lucide-react';
@@ -310,6 +311,8 @@ export function BuilderHeader() {
   const inspectorOpen = useBuilderUI((state) => state.inspectorOpen);
   const setInspectorOpen = useBuilderUI((state) => state.setInspectorOpen);
   const setPublishOpen = useBuilderUI((state) => state.setPublishOpen);
+  const aiOpen = useBuilderUI((state) => state.aiOpen);
+  const setAiOpen = useBuilderUI((state) => state.setAiOpen);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const pageStatus = useBuilderUI((state) => state.status);
   /*
@@ -365,6 +368,22 @@ export function BuilderHeader() {
               {tb('editor.unsavedChanges', { default: tb('page.editing') })}
             </m.span>
           )}
+          <m.button
+            type="button"
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setAiOpen(!aiOpen)}
+            aria-pressed={aiOpen}
+            title={`${tb('ai.open')} (⌘J)`}
+            className={cn(
+              'flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold shadow-xs transition sm:px-3',
+              aiOpen
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-primary/30 bg-gradient-to-r from-primary/10 to-primary/5 text-primary hover:border-primary/50 hover:from-primary/15',
+            )}
+          >
+            <Sparkles className="size-3.5" aria-hidden="true" />
+            <span className="hidden min-[520px]:inline">{tb('ai.button')}</span>
+          </m.button>
           <Button
             size="sm"
             variant="outline"

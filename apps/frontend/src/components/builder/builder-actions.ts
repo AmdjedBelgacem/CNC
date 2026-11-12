@@ -6,5 +6,12 @@ export interface BuilderActionHandlers {
   publish: (note?: string) => void;
   reset: () => void;
   revert: (version: number) => void;
+  /**
+   * Loads an AI-built layout into the canvas as one undoable step and returns the layout it
+   * replaced, so the AI panel can offer its own Undo. Nothing is saved or published.
+   */
+  applyAiLayout: (layout: unknown) => unknown;
+  /** The live layout, including unsaved edits, for the AI to work on. */
+  getLiveLayout: () => unknown;
 }
 export const builderActions: { current: BuilderActionHandlers | null } = { current: null };

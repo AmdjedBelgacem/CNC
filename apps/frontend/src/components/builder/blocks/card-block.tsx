@@ -40,6 +40,9 @@ export function CardBlock({ props, puck }: BlockComponentProps<CardProps>) {
     accent = false,
     accentColor = 'bg-primary',
     className,
+    bgColor,
+    textColor,
+    borderColor,
   } = props;
   return (
     <div
@@ -55,7 +58,13 @@ export function CardBlock({ props, puck }: BlockComponentProps<CardProps>) {
         accent && 'relative overflow-hidden group',
         className,
       )}
-      style={layoutStyle(props)}
+      style={{
+        ...layoutStyle(props),
+        // Exact colours sit over the preset, so a copied design keeps its palette.
+        ...(bgColor ? { backgroundColor: bgColor } : {}),
+        ...(textColor ? { color: textColor } : {}),
+        ...(borderColor ? { borderColor } : {}),
+      }}
     >
       {' '}
       {accent && (

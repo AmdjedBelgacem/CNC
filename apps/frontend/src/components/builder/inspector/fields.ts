@@ -407,6 +407,16 @@ export const buttonInspector = defineInspector<ButtonProps>().groups([
   },
   spacingGroup<ButtonProps>(),
   advancedGroup<ButtonProps>(),
+  {
+    id: 'colours',
+    title: 'Exact colours',
+    icon: Palette,
+    fields: [
+      { key: 'bgColor', label: 'Background', control: 'color' },
+      { key: 'textColor', label: 'Text', control: 'color' },
+      { key: 'borderColor', label: 'Border', control: 'color' },
+    ],
+  },
 ]);
 export const linkInspector = defineInspector<LinkProps>().groups([
   {
@@ -897,6 +907,16 @@ export const cardInspector = defineInspector<CardProps>().groups([
   },
   spacingGroup<CardProps>(),
   advancedGroup<CardProps>(),
+  {
+    id: 'colours',
+    title: 'Exact colours',
+    icon: Palette,
+    fields: [
+      { key: 'bgColor', label: 'Background', control: 'color' },
+      { key: 'textColor', label: 'Text', control: 'color' },
+      { key: 'borderColor', label: 'Border', control: 'color' },
+    ],
+  },
 ]); // ------------------------------------------------------------------ Items
 const statItemStyleFields = cardStyleFields as unknown as InspectorFieldDef<StatItemProps>[];
 export const statItemInspector = defineInspector<StatItemProps>().groups([

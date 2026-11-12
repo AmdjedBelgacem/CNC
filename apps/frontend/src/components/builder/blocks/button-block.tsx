@@ -67,6 +67,14 @@ export function ButtonBlock({ props, puck }: BlockComponentProps<ButtonProps>) {
     sizeClass,
   );
   const rootClass = cn(variantClass, width === 'full' && 'w-full', className);
+  // Exact colours sit over the variant's own, so a copied design keeps its palette.
+  const { bgColor, textColor, borderColor } = props;
+  const style = {
+    ...layoutStyle(props),
+    ...(bgColor ? { backgroundColor: bgColor, backgroundImage: 'none' } : {}),
+    ...(textColor ? { color: textColor } : {}),
+    ...(borderColor ? { borderColor, borderWidth: 1, borderStyle: 'solid' as const } : {}),
+  };
   const resolvedIcon = icon ? resolveIconName(icon) : null;
   const iconEl = resolvedIcon ? (
     <Icon
@@ -88,7 +96,7 @@ export function ButtonBlock({ props, puck }: BlockComponentProps<ButtonProps>) {
   );
   if (href && isInternalHref(href)) {
     return (
-      <Link href={href} className={rootClass} style={layoutStyle(props)}>
+      <Link href={href} className={rootClass} style={style}>
         {' '}
         {inner}{' '}
       </Link>
@@ -96,7 +104,7 @@ export function ButtonBlock({ props, puck }: BlockComponentProps<ButtonProps>) {
   }
   if (href) {
     return (
-      <a href={href} className={rootClass} style={layoutStyle(props)}>
+      <a href={href} className={rootClass} style={style}>
         {' '}
         {inner}{' '}
       </a>
@@ -104,14 +112,14 @@ export function ButtonBlock({ props, puck }: BlockComponentProps<ButtonProps>) {
   } // In the mockup, enroll/link labels are decorative `<span>`s (e.g. inside a // card that is itself a link) — never nest anchors or buttons inside one.
 if (variant === 'enroll' || variant === 'link') {
     return (
-      <span className={rootClass} style={layoutStyle(props)}>
+      <span className={rootClass} style={style}>
         {' '}
         {inner}{' '}
       </span>
     );
   }
   return (
-    <button type="button" className={rootClass} style={layoutStyle(props)}>
+    <button type="button" className={rootClass} style={style}>
       {' '}
       {inner}{' '}
     </button>
