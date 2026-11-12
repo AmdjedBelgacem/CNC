@@ -32,6 +32,38 @@ const TRANSLATABLE_KEYS = new Set([
   'accentText',
   'suffixText',
   'eyebrow',
+  // Prose props of the catalog, marketing and console blocks. They were not on the list, so a
+  // page's subtitle, meta line, CTA labels and quotes could not be translated by hand or by AI
+  // and stayed English for Arabic visitors however much of the rest was translated.
+  'subtitle',
+  'metaLine',
+  'titleAccent',
+  'tagline',
+  'quote',
+  'role',
+  'pill',
+  'note',
+  'trustNote',
+  'buttonLabel',
+  'ctaLabel',
+  'primaryLabel',
+  'secondaryLabel',
+  'meta',
+  'metaLabel',
+  'statusLabel',
+  'syncLabel',
+  'feedLabel',
+  'feedTag',
+  'spindleLabel',
+  'spindleTag',
+  'auditTitle',
+  'axesTitle',
+  'controllerLabel',
+  'floatLabel',
+  'floatTag',
+  'level',
+  'duration',
+  'ariaLabel',
 ]);
 
 /** Keys that are ids, urls, types or numbers and must never be sent to a model. */

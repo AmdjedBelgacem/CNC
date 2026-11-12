@@ -1,3 +1,4 @@
+import { getLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { BlockRenderer } from '@/components/builder/block-renderer';
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 export default async function TermsPage() {
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
-  const layout = await resolvePageLayout(tenantSlug, 'terms');
+  const layout = await resolvePageLayout(tenantSlug, 'terms', await getLocale());
   return (
     <LegalDocument>
       <BlockRenderer layout={layout} />

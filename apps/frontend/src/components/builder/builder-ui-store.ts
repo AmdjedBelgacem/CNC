@@ -35,6 +35,8 @@ interface BuilderUIState {
   publishOpen: boolean;
   /** The AI builder panel, docked where the inspector sits. */
   aiOpen: boolean;
+  /** Language the canvas renders in, independent of the admin interface language. */
+  canvasLocale: 'en' | 'ar';
   resetOpen: boolean;
   sectionDialog: SectionDialogState;
   setStatus: (status: StatusInfo | null) => void;
@@ -45,6 +47,7 @@ interface BuilderUIState {
   setInspectorOpen: (open: boolean) => void;
   setPublishOpen: (open: boolean) => void;
   setAiOpen: (open: boolean) => void;
+  setCanvasLocale: (locale: 'en' | 'ar') => void;
   setResetOpen: (open: boolean) => void;
   setSectionDialog: (dialog: SectionDialogState) => void;
 }
@@ -57,6 +60,7 @@ export const useBuilderUI = create<BuilderUIState>((set) => ({
   inspectorOpen: true,
   publishOpen: false,
   aiOpen: false,
+  canvasLocale: 'en',
   resetOpen: false,
   sectionDialog: null,
   setStatus: (status) => set({ status }),
@@ -67,6 +71,7 @@ export const useBuilderUI = create<BuilderUIState>((set) => ({
   setInspectorOpen: (inspectorOpen) => set({ inspectorOpen }),
   setPublishOpen: (publishOpen) => set({ publishOpen }),
   setAiOpen: (aiOpen) => set({ aiOpen }),
+  setCanvasLocale: (canvasLocale) => set({ canvasLocale }),
   setResetOpen: (resetOpen) => set({ resetOpen }),
   setSectionDialog: (sectionDialog) => set({ sectionDialog }),
 }));

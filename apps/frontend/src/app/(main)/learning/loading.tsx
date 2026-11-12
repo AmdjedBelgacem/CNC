@@ -1,13 +1,11 @@
 /**
- * Route-level loading state for `/(main)/learning`.
+ * Route-level loading state for `/learning`.
  *
- * Next.js shows this the instant navigation starts and keeps it on screen until
- * the segment's server render resolves. Without it the browser paints nothing —
- * which on a slow connection reads as a blank page, not as "loading".
- *
- * The composition mirrors the real layout so nothing reflows on arrival.
+ * A replica of the page's layout (containers, header, grids, sidebars), so
+ * nothing moves when the real content replaces it.
  */
-import { LearningSkeleton } from '@/components/skeletons/route-skeletons';
+import { LearningPageSkeleton } from '@/components/skeletons/public-route-skeletons';
+
 export default function Loading() {
-  return <LearningSkeleton  />;
+  return <LearningPageSkeleton />;
 }

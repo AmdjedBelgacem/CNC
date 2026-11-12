@@ -31,7 +31,6 @@ import {
   Field,
   FieldGrid,
   FormSection,
-  FormSkeleton,
   TextInput,
 } from '@/components/admin/admin-form';
 import {
@@ -46,6 +45,7 @@ import { Reveal } from '@/components/ui/motion';
 import { toast } from '@/components/ui/toast';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import { ease, spring } from '@/lib/motion';
+import { ThemeEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 const COLOR_GROUPS: { titleKey: string; keys: (keyof ColorSet)[] }[] = [
   { titleKey: 'brand', keys: ['primary', 'secondary', 'accent'] },
@@ -546,11 +546,7 @@ export function ThemeEditor() {
   };
 
   if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-[1500px] pt-6">
-        <FormSkeleton fields={6} />
-      </div>
-    );
+    return <ThemeEditorSkeleton />;
   }
 
   const preview = (

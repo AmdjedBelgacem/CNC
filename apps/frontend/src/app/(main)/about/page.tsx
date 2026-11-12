@@ -40,7 +40,7 @@ export default async function AboutPage() {
   const locale = coerceLocale(await getLocale());
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
-  const layout = ensureParitySections(await resolvePageLayout(tenantSlug, 'about'), 'about');
+  const layout = ensureParitySections(await resolvePageLayout(tenantSlug, 'about', locale), 'about');
 
   return (
     <>

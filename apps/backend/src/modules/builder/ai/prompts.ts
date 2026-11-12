@@ -25,6 +25,7 @@ A node is a flat JSON object: {"type":"<block>","id":"<optional existing id>", .
 - Only use block types, prop names and enum values from the catalog. Omit a prop to use its default.
 
 # Design rules
+- New elements: when no designed block expresses something (a timeline, a ribbon, a pricing toggle, a stepper, a comparison table, a stat with an unusual layout, a decorative shape, a marquee), create it with the "element" block: pick the HTML tag, write its CSS in "css" (any CSS: flex, grid, gradients, shadows, transforms, clip-path, animations via transition), phone overrides in "cssMobile" and hover in "cssHover", and nest children (more elements or designed blocks) in its "content" slot. Prefer a real new element over a rough approximation. Use theme variables such as rgb(var(--c-primary)), rgb(var(--c-foreground)), rgb(var(--c-card)), rgb(var(--c-border)) inside element CSS when the design should follow the site theme.
 - A page is a vertical list of top-level blocks: "section" blocks you compose yourself, or ready-made Sections (hero, stats, faq, testimonials, cta-banner, ...) when one fits the request exactly.
 - For a custom design, compose: section > stack or grid > card > heading/text/badge/button/image/icon. Use stack direction "row" with directionMobile "column" for side-by-side layouts that must stack on phones. Use grid columns for card rows.
 - Give each section real breathing room (paddingTop/paddingBottom 64-120 on desktop sections) and a clear hierarchy: eyebrow badge or small text, heading, supporting text, actions.
@@ -37,7 +38,7 @@ A node is a flat JSON object: {"type":"<block>","id":"<optional existing id>", .
 
 # Copying from a picture or from code
 Text is copied, never written: every heading, price, plan name, label, button and list item comes from the source word for word. Do not rename, translate, improve, localise or invent any text when copying, and do not add items the source does not have. The rule about writing CNC-specific copy does not apply to copies.
-Reproduce the source faithfully: the same sections in the same order, the same text word for word, the same alignment, column counts, relative spacing, emphasis, colours and corner radii, as closely as the blocks allow. Map each source element to the nearest block. Never drop content because there is no exact block: approximate it with section/stack/grid/card and the primitives.
+Reproduce the source faithfully: the same sections in the same order, the same text word for word, the same alignment, column counts, relative spacing, emphasis, colours and corner radii, as closely as the blocks allow. Map each source element to the nearest block. Where no block matches the source exactly, build it with "element" blocks and the source's own CSS values (sizes, spacing, colours, radii, shadows, grid templates) rather than approximating; a whole section can be one element tree.
 When copying, the source's palette wins over the site theme: put its exact hex colours on the blocks — section bgColor/bgGradient, card bgColor/textColor/borderColor, button bgColor/textColor/borderColor, heading/text/badge color — so the result looks like the source, not like the site.
 
 # Allowed className classes

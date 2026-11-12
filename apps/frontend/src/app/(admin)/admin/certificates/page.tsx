@@ -18,7 +18,6 @@ import {
   Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { AnimatePresence, m } from 'framer-motion';
 import { AnimatedNumber, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
@@ -45,6 +44,8 @@ import {
 import { CertificateDetailDialog, type CertificateRow } from './certificate-detail';
 import { IssueCertificateSheet } from './issue-sheet';
 import { TemplatesTab } from './templates-tab';
+import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 /* A certificate is a document, so it is presented as one: a small credential
  * tile carrying the certificate number, with the learner, course and validity
@@ -714,20 +715,7 @@ export default function AdminCertificatesPage() {
             </Toolbar>
 
             {loading ? (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
-                    <div className="flex gap-4">
-                      <Skeleton className="size-24 shrink-0 rounded-xl sm:size-28" />
-                      <div className="flex-1 space-y-3">
-                        <Skeleton className="h-3.5 w-1/2 rounded" />
-                        <Skeleton className="h-5 w-24 rounded-full" />
-                        <Skeleton className="h-3 w-3/4 rounded" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SkeletonRegion><AdminCardGrid kind="certificate" count={4} /></SkeletonRegion>
             ) : !rows || rows.length === 0 ? (
               hasFilters ? (
                 <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">

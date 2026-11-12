@@ -33,11 +33,11 @@ import {
   Field,
   FieldGrid,
   FormSection,
-  FormSkeleton,
   TextAreaField,
   TextField,
   TextInput,
 } from '@/components/admin/admin-form';
+import { AdminSettingsSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 /* Settings is grouped by concern and, for branding, needs to be *seen* rather
  * than described: the live preview renders a storefront header from the values
@@ -290,11 +290,7 @@ export default function AdminSettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-[1500px] pt-6">
-        <FormSkeleton fields={5} />
-      </div>
-    );
+    return <AdminSettingsSkeleton />;
   }
 
   const navItems = sections.map((s) => ({

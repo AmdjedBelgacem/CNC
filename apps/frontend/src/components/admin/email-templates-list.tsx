@@ -12,9 +12,10 @@ import { AdminCommandBar, AdminPageHeader, BarPrimaryButton } from '@/components
 import { FormSection, SelectField, TextField } from '@/components/admin/admin-form';
 import { SlugField, StatusChip, slugify as kitSlugify } from '@/components/admin/form-page';
 import { EmptyState } from '@/components/ui/states';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { AlertTriangle, ChevronRight, Loader2, Mail, Plus, ShieldAlert } from 'lucide-react';
+import { EmailTemplateRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const CATEGORIES = Object.keys(EMAIL_CATEGORY_LABELS) as EmailCategory[];
 
@@ -251,11 +252,7 @@ export function EmailTemplatesList() {
             </div>
 
             {loading ? (
-              <div className="space-y-2" aria-busy="true">
-                {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full rounded-xl" />
-                ))}
-              </div>
+              <SkeletonRegion><EmailTemplateRowsSkeleton /></SkeletonRegion>
             ) : visible.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border/80 bg-surface-sunken/30">
                 <EmptyState

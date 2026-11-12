@@ -3966,6 +3966,14 @@
   },
   "builder": {
     "ai": {
+      "step": {
+        "start": "Starting",
+        "vision": "Reading your picture",
+        "plan": "Planning the change",
+        "apply": "Applying the edits",
+        "build": "{count, plural, one {Building # section} other {Building # sections}}",
+        "page": "Creating the page"
+      },
       "button": "Build with AI",
       "open": "Build with AI",
       "title": "AI builder",
@@ -4135,6 +4143,15 @@
       "liveCanvas": "Replay on the canvas when a setting changes"
     },
     "canvas": {
+      "untranslated": "{count, plural, one {# text is} other {# texts are}} still English for Arabic visitors",
+      "translateNow": "Translate with AI",
+      "translated": "{count, plural, =0 {Nothing left to translate} one {Translated # text} other {Translated # texts}}",
+      "translateFailed": "Arabic translation failed",
+      "language": "Canvas language",
+      "previewArabic": "Preview the page as Arabic visitors see it",
+      "editEnglish": "Edit the English page",
+      "arabicPreviewNote": "Arabic preview · read-only. Edit Arabic text in the Arabic version panel.",
+      "noArabicCopy": "This page has no Arabic copy yet, so Arabic visitors see the English text.",
       "zoomOut": "Zoom out",
       "zoomToFit": "Zoom to fit",
       "auto": "Auto",
@@ -4533,6 +4550,7 @@
     },
     "puck": {
       "blocks": {
+        "element": "Element",
         "heading": "Heading",
         "text": "Text",
         "button": "Button",

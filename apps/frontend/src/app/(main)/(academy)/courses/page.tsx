@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { CourseGrid } from './course-grid';
 import { CategoryFilter } from '@/components/academy/category-filter';
-import { Skeleton, SkeletonCourseCard } from '@/components/ui/skeleton';
+import { CourseFilterSkeleton, CourseGridSkeleton as CourseGridReplica } from '@/components/ui/skeletons/public';
 import { fetchPublishedCourses } from '@/lib/courses';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { BRAND_NAME, OG_IMAGE, absoluteUrl } from '@/lib/brand';
@@ -84,16 +84,9 @@ export default async function CoursesPage() {
 async function CategoryFilterSkeleton() {
   const t = await getTranslations('pages.courseLibrary');
   return (
-    <div
-      className="mb-10 flex flex-wrap gap-2"
-      role="status"
-      aria-busy="true"
-      aria-label={t('loadingFilters')}
-    >
+    <div role="status" aria-busy="true" aria-label={t('loadingFilters')}>
       <span className="sr-only">{t('loadingFilters')}</span>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-8 w-28 rounded-full" />
-      ))}
+      <CourseFilterSkeleton />
     </div>
   );
 }
@@ -108,16 +101,9 @@ async function CategoryFilterSkeleton() {
 async function CourseGridSkeleton() {
   const t = await getTranslations('pages.courseLibrary');
   return (
-    <div
-      className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
-      role="status"
-      aria-busy="true"
-      aria-label={t('loadingCourses')}
-    >
+    <div role="status" aria-busy="true" aria-label={t('loadingCourses')}>
       <span className="sr-only">{t('loadingCourses')}</span>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <SkeletonCourseCard key={i} />
-      ))}
+      <CourseGridReplica />
     </div>
   );
 }

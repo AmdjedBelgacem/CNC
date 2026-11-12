@@ -35,14 +35,14 @@ import {
   Pagination,
   PillTabs,
   SegmentedIconToggle,
-  Skeleton,
-  SkeletonRows,
   StatusPill,
   Toolbar,
   type Tone,
 } from '@/components/admin/admin-ui';
 import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { AcademyRowMenu, type AcademyAction } from './academy-row-menu';
+import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion, TableCardSkeleton } from '@/components/ui/skeletons';
 
 /* Academies are branded destinations: each one carries its own accent colour, a
  * logo, a hero image and a subtitle. Rendering them as bare title/slug rows
@@ -290,18 +290,6 @@ function AcademyCard({
 }
 
 /** Card-shaped placeholder so the gallery does not reflow when data lands. */
-function AcademyCardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
-      <Skeleton className="h-32 w-full rounded-none" />
-      <div className="space-y-3 p-5">
-        <Skeleton className="h-3.5 w-3/4" />
-        <Skeleton className="h-3 w-1/3" />
-        <Skeleton className="h-8 w-full rounded-lg" />
-      </div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
@@ -646,15 +634,22 @@ export default function AdminAcademiesPage() {
 
         {loading ? (
           view === 'gallery' ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <AcademyCardSkeleton key={i} />
-              ))}
-            </div>
+            <SkeletonRegion><AdminCardGrid kind="academy" /></SkeletonRegion>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
-              <SkeletonRows rows={6} columns={3} />
-            </div>
+            <SkeletonRegion>
+              <TableCardSkeleton
+                className="rounded-2xl"
+                rowClassName="px-4 py-3.5 sm:px-6"
+                rows={6}
+                columns={[
+                  { cell: 'tile', size: 3, header: 56 },
+                  { cell: 'pill', size: 1.2, hideBelow: 'sm', header: 44 },
+                  { cell: 'num', size: 1, hideBelow: 'md', header: 52 },
+                  { cell: 'text2', size: 1.4, hideBelow: 'md', header: 60 },
+                  { cell: 'actions', size: '6rem', header: 48 },
+                ]}
+              />
+            </SkeletonRegion>
           )
         ) : !rows || rows.length === 0 ? (
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">

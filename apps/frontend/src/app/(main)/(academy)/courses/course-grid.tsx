@@ -9,6 +9,8 @@ import { coerceLocale } from '@/i18n/config';
 import type { ContentLocale } from '@titan/shared';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonRegion } from '@/components/ui/skeletons/region';
+import { CourseGridSkeleton } from '@/components/ui/skeletons/public';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { getImageSrc } from '@/lib/images';
 import { LayoutBox, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
@@ -101,19 +103,12 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
   const academyMissing = Boolean(academySlug) && academyQuery.isSuccess && academy === null;
 
   if (isLoading) {
+    // Same wrapper and grid as the loaded list below, so the cards land in place.
     return (
-      <div className="space-y-6">
-        {academySlug ? <Skeleton className="h-28 w-full rounded-2xl" /> : null}
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="space-y-3">
-              <Skeleton className="aspect-[16/10] w-full rounded-2xl" />
-              <Skeleton className="h-5 w-3/4" /> <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-3 w-full" />
-            </div>
-          ))}
-        </div>
-      </div>
+      <SkeletonRegion className="space-y-8">
+        {academySlug ? <Skeleton className="h-[15.75rem] w-full rounded-2xl md:h-[18.75rem]" /> : null}
+        <CourseGridSkeleton />
+      </SkeletonRegion>
     );
   }
   if (error) {

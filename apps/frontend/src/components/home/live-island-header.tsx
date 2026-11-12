@@ -8,16 +8,20 @@ import { BuilderNode } from '@/components/builder/block-renderer';
  * `HomeBuilder` is a client component, so it cannot receive a render function
  * from a server page (functions are not serializable across the RSC boundary).
  * The page resolves the slot itself and passes the resulting element into the
- * island component. Arabic pages call this with `locale !== 'en'` and get
- * `undefined`, keeping the translated header that lives inside the island.
+ * island component.
+ *
+ * Every locale renders the layout's own slot. Arabic pages used to get `undefined` here and
+ * fall back to a header baked into the island component, because the layout was English-only.
+ * The page layout is now served per locale (Arabic copy merged over the English structure), so
+ * the builder-authored header is the right one in both languages — and skipping it made the
+ * Arabic page show a different heading from the one the builder shows.
  */
 export function liveIslandSlot(
   layout: PageLayout,
   variant: string,
   slot: string,
-  locale: string,
+  _locale: string,
 ): ReactNode | undefined {
-  if (locale !== 'en') return undefined;
   const zones = (layout as { zones?: Record<string, PuckNode[]> }).zones ?? {};
   const node = (layout.content ?? []).find(
     (candidate) =>

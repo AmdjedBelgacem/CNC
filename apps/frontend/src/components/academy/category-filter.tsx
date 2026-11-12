@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Layers } from 'lucide-react';
 import { useAcademies } from '@/hooks/use-academies';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CourseFilterSkeleton } from '@/components/ui/skeletons/public';
 import { cn } from '@/lib/utils';
 import { m } from 'framer-motion';
 import { spring } from '@/lib/motion';
@@ -26,11 +26,7 @@ export function CategoryFilter() {
 
   if (isLoading) {
     return (
-      <div className="mb-10 flex flex-wrap gap-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-24 rounded-full" />
-        ))}
-      </div>
+      <CourseFilterSkeleton />
     );
   }
 

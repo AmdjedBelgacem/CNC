@@ -15,7 +15,9 @@ import { BRAND_NAME, OG_IMAGE, SITE_URL, absoluteUrl, organizationJsonLd, webSit
 import { faqJsonLd, breadcrumbJsonLd } from '@/lib/schema';
 import { HOMEPAGE_FAQ } from '@/lib/faq-content';
 import { HomeFaqSection, HomeGuidesSection } from '@/components/home/home-extras';
-import { liveIslandSlot } from '@/components/home/live-island-header';
+import { liveIslandHeader, liveIslandSlot } from '@/components/home/live-island-header';
+import { ProductsFeatured } from '@/components/store/products-islands';
+import { fetchCatalogProducts } from '@/lib/products';
 export const metadata: Metadata = {
   title: 'CNC Machining Courses & Certification',
   description:
@@ -53,11 +55,14 @@ export default async function HomePage() {
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const locale = coerceLocale(await getLocale());
-  const [rawLayout, academies, courses, sponsors] = await Promise.all([
+  const [rawLayout, academies, courses, sponsors, products] = await Promise.all([
     resolvePageLayout(tenantSlug, 'home', locale),
-    fetchPublishedAcademies(tenantSlug),
+    fetchPublishedAcademies(tenantSlug, locale),
     fetchPublishedCourses(tenantSlug, 6, locale),
     fetchPublishedSponsors(tenantSlug),
+    // The homepage sells the store too: its featured-products section is the same live island
+    // the products page uses, fed from the same catalogue.
+    fetchCatalogProducts(tenantSlug, { limit: 24 }, locale),
   ]);
   const courseTotal =
     academies.reduce((sum, a) => sum + (a.courseCount || 0), 0) || courses.length;
@@ -69,6 +74,7 @@ export default async function HomePage() {
       academyCount: academies.length,
       courseCount: courseTotal,
       sponsorCount: sponsors.length,
+      locale,
     }),
   );
   // JSON-LD reflects live catalog data, never hardcoded course names.
@@ -115,6 +121,12 @@ export default async function HomePage() {
         courses={courses}
         sponsors={sponsors}
         islands={{
+          'products-featured': (
+            <ProductsFeatured
+              products={products}
+              header={liveIslandHeader(layout, 'products-featured', locale)}
+            />
+          ),
           'home-faq': (
             <HomeFaqSection
               header={liveIslandSlot(layout, 'home-faq', 'header', locale)}

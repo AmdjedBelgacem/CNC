@@ -13,8 +13,54 @@ export function buildLiveHomeMetrics(input: {
   academyCount: number;
   courseCount: number;
   sponsorCount: number;
+  /** The page language. Arabic pages used to get these sentences in English. */
+  locale?: string;
 }): LiveHomeMetrics {
   const { academyCount, courseCount, sponsorCount } = input;
+  if (input.locale === 'ar') {
+    return {
+      trustCount: `+${academyCount}`,
+      trustNote: `${academyCount} أكاديميات متخصصة و${courseCount} دورة منشورة — منهج أساسي مجاني للمشغّلين المعاصرين.`,
+      ctaSubtitle: `انضم إلى المتعلمين في ${academyCount} أكاديميات و${courseCount} دورة. احجز مكانك في الدفعة القادمة ذاتية الوتيرة.`,
+      ctaPill: 'التسجيل مفتوح',
+      stats: [
+        {
+          label: 'الكتالوج',
+          tag: 'مباشر',
+          tagIcon: 'school',
+          value: String(academyCount),
+          sub: 'أكاديميات منشورة',
+          note: 'مسارات منظمة تغطي المهارات التي تبحث عنها الورش عند التوظيف.',
+        },
+        {
+          label: 'المنهج',
+          tag: 'أساسي مجاني',
+          tagIcon: 'menu_book',
+          tagVariant: 'primary',
+          value: String(courseCount),
+          sub: 'دورات منشورة',
+          note: 'مشاريع عملية مع محاكيات — بلا رسوم على المسارات الأساسية.',
+        },
+        {
+          label: 'الشبكة',
+          tag: 'الصناعة',
+          tagIcon: 'handshake',
+          value: String(sponsorCount),
+          sub: 'شركاء المعدات والبرمجيات',
+          note: 'شركاء آلات القطع وبرامج التصنيع الممثلون في الكتالوج.',
+        },
+        {
+          label: 'الوصول',
+          tag: 'ذاتي الوتيرة',
+          tagIcon: 'language',
+          tagVariant: 'primary',
+          value: '$0',
+          sub: 'يعمل في المتصفح',
+          note: 'تعلّم من أي مكان بأدوات CAM السحابية والتوأم الرقمي.',
+        },
+      ],
+    };
+  }
   return {
     trustCount: `+${academyCount}`,
     trustNote: `${academyCount} specialized academies and ${courseCount} published courses — free core curriculum for modern machinists.`,
@@ -84,7 +130,7 @@ export function applyLiveHomeMetrics(layout: PageLayout, metrics: LiveHomeMetric
         const count = props.count;
         if (count === '+17k' || count === '+80') props.count = metrics.trustCount;
       }
-      if (node.type === 'text' && typeof props.text === 'string' && props.text.includes('17,400')) {
+      if (node.type === 'text' && typeof props.text === 'string' && /17,400|17400|١٧٬?٤٠٠/.test(props.text)) {
         props.text = metrics.trustNote;
       }
       if (node.type === 'cta-signup') {

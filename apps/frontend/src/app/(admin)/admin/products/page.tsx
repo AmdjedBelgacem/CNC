@@ -35,7 +35,6 @@ import {
   PillTabs,
   SegmentedIconToggle,
   Select,
-  Skeleton,
   StatusPill,
   Toolbar,
   type Tone,
@@ -43,6 +42,8 @@ import {
 import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { ProductRowMenu, type ProductAction } from './product-row-menu';
 import { categoryStyle } from '@/components/admin/product-category';
+import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 /* A product catalogue with no product photography still has one strong visual
  * signal per item: its category. Each card is built around that, with the price
@@ -320,19 +321,6 @@ function ProductCard({
   );
 }
 
-function ProductCardSkeleton() {
-  return (
-    <div className="flex gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
-      <Skeleton className="size-24 shrink-0 rounded-xl sm:size-28" />
-      <div className="flex-1 space-y-3">
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-3.5 w-2/3" />
-        <Skeleton className="h-5 w-40 rounded-full" />
-        <Skeleton className="h-3 w-1/2" />
-      </div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
@@ -704,11 +692,7 @@ export default function AdminProductsPage() {
         </Toolbar>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ProductCardSkeleton key={i} />
-            ))}
-          </div>
+          <SkeletonRegion><AdminCardGrid kind="product" /></SkeletonRegion>
         ) : !rows || rows.length === 0 ? (
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
             <EmptyState

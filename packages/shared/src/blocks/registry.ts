@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ICON_KEYS, type IconKey } from '../types/theme';
 import type { PuckNode } from '../types/page';
 import { NODE_ANIMATION_DEFAULTS, NODE_ANIMATION_SCHEMA_SHAPE } from './animation';
+import { ELEMENT_TAGS } from './element-css';
 
 export * from './animation';
 
@@ -1949,6 +1950,49 @@ const section: BlockDefinition = {
   zones: { content: {} },
 };
 
+/**
+ * A free-form element: any allowed HTML tag with its own CSS and nested children.
+ *
+ * Every other block is a designed component with a fixed set of options. This one is the
+ * escape hatch for what none of them covers — a ribbon, a timeline rail, a pricing toggle, a
+ * stat with an unusual layout — so the AI builder (and an author) can create new elements
+ * instead of approximating them. CSS is sanitised by `sanitizeElementCss` before render.
+ */
+export const elementPropsSchema = layoutPropsSchema.extend({
+  id: z.string().optional(),
+  tag: z.enum(ELEMENT_TAGS).default('div'),
+  /** Text shown inside the element, before its children. */
+  text: z.string().max(4000).optional(),
+  /** CSS declarations for the element ("display: flex; gap: 12px; ..."). */
+  css: z.string().max(6000).optional(),
+  /** Extra declarations applied on hover. */
+  cssHover: z.string().max(2000).optional(),
+  /** Overrides below 768px. */
+  cssMobile: z.string().max(3000).optional(),
+  /** For `a`. */
+  href: z.string().max(600).optional(),
+  openInNewTab: z.boolean().optional(),
+  /** For `img`. */
+  src: z.string().max(2000).optional(),
+  alt: z.string().max(300).optional(),
+  /** Accessible label for elements without visible text. */
+  ariaLabel: z.string().max(200).optional(),
+});
+export type ElementProps = z.infer<typeof elementPropsSchema>;
+
+export const elementDefaults: ElementProps = { tag: 'div' };
+
+const element: BlockDefinition = {
+  type: 'element',
+  label: 'Element',
+  description:
+    'A free-form HTML element (div, span, p, h1-h6, ul/li, a, img, table, ...) with its own CSS in "css", hover CSS in "cssHover" and phone CSS in "cssMobile". Nest more blocks or elements in its content slot. Use it for anything no other block expresses.',
+  category: 'Layout',
+  schema: elementPropsSchema,
+  defaultProps: elementDefaults,
+  zones: { content: {} },
+};
+
 const grid: BlockDefinition = {
   type: 'grid',
   label: 'Grid',
@@ -2244,6 +2288,7 @@ const BASE_BLOCK_REGISTRY: Readonly<Record<string, BlockDefinition>> = {
   stack,
   grid,
   card,
+  element,
   section,
   heading,
   text,

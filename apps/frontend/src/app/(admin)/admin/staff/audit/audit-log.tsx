@@ -7,7 +7,8 @@ import { ChevronLeft, ChevronRight, ScrollText } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AuditRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 interface AuditRow {
   id: string;
@@ -98,11 +99,7 @@ export function AuditLog() {
       </form>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }, (_, i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-xl" />
-          ))}
-        </div>
+        <SkeletonRegion><AuditRowsSkeleton /></SkeletonRegion>
       ) : isError ? (
         <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm">
           <p className="font-medium text-foreground">{t('loadFailed')}</p>

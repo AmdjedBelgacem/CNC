@@ -1,4 +1,4 @@
-import { DEFAULT_THEME_TOKENS, getDefaultLayout } from '@titan/shared';
+import { arabicPageLayout, DEFAULT_THEME_TOKENS, getDefaultLayout } from '@titan/shared';
 import type { PageLayout, ThemeTokens } from '@titan/shared';
 import { serverApiUrl } from '../server-api-url';
 
@@ -63,7 +63,10 @@ export async function fetchPublishedLayout(
 } /** Builds the final layout used for public rendering: published layout, else the hardcoded default. */
 export async function resolvePageLayout(tenantSlug: string, slug: string, locale?: string): Promise<PageLayout> {
   const published = await fetchPublishedLayout(tenantSlug, slug, locale);
-  return published ?? getDefaultLayout(slug);
+  if (published) return published;
+  // An unpublished page shows its built-in layout; Arabic visitors get its Arabic text.
+  const fallback = getDefaultLayout(slug);
+  return locale === 'ar' ? arabicPageLayout(fallback) : fallback;
 } /** Theme used for public rendering: published tokens, else the built-in defaults. */
 export async function resolveThemeTokens(tenantSlug: string): Promise<ThemeTokens> {
   const published = await fetchPublishedTheme(tenantSlug);

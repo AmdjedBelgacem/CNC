@@ -13,6 +13,7 @@ import { ProgressCardBlock } from './progress-card-block';
 import { StackBlock } from './stack-block';
 import { GridBlock } from './grid-block';
 import { CardBlock } from './card-block';
+import { ElementBlock } from './element-block';
 import { SectionBlock } from './section-block';
 import { NavBlock } from './nav-block';
 import { HeroBlock } from './hero-block';
@@ -122,6 +123,7 @@ export const BLOCK_COMPONENTS: Record<string, ComponentType<BlockComponentProps<
   stack: StackBlock,
   grid: GridBlock,
   card: CardBlock,
+  element: ElementBlock,
   section: SectionBlock,
   heading: HeadingBlock,
   text: TextBlock,

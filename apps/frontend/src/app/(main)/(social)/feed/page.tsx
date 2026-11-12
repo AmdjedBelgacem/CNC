@@ -17,7 +17,7 @@ export default async function FeedPage() {
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, snapshot] = await Promise.all([
-    resolvePageLayout(tenantSlug, 'feed'),
+    resolvePageLayout(tenantSlug, 'feed', locale),
     fetchWireSnapshot(tenantSlug),
   ]);
 

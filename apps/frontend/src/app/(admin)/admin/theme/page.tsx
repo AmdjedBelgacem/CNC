@@ -1,19 +1,12 @@
 'use client';
 import dynamic from 'next/dynamic';
-import { useTranslations } from 'next-intl';
+import { ThemeEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
-function EditorFallback() {
-  const t = useTranslations('theme');
-  return (
-    <div className="flex h-screen items-center justify-center text-muted-foreground">
-      {t('loadingEditor')}
-    </div>
-  );
-}
-
+// While the editor chunk loads, show the editor's own shape rather than a
+// centred "Loading editor…" line in an h-screen box that the page then replaces.
 const ThemeEditor = dynamic(() => import('./theme-editor').then((m) => m.ThemeEditor), {
   ssr: false,
-  loading: () => <EditorFallback />,
+  loading: () => <ThemeEditorSkeleton />,
 });
 export default function ThemePage() {
   return <ThemeEditor />;

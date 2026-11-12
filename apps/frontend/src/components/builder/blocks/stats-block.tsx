@@ -55,8 +55,8 @@ export function StatsBlock({ props, puck }: BlockComponentProps<StatsProps>) {
   const layout = layoutStyle(props);
   const authoredMarginTop = typeof props.marginTop === 'number' ? props.marginTop : 0;
   const preview = useBuilderLivePreview();
-  const editing = Boolean(puck?.isEditing);
-  const isHome = editing && preview?.pageSlug === 'home';
+  // In the builder (editing or its read-only preview), never on the public page.
+  const isHome = Boolean(preview) && preview?.pageSlug === 'home';
   const liveNodes = isHome && preview?.homeMetrics
     ? preview.homeMetrics.stats.map((stat) => seedStatCard(stat).node)
     : null;

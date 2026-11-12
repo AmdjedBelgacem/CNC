@@ -10,6 +10,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 // made esbuild emit [MISSING_EXPORT] "Actor" is not exported by builder.service.
 import { BuilderService, type Actor } from './builder.service';
 import { NavigationService } from './navigation.service';
+import { PageAutoTranslateService } from './page-autotranslate.service';
 import {
   CreatePageDto,
   UpdatePageDto,
@@ -32,6 +33,7 @@ export class BuilderController {
   constructor(
     private builder: BuilderService,
     private navigation: NavigationService,
+    private autoTranslate: PageAutoTranslateService,
   ) {}
 
   private ctx(req: any) {
@@ -116,6 +118,16 @@ export class BuilderController {
     @Req() req: any,
   ) {
     return this.builder.savePage(this.builder.assertTenant(tenant), slug, dto, user, this.ctx(req));
+  }
+
+  @Post('pages/:slug/translate-arabic')
+  @ApiOperation({ summary: 'Translate every still-English text field of the page into its Arabic copy' })
+  async translateArabic(@CurrentTenant() tenant: any, @Param('slug') slug: string) {
+    const tenantId = this.builder.assertTenant(tenant);
+    const page = await this.builder.getPage(tenantId, slug);
+    const translated = await this.autoTranslate.fillArabic(tenantId, page.id);
+    const updated = await this.builder.getPage(tenantId, slug);
+    return { translated, translations: updated.translations ?? null };
   }
 
   @Post('pages/:slug/publish')

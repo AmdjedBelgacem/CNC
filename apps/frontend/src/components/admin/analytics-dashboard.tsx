@@ -45,7 +45,6 @@ import {
   PillTabs,
   Select,
   Skeleton,
-  SkeletonPanel,
   SkeletonRows,
   StatusPill,
   TONE_ICON,
@@ -53,6 +52,7 @@ import {
   type Tone,
 } from './admin-ui';
 import { RankedListItem, TrendChart, type TrendPoint } from './analytics-charts';
+import { AdminAnalyticsSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 type RangeKey = '7d' | '30d' | '90d' | '12m';
 
@@ -424,20 +424,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
 
   /* ------------------------------- loading ------------------------------- */
   if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-[132px] rounded-xl" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonPanel key={i} />
-          ))}
-        </div>
-      </div>
-    );
+    return <AdminAnalyticsSkeleton />;
   }
 
   /* ------------------------------- render ------------------------------- */

@@ -28,7 +28,7 @@ export function CtaSignupBlock({ props, puck }: BlockComponentProps<CtaSignupPro
     formAction = '/register',
   } = props;
   const preview = useBuilderLivePreview();
-  const isHome = puck?.isEditing && preview?.pageSlug === 'home';
+  const isHome = Boolean(preview) && preview?.pageSlug === 'home';
   const livePill =
     isHome && preview?.homeMetrics && typeof pill === 'string' && pill.includes('Cohort')
       ? (preview.homeMetrics.ctaPill ?? pill)

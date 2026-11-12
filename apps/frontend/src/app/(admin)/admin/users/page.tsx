@@ -31,7 +31,6 @@ import {
   FilterChip,
   Pagination,
   PillTabs,
-  SkeletonRows,
   StatusPill,
   TableCard,
   Toolbar,
@@ -39,6 +38,8 @@ import {
 } from '@/components/admin/admin-ui';
 import { LearnerDrawer } from './learner-drawer';
 import type { AdminUserRow } from './users-shared';
+import { LearnersTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const PER_PAGE = 12;
 
@@ -353,9 +354,7 @@ export default function AdminUsersPage() {
         </Toolbar>
 
         {loading ? (
-          <TableCard>
-            <SkeletonRows rows={6} columns={3} />
-          </TableCard>
+          <SkeletonRegion><LearnersTableSkeleton /></SkeletonRegion>
         ) : !rows || rows.length === 0 ? (
           <TableCard>
             <EmptyState

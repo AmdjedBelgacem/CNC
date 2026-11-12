@@ -7,7 +7,6 @@ import { ACADEMY_FIELDS, type AcademyContentTranslation, type ContentLocale } fr
 import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
 import { AdminCommandBar, BarButton } from '@/components/admin/admin-chrome';
-import { FormSkeleton } from '@/components/admin/admin-form';
 import { ErrorBanner } from '@/components/admin/admin-ui';
 import { SaveDock, SlugField, useFormGuard } from '@/components/admin/form-page';
 import { TranslateAction, useTranslateDraft } from '@/components/admin/translation';
@@ -39,6 +38,7 @@ import {
   contrastWithWhite,
 } from './academy-hero-editor';
 import { AcademyCourses, type RosterCourse } from './academy-courses';
+import { AcademyEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 interface AcademyDetail {
   id: string;
@@ -413,11 +413,7 @@ function AcademyEditor() {
   };
 
   if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-6xl space-y-6 pt-6">
-        <FormSkeleton fields={6} />
-      </div>
-    );
+    return <AcademyEditorSkeleton />;
   }
 
   if (!academy || !value) {

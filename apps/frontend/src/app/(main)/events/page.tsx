@@ -23,7 +23,7 @@ export default async function EventsPage() {
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, events, upcoming] = await Promise.all([
-    resolvePageLayout(tenantSlug, 'events'),
+    resolvePageLayout(tenantSlug, 'events', locale),
     fetchCatalogEvents(tenantSlug, { limit: 50 }, locale),
     fetchCatalogEvents(tenantSlug, { limit: 50, upcoming: true }, locale),
   ]);

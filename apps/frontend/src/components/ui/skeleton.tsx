@@ -59,7 +59,7 @@ export function Skeleton({ className, speed = 1.6, interval = 1.6, shimmer = tru
     >
       {shimmer && (
         <div
-          className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-foreground/[0.06] to-transparent"
+          className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r motion-reduce:hidden from-transparent via-foreground/[0.06] to-transparent"
           style={{ animationDuration: `${speed}s`, animationDelay: `${-interval}s` }}
         />
       )}

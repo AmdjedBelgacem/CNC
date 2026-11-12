@@ -3,6 +3,7 @@ import {
   getBlockDefinition,
   isNodeArray,
   sanitizeAiClassName,
+  sanitizeElementCss,
   slotNamesFor,
   validatePageLayout,
   walkLayoutNodes,
@@ -160,6 +161,16 @@ export function fromAiNode(raw: unknown, ctx: BuildContext): PuckNode | null {
         continue;
       }
       if (!(key in props)) props[key] = value;
+    }
+  }
+
+  if (type === 'element') {
+    for (const key of ['css', 'cssHover', 'cssMobile']) {
+      if (key in props) {
+        const clean = sanitizeElementCss(props[key]);
+        if (clean) props[key] = clean;
+        else delete props[key];
+      }
     }
   }
 

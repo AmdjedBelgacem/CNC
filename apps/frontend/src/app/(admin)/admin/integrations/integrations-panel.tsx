@@ -17,13 +17,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ErrorState, LoadingState } from '@/components/ui/states';
+import { ErrorState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
+import { IntegrationCardsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 type Status = 'connected' | 'expired' | 'revoked' | 'not_connected' | 'blocked';
 
@@ -158,7 +160,7 @@ export function IntegrationsPanel() {
       </header>
 
       {query.isPending ? (
-        <LoadingState rows={3} />
+        <SkeletonRegion><IntegrationCardsSkeleton /></SkeletonRegion>
       ) : query.isError ? (
         <ErrorState title={tAdmin('loadFailed')} onRetry={() => void query.refetch()} />
       ) : (

@@ -39,7 +39,7 @@ const LEADING_CLASS: Record<string, string> = {
   relaxed: 'leading-relaxed',
   loose: 'leading-loose',
 };
-export function TextBlock({ props, puck }: BlockComponentProps<TextProps>) {
+export function TextBlock({ props }: BlockComponentProps<TextProps>) {
   const {
     text = '',
     align,
@@ -54,7 +54,7 @@ export function TextBlock({ props, puck }: BlockComponentProps<TextProps>) {
   } = props;
   const preview = useBuilderLivePreview();
   const liveText =
-    puck?.isEditing &&
+    Boolean(preview) &&
     preview?.pageSlug === 'home' &&
     preview.homeMetrics &&
     text.includes('17,400')

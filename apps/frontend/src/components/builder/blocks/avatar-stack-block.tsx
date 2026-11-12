@@ -5,11 +5,12 @@ import type { BlockComponentProps } from './index';
 import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
 
 /** Overlapping avatar circles with a "+N" pill (mockup academy cards). */
-export function AvatarStackBlock({ props, puck }: BlockComponentProps<AvatarStackProps>) {
+export function AvatarStackBlock({ props }: BlockComponentProps<AvatarStackProps>) {
   const { count = '+80', size = 32, plainCircles = 2, className } = props;
   const preview = useBuilderLivePreview();
   const liveCount =
-    puck?.isEditing &&
+    // The preview context only exists inside the builder, including its read-only preview.
+    Boolean(preview) &&
     preview?.pageSlug === 'home' &&
     preview.homeMetrics &&
     (count === '+17k' || count === '+80')

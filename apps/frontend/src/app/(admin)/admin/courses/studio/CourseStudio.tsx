@@ -43,6 +43,7 @@ import { toast } from '@/components/ui/toast';
 import { Crossfade, Reveal } from '@/components/ui/motion';
 import type { CourseStudioData, Lesson, Section } from './types';
 import * as api from './api';
+import { CourseStudioSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 /** Rail order. `publish` was the old name of `certificate`; old links still land there. */
 const STEP_KEYS = ['basics', 'curriculum', 'media', 'pricing', 'live', 'arabic', 'localization', 'certificate'] as const;
@@ -630,7 +631,7 @@ function CourseStudioEditor({ slug }: { slug: string }) {
   });
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="size-6 animate-spin text-muted-foreground/70" /></div>;
+    return <CourseStudioSkeleton />;
   }
   if (error || !course) {
     return (

@@ -17,7 +17,7 @@ export default async function AcademyPage() {
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, academies] = await Promise.all([
-    resolvePageLayout(tenantSlug, 'academy-landing'),
+    resolvePageLayout(tenantSlug, 'academy-landing', locale),
     fetchPublishedAcademies(tenantSlug, locale),
   ]);
 

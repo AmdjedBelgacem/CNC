@@ -71,6 +71,8 @@ import {
   twinReadoutDefaults,
   twinSectionDefaults,
   LIVE_ISLAND_VARIANTS,
+  ELEMENT_TAGS,
+  elementDefaults,
 } from '@titan/shared';
 import { ImageUploadControl } from '@/components/builder/inspector/image-upload-control';
 import { NodeAnimation } from '@/components/builder/animation';
@@ -265,6 +267,20 @@ const def = (
   fields: { ...withLayoutFields(fields), ...slotFieldsFor(type) },
   render: render(type),
 }); // ---------------------------------------------------------------- blocks
+const element: ComponentConfig = def('element', 'Element', elementDefaults, {
+  tag: selectField(
+    'Tag',
+    ELEMENT_TAGS.map((tag) => ({ label: tag, value: tag })),
+  ),
+  text: textareaField('Text'),
+  css: textareaField('CSS', 'display: flex; gap: 16px; padding: 24px; border-radius: 16px;'),
+  cssHover: textareaField('CSS on hover', 'transform: translateY(-2px);'),
+  cssMobile: textareaField('CSS on phones', 'flex-direction: column;'),
+  href: textField('Link (for a)'),
+  src: textField('Image URL (for img)'),
+  alt: textField('Alt text (for img)'),
+  ariaLabel: textField('Accessible label'),
+});
 const heading: ComponentConfig = def('heading', 'Heading', headingDefaults, {
   as: selectField('Tag', [
     { label: 'H1', value: 'h1' },
@@ -1280,6 +1296,7 @@ export const puckConfig: Config = {
     stack,
     grid,
     card,
+    element,
     heading,
     text,
     button,
@@ -1351,7 +1368,7 @@ export const puckConfig: Config = {
         'closing-cta-action',
       ],
     },
-    Layout: { components: ['stack', 'grid', 'card'] },
+    Layout: { components: ['stack', 'grid', 'card', 'element'] },
     Content: {
       components: [
         'heading',

@@ -24,53 +24,86 @@ import { useOpenPage } from './use-open-page';
  * muted grey is a dead end; a skeleton matching the two-tier bar and the
  * three-column body also covers the layout shift when the real thing arrives.
  */
-export function BuilderSkeleton() {
+/**
+ * The editor's full-bleed frame, copied from `BuilderEditor`: it cancels the
+ * admin `<main>` padding and fills the viewport. Without it the skeleton's
+ * `h-full` resolved against an auto-height parent and collapsed to its content,
+ * so the canvas column was a sliver until the editor arrived.
+ */
+const BUILDER_FRAME =
+  'relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-surface-sunken sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh';
+
+export function BuilderSkeleton({ framed = true }: { framed?: boolean }) {
   const tb = useTranslations('builder');
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-surface-sunken" aria-busy="true">
-      <span className="sr-only" role="status">
-        {tb('loading.subtitle', { default: tb('loading.title') })}
-      </span>
+  const label = tb('loading.subtitle', { default: tb('loading.title') });
+  const body = (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label={label}
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-surface-sunken"
+    >
+      <span className="sr-only">{label}</span>
 
-      {/* tier one: identity + lifecycle */}
-      <div className="flex h-12 shrink-0 items-center gap-2 px-3 pt-1.5 sm:px-3.5">
-        <Skeleton className="size-8 shrink-0" />
-        <div className="min-w-0 space-y-1">
-          <Skeleton className="h-3 w-28 rounded" />
-          <Skeleton className="h-2 w-16 rounded" />
+      {/* `BuilderHeader`: px-2 pt-1.5 wrapper around both tiers. */}
+      <div className="shrink-0 px-2 pt-1.5">
+        {/* tier one: exit, page identity, AI / save / publish */}
+        <div className="flex h-12 items-center gap-1.5 px-1 sm:px-1.5">
+          <Skeleton className="size-8 shrink-0 rounded-lg" />
+          <div className="min-w-0 flex-1 space-y-1.5 sm:flex-none">
+            <Skeleton className="h-3 w-28 rounded" />
+            <Skeleton className="h-2 w-16 rounded" />
+          </div>
+          <div className="ms-auto flex shrink-0 items-center gap-1.5">
+            <Skeleton className="h-8 w-8 rounded-md min-[520px]:w-16" />
+            <Skeleton className="h-8 w-8 rounded-md min-[420px]:w-20" />
+            <Skeleton className="h-8 w-8 rounded-md bg-primary/25 min-[420px]:w-24" />
+          </div>
         </div>
-        <div className="ms-auto flex gap-1.5">
-          <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-8 w-20" />
+
+        {/* tier two: the toolbox */}
+        <div className="flex h-11 items-center gap-1.5 overflow-hidden rounded-xl border border-border/70 bg-card px-1.5 shadow-xs sm:px-2">
+          {[0, 1, 2, 3, 4].map((index) => (
+            <Skeleton key={index} className="size-8 shrink-0" />
+          ))}
+          <Skeleton className="ms-auto size-8 shrink-0" />
         </div>
       </div>
 
-      {/* tier two: the toolbox */}
-      <div className="mx-2 flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-border/70 bg-card px-2 shadow-xs">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <Skeleton key={index} className="size-8 shrink-0" />
-        ))}
-        <Skeleton className="ms-auto size-8 shrink-0" />
-      </div>
-
-      {/* three-column body */}
-      <div className="flex min-h-0 flex-1 gap-2 p-2">
+      {/* three-column body: layers (w-64), canvas, inspector (w-80) */}
+      <div className="flex min-h-0 flex-1 gap-2 p-2 max-lg:gap-0">
         <div className="hidden w-64 shrink-0 space-y-2 rounded-2xl border border-border/70 bg-card p-3 shadow-sm lg:block">
+          <Skeleton className="h-3 w-20" />
           {[0, 1, 2, 3, 4, 5].map((index) => (
-            <Skeleton key={index} className="h-8" />
+            <Skeleton key={index} className="h-8" style={{ marginInlineStart: index % 3 === 0 ? 0 : 12 }} />
           ))}
         </div>
-        <div className="min-w-0 flex-1 rounded-2xl border border-border/70 bg-background p-6 shadow-xs">
-          <Skeleton className="mx-auto h-full max-w-4xl rounded-2xl border border-border/70 bg-card" />
+        <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-border/70 bg-background p-4 shadow-xs sm:p-6">
+          <div className="mx-auto flex h-full max-w-4xl flex-col gap-4 rounded-2xl border border-border/70 bg-card p-6">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-3 w-2/3" />
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {[0, 1, 2].map((index) => (
+                <Skeleton key={index} className="h-24 rounded-xl" />
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="hidden w-80 shrink-0 space-y-2 rounded-2xl border border-border/70 bg-card p-3 shadow-sm lg:block">
+        <div className="hidden w-80 shrink-0 space-y-3 rounded-2xl border border-border/70 bg-card p-3 shadow-sm lg:block">
+          <Skeleton className="h-3 w-24" />
           {[0, 1, 2, 3].map((index) => (
-            <Skeleton key={index} className="h-9" />
+            <div key={index} className="space-y-1.5">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-9" />
+            </div>
           ))}
         </div>
       </div>
     </div>
   );
+  return framed ? <div className={BUILDER_FRAME}>{body}</div> : body;
 }
 
 /**

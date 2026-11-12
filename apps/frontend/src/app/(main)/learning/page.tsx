@@ -7,7 +7,8 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useMyEnrollments } from '@/hooks/use-learning';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonRegion } from '@/components/ui/skeletons/region';
+import { LearningContentSkeleton } from '@/components/skeletons/public-route-skeletons';
 import { Progress, ProgressRing } from '@/components/ui/progress';
 import { AnimatedNumber, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { EmptyState, ErrorState } from '@/components/ui/states';
@@ -109,18 +110,9 @@ export default function LearningPage() {
       </header>
 
       {isLoading ? (
-        <>
-          <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[118px] rounded-xl" />
-            ))}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-72 rounded-2xl" />
-            ))}
-          </div>
-        </>
+        <SkeletonRegion>
+          <LearningContentSkeleton />
+        </SkeletonRegion>
       ) : isError ? (
         <ErrorState
           title={t('loadFailed')}

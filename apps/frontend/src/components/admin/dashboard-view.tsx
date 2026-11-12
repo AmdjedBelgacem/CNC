@@ -62,6 +62,8 @@ import {
   useFormats,
   useMountedNow,
 } from './dashboard-parts';
+import { DashboardKpiStripSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { PanelListSkeleton } from '@/components/ui/skeletons';
 
 /* -------------------------------------------------------------------------- */
 /* Data                                                                       */
@@ -283,6 +285,7 @@ function KpiCell({
 export function DashboardView() {
   const t = useTranslations('admin.overview');
   const tAdmin = useTranslations('admin');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -647,7 +650,12 @@ export function DashboardView() {
         }
       />
 
-      <div className="mx-auto w-full max-w-[1560px] space-y-6 pt-6">
+      <div className="mx-auto w-full max-w-[1560px] space-y-6 pt-6" aria-busy={loading}>
+        {loading && (
+          <span role="status" className="sr-only">
+            {tCommon('loading')}
+          </span>
+        )}
         {/* Hero band: greeting plus the four numbers as one reading. */}
         <header className="space-y-5">
           <Reveal className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -681,15 +689,7 @@ export function DashboardView() {
               the dividers on every row, however the grid wraps. */}
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
             {loading ? (
-              <div className="grid grid-cols-1 gap-px bg-border/60 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {[0, 1, 2, 3, 4].map((index) => (
-                  <div key={index} className="bg-card px-4 py-5 sm:px-5">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="mt-3 h-7 w-24" />
-                    <Skeleton className="mt-3 h-7 w-full" />
-                  </div>
-                ))}
-              </div>
+              <DashboardKpiStripSkeleton />
             ) : (
               <Stagger className="grid grid-cols-1 gap-px bg-border/60 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {kpis.map((kpi, index) => (
@@ -753,10 +753,7 @@ export function DashboardView() {
               bodyClassName="p-0"
             >
               {loading ? (
-                <div className="space-y-2 p-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
+                <PanelListSkeleton rows={3} rowClassName="px-4 py-3.5 sm:px-5" trailing="w-10" />
               ) : attention.length === 0 ? (
                 <div className="flex items-center gap-3 px-4 py-5 sm:px-5">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
@@ -827,7 +824,17 @@ export function DashboardView() {
               }
             >
               {loading ? (
-                <Skeleton className="h-24 w-full" />
+                <div className="space-y-5">
+                  {[0, 1].map((index) => (
+                    <div key={index}>
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <Skeleton className="h-2.5 w-20" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <Skeleton className="h-24 w-full" />
+                    </div>
+                  ))}
+                </div>
               ) : !hasSeries ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">{t('seriesEmpty')}</p>
               ) : (
@@ -875,10 +882,7 @@ export function DashboardView() {
               }
             >
               {loading ? (
-                <div className="space-y-2 p-4">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
+                <PanelListSkeleton rows={5} lead="index" trailing="w-20" />
               ) : (topCourses ?? []).length === 0 ? (
                 <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
                   {t('topCoursesEmpty')}
@@ -925,7 +929,20 @@ export function DashboardView() {
             {/* Catalogue health, over counts that exist */}
             <Panel title={t('health')} subtitle={t('healthSub')}>
               {loading ? (
-                <Skeleton className="h-24 w-full" />
+                <div className="space-y-4">
+                  <Skeleton className="h-2 w-full rounded-full" />
+                  <div className="space-y-2.5">
+                    {[0, 1, 2].map((index) => (
+                      <div key={index} className="flex h-5 items-center justify-between gap-2">
+                        <Skeleton className="h-2.5 w-24" />
+                        <Skeleton className="h-3 w-8" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t border-border/60 pt-3">
+                    <Skeleton className="h-2.5 w-2/3" />
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <SegmentedBar
@@ -978,10 +995,7 @@ export function DashboardView() {
               }
             >
               {loading ? (
-                <div className="space-y-2 p-4">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
+                <PanelListSkeleton rows={5} trailing="w-10" />
               ) : (stats?.recentUsers ?? []).length === 0 ? (
                 <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
                   {t('noUsersYet')}

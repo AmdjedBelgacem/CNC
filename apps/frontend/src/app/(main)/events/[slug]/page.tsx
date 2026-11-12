@@ -8,7 +8,7 @@ import { formatDate as formatDateInLocale } from '@/lib/format';
 import { formatMoney } from '@/lib/api/normalize';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EventDetailSkeleton } from '@/components/skeletons/public-route-skeletons';
 import { useAuthStore } from '@/stores/auth-store';
 import { useBuyAndCheckout, usePaymentConfig } from '@/hooks/use-payments';
 import {
@@ -113,14 +113,7 @@ export default function EventDetailPage() {
     }
   };
   if (loading) {
-    return (
-      <div className="container mx-auto max-w-5xl px-4 py-12">
-        <Skeleton className="mb-8 h-72 rounded-2xl" />
-        <Skeleton className="mb-4 h-9 w-2/3" />
-        <Skeleton className="mb-2 h-4 w-1/3" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
+    return <EventDetailSkeleton />;
   }
   if (!event) {
     return (

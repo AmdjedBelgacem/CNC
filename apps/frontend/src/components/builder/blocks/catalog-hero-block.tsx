@@ -44,11 +44,11 @@ export function CatalogHeroBlock({
     heroStats || hasSlotStats ? undefined : legacyStats,
   );
   const stats = heroStats ?? previewStats ?? liveLegacyStats;
-  // Public pages that receive server-baked `heroStats` keep the exact previous
-  // render (translated labels included). Everywhere else — the builder canvas
-  // and public pages without a live override — render the real slot children so
-  // each stat stays selectable, overlaying live values only on placeholders.
-  const renderSlotStats = hasSlotStats && !heroStats;
+  // The stat blocks are always what renders, in the builder and on the public page alike; the
+  // server's `heroStats` only supply live values. Public pages used to swap the blocks for
+  // fixed catalogue labels, so a label renamed in the builder — or translated in the page's
+  // Arabic copy — never reached visitors, and the live page differed from the canvas.
+  const renderSlotStats = hasSlotStats;
   const liveStatOverrides =
     renderSlotStats && stats
       ? new Map(

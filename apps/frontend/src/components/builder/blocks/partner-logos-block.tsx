@@ -10,8 +10,9 @@ import { useBuilderLivePreview } from '@/components/builder/live-preview-context
 export function PartnerLogosBlock({ props, puck }: BlockComponentProps<PartnerLogosProps>) {
   const { id, className, logoGap = 'gap-12 md:gap-24', headerMarginBottom = 40, frame = 'wall' } = props;
   const preview = useBuilderLivePreview();
-  const editing = Boolean(puck?.isEditing);
-  const live = editing ? preview : null;
+  // Live data whenever the block renders inside the builder, including its read-only Arabic
+  // preview; `preview` is null on the public page, which gets its data from the server.
+  const live = preview;
 
   const logos = live ? (
     live.loading ? (

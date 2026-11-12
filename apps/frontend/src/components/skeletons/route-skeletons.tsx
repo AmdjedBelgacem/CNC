@@ -8,21 +8,16 @@ import {
   SkeletonArticle,
   SkeletonCard,
   SkeletonCircle,
-  SkeletonCourseCard,
-  SkeletonEvent,
   SkeletonField,
   SkeletonHeading,
   SkeletonInput,
   SkeletonList,
   SkeletonProducts,
   SkeletonSplit,
-  SkeletonStat,
-  SkeletonStats,
   SkeletonTable,
   SkeletonText,
 } from '@/components/ui/skeleton';
 import { Stagger, StaggerItem } from '@/components/ui/motion';
-import { cn } from '@/lib/utils';
 
 /**
  * ROUTE SKELETONS
@@ -162,58 +157,6 @@ export function LandingSkeleton() {
           ))}
         </div>
       </section>
-    </LoadingShell>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * Detail pages — breadcrumbs, hero, body, optional sidebar
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-export function DetailPageSkeleton({
-  breadcrumbs = true,
-  withSidebar = false,
-}: {
-  breadcrumbs?: boolean;
-  withSidebar?: boolean;
-}) {
-  const tc = useTranslations('common');
-  return (
-    <LoadingShell label={tc('loading')}>
-      <div className="space-y-8">
-        {breadcrumbs && (
-          <div className="flex items-center gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-3" style={{ width: i === 2 ? 72 : 48 }} />
-            ))}
-          </div>
-        )}
-
-        <div className={cn('grid gap-10', withSidebar && 'lg:grid-cols-[minmax(0,1fr)_20rem]')}>
-          <div className="space-y-6">
-            <Skeleton className="aspect-[21/9] w-full rounded-xl" />
-            <SkeletonHeading lines={2} titleWidth="62%" />
-            {/* Body paragraphs cascade in. `whileInView` fires immediately here
-                because the block is on screen, so this reads as the copy
-                settling rather than the page hanging. */}
-            <Stagger gap={0.05}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <StaggerItem key={i}>
-                  <BodyCopy lines={3} />
-                </StaggerItem>
-              ))}
-            </Stagger>
-          </div>
-
-          {withSidebar && (
-            <aside className="space-y-5">
-              <SkeletonStat />
-              <SkeletonCard media={false} lines={3} />
-              <SkeletonCard media={false} lines={2} />
-            </aside>
-          )}
-        </div>
-      </div>
     </LoadingShell>
   );
 }
@@ -529,7 +472,7 @@ export function ProfileSkeleton() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * Events / learning / courses
+ * Events
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 export function EventsSkeleton() {
@@ -540,39 +483,6 @@ export function EventsSkeleton() {
         <SkeletonHeading titleWidth="40%" />
         <ChipRow count={5} />
         <SkeletonList count={5} avatar lines={2} trailing={false} />
-      </div>
-    </LoadingShell>
-  );
-}
-
-export function LearningSkeleton() {
-  const tc = useTranslations('common');
-  return (
-    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-6xl">
-      <div className="space-y-8">
-        <SkeletonHeading titleWidth="44%" />
-        <SkeletonStats count={3} />
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCard key={i} lines={2} footer />
-          ))}
-        </div>
-      </div>
-    </LoadingShell>
-  );
-}
-
-export function CoursesSkeleton() {
-  const tc = useTranslations('common');
-  return (
-    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-7xl">
-      <div className="space-y-8">
-        <SkeletonHeading titleWidth="38%" />
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCourseCard key={i} />
-          ))}
-        </div>
       </div>
     </LoadingShell>
   );
@@ -647,23 +557,6 @@ export function SearchSkeleton() {
  * Narrow standalone tasks
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/** Certificate verification (`/verify`, `/verify/[number]`). */
-export function VerifySkeleton() {
-  const tc = useTranslations('common');
-  return (
-    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-xl py-16">
-      <div className="space-y-6 text-center">
-        <Skeleton className="mx-auto size-12 rounded-xl" />
-        <Skeleton className="mx-auto h-6 w-64" />
-        <div className="mx-auto w-full max-w-sm">
-          <BodyCopy lines={2} />
-        </div>
-        <Skeleton className="mx-auto h-11 w-40 rounded-md" />
-      </div>
-    </LoadingShell>
-  );
-}
-
 /** Offline page: a status card with two actions. */
 export function OfflineSkeleton() {
   const tc = useTranslations('common');
@@ -679,65 +572,6 @@ export function OfflineSkeleton() {
           <Skeleton className="h-10 w-full rounded-md" />
           <Skeleton className="h-10 w-full rounded-md" />
         </div>
-      </div>
-    </LoadingShell>
-  );
-}
-
-/** Standalone account overview (`/account`). */
-export function AccountOverviewSkeleton() {
-  const tc = useTranslations('common');
-  return (
-    <LoadingShell label={tc('loading')} containerClassName="mx-auto max-w-4xl py-12">
-      <div className="space-y-8">
-        <SkeletonHeading lines={1} titleWidth="32%" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card shadow-xs p-4">
-              <SkeletonCircle className="size-10" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-2.5 w-28" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <SkeletonList count={3} avatar lines={1} />
-      </div>
-    </LoadingShell>
-  );
-}
-
-/** Lesson player: video stage then a transcript. */
-export function LessonSkeleton() {
-  const tc = useTranslations('common');
-  return (
-    <LoadingShell label={tc('loading')} containerClassName="py-6">
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14">
-        <div className="space-y-8">
-          <Skeleton className="aspect-video w-full rounded-2xl" />
-          <div className="mx-auto max-w-3xl space-y-4">
-            <Skeleton className="h-3 w-24 rounded-full" />
-            <Skeleton className="h-9 w-3/4" />
-            <Stagger gap={0.05}>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <StaggerItem key={i} className="pt-3">
-                  <BodyCopy lines={3} />
-                </StaggerItem>
-              ))}
-            </Stagger>
-          </div>
-        </div>
-        <aside className="hidden space-y-4 rounded-2xl border border-border/70 bg-card p-5 shadow-xs lg:block">
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-1 w-full rounded-full" />
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <SkeletonCircle className="size-7 shrink-0" />
-              <Skeleton className="h-3 flex-1" />
-            </div>
-          ))}
-        </aside>
       </div>
     </LoadingShell>
   );
@@ -894,113 +728,3 @@ export function TagFeedSkeleton() {
     </LoadingShell>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * Admin
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-/** The header every admin index page shares: title block plus two actions. */
-function AdminHeader() {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="space-y-2">
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="h-6 w-56" />
-      </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-9 w-24 rounded-md" />
-        <Skeleton className="h-9 w-28 rounded-md" />
-      </div>
-    </div>
-  );
-}
-
-/**
- * Admin page shell: `aria-busy` + a single announcement, and no gutters —
- * `(admin)/admin/layout.tsx` already wraps children in a padded `<main>`, so
- * adding padding here would double it.
- */
-function AdminFrame({ children }: { children: React.ReactNode }) {
-  const tc = useTranslations('common');
-  return (
-    <div role="status" aria-busy="true" aria-live="polite" aria-label={tc('loading')}>
-      <span className="sr-only">{tc('loading')}</span>
-      <div className="space-y-6">
-        <AdminHeader />
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export function AdminSkeleton() {
-  const t = useTranslations('ui.routeSkeletons');
-  return (
-    <div role="status" aria-busy="true" aria-live="polite" aria-label={t('loadingAdminConsole')}>
-      <span className="sr-only">{t('loadingAdminConsole')}</span>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-5 w-44" />
-          </div>
-          <Skeleton className="h-9 w-32 rounded-md" />
-        </div>
-        <SkeletonStats count={4} />
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-4 rounded-xl border border-border/70 bg-card shadow-xs p-5 lg:col-span-2">
-            <Skeleton className="h-3.5 w-32" />
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <SkeletonCircle className="size-8" />
-                <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-3 w-2/5" />
-                  <Skeleton className="h-2.5 w-1/4" />
-                </div>
-                <Skeleton className="h-3 w-12" />
-              </div>
-            ))}
-          </div>
-          <SkeletonCard media={false} lines={6} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function AdminTableSkeleton({
-  rows = 6,
-  columns = ['2fr', '1fr', '1fr', '120px'],
-}: {
-  rows?: number;
-  columns?: string[];
-}) {
-  return (
-    <AdminFrame>
-      <SkeletonTable rows={rows} columns={columns} />
-    </AdminFrame>
-  );
-}
-
-export function AdminGridSkeleton({ cards = 6 }: { cards?: number }) {
-  return (
-    <AdminFrame>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: cards }).map((_, i) => (
-          <SkeletonCard key={i} lines={2} />
-        ))}
-      </div>
-    </AdminFrame>
-  );
-}
-
-export function AdminFormSkeleton({ fields = 5 }: { fields?: number }) {
-  return (
-    <AdminFrame>
-      <FormPanel fields={fields} />
-    </AdminFrame>
-  );
-}
-
-/** Re-exported so admin pages can import everything from one place. */
-export { SkeletonEvent };

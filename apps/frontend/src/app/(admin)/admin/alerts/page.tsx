@@ -17,7 +17,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { AdminCommandBar, AdminPageHeader, BarButton, BarPrimaryButton } from '@/components/admin/admin-chrome';
-import { EmptyState, ErrorBanner, SkeletonRows, StatusPill, type Tone } from '@/components/admin/admin-ui';
+import { EmptyState, ErrorBanner, StatusPill, type Tone } from '@/components/admin/admin-ui';
 import { PillTabs, Toolbar } from '@/components/admin/admin-ui';
 import { AnimatePresence, m } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,8 @@ import { ease, spring } from '@/lib/motion';
 import { AnimatedNumber } from '@/components/ui/motion';
 import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
+import { AlertListSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 /**
  * Platform-critical alert feed (super admins only).
@@ -290,9 +292,7 @@ export default function PlatformAlertsPage() {
         </Toolbar>
 
         {loading ? (
-          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
-            <SkeletonRows rows={5} columns={3} />
-          </div>
+          <SkeletonRegion><AlertListSkeleton /></SkeletonRegion>
         ) : error ? null : (items?.length ?? 0) === 0 ? (
           <EmptyState
             icon={Activity}

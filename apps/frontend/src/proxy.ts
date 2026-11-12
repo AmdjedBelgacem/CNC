@@ -206,6 +206,19 @@ function buildCsp(nonce: string, allowSelfFrame = false): string {
   requestHeaders.set('x-nonce', nonce);
   if (isPreviewSurface) requestHeaders.set('x-preview-surface', '1');
 
+  // A builder preview renders in the canvas language, not the admin's own. The canvas passes it
+  // as ?locale=; the request's locale cookie is rewritten for this render only (never written
+  // back to the browser), so the layout direction, translations and catalogue data all follow.
+  const previewLocaleParam = isPreviewSurface ? request.nextUrl.searchParams.get('locale') : null;
+  const previewLocale = previewLocaleParam ? coerceLocale(previewLocaleParam) : null;
+  if (previewLocale) {
+    const others = (request.headers.get('cookie') ?? '')
+      .split(';')
+      .map((part) => part.trim())
+      .filter((part) => part && !part.startsWith(`${LOCALE_COOKIE}=`));
+    requestHeaders.set('cookie', [...others, `${LOCALE_COOKIE}=${previewLocale}`].join('; '));
+  }
+
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', buildCsp(nonce, isPreviewSurface));
   if (isPreviewSurface) {
@@ -215,7 +228,7 @@ function buildCsp(nonce: string, allowSelfFrame = false): string {
   }
   response.headers.set('x-tenant-slug', tenantSlug);
   // Cookie-based locale resolution — no URL prefix, no redirect.
-  const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
+  const cookieLocale = previewLocale ?? request.cookies.get(LOCALE_COOKIE)?.value;
   const locale = cookieLocale
     ? coerceLocale(cookieLocale)
     : (localeFromAcceptLanguage(request.headers.get('accept-language')) ?? DEFAULT_LOCALE);

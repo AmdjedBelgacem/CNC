@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ISLAND_PAD, type LiveIslandProps } from '@titan/shared';
 import type { BlockComponentProps } from './index';
+import { useCanvasLocale } from '@/components/builder/canvas-locale';
 import { Icon } from '@/components/ui/icon';
 import { ProductsCatalog } from '@/components/store/products-catalog';
 import {
@@ -111,6 +112,7 @@ const ISLAND_HEADER_WRAPPER: Record<string, string> = {
 
 export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandProps>) {
   const { variant } = props;
+  const { locale: canvasLocale } = useCanvasLocale();
   const frameRef = useRef<HTMLIFrameElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
@@ -177,7 +179,8 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
   const items = hasItems ? puck.renderSlot('items') : undefined;
   const footer = hasFooter ? puck.renderSlot('footer') : undefined;
 
-  const badge = (
+  // The Arabic preview shows the visitor's page, so the editor-only badge stays out of it.
+  const badge = canvasLocale === 'ar' ? null : (
     <div className="pointer-events-none absolute end-3 top-3 z-20 flex max-w-[min(22rem,calc(100%-1.5rem))] flex-col items-end gap-1">
       <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-primary shadow-sm backdrop-blur">
         <Icon name="bolt" className="size-3" />
@@ -267,7 +270,7 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
         <iframe
           ref={frameRef}
           title={`Live preview: ${copy.label}`}
-          src={`/preview/island/${variant}?part=body${
+          src={`/preview/island/${variant}?part=body&locale=${canvasLocale}${
             sideRailHeader ? `&headerHeight=${headerHeight}` : ''
           }`}
           className="pointer-events-none block w-full border-0"

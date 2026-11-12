@@ -1,3 +1,4 @@
+import { getLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { BlockRenderer } from '@/components/builder/block-renderer';
@@ -12,6 +13,6 @@ export const metadata: Metadata = {
 export default async function EduPurchasesPage() {
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
-  const layout = await resolvePageLayout(tenantSlug, 'edu-purchases');
+  const layout = await resolvePageLayout(tenantSlug, 'edu-purchases', await getLocale());
   return <BlockRenderer layout={layout} />;
 }

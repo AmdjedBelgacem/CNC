@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { TestimonialCardProps } from '@titan/shared';
+import { isSampleTestimonial, type TestimonialCardProps } from '@titan/shared';
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
 import { Icon } from '@/components/ui/icon';
 
 /** Review card: star rating, italic quote, reviewer identity row. */
-export function TestimonialCardBlock({ props }: BlockComponentProps<TestimonialCardProps>) {
+export function TestimonialCardBlock({ props, puck }: BlockComponentProps<TestimonialCardProps>) {
   const { className, quote = '', name = '', role, avatarUrl, rating = 5 } = props;
   const stars = Math.max(0, Math.min(5, rating ?? 5));
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -23,11 +23,18 @@ export function TestimonialCardBlock({ props }: BlockComponentProps<TestimonialC
   return (
     <figure
       className={cn(
-        'card-hover flex h-full flex-col justify-between gap-6 rounded-2xl border border-border/70 bg-card p-8 shadow-xs',
+        'card-hover relative flex h-full flex-col justify-between gap-6 rounded-2xl border border-border/70 bg-card p-8 shadow-xs',
         className,
       )}
       style={layoutStyle(props)}
     >
+      {puck?.isEditing && isSampleTestimonial(quote) && (
+        // Sample quotes never reach visitors; say so here so the canvas is not mistaken for
+        // what the live page shows.
+        <span className="absolute end-3 top-3 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning">
+          Sample · hidden on the live site
+        </span>
+      )}
       <div>
         {stars > 0 ? (
           <div className="flex items-center gap-1 text-warning mb-4" aria-label={`${stars} out of 5 stars`}>

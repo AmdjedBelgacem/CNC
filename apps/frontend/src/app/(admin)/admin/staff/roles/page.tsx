@@ -7,7 +7,6 @@ import { Reveal } from '@/components/ui/motion';
 import { ease, spring } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import {
   AdminCommandBar,
@@ -16,6 +15,8 @@ import {
 } from '@/components/admin/admin-chrome';
 import { Modal, ModalHeader, GLASS_SUB } from '@/components/ui/modal';
 import { useCan } from '@/lib/use-permissions';
+import { RoleRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 interface PermDef {
   key: string;
   label: string;
@@ -117,23 +118,7 @@ export default function AdminRolesPage() {
               </span>
             </div>
             <div className="flex-1">
-              {loading &&
-                !roles &&
-                Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border-b border-border/70 p-6"
-                  >
-                    <div className="flex items-center gap-5">
-                      <Skeleton className="size-11 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-36 rounded" />
-                        <Skeleton className="h-3 w-52 rounded" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-7 w-24 rounded-md" />
-                  </div>
-                ))}
+              {loading && !roles && <SkeletonRegion><RoleRowsSkeleton /></SkeletonRegion>}
               {!loading && roles && roles.length === 0 && (
                 <div className="px-6 py-20 text-center">
                   {' '}

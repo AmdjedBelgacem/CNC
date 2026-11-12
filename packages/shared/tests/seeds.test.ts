@@ -94,11 +94,12 @@ describe('seeds', () => {
     expect(stack[1].props).toMatchObject({ variant: 'glass' });
   });
 
-  it('home academy grid carries the four-card limit the public page uses', () => {
+  it('home academy grid carries an explicit limit that fills its three-column row', () => {
     expect(seedAcademyGrid({ limit: 4 }).node.props).toMatchObject({ limit: 4 });
     const home = seedHomeLayout();
     const grid = home.content?.find((node) => node.type === 'academy-grid');
-    expect(grid?.props?.limit).toBe(4);
+    // The layout's own limit wins over the route default, so builder and live page agree.
+    expect(grid?.props?.limit).toBe(3);
   });
 
   it('stats seed builds four stat-item cards with icon, tag, number and label', () => {
@@ -213,25 +214,38 @@ describe('seeds', () => {
     }
   });
 
-  it('home layout contains the parity sections in mockup order (nav/footer live in the app shell, not the seed)', () => {
+  it('home layout is the commercial landing page, built only from builder blocks (nav/footer live in the app shell)', () => {
     const layout = seedHomeLayout();
     expect(layout.content.map((node) => node.type)).toEqual([
       'hero-console',
       'stats',
       'partner-logos',
+      'section',
       'academy-grid',
-      'program-cards',
+      'live-island',
+      'card-grid',
       'twin-section',
-      'faq',
+      'closing-cta',
+      'live-island',
       'cta-signup',
       'live-island',
-      'live-island',
     ]);
-    expect(layout.content.slice(-2).map((node) => node.props?.variant)).toEqual([
-      'home-faq',
-      'home-guides',
-    ]);
+    expect(
+      layout.content.filter((node) => node.type === 'live-island').map((node) => node.props?.variant),
+    ).toEqual(['products-featured', 'home-faq', 'home-guides']);
+    // No placeholder testimonials on the homepage: they would never reach visitors.
+    expect(JSON.stringify(layout)).not.toContain('testimonial-card');
     expect(validatePageLayout(layout).ok).toBe(true);
+  });
+
+  it('ships Arabic for every built-in homepage string', async () => {
+    const { localizeDefaultLayout, harvestPageLayout } = await import('../src/index');
+    const arabic = localizeDefaultLayout(seedHomeLayout());
+    const english = Object.values(harvestPageLayout(arabic).fields).filter(
+      (value) => /[A-Za-z]{3,}/.test(value) && !/[\u0600-\u06FF]/.test(value) && !value.startsWith('//'),
+    );
+    // Only brand and model names (and G-code comments) stay in Latin script.
+    for (const value of english) expect(value.length).toBeLessThan(40);
   });
 
   it('academy landing reconstructs the redesign: catalog hero, live pathways, steps, spotlights, CTA', () => {

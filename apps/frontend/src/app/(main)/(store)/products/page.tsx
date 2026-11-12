@@ -27,7 +27,7 @@ export default async function ProductsPage() {
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const [layout, products] = await Promise.all([
-    resolvePageLayout(tenantSlug, 'products'),
+    resolvePageLayout(tenantSlug, 'products', locale),
     fetchCatalogProducts(tenantSlug, { limit: 100 }, locale as ContentLocale),
   ]);
 

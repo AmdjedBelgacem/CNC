@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   Download,
   ExternalLink,
-  Loader2,
   Lock,
   PlayCircle,
 } from 'lucide-react';
@@ -21,6 +20,8 @@ import { useLessonPlayback, useUpdateLessonProgress } from '@/hooks/use-learning
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonRegion } from '@/components/ui/skeletons/region';
+import { LessonPlayerBodySkeleton } from '@/components/skeletons/public-route-skeletons';
 import { ErrorState } from '@/components/ui/states';
 import { LessonAssistantButton } from '@/components/ai/lesson-assistant-button';
 import { LessonBlockRenderer } from '@/components/learning/lesson-block-renderer';
@@ -133,11 +134,9 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
 
   if (lessonLoading && !courseLesson) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="aspect-video w-full rounded-2xl" />
-        <Skeleton className="mx-auto h-9 w-2/3 max-w-3xl rounded-lg" />
-        <Skeleton className="mx-auto h-4 w-1/3 max-w-3xl rounded-md" />
-      </div>
+      <SkeletonRegion>
+        <LessonPlayerBodySkeleton />
+      </SkeletonRegion>
     );
   }
 
@@ -187,9 +186,10 @@ export function LessonPlayer({ lessonSlug, courseSlug }: LessonPlayerProps) {
                 />
               </div>
             ) : playbackLoading && hasVideo ? (
-              <div className="flex aspect-video w-full items-center justify-center rounded-2xl border border-border/70 bg-muted/60">
-                <Loader2 className="size-8 animate-spin text-primary motion-reduce:animate-none" />
-                <p className="ms-3 text-sm text-muted-foreground">{t('overview')}…</p>
+              // The player's own frame, waiting for the signed playback URL.
+              <div role="status" aria-busy="true">
+                <span className="sr-only">{tCommon('loading')}</span>
+                <Skeleton className="aspect-video w-full rounded-2xl border border-border/70" />
               </div>
             ) : (
               <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-border/70 bg-surface-sunken p-6 text-center">

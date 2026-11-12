@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api-client';
-import { Skeleton } from '@/components/ui/skeleton';
 import { formatMinorUnits } from '@/lib/money';
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@titan/shared';
 import {
@@ -27,6 +26,8 @@ import {
 import { AnimatePresence, m } from 'framer-motion';
 import { ease } from '@/lib/motion';
 import { Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
+import { BudgetsTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 interface BudgetRow {
   id: string;
@@ -279,17 +280,7 @@ export default function AdminFinancePage() {
         )}
 
         {loading ? (
-          <TableCard>
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-4 border-b border-border/60 p-4 last:border-0">
-                <Skeleton className="h-10 w-28 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-3.5 w-40 rounded-md" />
-                  <Skeleton className="h-3 w-24 rounded-md" />
-                </div>
-              </div>
-            ))}
-          </TableCard>
+          <SkeletonRegion><BudgetsTableSkeleton /></SkeletonRegion>
         ) : filtered.length === 0 ? (
           <TableCard>
             <EmptyState

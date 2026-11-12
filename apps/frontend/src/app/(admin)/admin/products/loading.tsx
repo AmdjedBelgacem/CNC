@@ -1,13 +1,9 @@
 /**
- * Route-level loading state for `/(admin)/admin/products`.
- *
- * Next.js shows this the instant navigation starts and keeps it on screen until
- * the segment's server render resolves. Without it the browser paints nothing —
- * which on a slow connection reads as a blank page, not as "loading".
- *
- * The composition mirrors the real layout so nothing reflows on arrival.
+ * Route loading state: a replica of the products list, so nothing moves when the page
+ * arrives. The composition lives in components/skeletons/admin-route-skeletons.
  */
-import { AdminGridSkeleton } from '@/components/skeletons/route-skeletons';
+import { AdminProductsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+
 export default function Loading() {
-  return <AdminGridSkeleton cards={6} />;
+  return <AdminProductsSkeleton />;
 }

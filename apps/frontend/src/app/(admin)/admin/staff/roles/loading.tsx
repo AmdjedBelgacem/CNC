@@ -1,13 +1,9 @@
 /**
- * Route-level loading state for `/(admin)/admin/staff/roles`.
- *
- * Next.js shows this the instant navigation starts and keeps it on screen until
- * the segment's server render resolves. Without it the browser paints nothing —
- * which on a slow connection reads as a blank page, not as "loading".
- *
- * The composition mirrors the real layout so nothing reflows on arrival.
+ * Route loading state: a replica of the roles list, so nothing moves when the page
+ * arrives. The composition lives in components/skeletons/admin-route-skeletons.
  */
-import { AdminTableSkeleton } from '@/components/skeletons/route-skeletons';
+import { AdminRolesSkeleton } from '@/components/skeletons/admin-route-skeletons';
+
 export default function Loading() {
-  return <AdminTableSkeleton rows={6} />;
+  return <AdminRolesSkeleton />;
 }

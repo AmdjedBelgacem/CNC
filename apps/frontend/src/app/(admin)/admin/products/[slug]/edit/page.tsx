@@ -8,7 +8,6 @@ import type { ContentLocale, ProductContentTranslation } from '@titan/shared';
 import { toast } from '@/components/ui/toast';
 import { formatMoney } from '@/lib/api/normalize';
 import { AdminCommandBar, BarButton } from '@/components/admin/admin-chrome';
-import { FormSkeleton } from '@/components/admin/admin-form';
 import { SaveDock, useFormGuard } from '@/components/admin/form-page';
 import {
   AsideCard,
@@ -37,6 +36,7 @@ import {
 } from '../../product-form';
 import type { InteractiveHotspot } from '@titan/shared';
 import { ProductGalleryManager } from '../../product-gallery';
+import { ProductEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 export interface ProductImage {
   id: string;
@@ -370,11 +370,7 @@ function ProductEditor() {
   };
 
   if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-6xl space-y-6 pt-6">
-        <FormSkeleton fields={6} />
-      </div>
-    );
+    return <ProductEditorSkeleton />;
   }
 
   if (!product) {

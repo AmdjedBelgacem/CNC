@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { AdminGenericSkeleton, adminSkeletonFor } from '@/components/skeletons/admin-route-skeletons';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api-client';
 
@@ -10,6 +10,7 @@ type Status = 'checking' | 'ok' | 'denied' | 'anon';
 
 export function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   // Cookie auth hydrates asynchronously (GET /auth/me) — wait for it before
   // deciding, otherwise the gate bounces users to /login mid-restore.
@@ -45,16 +46,11 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
   }, [status, router]);
 
   if (status !== 'ok') {
-    return (
-      <div className="flex min-h-[70vh] items-center justify-center">
-        <div
-          role="status"
-          className="flex animate-fade-in-up items-center gap-3 rounded-full border border-border/70 bg-card px-4 py-2.5 text-sm text-muted-foreground shadow-sm"
-        >
-          <Loader2 className="size-4 animate-spin text-primary" /> Checking admin access…
-        </div>
-      </div>
-    );
+    // The role check runs on every hard load. Show the page's own replica
+    // meanwhile, so the wait reads as the page loading (and the layout is
+    // already in place), instead of a centred "Checking admin access…" pill
+    // that the page then replaces wholesale.
+    return <>{adminSkeletonFor(pathname ?? '/admin') ?? <AdminGenericSkeleton />}</>;
   }
   return <>{children}</>;
 }

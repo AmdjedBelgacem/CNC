@@ -14,6 +14,7 @@ import {
   migrateLegacyLayout,
   ensureNodeIds,
   ensureParitySections,
+  arabicPageLayout,
   slotNamesFor,
   walkLayoutNodes,
   type PageLayout,
@@ -26,9 +27,10 @@ import { seedProductInventoryRecords } from '@/lib/builder/live-record-seeds';
 import { apiProxyFetch } from '@/hooks/use-api-proxy';
 import type { Product as CatalogProduct } from '@/components/store/product-card';
 import { PageTranslationPanel } from '@/components/builder/page-translation';
-import { BuilderTranslationProvider } from '@/components/builder/translation-context';
+import { BuilderTranslationProvider, useBuilderTranslation } from '@/components/builder/translation-context';
+import { CanvasLocaleProvider } from '@/components/builder/canvas-locale';
 import { BuilderLivePreviewProvider } from '@/components/builder/live-preview-context';
-import { Languages, Loader2 } from 'lucide-react';
+import { Languages } from 'lucide-react';
 import { AnimatePresence, m, MotionConfig } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { spring, transition } from '@/lib/motion';
@@ -42,7 +44,7 @@ import { InspectorPanel } from '@/components/builder/inspector-panel';
 import { AiBuilderPanel } from '@/components/builder/ai/ai-builder-panel';
 import { CanvasControls } from '@/components/builder/canvas-controls';
 import { useMediaQuery, IS_DESKTOP_QUERY } from '@/lib/use-media-query';
-import { NoPageSelected } from '@/components/builder/builder-shell';
+import { BuilderSkeleton, NoPageSelected } from '@/components/builder/builder-shell';
 import { VersionDrawer } from '@/components/builder/version-drawer';
 import { BuilderShortcuts } from '@/components/builder/publish-checklist';
 import { useOpenPage } from '@/components/builder/use-open-page';
@@ -282,6 +284,15 @@ function BuilderPuckShell({
     </>
   );
 }
+/** Hands the translation context's live Arabic tree (including unsaved Arabic edits) to the editor. */
+function ArabicLayoutBridge({ onChange }: { onChange: (layout: PageLayout | null) => void }) {
+  const arabic = useBuilderTranslation()?.arabicLayout ?? null;
+  useEffect(() => {
+    onChange(arabic);
+  }, [arabic, onChange]);
+  return null;
+}
+
 export function BuilderEditor() {
   const tb = useTranslations('builder');
   /**
@@ -382,6 +393,18 @@ export function BuilderEditor() {
    * used by save, and `dirty` is a plain flag instead of a JSON diff.
    */
   const liveRef = useRef<Data | null>(null);
+  /**
+   * Arabic preview. While the canvas shows the Arabic page, Puck holds the merged Arabic
+   * layout, so its change events must not be taken as edits to the English draft; the English
+   * working copy waits in `englishSnapshotRef` and comes back when the preview ends.
+   */
+  const previewingArabicRef = useRef(false);
+  const englishSnapshotRef = useRef<Data | null>(null);
+  const arabicLiveRef = useRef<PageLayout | null>(null);
+  const onArabicLayout = useCallback((layout: PageLayout | null) => {
+    arabicLiveRef.current = layout;
+  }, []);
+  const canvasLocale = useBuilderUI((s) => s.canvasLocale);
   /** Last loaded/saved layout — the unsaved-changes indicator derives from comparing live data to this, so undo-back-to-baseline clears cleanly. */
   const baselineRef = useRef<Data | null>(null);
   /** Set after a load/save/reset/revert so the next onChange adopts Puck's canonical representation as the baseline. */
@@ -475,6 +498,14 @@ Stable registration callback (unstable identity would re-run the bridge effect o
   const loadToken = useRef(0);
 
   const syncStore = useCallback((layout: Data, clearSelection = false) => {
+    // Any load, save, reset or revert lands on the English layout, so leave Arabic preview.
+    if (previewingArabicRef.current) {
+      previewingArabicRef.current = false;
+      englishSnapshotRef.current = null;
+      useBuilderUI.getState().setCanvasLocale('en');
+      const leavePreview = puckDispatch.current;
+      if (leavePreview) leavePreview({ type: 'setUi', ui: { previewMode: 'edit' } } as never);
+    }
     setData(layout);
     liveRef.current = layout;
     baselineRef.current = layout;
@@ -642,6 +673,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
     }, []);
   const handleChange = useCallback(
     (next: Data) => {
+      if (previewingArabicRef.current) return;
       const seeded = ensureSeeded(next, slug);
       liveRef.current = seeded;
       // The first payload after a load/save is the authoritative baseline
@@ -976,6 +1008,37 @@ Stable registration callback (unstable identity would re-run the bridge effect o
     [slug, syncStore, setSaving, setDirty, setStatus, setVersionsOpen, tb],
   );
   /**
+   * Switch the canvas between the English draft and the page Arabic visitors receive.
+   *
+   * Arabic is the English structure with the Arabic copy merged in — the same merge the server
+   * applies when it serves the page — so the preview cannot drift from the live result. It is
+   * read-only: the English layout is what the editor edits, and Arabic text is edited in the
+   * Arabic version panel or the inspector's Arabic fields.
+   */
+  useEffect(() => {
+    const dispatch = puckDispatch.current;
+    if (!dispatch) return;
+    if (canvasLocale === 'ar' && !previewingArabicRef.current) {
+      const english = liveRef.current;
+      if (!english) return;
+      const arabic = arabicLiveRef.current ?? arabicLayout;
+      // The same function the server uses to build the Arabic page, so the preview cannot drift.
+      const merged = arabicPageLayout(english as unknown as PageLayout, arabic);
+      previewingArabicRef.current = true;
+      englishSnapshotRef.current = english;
+      dispatch({ type: 'setUi', ui: { itemSelector: null, previewMode: 'interactive' } } as never);
+      dispatch({ type: 'setData', data: () => merged, recordHistory: false } as never);
+    } else if (canvasLocale === 'en' && previewingArabicRef.current) {
+      const english = englishSnapshotRef.current ?? liveRef.current;
+      englishSnapshotRef.current = null;
+      // Cleared before the restore: the Arabic tree's change events were delivered long ago, and
+      // the restored tree is the English working copy itself, so adopting it is correct.
+      previewingArabicRef.current = false;
+      if (english) dispatch({ type: 'setData', data: () => english, recordHistory: false } as never);
+      dispatch({ type: 'setUi', ui: { previewMode: 'edit' } } as never);
+    }
+  }, [canvasLocale, arabicLayout]);
+  /**
    * An AI result enters the canvas like any other edit: through Puck's store with history
    * recorded, so ⌘Z undoes it and the page is marked unsaved. Every node id in it is marked as
    * already seen first; otherwise `ensureSeeded` would treat the AI's deliberately empty slots
@@ -983,6 +1046,12 @@ Stable registration callback (unstable identity would re-run the bridge effect o
    */
   const applyAiLayout = useCallback(
     (next: unknown) => {
+      if (previewingArabicRef.current) {
+        previewingArabicRef.current = false;
+        englishSnapshotRef.current = null;
+        useBuilderUI.getState().setCanvasLocale('en');
+        puckDispatch.current?.({ type: 'setUi', ui: { previewMode: 'edit' } } as never);
+      }
       const previous = liveRef.current;
       const layout = ensureNodeIds(next as PageLayout) as unknown as Data;
       let seen = seenIds.current.get(slug);
@@ -1017,6 +1086,19 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       revert,
       applyAiLayout,
       getLiveLayout: () => liveRef.current,
+      setArabicLayout: (next: unknown) => {
+        const layout = next as PageLayout;
+        arabicLiveRef.current = layout;
+        setArabicLayout(layout);
+        setPage((prev) =>
+          prev ? { ...prev, translations: { ...(prev.translations ?? {}), ar: { ...(prev.translations?.ar ?? {}), layout } } } : prev,
+        );
+        // Refresh the Arabic preview in place so the translated text shows immediately.
+        if (previewingArabicRef.current && englishSnapshotRef.current) {
+          const merged = arabicPageLayout(englishSnapshotRef.current as unknown as PageLayout, layout);
+          puckDispatch.current?.({ type: 'setData', data: () => merged, recordHistory: false } as never);
+        }
+      },
     };
   });
   /** ⌘S / ⌃S — save the draft. */
@@ -1036,28 +1118,26 @@ Stable registration callback (unstable identity would re-run the bridge effect o
       englishLayout={(data as PageLayout | null | undefined) ?? page?.layout ?? null}
       onPersist={persistArabic}
     >
+      <ArabicLayoutBridge onChange={onArabicLayout} />
       <div className="relative -m-4 -mb-14 h-[calc(100dvh_-_env(safe-area-inset-bottom)_-_3.5rem)] overflow-hidden bg-surface-sunken sm:-m-6 sm:-mb-14 lg:-my-8 lg:-me-8 lg:-ms-4 lg:h-dvh">
         {' '}
         <style>{HOST_CSS}</style>
         <style>{CANVAS_CSS}</style>{' '}
         {!data ? (
-          <div className="flex h-full items-center justify-center gap-3 bg-surface-sunken text-muted-foreground">
-            {' '}
-            {loading && <Loader2 className="size-5 animate-spin" />}
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-                {tb('editor.loadingPage', { default: 'Loading page…' })}
-              </span>
-            ) : (
+          loading ? (
+            // The frame is already on screen here, so the bare skeleton fills it.
+            <BuilderSkeleton framed={false} />
+          ) : (
+            <div className="flex h-full items-center justify-center gap-3 bg-surface-sunken text-muted-foreground">
               <PageDataView />
-            )}
-          </div>
+            </div>
+          )
         ) : (
           <div className="flex h-full min-h-0 flex-col">
             {' '}
             <div className="min-h-0 flex-1">
               {' '}
+              <CanvasLocaleProvider>
               <BuilderLivePreviewProvider pageSlug={page?.slug ?? slug}>
                 {/* MotionConfig reducedMotion="always" — the canvas must stay a
                     1:1, selectable copy of the production page. Blocks share
@@ -1086,6 +1166,7 @@ Stable registration callback (unstable identity would re-run the bridge effect o
                   />{' '}
                 </MotionConfig>
               </BuilderLivePreviewProvider>
+              </CanvasLocaleProvider>
             </div>{' '}
             {page && data && !aiPanelOpen && (
               // A page's Arabic copy is a separate layout, so it lives outside the canvas rather

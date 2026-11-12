@@ -35,7 +35,7 @@ import { LessonRow } from './lesson-row';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CourseDetailSkeleton } from '@/components/skeletons/public-route-skeletons';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { LanguageAvailability } from '@/components/academy/language-availability';
 import { coerceLocale } from '@/i18n/config';
@@ -164,38 +164,6 @@ function CurriculumSeries({
   );
 }
 
-function CoursePageSkeleton() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-border/70">
-        <div className="container mx-auto space-y-6 px-4 py-10 sm:px-6 lg:px-8">
-          <Skeleton className="h-4 w-32" />
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)] lg:items-center">
-            <div className="space-y-5">
-              <Skeleton className="h-5 w-40 rounded-full" />
-              <Skeleton className="h-16 w-4/5" />
-              <Skeleton className="h-6 w-3/5" />
-              <div className="flex gap-5">
-                <Skeleton className="h-8 w-28 rounded-full" />
-                <Skeleton className="h-8 w-28 rounded-full" />
-              </div>
-            </div>
-            <Skeleton className="aspect-video w-full rounded-2xl" />
-          </div>
-        </div>
-      </div>
-      <div className="container mx-auto space-y-10 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
-        </div>
-        <Skeleton className="h-72 rounded-xl" />
-      </div>
-    </div>
-  );
-}
-
 export interface CourseDetailClientProps {
   /** Fetched on the server so the first HTML contains real course content. */
   initialCourse?: Course | null;
@@ -216,7 +184,7 @@ export default function CourseDetailClient({ initialCourse }: CourseDetailClient
   const { course, isLoading, isError, error, refetch } = useCourse(slug, locale, initialCourse);
 
   // Only skeleton when there is genuinely nothing to show yet.
-  if (isLoading && !course) return <CoursePageSkeleton />;
+  if (isLoading && !course) return <CourseDetailSkeleton />;
 
   if (isError || !course) {
     return (

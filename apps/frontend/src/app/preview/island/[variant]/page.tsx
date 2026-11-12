@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
+import { getLocale } from 'next-intl/server';
+import type { ContentLocale } from '@titan/shared';
 import { notFound } from 'next/navigation';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { fetchPublishedAcademies } from '@/lib/academies';
@@ -43,6 +45,9 @@ export default async function IslandPreviewPage({
   const headerSpacerHeight = Number(rawHeaderHeight) || 0;
   const cookieStore = await cookies();
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
+  // The canvas language (set by the builder through ?locale=) decides the catalogue language,
+  // exactly as the visitor's locale does on the public page.
+  const locale = (await getLocale()) as ContentLocale;
 
   let content: ReactNode = null;
 
@@ -57,17 +62,17 @@ export default async function IslandPreviewPage({
       content = <AboutFactsSection />;
       break;
     case 'academy-pathways': {
-      const academies = await fetchPublishedAcademies(tenantSlug);
+      const academies = await fetchPublishedAcademies(tenantSlug, locale);
       content = <AcademyPathways academies={academies} bodyOnly={bodyOnly} />;
       break;
     }
     case 'products-featured': {
-      const products = await fetchCatalogProducts(tenantSlug, { limit: 100 });
+      const products = await fetchCatalogProducts(tenantSlug, { limit: 100 }, locale);
       content = <ProductsFeatured products={products} bodyOnly={bodyOnly} />;
       break;
     }
     case 'products-inventory': {
-      const products = await fetchCatalogProducts(tenantSlug, { limit: 100 });
+      const products = await fetchCatalogProducts(tenantSlug, { limit: 100 }, locale);
       const categories = categoryCounts(products);
       content = (
         <ProductsInventory categories={categories} products={products} bodyOnly={bodyOnly} />
@@ -75,7 +80,7 @@ export default async function IslandPreviewPage({
       break;
     }
     case 'products-departments': {
-      const products = await fetchCatalogProducts(tenantSlug, { limit: 100 });
+      const products = await fetchCatalogProducts(tenantSlug, { limit: 100 }, locale);
       content = <ProductsDepartments categories={categoryCounts(products)} bodyOnly={bodyOnly} />;
       break;
     }
@@ -106,8 +111,8 @@ export default async function IslandPreviewPage({
         break;
       }
       const [events, upcoming] = await Promise.all([
-        fetchCatalogEvents(tenantSlug, { limit: 50 }),
-        fetchCatalogEvents(tenantSlug, { limit: 50, upcoming: true }),
+        fetchCatalogEvents(tenantSlug, { limit: 50 }, locale),
+        fetchCatalogEvents(tenantSlug, { limit: 50, upcoming: true }, locale),
       ]);
       content =
         variant === 'events-ticker' ? (

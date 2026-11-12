@@ -20,6 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { PartnerApplicationsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const ACTION =
   'rounded-lg border border-border/80 bg-card px-3 py-1.5 text-xs font-medium shadow-xs transition hover:border-border-strong hover:bg-muted/60 active:scale-[0.98]';
@@ -113,11 +115,14 @@ const OPEN_STATUSES = new Set(['pending', 'under_review', 'needs_info']);
 
 export default function AdminPartnersPage() {
   const [items, setItems] = useState<any[]>([]);
+  // Until the first response there is nothing to show; render the list's shape
+  // instead of an empty page under the header.
+  const [loaded, setLoaded] = useState(false);
   const [review, setReview] = useState<ReviewAction | null>(null);
   const [status, setStatus] = useState('all');
   const load = () => {
     const q = status !== 'all' ? `?status=${status}` : '';
-    api.get<any>(`/admin/partners/applications${q}`).then((d) => setItems(Array.isArray(d?.items) ? d.items : [])).catch((e)=>toast({type:'err',title:e?.message}));
+    api.get<any>(`/admin/partners/applications${q}`).then((d) => setItems(Array.isArray(d?.items) ? d.items : [])).catch((e)=>toast({type:'err',title:e?.message})).finally(() => setLoaded(true));
   };
   useEffect(load, [status]);
   const act = async (id: string, action: 'approve'|'reject'|'request-info', payload?: any): Promise<boolean> => {
@@ -150,6 +155,7 @@ export default function AdminPartnersPage() {
           </select>
         }
       />
+      {!loaded && <SkeletonRegion><PartnerApplicationsSkeleton /></SkeletonRegion>}
       <Crossfade value={status} axis="none">
         <ul className="space-y-3">
           {items.map((a, index) => (

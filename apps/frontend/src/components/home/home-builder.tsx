@@ -12,7 +12,7 @@ import type {
   ProgramCardsProps,
   PuckNode,
 } from '@titan/shared';
-import { getSlotChildren, mergeBlockProps } from '@titan/shared';
+import { isSampleTestimonial, getSlotChildren, mergeBlockProps } from '@titan/shared';
 import { BuilderNode } from '@/components/builder/block-renderer';
 import { AcademyGridBlock } from '@/components/builder/blocks/academy-grid-block';
 import { CatalogHeroBlock } from '@/components/builder/blocks/catalog-hero-block';
@@ -42,7 +42,7 @@ const noopPuck: PuckBridge = { renderSlot: () => null, getSlotData: () => [] };
  *  - any node whose `props.id` matches a key in `replacements` is swapped for
  *    a live interactive island,
  *  - `catalog-hero` stats can be overridden with live counters via `heroStats`,
- *  - seed testimonials (no public API) are dropped.
+ *  - the built-in sample testimonials are dropped (admin-written ones render).
  * Static seed cards can therefore never reach visitors — the block renders DB
  * rows in place (preserving page order) or disappears when nothing is published.
  */
@@ -92,8 +92,14 @@ export function HomeBuilder({
       // rendering editor chrome to visitors.
       return null;
     }
-    // Fake social proof has no public API — never render seed testimonials.
-    if (node.type === 'testimonials' || node.type === 'testimonial-card') return null;
+    // The built-in sample quotes are placeholders and never reach visitors. Testimonials an
+    // admin wrote are real and render, exactly as the builder shows them; a section whose cards
+    // are all samples disappears rather than showing an empty header.
+    if (node.type === 'testimonial-card' && isSampleTestimonial(node.props?.quote)) return null;
+    if (node.type === 'testimonials') {
+      const cards = getSlotChildren(node, 'items', zones).filter((child) => child.type === 'testimonial-card');
+      if (cards.length === 0 || cards.every((card) => isSampleTestimonial(card.props?.quote))) return null;
+    }
     if (node.type === 'catalog-hero') {
       const props = mergeBlockProps(node.type, node.props) as unknown as CatalogHeroProps;
       const nodeWithDefaults: PuckNode = {

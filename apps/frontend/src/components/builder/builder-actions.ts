@@ -13,5 +13,7 @@ export interface BuilderActionHandlers {
   applyAiLayout: (layout: unknown) => unknown;
   /** The live layout, including unsaved edits, for the AI to work on. */
   getLiveLayout: () => unknown;
+  /** Replace the page's Arabic copy in the editor (after a server-side translation). */
+  setArabicLayout: (layout: unknown) => void;
 }
 export const builderActions: { current: BuilderActionHandlers | null } = { current: null };

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import CourseDetailClient from './course-detail-client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { CourseDetailSkeleton } from '@/components/skeletons/public-route-skeletons';
 import { fetchCourseDetail } from '@/lib/courses';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { BRAND_NAME, OG_IMAGE, absoluteUrl } from '@/lib/brand';
@@ -116,19 +116,9 @@ export default async function CourseDetailPage({ params }: PageProps) {
       ) : null}
 
       {/* Rendered outside Suspense so the real content is never behind a fallback. */}
-      <Suspense fallback={<CourseFallback />}>
+      <Suspense fallback={<CourseDetailSkeleton />}>
         <CourseDetailClient initialCourse={course} />
       </Suspense>
     </>
-  );
-}
-
-function CourseFallback() {
-  return (
-    <div className="container mx-auto space-y-4 px-4 py-16 sm:px-6 lg:px-8">
-      <Skeleton className="h-10 w-3/4" />
-      <Skeleton className="h-5 w-1/2" />
-      <Skeleton className="h-40 w-full" />
-    </div>
   );
 }

@@ -478,6 +478,12 @@ function AssistantCard({
 }) {
   const t = useTranslations('builder.ai');
   const [showWarnings, setShowWarnings] = useState(false);
+  // The server names steps in English; show them in the admin's language by their key.
+  const stepLabel = (step: AssistantTurn['steps'][number]) => {
+    const count = step.key === 'build' ? Number(step.label.match(/\d+/)?.[0] ?? 0) : 0;
+    const known = ['start', 'vision', 'plan', 'apply', 'build', 'page'];
+    return known.includes(step.key) ? t(`step.${step.key}`, { count }) : step.label;
+  };
   const seconds = turn.elapsedMs ? Math.max(1, Math.round(turn.elapsedMs / 1000)) : null;
   return (
     <m.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0, transition: spring.smooth }} className="me-2 rounded-2xl rounded-es-md border border-border/70 bg-background p-3">
@@ -485,7 +491,7 @@ function AssistantCard({
         {turn.steps.map((step) => (
           <li key={step.key} className="flex items-center gap-2 text-xs">
             <StepIcon state={step.state} />
-            <span className={cn('text-foreground', step.state === 'done' && 'text-muted-foreground')}>{step.label}</span>
+            <span className={cn('text-foreground', step.state === 'done' && 'text-muted-foreground')}>{stepLabel(step)}</span>
             {step.detail && <span className="truncate text-2xs text-muted-foreground">· {step.detail}</span>}
           </li>
         ))}

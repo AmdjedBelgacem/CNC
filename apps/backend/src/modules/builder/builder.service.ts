@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { DrizzleService } from '../../database/drizzle.service';
 import { resolveContentLocale } from '../courses/lesson-content';
@@ -21,11 +21,13 @@ import {
   migrateLegacyLayout,
   expandHeroConsoleLayout,
   mergeLayoutStructure,
+  arabicPageLayout,
   inlineSectionZones,
 } from '@titan/shared';
 import type { PageLayout, PageTranslation, ThemeTokens, PuckNode } from '@titan/shared';
 import { SearchService } from '../search/search.service';
 import { NavigationService } from './navigation.service';
+import { PageAutoTranslateService } from './page-autotranslate.service';
 
 export interface Actor {
   id: string;
@@ -46,6 +48,7 @@ export class BuilderService {
     private audit: AuditService,
     private search?: SearchService,
     private navigation?: NavigationService,
+    @Optional() private autoTranslate?: PageAutoTranslateService,
   ) {}
 
   /** Renaming a page must not leave a menu pointing at the old URL. */
@@ -296,18 +299,27 @@ export class BuilderService {
       return {
         ...rest,
         title: copy.title ?? page.title,
-        layout: expandHeroConsoleLayout(migrateLegacyLayout(copy.layout as PageLayout)),
+        // Structure always comes from the English layout and copy from the translation.
+        // Serving the stored Arabic tree as-is meant any block added, moved or restyled
+        // since it was last saved was missing or stale for Arabic visitors, so the live
+        // Arabic page drifted from what the builder showed.
+        layout: arabicPageLayout(
+          englishLayout,
+          expandHeroConsoleLayout(migrateLegacyLayout(copy.layout as PageLayout)),
+        ),
         locale,
         resolvedLocale: locale,
       };
     }
     const { title: _t, layout: _l, ...rest } = page;
+    // No Arabic copy yet: built-in text still reads in Arabic from the shipped dictionary.
+    const localized = locale === 'ar' ? arabicPageLayout(englishLayout) : englishLayout;
     return {
       ...rest,
       title: page.title,
-      layout: englishLayout,
+      layout: localized,
       locale,
-      resolvedLocale: 'en',
+      resolvedLocale: localized === englishLayout ? 'en' : locale,
     };
   }
 
@@ -745,6 +757,8 @@ export class BuilderService {
     }
 
     if (updated) this.syncSearch(tenantId, updated.id);
+    // Arabic visitors must not be left reading English: translate whatever is still English.
+    if (updated) this.autoTranslate?.schedule(tenantId, updated.id);
     await this.audit.log({
       userId: actor.id,
       action: 'builder.page.publish',

@@ -41,7 +41,6 @@ import {
 } from '@/components/admin/sortable-list';
 import { Reveal } from '@/components/ui/motion';
 import { ErrorState } from '@/components/ui/states';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { NavigationEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 // There is no alert-dialog primitive in this design system; the confirm reuses
 // Dialog so it inherits the same overlay, focus trap and Escape handling.
 
@@ -375,25 +375,7 @@ export function NavigationEditor() {
   const trail = [{ label: t('title') }];
 
   if (loading) {
-    return (
-      <div className="w-full">
-        <AdminCommandBar trail={trail} live={false} />
-        <div className="mx-auto w-full max-w-6xl space-y-6 pt-6" aria-busy="true">
-          <div className="space-y-3 pt-2">
-            <Skeleton className="h-9 w-56" />
-            <Skeleton className="h-4 w-80" />
-          </div>
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="space-y-2 rounded-xl border border-border/70 bg-card p-5 shadow-xs">
-              {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-xl" />
-              ))}
-            </div>
-            <Skeleton className="h-48 w-full rounded-xl" />
-          </div>
-        </div>
-      </div>
-    );
+    return <NavigationEditorSkeleton />;
   }
 
   if (loadError) {

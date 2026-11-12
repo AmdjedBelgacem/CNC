@@ -16,8 +16,9 @@ import { Modal } from '@/components/ui/modal';
 import { FormSection, TextAreaField, TextField } from '@/components/admin/admin-form';
 import { StatusChip } from '@/components/admin/form-page';
 import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/admin/drawer-kit';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { QuoteRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 interface QuoteRow {
   id: string;
@@ -105,11 +106,7 @@ export function QuotesInbox() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[74px] rounded-xl" />
-          ))}
-        </div>
+        <SkeletonRegion><QuoteRowsSkeleton /></SkeletonRegion>
       ) : items.length === 0 ? (
         <m.p
           initial={{ opacity: 0, y: 6 }}

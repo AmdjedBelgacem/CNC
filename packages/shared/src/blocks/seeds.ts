@@ -1584,6 +1584,18 @@ export const LANDING_TESTIMONIALS: TestimonialInput[] = [
   },
 ];
 
+/**
+ * True for one of the built-in sample testimonials above. These are placeholder quotes, so the
+ * public site never shows them; testimonials an admin writes are real and are shown. The builder
+ * labels the samples instead of hiding them, so the canvas and the live page never disagree
+ * silently.
+ */
+export function isSampleTestimonial(quote: unknown): boolean {
+  if (typeof quote !== 'string') return false;
+  const text = quote.trim();
+  return LANDING_TESTIMONIALS.some((item) => item.quote === text);
+}
+
 export function seedTestimonials(overrides: Record<string, unknown> = {}): SeedResult {
   const list = itemsOf(overrides) ?? (LANDING_TESTIMONIALS as Record<string, unknown>[]);
   return packMulti(
@@ -1654,48 +1666,175 @@ export function seedCtaSignup(overrides: Record<string, unknown> = {}): SeedResu
  * Footer/nav are deliberately NOT seeded: the app chrome renders them and the
  * public renderer suppresses those block types.
  */
+/**
+ * A free-form element node (see `element` in the registry) with children in its content slot.
+ * Used where the homepage needs a composition no designed block covers; every part stays a
+ * selectable, editable block in the builder and renders identically on the public page.
+ */
+function el(
+  tag: string,
+  css: string,
+  extra: Record<string, unknown> = {},
+  children: SeedResult[] = [],
+): SeedResult {
+  const node = n('element', { tag, css, ...extra });
+  return children.length ? pack(node, 'content', children) : { node };
+}
+
+interface OfferInput {
+  icon: string;
+  kicker: string;
+  title: string;
+  body: string;
+  cta: string;
+  href: string;
+}
+
+const HOME_OFFERS: OfferInput[] = [
+  {
+    icon: 'school',
+    kicker: 'Academies',
+    title: 'Simulation-first CNC training',
+    body: 'Structured paths from first setup to five-axis programming, with a Digital Twin that verifies every toolpath before metal is cut.',
+    cta: 'Explore academies',
+    href: '/academy',
+  },
+  {
+    icon: 'verified',
+    kicker: 'Certification',
+    title: 'Credentials shops recognise',
+    body: 'Finish a path and earn a verifiable certificate employers can check online in seconds.',
+    cta: 'Verify a certificate',
+    href: '/verify',
+  },
+  {
+    icon: 'inventory_2',
+    kicker: 'Store',
+    title: 'Tooling spec’d by our labs',
+    body: 'Workholding, cutters and metrology — the same SKUs used in our courses, shipped to your floor.',
+    cta: 'Shop the store',
+    href: '/products',
+  },
+  {
+    icon: 'precision_manufacturing',
+    kicker: 'Machines & quotes',
+    title: 'Equip a shop or a training centre',
+    body: 'Machines, fixtures and lab packages quoted by engineers who program them — institutional purchasing supported.',
+    cta: 'Request a quote',
+    href: '/edu-purchases',
+  },
+];
+
+/** "Everything your shop needs": the four lines of business, each a linked card. */
+function seedHomeOffers(): SeedResult {
+  const card = (offer: OfferInput) =>
+    el(
+      'a',
+      'display: flex; flex-direction: column; gap: 14px; padding: 28px; border-radius: 20px; background: rgb(var(--c-card)); border: 1px solid rgb(var(--c-border)); color: rgb(var(--c-foreground)); text-decoration: none; height: 100%; transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease',
+      { href: offer.href, cssHover: 'transform: translateY(-4px); box-shadow: 0 24px 48px -28px rgb(0 0 0 / 0.45); border-color: rgb(var(--c-primary) / 0.45)' },
+      [
+        el(
+          'span',
+          'display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: rgb(var(--c-primary) / 0.12); color: rgb(var(--c-primary))',
+          {},
+          [leaf('icon', { icon: offer.icon, size: 22 })],
+        ),
+        el('span', 'font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(var(--c-primary))', { text: offer.kicker }),
+        el('h3', 'margin: 0; font-family: var(--font-display, inherit); font-size: 22px; line-height: 1.25; font-weight: 500', { text: offer.title }),
+        el('p', 'margin: 0; font-size: 15px; line-height: 1.6; color: rgb(var(--c-muted-foreground)); flex: 1', { text: offer.body }),
+        el('span', 'display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: rgb(var(--c-primary))', { text: `${offer.cta} →` }),
+      ],
+    );
+  return pack(
+    n('section', { id: 'offers', paddingTop: 96, paddingBottom: 96 }),
+    'content',
+    [
+      el(
+        'div',
+        'max-width: 1240px; margin: 0 auto; padding: 0 24px; display: flex; flex-direction: column; gap: 48px',
+        {},
+        [
+          el('div', 'display: flex; flex-direction: column; align-items: flex-start; gap: 16px; max-width: 760px', {}, [
+            leaf('badge', { text: 'One partner for the whole shop', variant: 'primary', size: 'sm', uppercase: true }),
+            leaf('heading', { as: 'h2', size: 'headline-lg', text: 'Everything your shop needs,', accentText: 'in one place.' }),
+            leaf('text', {
+              size: 'lg',
+              text: 'Train people, prove their skills, stock the tooling and buy the machines — from a team that runs CNC every day.',
+            }),
+          ]),
+          el(
+            'div',
+            'display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px',
+            { cssMobile: 'grid-template-columns: 1fr', ariaLabel: 'What we offer' },
+            HOME_OFFERS.map(card),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+/** Homepage: a commercial landing page built entirely from builder blocks. */
 export function seedHomeLayout(): PageLayout {
   const sections: SeedResult[] = [
-    seedHeroConsole(),
+    seedHeroConsole({
+      eyebrow: 'CNC training · tooling · machines',
+      title: 'Train your team.',
+      titleAccent: 'Equip',
+      titleSuffix: 'your shop floor.',
+      subtitle:
+        'Simulation-first CNC academies with recognised certification, a store stocked with the tooling our labs use, and machine quotes from engineers who program them.',
+      primaryCta: { label: 'Explore academies', href: '/academy' },
+      secondaryCta: { label: 'Shop tooling', href: '/products' },
+    }),
     seedStatsDeck(),
     seedPartnerStrip(),
-    seedAcademyGrid({ limit: 4 }),
-    seedProgramCards(),
-    seedTwinSection(),
-    seedFaq({
-      id: 'faq',
-      sectionBg: 'bg-surface-container-lowest',
-      eyebrow: 'Clear Answers',
-      title: 'Frequently Asked Questions',
+    seedHomeOffers(),
+    seedAcademyGrid({ limit: 3 }),
+    seedLiveIsland('products-featured', 'Featured products', 'home-products'),
+    leaf('card-grid', {
+      id: 'how-it-works',
+      eyebrow: 'How it works',
+      title: 'From first lesson to a running cell.',
+      subtitle: 'Most teams go from sign-up to a certified operator in a single quarter.',
       items: [
         {
-          question: 'Do I need a physical 5-axis CNC machine to complete the cohort?',
-          answer:
-            'No. Our web-based Digital Twin console executes exact kinematic verification, post-processing, and toolpath physics. You will generate and verify production G-code directly in the browser. For cohort members wanting spindle time, we provide access to 140+ certified partner shop hubs worldwide for in-person machining test days.',
-          icon: 'expand_more',
+          title: 'Learn in the simulator',
+          body: 'Pick an academy and cut real projects in a browser-based Digital Twin — no machine time needed to start.',
+          icon: 'school',
         },
         {
-          question: 'Which CAM and Controller platforms are covered?',
-          answer:
-            'We cover industry-standard CAD/CAM systems including Siemens NX, Mastercam, Autodesk Fusion, and HyperMill. On the controller side, we teach direct macro programming and RTCP controls for Siemens Sinumerik 840D, Heidenhain TNC 640, Fanuc 30i/31i-B5, and Mazatrol SmoothX.',
-          icon: 'expand_more',
+          title: 'Certify the skills',
+          body: 'Pass the path assessments and earn a verifiable credential your managers and customers can check.',
+          icon: 'verified_user',
         },
         {
-          question: 'Can our manufacturing company enroll an entire tooling department?',
-          answer:
-            'Yes. We offer Enterprise Team Portals with manager oversight dashboards, custom post-processor calibration for your specific machines, and bespoke AS9100 audit compliance certifications.',
-          icon: 'expand_more',
-        },
-        {
-          question: 'What certification will I receive upon graduating?',
-          answer:
-            'You will receive the Machinist Pro Master Multi-Axis Credential, backed by OEM partners and cross-referenced with ISO 13485 and AS9100 Rev D manufacturing criteria.',
-          icon: 'expand_more',
+          title: 'Equip the floor',
+          body: 'Order the tooling from the store and get machines quoted for the work your team is now trained to run.',
+          icon: 'factory',
         },
       ],
+      showNumbers: true,
+      columns: 'md:grid-cols-3',
+      band: 'sunken',
+      paddingTop: 80,
+      paddingBottom: 96,
     }),
-    seedCtaSignup(),
+    seedTwinSection(),
+    seedClosingCta({
+      id: 'business',
+      eyebrow: 'For shops, institutes & OEMs',
+      title: 'Equipping a shop or a training centre?',
+      body: 'Get a machine and tooling package quoted with training included — one supplier, one invoice, institutional purchasing supported.',
+      primaryLabel: 'Request a quote',
+      primaryHref: '/edu-purchases',
+      primaryIcon: 'arrow_forward',
+      secondaryLabel: 'Become a partner',
+      secondaryHref: '/become-a-partner',
+      borderTop: true,
+    }),
     seedLiveIsland('home-faq', 'Homepage FAQ — repository-managed', 'home-faq'),
+    seedCtaSignup(),
     seedLiveIsland('home-guides', 'CNC guides — repository-managed', 'home-guides'),
   ];
   return toLayout(sections);

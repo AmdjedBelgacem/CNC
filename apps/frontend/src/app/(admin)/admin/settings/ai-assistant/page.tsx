@@ -40,7 +40,7 @@ import { FormLayout, SaveDock, SectionNav } from '@/components/admin/form-page';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ErrorState, LoadingState } from '@/components/ui/states';
+import { ErrorState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
@@ -48,6 +48,7 @@ import { ease } from '@/lib/motion';
 import { AiLearningPanel } from './ai-learning-panel';
 import { PaymentSettingsPanel } from './payment-settings-panel';
 import { AI_PROVIDER_PRESETS } from '@titan/shared';
+import { AiAssistantSettingsSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 const REINDEX_STORAGE_KEY = 'ai-assistant-last-reindex';
 
@@ -369,11 +370,7 @@ const buildPayload = (): AiSettingsUpdate => {
   };
 
   if (statusQuery.isLoading && !settings) {
-    return (
-      <div className="mx-auto w-full max-w-5xl space-y-6">
-        <LoadingState label={t('loading')} rows={5} />
-      </div>
-    );
+    return <AiAssistantSettingsSkeleton />;
   }
 
   if (statusQuery.isError && !settings) {

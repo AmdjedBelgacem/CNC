@@ -54,8 +54,9 @@ export function ProgramCardsBlock({ props, puck }: BlockComponentProps<ProgramCa
   } = props;
   const t = useTranslations('ui.homeBuilder');
   const preview = useBuilderLivePreview();
-  const editing = Boolean(puck?.isEditing);
-  const live = editing ? preview : null;
+  // Live data whenever the block renders inside the builder, including its read-only Arabic
+  // preview; `preview` is null on the public page, which gets its data from the server.
+  const live = preview;
   const noopPuck = { renderSlot: () => null, getSlotData: () => [] };
 
   return (

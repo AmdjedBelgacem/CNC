@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Award, Download, ExternalLink, Loader2, Printer, ShieldCheck, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonRegion } from '@/components/ui/skeletons/region';
+import { CertificateListSkeleton } from '@/components/ui/skeletons/public';
 import { toast } from '@/components/ui/toast';
 import { AnimatePresence, m } from 'framer-motion';
 import { Stagger, StaggerItem } from '@/components/ui/motion';
@@ -134,11 +135,9 @@ export function CertificateList({ className }: { className?: string }) {
 
   if (isLoading) {
     return (
-      <div className={cn('space-y-3', className)}>
-        {[0, 1].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
-        ))}
-      </div>
+      <SkeletonRegion>
+        <CertificateListSkeleton className={className} />
+      </SkeletonRegion>
     );
   }
 

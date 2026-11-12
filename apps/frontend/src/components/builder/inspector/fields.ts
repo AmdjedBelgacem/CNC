@@ -60,7 +60,7 @@ import type {
   TwinReadoutProps,
   TwinSectionProps,
 } from '@titan/shared';
-import { LIVE_ISLAND_VARIANTS } from '@titan/shared';
+import { ELEMENT_TAGS, LIVE_ISLAND_VARIANTS, type ElementProps } from '@titan/shared';
 import {
   Square,
   AlignLeft,
@@ -867,6 +867,37 @@ const cardStyleFields: InspectorFieldDef<CardProps>[] = [
     showWhen: (p: CardProps) => Boolean(p.accent),
   },
 ];
+export const elementInspector = defineInspector<ElementProps>().groups([
+  {
+    id: 'content',
+    title: 'Content',
+    titleKey: 'content',
+    icon: Type,
+    fields: [
+      {
+        key: 'tag',
+        label: 'Tag',
+        control: 'select',
+        options: ELEMENT_TAGS.map((tag) => ({ label: tag, value: tag })),
+      },
+      { key: 'text', label: 'Text', control: 'textarea' },
+      { key: 'href', label: 'Link (for a)', control: 'text' },
+      { key: 'src', label: 'Image URL (for img)', control: 'text' },
+      { key: 'alt', label: 'Alt text (for img)', control: 'text' },
+      { key: 'ariaLabel', label: 'Accessible label', control: 'text' },
+    ],
+  },
+  {
+    id: 'css',
+    title: 'CSS',
+    icon: Palette,
+    fields: [
+      { key: 'css', label: 'Styles', control: 'textarea', hint: 'display: flex; gap: 16px; padding: 24px;' },
+      { key: 'cssHover', label: 'On hover', control: 'textarea' },
+      { key: 'cssMobile', label: 'On phones', control: 'textarea' },
+    ],
+  },
+]);
 export const cardInspector = defineInspector<CardProps>().groups([
   { id: 'style', title: 'Style', icon: Palette, fields: cardStyleFields },
   {
@@ -3264,6 +3295,7 @@ export const BLOCK_INSPECTOR: Record<string, InspectorBlockDef> = {
   stack: { label: 'Stack', groups: stackInspector.groups },
   grid: { label: 'Grid', groups: gridInspector.groups },
   card: { label: 'Card', groups: cardInspector.groups },
+  element: { label: 'Element', groups: elementInspector.groups },
   'stat-item': { label: 'Stat Card', groups: statItemInspector.groups },
   'logo-item': { label: 'Logo Item', groups: logoItemInspector.groups },
   'feature-item': { label: 'Feature Row', groups: featureItemInspector.groups },

@@ -43,7 +43,6 @@ import {
   PillTabs,
   Select,
   SegmentedIconToggle,
-  Skeleton,
   StatusPill,
   Toolbar,
   type Tone,
@@ -52,6 +51,8 @@ import { AnimatePresence, m } from 'framer-motion';
 import { spring } from '@/lib/motion';
 import { AnimatedNumber, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { CourseRowMenu, type CourseAction } from './course-row-menu';
+import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 /* Courses carry a thumbnail, a subtitle, a difficulty level and live enrollment
  * and lesson counts. The previous card treated the thumbnail as a full-bleed
@@ -298,19 +299,6 @@ function CourseCard({
   );
 }
 
-function CourseCardSkeleton() {
-  return (
-    <div className="flex gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-xs">
-      <Skeleton className="size-24 shrink-0 rounded-lg sm:size-28" />
-      <div className="flex-1 space-y-3">
-        <Skeleton className="h-3.5 w-2/3" />
-        <Skeleton className="h-3 w-1/3" />
-        <Skeleton className="h-5 w-32 rounded-full" />
-        <Skeleton className="h-3 w-1/2" />
-      </div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
@@ -669,11 +657,7 @@ export default function AdminCoursesPage() {
 
         <Crossfade value={loading ? 'loading' : !rows || rows.length === 0 ? 'empty' : view} distance={6}>
         {loading ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <CourseCardSkeleton key={i} />
-            ))}
-          </div>
+          <SkeletonRegion><AdminCardGrid kind="course" /></SkeletonRegion>
         ) : !rows || rows.length === 0 ? (
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
             <EmptyState

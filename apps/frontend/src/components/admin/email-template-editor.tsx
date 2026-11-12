@@ -16,7 +16,6 @@ import { AdminCommandBar, AdminPageHeader, BarPrimaryButton } from '@/components
 import {
   Field,
   FormSection,
-  FormSkeleton,
   SelectField,
   SwitchField,
   TextField,
@@ -32,7 +31,6 @@ import {
   useSortableItem,
 } from '@/components/admin/sortable-list';
 import { EmptyState, ErrorState } from '@/components/ui/states';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Reveal } from '@/components/ui/motion';
 import { toast } from '@/components/ui/toast';
 import {
@@ -73,6 +71,7 @@ import {
   Type,
   type LucideIcon,
 } from 'lucide-react';
+import { EmailTemplateEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 
 /** Blocks an admin may add. `raw-html` is intentionally absent until P1 ships
  *  the sanitizer; offering a button that always fails would be worse. */
@@ -482,21 +481,7 @@ export function EmailTemplateEditor({ templateId }: { templateId: string }) {
   ];
 
   if (loading) {
-    return (
-      <div className="w-full">
-        <AdminCommandBar trail={trail} live={false} />
-        <div className="mx-auto w-full max-w-[1500px] space-y-6 pt-6" aria-busy="true">
-          <div className="space-y-3 pt-2">
-            <Skeleton className="h-9 w-72" />
-            <Skeleton className="h-4 w-48" />
-          </div>
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-            <FormSkeleton fields={3} />
-            <Skeleton className="h-[28rem] w-full rounded-xl" />
-          </div>
-        </div>
-      </div>
-    );
+    return <EmailTemplateEditorSkeleton />;
   }
 
   if (!layout || !template) {

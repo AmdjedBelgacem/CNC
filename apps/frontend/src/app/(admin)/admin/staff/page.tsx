@@ -48,7 +48,6 @@ import {
   FilterChip,
   Pagination,
   SegmentedIconToggle,
-  SkeletonRows,
   StatusPill,
   TableCard,
   Toolbar,
@@ -56,6 +55,8 @@ import {
 } from '@/components/admin/admin-ui';
 import { StaffDrawer } from './staff-drawer';
 import type { AdminUserRow } from '../users/users-shared';
+import { StaffTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const ROLES = ['super_admin', 'admin', 'instructor', 'moderator', 'sponsor'] as const;
 type RoleKey = (typeof ROLES)[number];
@@ -726,9 +727,7 @@ export default function AdminStaffPage() {
         </Toolbar>
 
         {loading ? (
-          <TableCard>
-            <SkeletonRows rows={8} columns={4} />
-          </TableCard>
+          <SkeletonRegion><StaffTableSkeleton /></SkeletonRegion>
         ) : !rows || rows.length === 0 ? (
           <TableCard>
             <EmptyState

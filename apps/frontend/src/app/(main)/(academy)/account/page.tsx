@@ -6,7 +6,8 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { Button } from '@/components/ui/button';
 import { DifficultyBar } from '@/components/academy/difficulty-bar';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SkeletonRegion } from '@/components/ui/skeletons/region';
+import { EnrollmentListSkeleton } from '@/components/skeletons/public-route-skeletons';
 import { Award, BookOpen, ArrowRight, Shield, Video } from 'lucide-react';
 import { CertificateList } from '@/components/certificates/certificate-list';
 import { useNextLiveSession } from '@/hooks/use-live-sessions';
@@ -111,11 +112,9 @@ export default function AccountPage() {
             </h2>
           </Reveal>
           {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <Skeleton key={i} className="h-28 rounded-xl" />
-              ))}
-            </div>
+            <SkeletonRegion>
+              <EnrollmentListSkeleton />
+            </SkeletonRegion>
           ) : enrollments && enrollments.length > 0 ? (
             <Stagger className="space-y-3">
               {enrollments.map((enrollment, index) => {
