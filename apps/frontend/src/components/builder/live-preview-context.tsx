@@ -196,9 +196,10 @@ export function BuilderLivePreviewProvider({
       academyCount: academies.length,
       courseCount: courseTotal,
       sponsorCount: sponsors.length,
+      productCount: products.length,
       locale: canvas.locale,
     });
-  }, [pageSlug, loading, failed, academies, courses.length, sponsors.length, canvas.locale]);
+  }, [pageSlug, loading, failed, academies, courses.length, sponsors.length, products.length, canvas.locale]);
 
   const heroStats = useMemo<HeroStat[] | null>(() => {
     if (loading) return null;

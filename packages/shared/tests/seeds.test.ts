@@ -216,20 +216,21 @@ describe('seeds', () => {
 
   it('home layout is the commercial landing page, built only from builder blocks (nav/footer live in the app shell)', () => {
     const layout = seedHomeLayout();
+    // Matches the "Public site" design on the Claude Design canvas, section for section.
     expect(layout.content.map((node) => node.type)).toEqual([
-      'hero-console',
-      'stats',
+      'section', // hero, built from element blocks
       'partner-logos',
-      'section',
+      'section', // offers
       'academy-grid',
-      'live-island',
-      'card-grid',
-      'twin-section',
-      'closing-cta',
-      'live-island',
+      'live-island', // featured products
+      'card-grid', // how it works
+      'closing-cta', // business band
+      'live-island', // FAQ
       'cta-signup',
-      'live-island',
+      'live-island', // guides
     ]);
+    // Live counts are placeholders filled on the server and in the builder alike.
+    expect(JSON.stringify(layout.content[0])).toContain('{{academies}}');
     expect(
       layout.content.filter((node) => node.type === 'live-island').map((node) => node.props?.variant),
     ).toEqual(['products-featured', 'home-faq', 'home-guides']);

@@ -63,7 +63,10 @@ describe('session probe answers without failing', () => {
     const probe = readFileSync(resolve(__dirname, '../../frontend/src/lib/session-probe.ts'), 'utf8');
     expect(probe).toMatch(/'\/auth\/session'/);
     // Rotates only when the server says there is something to rotate.
-    expect(probe).toMatch(/session\.refreshable && \(await refreshSession\(\)\)/);
+    // Rotates only when there is something to rotate, and a busy server is not a sign-out.
+    expect(probe).toMatch(/if \(session\.refreshable\)/);
+    expect(probe).toMatch(/refreshSessionOutcome\(\)/);
+    expect(probe).toMatch(/outcome === 'unavailable'/);
   });
 
   it('does not try to refresh a session after a credential endpoint answers 401', () => {

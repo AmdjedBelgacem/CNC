@@ -6,7 +6,7 @@ import { pages, pageVersions } from '../../database/schema/pages';
 import { tenants } from '../../database/schema/tenants';
 
 /** Bumped when the built-in homepage is redesigned and existing homepages should adopt it. */
-export const HOME_LAYOUT_REVISION = 'home-2026-11';
+export const HOME_LAYOUT_REVISION = 'home-2026-11-design';
 
 /**
  * Moves each tenant's homepage onto the redesigned layout, once.
@@ -70,7 +70,7 @@ export class HomeRedesignUpgradeService implements OnApplicationBootstrap {
         version: base + 1,
         layout: page.layout as PageLayout,
         status: 'snapshot',
-        note: 'Homepage before the redesign (restore it from here)',
+        note: 'Homepage before the latest redesign (restore it from here)',
       });
 
       const layout = ensureNodeIds(seedHomeLayout());

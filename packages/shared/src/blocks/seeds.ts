@@ -1774,20 +1774,114 @@ function seedHomeOffers(): SeedResult {
   );
 }
 
+/**
+ * The homepage hero from the "Public site" design: copy, two calls to action and live counts on
+ * the left, a showcase of the three things the site sells on the right. Built from element blocks
+ * so every part is editable in the builder; `{{academies}}`, `{{courses}}` and `{{products}}` are
+ * filled with live counts on the public page and in the builder canvas alike.
+ */
+function seedHomeHero(): SeedResult {
+  const stat = (label: string, token: string) =>
+    el('div', 'display: flex; flex-direction: column; gap: 4px', {}, [
+      el('span', 'font-size: 12px; color: rgb(var(--c-muted-foreground))', { text: label }),
+      el('span', 'font-family: var(--font-display, Georgia, serif); font-size: 28px; line-height: 1.1; color: rgb(var(--c-foreground))', { text: token }),
+    ]);
+  const copy = el(
+    'div',
+    'display: flex; flex-direction: column; align-items: flex-start; gap: 24px; min-width: 0',
+    {},
+    [
+      leaf('badge', { text: 'Training · tooling · machines', variant: 'glow', size: 'sm', uppercase: true }),
+      leaf('heading', { as: 'h1', size: 'hero', text: 'Train your team.', accentText: 'Equip', suffixText: 'your shop floor.' }),
+      leaf('text', {
+        size: 'lg',
+        text: 'CNC academies that start in a simulator, certificates employers can verify, the tooling our labs use, and machines quoted by engineers who program them.',
+      }),
+      pack(n('stack', { direction: 'row', directionMobile: 'column', gap: 'md', align: 'start', justify: 'start', wrap: true }), 'content', [
+        leaf('button', { label: 'Explore academies', href: '/academy', variant: 'primary', icon: 'arrow_forward', iconPosition: 'right', size: 'lg' }),
+        leaf('button', { label: 'Shop tooling', href: '/products', variant: 'glass', size: 'lg' }),
+      ]),
+      el(
+        'div',
+        'display: flex; flex-wrap: wrap; gap: 32px; width: 100%; margin-top: 8px; padding-top: 24px; border-top: 1px solid rgb(var(--c-border))',
+        { ariaLabel: 'Catalogue in numbers' },
+        [stat('Academies', '{{academies}}'), stat('Published courses', '{{courses}}'), stat('Products in stock', '{{products}}')],
+      ),
+    ],
+  );
+  const showcase = el(
+    'div',
+    'position: relative; min-height: 460px',
+    { cssMobile: 'min-height: 380px', ariaLabel: 'What Baroot offers' },
+    [
+      el(
+        'a',
+        'position: absolute; inset: 0 60px 70px 0; display: flex; flex-direction: column; overflow: hidden; border-radius: 20px; border: 1px solid rgb(var(--c-border)); background: rgb(var(--c-card)); color: rgb(var(--c-foreground)); text-decoration: none',
+        { href: '/academy', cssMobile: 'inset: 0 24px 90px 0' },
+        [
+          el(
+            'div',
+            'flex: 1; display: flex; align-items: flex-end; padding: 24px; background: linear-gradient(135deg, rgb(var(--c-primary) / 0.28), rgb(var(--c-card)) 62%)',
+            {},
+            [
+              el('div', 'display: flex; flex-direction: column; gap: 8px', {}, [
+                el('span', 'font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em; color: rgb(var(--c-primary))', { text: 'ACADEMY · SIMULATOR FIRST' }),
+                el('span', 'font-family: var(--font-display, Georgia, serif); font-size: 26px; line-height: 1.2', { text: '5-Axis Programming' }),
+                el('span', 'font-size: 14px; color: rgb(var(--c-muted-foreground))', { text: 'Verify every toolpath in the Digital Twin, then cut.' }),
+              ]),
+            ],
+          ),
+          el('div', 'display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-top: 1px solid rgb(var(--c-border))', {}, [
+            el('span', 'font-size: 13px; color: rgb(var(--c-muted-foreground))', { text: 'Progress' }),
+            el('span', 'flex: 1; height: 6px; border-radius: 999px; background: rgb(var(--c-border)); overflow: hidden', { ariaLabel: '64 percent complete' }, [
+              el('span', 'display: block; width: 64%; height: 100%; background: rgb(var(--c-primary))'),
+            ]),
+            el('span', 'font-family: ui-monospace, monospace; font-size: 12px', { text: '64%' }),
+          ]),
+        ],
+      ),
+      el(
+        'a',
+        'position: absolute; right: 0; bottom: 0; width: 260px; display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 20px; border: 1px solid rgb(var(--c-border)); background: rgb(var(--c-card)); color: rgb(var(--c-foreground)); text-decoration: none; box-shadow: 0 24px 48px -24px rgb(0 0 0 / 0.55)',
+        { href: '/products', cssMobile: 'width: 230px' },
+        [
+          el('span', 'font-family: ui-monospace, monospace; font-size: 11px; color: rgb(var(--c-muted-foreground))', { text: 'STORE · MEASUREMENT' }),
+          el('span', 'font-size: 15px; font-weight: 600', { text: 'Tooling for your floor' }),
+          el('span', 'font-size: 14px; font-weight: 600; color: rgb(var(--c-primary))', { text: 'Shop the store →' }),
+        ],
+      ),
+      el(
+        'a',
+        'position: absolute; left: -12px; bottom: 4px; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 14px; background: rgb(var(--c-foreground)); color: rgb(var(--c-background)); text-decoration: none; box-shadow: 0 20px 40px -20px rgb(0 0 0 / 0.6)',
+        { href: '/verify', cssMobile: 'left: 0' },
+        [
+          leaf('icon', { icon: 'verified_user', size: 20, color: '#3F7A4F' }),
+          el('span', 'display: flex; flex-direction: column; line-height: 1.25', {}, [
+            el('span', 'font-size: 13px; font-weight: 600', { text: 'Certificates you can verify' }),
+            el('span', 'font-size: 12px; opacity: 0.7', { text: 'Check any certificate online' }),
+          ]),
+        ],
+      ),
+    ],
+  );
+  return pack(
+    n('section', { id: 'hero', paddingTop: 88, paddingBottom: 72, bgGradient: 'radial-gradient(1200px 520px at 85% -10%, rgb(var(--c-primary) / 0.2), transparent 60%)' }),
+    'content',
+    [
+      el(
+        'div',
+        'max-width: 1240px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center',
+        { cssMobile: 'grid-template-columns: 1fr; gap: 48px' },
+        [copy, showcase],
+      ),
+    ],
+  );
+}
+
 /** Homepage: a commercial landing page built entirely from builder blocks. */
 export function seedHomeLayout(): PageLayout {
   const sections: SeedResult[] = [
-    seedHeroConsole({
-      eyebrow: 'CNC training · tooling · machines',
-      title: 'Train your team.',
-      titleAccent: 'Equip',
-      titleSuffix: 'your shop floor.',
-      subtitle:
-        'Simulation-first CNC academies with recognised certification, a store stocked with the tooling our labs use, and machine quotes from engineers who program them.',
-      primaryCta: { label: 'Explore academies', href: '/academy' },
-      secondaryCta: { label: 'Shop tooling', href: '/products' },
-    }),
-    seedStatsDeck(),
+    seedHomeHero(),
     seedPartnerStrip(),
     seedHomeOffers(),
     seedAcademyGrid({ limit: 3 }),
@@ -1820,7 +1914,6 @@ export function seedHomeLayout(): PageLayout {
       paddingTop: 80,
       paddingBottom: 96,
     }),
-    seedTwinSection(),
     seedClosingCta({
       id: 'business',
       eyebrow: 'For shops, institutes & OEMs',

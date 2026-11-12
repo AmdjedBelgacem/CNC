@@ -187,6 +187,10 @@
     }
   },
   "auth": {
+    "orWithEmail": "or with email",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "keepSignedIn": "Keep me signed in for 30 days",
     "oauthDenied": "Sign-in was cancelled.",
     "oauthInvalidState": "That sign-in link expired. Please try again.",
     "oauthUnverifiedEmail": "Your provider did not confirm your email address, so we could not sign you in.",
@@ -262,6 +266,7 @@
       "sentSuffix": ", we've sent a password reset link."
     },
     "login": {
+      "welcomeBack": "Welcome back",
       "eyebrow": "Operator Sign In",
       "subtitle": "Access your CNC manufacturing academy"
     },
@@ -5567,6 +5572,28 @@
     "rights": "© {year} {brand}. All rights reserved.",
     "footerTagline": "Precision manufacturing education — academies, products and a community built for modern machinists and engineers.",
     "auth": {
+      "panel": {
+        "headline": "Pick up where your <accent>shop</accent> left off.",
+        "perks": {
+          "progress": {
+            "title": "Your academy progress",
+            "desc": "Courses, simulator projects and the next lesson, exactly where you stopped."
+          },
+          "certificates": {
+            "title": "Verifiable certificates",
+            "desc": "Download or share every certificate you have earned."
+          },
+          "orders": {
+            "title": "Orders and quotes",
+            "desc": "Track tooling orders and machine quotes in one place."
+          },
+          "languages": {
+            "title": "English and Arabic",
+            "desc": "Switch language any time; your account follows you."
+          }
+        },
+        "session": "Choose “Keep me signed in” and this device stays signed in for up to 30 days."
+      },
       "signIn": "Sign in",
       "skip": "Skip to main content",
       "back": "Back",

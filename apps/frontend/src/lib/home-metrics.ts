@@ -2,6 +2,8 @@ import type { PageLayout, PuckNode, StatCardInput } from '@titan/shared';
 import { seedStatCard } from '@titan/shared';
 
 export interface LiveHomeMetrics {
+  /** Values for the `{{academies}}`, `{{courses}}` and `{{products}}` placeholders in element text. */
+  counts: Record<string, string>;
   trustCount: string;
   trustNote: string;
   ctaSubtitle: string;
@@ -13,12 +15,19 @@ export function buildLiveHomeMetrics(input: {
   academyCount: number;
   courseCount: number;
   sponsorCount: number;
+  productCount?: number;
   /** The page language. Arabic pages used to get these sentences in English. */
   locale?: string;
 }): LiveHomeMetrics {
   const { academyCount, courseCount, sponsorCount } = input;
+  const counts = {
+    academies: String(academyCount),
+    courses: String(courseCount),
+    products: String(input.productCount ?? 0),
+  };
   if (input.locale === 'ar') {
     return {
+      counts,
       trustCount: `+${academyCount}`,
       trustNote: `${academyCount} أكاديميات متخصصة و${courseCount} دورة منشورة — منهج أساسي مجاني للمشغّلين المعاصرين.`,
       ctaSubtitle: `انضم إلى المتعلمين في ${academyCount} أكاديميات و${courseCount} دورة. احجز مكانك في الدفعة القادمة ذاتية الوتيرة.`,
@@ -62,6 +71,7 @@ export function buildLiveHomeMetrics(input: {
     };
   }
   return {
+    counts,
     trustCount: `+${academyCount}`,
     trustNote: `${academyCount} specialized academies and ${courseCount} published courses — free core curriculum for modern machinists.`,
     ctaSubtitle: `Join learners across ${academyCount} academies and ${courseCount} courses. Secure your place in the next self-paced cohort.`,
@@ -126,6 +136,9 @@ export function applyLiveHomeMetrics(layout: PageLayout, metrics: LiveHomeMetric
   const walkNodes = (nodes: PuckNode[]): PuckNode[] =>
     nodes.map((node) => {
       const props = { ...(node.props ?? {}) };
+      if (node.type === 'element' && typeof props.text === 'string' && props.text.includes('{{')) {
+        props.text = fillCountTokens(props.text, metrics.counts);
+      }
       if (node.type === 'avatar-stack') {
         const count = props.count;
         if (count === '+17k' || count === '+80') props.count = metrics.trustCount;
@@ -161,4 +174,10 @@ export function applyLiveHomeMetrics(layout: PageLayout, metrics: LiveHomeMetric
     content: walkNodes(layout.content ?? []),
     ...(zones ? { zones } : {}),
   };
+}
+
+/** Replaces `{{academies}}`-style placeholders with live counts; unknown tokens are left alone. */
+export function fillCountTokens(text: string, counts: Record<string, string> | undefined): string {
+  if (!counts) return text;
+  return text.replace(/\{\{\s*([a-z]+)\s*\}\}/g, (match, key: string) => counts[key] ?? match);
 }

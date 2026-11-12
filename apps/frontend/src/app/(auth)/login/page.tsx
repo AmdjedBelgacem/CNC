@@ -13,6 +13,8 @@ import {
   AuthField,
   AuthHeading,
   AuthInput,
+  AuthModeSwitch,
+  AuthPasswordInput,
   AuthSubmit,
   GoogleButton,
   authLinkClass,
@@ -49,7 +51,8 @@ function LoginForm() {
   const { login, resendVerification } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberDevice, setRememberDevice] = useState(false);
+  // On by default: a session that ends after seven days without warning reads as being logged out.
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [error, setError] = useState('');
   // The OAuth callback sends the browser back here with a reason when sign-in did not complete.
   const oauthError = searchParams.get('error');
@@ -108,9 +111,17 @@ const result = await login(email, password, rememberDevice);
       setResending(false);
     }
   };
+  const query = searchParams.toString();
   return (
-    <div className="flex h-full flex-1 flex-col justify-center">
-      <AuthHeading eyebrow={t('login.eyebrow')} title={t('signIn')} subtitle={t('login.subtitle')} />
+    <div className="flex flex-col">
+      <AuthModeSwitch active="signin" signInLabel={t('signIn')} createLabel={t('createAccount')} query={query} />
+      <AuthHeading title={t('login.welcomeBack')} subtitle={t('login.subtitle')} className="mb-7" />
+      <GoogleButton
+        onClick={() => {
+          void oauthRedirect('google');
+        }}
+      />
+      <AuthDivider>{t('orWithEmail')}</AuthDivider>
       <form onSubmit={handleSubmit} className="space-y-5">
         <AuthAlert show={!!error}>
           {error}
@@ -150,39 +161,34 @@ const result = await login(email, password, rememberDevice);
             </Link>
           }
         >
-          <AuthInput
+          <AuthPasswordInput
             id="password"
-            type="password"
             placeholder={t('passwordPlaceholder')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
             invalid={!!error}
+            showLabel={t('showPassword')}
+            hideLabel={t('hidePassword')}
           />
         </AuthField>
-        <label className="flex w-fit cursor-pointer select-none items-center gap-2.5">
+        <label className="flex min-h-11 w-fit cursor-pointer select-none items-center gap-2.5">
           <input
             type="checkbox"
             checked={rememberDevice}
             onChange={(e) => setRememberDevice(e.target.checked)}
-            className="size-4 rounded border-border bg-card text-primary accent-primary"
+            className="size-[18px] rounded border-border bg-card text-primary accent-primary"
           />
-          <span className="text-sm text-muted-foreground">{t('rememberDevice')}</span>
+          <span className="text-sm text-foreground/85">{t('keepSignedIn')}</span>
         </label>
         <AuthSubmit type="submit" disabled={loading} loading={loading}>
           {loading ? t('signingIn') : t('signIn')}
         </AuthSubmit>
       </form>
-      <AuthDivider>{t('orContinueWith')}</AuthDivider>
-      <GoogleButton
-        onClick={() => {
-          void oauthRedirect('google');
-        }}
-      />
       <p className="mt-7 text-center text-sm text-muted-foreground">
         {t('dontHaveAccount')}{' '}
-        <Link href="/register" className={authLinkClass}>
+        <Link href={query ? `/register?${query}` : '/register'} className={authLinkClass}>
           {t('signUp')}
         </Link>
       </p>

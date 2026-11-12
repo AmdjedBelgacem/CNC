@@ -1,5 +1,4 @@
 import { isNodeArray, type PageLayout, type PuckNode } from '@titan/shared';
-import { HOMEPAGE_FAQ } from '@/lib/faq-content';
 import { BRAND_NAME } from '@/lib/brand';
 
 /**
@@ -68,8 +67,6 @@ const itemCard = (question: string, answer: string): SeedNode =>
     ],
   });
 
-const faqHeader = [heading('Frequently asked questions about CNC machining training')];
-const faqItems = HOMEPAGE_FAQ.map((item) => itemCard(item.question, item.answer));
 
 /** One pill, matching the public guides card (`link-pill` with its trailing arrow). */
 const guidePill = (label: string, href: string): SeedNode =>
@@ -159,7 +156,9 @@ const aboutFooter = [
 ];
 
 const FIXED_SEEDS: Record<string, Record<string, SeedNode[]>> = {
-  'home-faq': { header: faqHeader, items: faqItems },
+  // The homepage FAQ is not seeded: it renders the same accordion component in the builder and on
+  // the public page, in the visitor's language. Seeding it as blocks made the canvas show English
+  // cards while visitors saw an Arabic accordion.
   'home-guides': { header: guidesHeader },
   'about-facts': { header: aboutHeader, items: aboutItems, footer: aboutFooter },
 };

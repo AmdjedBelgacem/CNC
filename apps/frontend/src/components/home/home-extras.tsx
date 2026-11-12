@@ -29,6 +29,8 @@ type IslandSlots = {
 const COPY = {
   en: {
     faqTitle: 'Frequently asked questions about CNC machining training',
+    faqAsk: 'Still unsure?',
+    faqAskLink: 'Talk to our team',
     guidesTitle: 'CNC solutions, training and practical guides',
     guidesBody:
       'Start with our CNC training materials, then review CNC solutions, implementation guidance and partner options for your shop or learning centre.',
@@ -38,6 +40,8 @@ const COPY = {
   },
   ar: {
     faqTitle: 'أسئلة شائعة حول التدريب على التشغيل بماكينات CNC',
+    faqAsk: 'ما زلت مترددًا؟',
+    faqAskLink: 'تحدّث مع فريقنا',
     guidesTitle: 'حلول CNC والتدريب والأدلة العملية',
     guidesBody:
       'ابدأ بمواد التدريب على CNC لدينا، ثم استعرض حلول CNC وإرشادات التطبيق وخيارات الشراكة لورشتك أو مركز التدريب لديك.',
@@ -54,40 +58,56 @@ function useCopy() {
 
 export function HomeFaqSection({ header, items }: IslandSlots) {
   const { locale, copy } = useCopy();
+  // Two columns from the "Public site" design: the heading and a way to ask on the left, the
+  // questions as an accordion on the right. Answers stay in the HTML when closed, so the visible
+  // copy and the FAQPage schema still match.
   return (
     <section
       aria-label={header ? copy.faqTitle : undefined}
       aria-labelledby={header ? undefined : 'faq-heading'}
-      className="mx-auto max-w-3xl px-4 py-20 sm:px-6 md:py-28 lg:px-8"
+      className="mx-auto grid max-w-[1240px] gap-10 px-4 py-20 sm:px-6 md:grid-cols-[1fr_2fr] md:gap-12 md:py-28 lg:px-8"
     >
-      <Reveal>
+      <Reveal className="flex flex-col gap-3">
         {header ?? (
-          <h2
-            id="faq-heading"
-            className="text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl"
-          >
-            {copy.faqTitle}
-          </h2>
+          <>
+            <h2
+              id="faq-heading"
+              className="text-balance font-display text-3xl font-medium tracking-[-0.022em] text-foreground sm:text-4xl"
+            >
+              {copy.faqTitle}
+            </h2>
+            <p className="text-pretty text-base leading-7 text-muted-foreground">
+              {copy.faqAsk}{' '}
+              <Link href="/edu-purchases" className="text-primary underline-offset-4 hover:underline">
+                {copy.faqAskLink}
+              </Link>
+            </p>
+          </>
         )}
       </Reveal>
       {items ? (
-        <div className="fixed-island-items mt-12 flex flex-col gap-8">{items}</div>
+        <div className="fixed-island-items flex flex-col gap-8">{items}</div>
       ) : (
-        <dl className="fixed-island-items mt-12 flex flex-col gap-8">
-          {homepageFaq(locale).map((item) => (
-            <Reveal
+        <div className="fixed-island-items flex flex-col">
+          {homepageFaq(locale).map((item, index) => (
+            <details
               key={item.question}
-              className="fixed-island-item border-b border-border/70 pb-8"
+              open={index === 0}
+              className="fixed-island-item group border-b border-border/70 py-5"
             >
-              <dt className="text-balance font-display text-xl font-medium tracking-[-0.012em] text-foreground">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-balance font-display text-xl font-medium tracking-[-0.012em] text-foreground [&::-webkit-details-marker]:hidden">
                 {item.question}
-              </dt>
-              <dd className="mt-3 text-pretty text-base leading-7 text-muted-foreground">
-                {item.answer}
-              </dd>
-            </Reveal>
+                <span
+                  aria-hidden
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-pretty text-base leading-7 text-muted-foreground">{item.answer}</p>
+            </details>
           ))}
-        </dl>
+        </div>
       )}
     </section>
   );

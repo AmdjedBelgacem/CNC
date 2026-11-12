@@ -10,6 +10,8 @@ import {
 import { cn } from '@/lib/utils';
 import { layoutStyle } from '@/components/builder/layout-style';
 import type { BlockComponentProps } from './index';
+import { useBuilderLivePreview } from '@/components/builder/live-preview-context';
+import { fillCountTokens } from '@/lib/home-metrics';
 
 /**
  * The free-form element: a sanitised HTML tag with its own scoped stylesheet.
@@ -22,6 +24,10 @@ import type { BlockComponentProps } from './index';
 export function ElementBlock({ props, puck }: BlockComponentProps<ElementProps>) {
   const { tag = 'div', text, css, cssHover, cssMobile, href, openInNewTab, src, alt, ariaLabel, className } = props;
   const id = typeof props.id === 'string' ? props.id : 'element';
+  // In the builder, `{{academies}}`-style placeholders show the same live counts the public page
+  // bakes in on the server, so the canvas matches what visitors see.
+  const preview = useBuilderLivePreview();
+  const shownText = typeof text === 'string' && preview?.homeMetrics ? fillCountTokens(text, preview.homeMetrics.counts) : text;
   const sheet = elementStylesheet(id, { base: css, hover: cssHover, mobile: cssMobile });
   const style = layoutStyle(props);
   const common = {
@@ -45,7 +51,7 @@ export function ElementBlock({ props, puck }: BlockComponentProps<ElementProps>)
 
   const children: ReactNode = (
     <>
-      {text}
+      {shownText}
       {puck.renderSlot('content')}
     </>
   );

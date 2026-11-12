@@ -13,7 +13,9 @@ import {
   AuthField,
   AuthHeading,
   AuthInput,
+  AuthModeSwitch,
   AuthNote,
+  AuthPasswordInput,
   AuthStatus,
   AuthStatusIcon,
   AuthSteps,
@@ -120,12 +122,15 @@ await register({
           </p>
         </AuthStatus>
       ) : (
-        <div className="flex h-full flex-col justify-center">
-          <AuthHeading
-            eyebrow={t('register.eyebrow')}
-            title={t('createAccount')}
-            subtitle={t('register.subtitle')}
+        <div className="flex flex-col">
+          <AuthModeSwitch active="create" signInLabel={t('signIn')} createLabel={t('createAccount')} />
+          <AuthHeading title={t('createAccount')} subtitle={t('register.subtitle')} className="mb-7" />
+          <GoogleButton
+            onClick={() => {
+              void oauthRedirect('google');
+            }}
           />
+          <AuthDivider>{t('orWithEmail')}</AuthDivider>
           <form onSubmit={handleSubmit} className="space-y-4">
             <AuthAlert show={!!error}>{error}</AuthAlert>
             <div className="grid gap-4 sm:grid-cols-2 sm:gap-3">
@@ -154,18 +159,20 @@ await register({
               />
             </AuthField>
             <AuthField id="password" label={t('password')}>
-              <AuthInput
+              <AuthPasswordInput
                 {...inputs('password')}
-                type="password"
                 placeholder={t('passwordRequirementsPlaceholder')}
                 required
                 autoComplete="new-password"
+                showLabel={t('showPassword')}
+                hideLabel={t('hidePassword')}
               />
             </AuthField>
             <AuthField id="confirmPassword" label={t('confirmPassword')}>
-              <AuthInput
+              <AuthPasswordInput
                 {...inputs('confirmPassword')}
-                type="password"
+                showLabel={t('showPassword')}
+                hideLabel={t('hidePassword')}
                 placeholder={t('confirmPasswordPlaceholder')}
                 required
                 autoComplete="new-password"
@@ -178,12 +185,6 @@ await register({
               </AuthSubmit>
             </div>
           </form>
-          <AuthDivider>{t('orSignUpWith')}</AuthDivider>
-          <GoogleButton
-            onClick={() => {
-              void oauthRedirect('google');
-            }}
-          />
           <p className="mt-7 text-center text-sm text-muted-foreground">
             {t('alreadyHaveAccount')}{' '}
             <Link href="/login" className={authLinkClass}>

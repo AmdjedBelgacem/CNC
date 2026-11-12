@@ -67,7 +67,7 @@ describe('landmarks exist on the auth routes', () => {
   });
 
   it('highlights are a real list', () => {
-    expect(auth).toMatch(/<ul className="space-y-3"/);
+    expect(auth).toMatch(/<ul className="mt-8 space-y-5"/);
     expect(auth).toMatch(/<li key=\{key\}/);
   });
 });

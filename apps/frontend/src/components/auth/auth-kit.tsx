@@ -11,7 +11,8 @@
 
 import * as React from 'react';
 import { AnimatePresence, m } from 'framer-motion';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { Input, type InputProps } from '@/components/ui/input';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { distance, ease, transition } from '@/lib/motion';
@@ -306,3 +307,67 @@ export function AuthSteps({ step, children }: { step: React.Key; children: React
     </AnimatePresence>
   );
 }
+
+/* ── Sign in / create account switch ─────────────────────────────────────── */
+
+/**
+ * The two-segment switch at the top of the sign-in and create-account screens. They are separate
+ * routes, so these are links (with `aria-current`), not tabs that hide panels.
+ */
+export function AuthModeSwitch({
+  active,
+  signInLabel,
+  createLabel,
+  query,
+}: {
+  active: 'signin' | 'create';
+  signInLabel: string;
+  createLabel: string;
+  /** Carried across so a returnUrl survives switching modes. */
+  query?: string;
+}) {
+  const item = (mode: 'signin' | 'create', href: string, label: string) => (
+    <Link
+      href={query ? `${href}?${query}` : href}
+      aria-current={active === mode ? 'page' : undefined}
+      className={cn(
+        'flex min-h-10 items-center justify-center rounded-[10px] text-sm transition-colors',
+        active === mode
+          ? 'bg-foreground/10 font-semibold text-foreground shadow-xs'
+          : 'font-medium text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {label}
+    </Link>
+  );
+  return (
+    <nav aria-label={`${signInLabel} / ${createLabel}`} className="mb-7 grid grid-cols-2 rounded-[14px] border border-border/70 bg-card p-1">
+      {item('signin', '/login', signInLabel)}
+      {item('create', '/register', createLabel)}
+    </nav>
+  );
+}
+
+/* ── Password with reveal ────────────────────────────────────────────────── */
+
+export const AuthPasswordInput = React.forwardRef<
+  HTMLInputElement,
+  InputProps & { showLabel: string; hideLabel: string }
+>(({ className, showLabel, hideLabel, ...props }, ref) => {
+  const [visible, setVisible] = React.useState(false);
+  return (
+    <div className="relative">
+      <AuthInput ref={ref} {...props} type={visible ? 'text' : 'password'} className={cn('pe-12', className)} />
+      <button
+        type="button"
+        onClick={() => setVisible((value) => !value)}
+        aria-label={visible ? hideLabel : showLabel}
+        aria-pressed={visible}
+        className="absolute end-1 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+      </button>
+    </div>
+  );
+});
+AuthPasswordInput.displayName = 'AuthPasswordInput';

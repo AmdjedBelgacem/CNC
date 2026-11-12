@@ -62,7 +62,7 @@ export default async function HomePage() {
     fetchPublishedSponsors(tenantSlug),
     // The homepage sells the store too: its featured-products section is the same live island
     // the products page uses, fed from the same catalogue.
-    fetchCatalogProducts(tenantSlug, { limit: 24 }, locale),
+    fetchCatalogProducts(tenantSlug, { limit: 100 }, locale),
   ]);
   const courseTotal =
     academies.reduce((sum, a) => sum + (a.courseCount || 0), 0) || courses.length;
@@ -74,6 +74,7 @@ export default async function HomePage() {
       academyCount: academies.length,
       courseCount: courseTotal,
       sponsorCount: sponsors.length,
+      productCount: products.length,
       locale,
     }),
   );
