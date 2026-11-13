@@ -15,12 +15,13 @@ import { useSyncExternalStore } from 'react';
 
 const NAV_SHAPE_KEY = 'admin:navigation-shape';
 
+/** Only the number of children matters; their contents are not read. */
 interface NavShapeNode {
-  children?: NavShapeNode[] | null;
+  children?: readonly unknown[] | null;
 }
 
 /** One entry per rendered row: 0 for a top-level item, 1 for an item inside a group. */
-export function navShapeOf(tree: NavShapeNode[]): number[] {
+export function navShapeOf(tree: readonly NavShapeNode[]): number[] {
   const depths: number[] = [];
   for (const node of tree) {
     depths.push(0);
@@ -29,7 +30,7 @@ export function navShapeOf(tree: NavShapeNode[]): number[] {
   return depths;
 }
 
-export function rememberNavShape(tree: NavShapeNode[]): void {
+export function rememberNavShape(tree: readonly NavShapeNode[]): void {
   try {
     window.localStorage.setItem(NAV_SHAPE_KEY, JSON.stringify(navShapeOf(tree)));
   } catch {

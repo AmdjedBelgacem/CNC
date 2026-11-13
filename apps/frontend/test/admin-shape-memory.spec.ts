@@ -5,7 +5,7 @@ const FALLBACK = [0, 0, 0];
 
 describe('navigation skeleton shape', () => {
   it('records one row per item, group children one level in', () => {
-    const tree = [
+    const tree: { label: string; children?: { label: string }[] }[] = [
       { label: 'Academy' },
       { label: 'More', children: [{ label: 'Groups' }, { label: 'About' }] },
       { label: 'Sponsors' },
