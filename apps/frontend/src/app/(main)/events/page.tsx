@@ -97,7 +97,10 @@ export default async function EventsPage() {
             />
           ),
           'events-browse': (
-            <EventsBrowse header={liveIslandHeader(layout, 'events-browse', locale)} />
+            <EventsBrowse
+              header={liveIslandHeader(layout, 'events-browse', locale)}
+              initialEvents={upcoming}
+            />
           ),
         }}
       />

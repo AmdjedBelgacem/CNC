@@ -489,7 +489,11 @@ export async function EventsSchedule({
 }
 
 /** Full events board island — the `events-browse` island. */
-export async function EventsBrowse({ header, bodyOnly }: IslandChrome) {
+export async function EventsBrowse({
+  header,
+  bodyOnly,
+  initialEvents,
+}: IslandChrome & { initialEvents?: CatalogEvent[] }) {
   const t = await getTranslations('pages.events');
   return (
     <section
@@ -514,7 +518,7 @@ export async function EventsBrowse({ header, bodyOnly }: IslandChrome) {
                 </p>
               </Reveal>
             )}
-        <EventsBoard />
+        <EventsBoard initialEvents={initialEvents} />
       </div>
     </section>
   );

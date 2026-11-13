@@ -13,7 +13,7 @@ import {
 } from '@/hooks/use-notification-preferences';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
+import { NotificationPreferencesSkeleton } from '@/components/skeletons/public-page-replicas';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { Crossfade } from '@/components/ui/motion';
@@ -107,12 +107,7 @@ export default function NotificationPreferencesPage() {
   };
 
   if (!hydrated) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
+    return <NotificationPreferencesSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -143,12 +138,7 @@ export default function NotificationPreferencesPage() {
   }
 
   if (isLoading || !draft) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
+    return <NotificationPreferencesSkeleton />;
   }
 
   const renderChannel = (

@@ -1,13 +1,11 @@
 /**
- * Route-level loading state for `/(main)/(academy)/settings/preferences/notifications`.
+ * Route-level loading state for `/settings/preferences/notifications`.
  *
- * Next.js shows this the instant navigation starts and keeps it on screen until
- * the segment's server render resolves. Without it the browser paints nothing —
- * which on a slow connection reads as a blank page, not as "loading".
- *
- * The composition mirrors the real layout so nothing reflows on arrival.
+ * Rendered inside the settings shell. A replica of the page body (header, two channels of four
+ * switches, save bar), which is taller than the generic settings form skeleton.
  */
-import { SettingsSkeleton } from '@/components/skeletons/route-skeletons';
+import { NotificationPreferencesSkeleton } from '@/components/skeletons/public-page-replicas';
+
 export default function Loading() {
-  return <SettingsSkeleton fields={4} embedded />;
+  return <NotificationPreferencesSkeleton />;
 }

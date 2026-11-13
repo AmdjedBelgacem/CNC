@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CalendarDays, Clock, MapPin, Monitor, Search, Users } from 'lucide-react';
@@ -53,20 +53,42 @@ function seatLabel(event: CatalogEvent) {
   return `${remaining} seats left`;
 }
 
+const noSubscription = () => () => {};
+
+/**
+ * True in the browser, false in the server render and the hydrating render. Dates are formatted
+ * in the viewer's time zone, which the server does not know, so server-rendered cards hold a
+ * no-break space in their date slots until hydration (same line box, no mismatch).
+ */
+function useIsClient() {
+  return useSyncExternalStore(noSubscription, () => true, () => false);
+}
+
 /**
  * Live schedule board — client island for type/upcoming/search filters.
  * Rendered inside the builder-driven events page (events-browse island).
+ *
+ * `initialEvents` is the server's upcoming list (the board's default view: all types, upcoming
+ * only). With it the board renders its results in the server HTML instead of six placeholder
+ * cards that collapse once the browser fetch returns, which moved everything below the board.
  */
-export function EventsBoard({ locale = 'en' }: { locale?: string }) {
+export function EventsBoard({
+  locale = 'en',
+  initialEvents,
+}: {
+  locale?: string;
+  initialEvents?: CatalogEvent[];
+}) {
   const t = useTranslations('events');
   const tc = useTranslations('common');
   const tu = useTranslations('ui.events');
-  const [events, setEvents] = useState<CatalogEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<CatalogEvent[]>(initialEvents ?? []);
+  const [loading, setLoading] = useState(!initialEvents);
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState<TypeFilter>('All');
   const [upcoming, setUpcoming] = useState(true);
   const [search, setSearch] = useState('');
+  const isClient = useIsClient();
 
   const load = () => {
     setLoading(true);
@@ -95,7 +117,13 @@ export function EventsBoard({ locale = 'en' }: { locale?: string }) {
       .finally(() => setLoading(false));
   };
 
+  // The filter combination the server already answered; it is skipped once, then cleared so a
+  // later return to the default view fetches again. Keyed (not a boolean) so a Strict Mode
+  // double effect does not fetch on the first pass either.
+  const seededView = useRef<string | null>(initialEvents ? 'All-true' : null);
   useEffect(() => {
+    if (seededView.current === `${type}-${upcoming}`) return;
+    seededView.current = null;
     load();
   }, [type, upcoming]);
 
@@ -258,10 +286,10 @@ export function EventsBoard({ locale = 'en' }: { locale?: string }) {
                           className="absolute bottom-3 end-3 flex min-w-12 flex-col items-center rounded-lg bg-card/95 px-2 py-1 leading-none shadow-sm ring-1 ring-border/50 backdrop-blur"
                         >
                           <span className="text-[10px] font-medium text-primary">
-                            {start.toLocaleDateString(locale, { month: 'short' })}
+                            {isClient ? start.toLocaleDateString(locale, { month: 'short' }) : '\u00a0'}
                           </span>
                           <span className="mt-0.5 font-display text-lg font-medium tabular-nums text-foreground">
-                            {start.toLocaleDateString(locale, { day: 'numeric' })}
+                            {isClient ? start.toLocaleDateString(locale, { day: 'numeric' }) : '\u00a0'}
                           </span>
                         </div>
                       )}
@@ -274,8 +302,9 @@ export function EventsBoard({ locale = 'en' }: { locale?: string }) {
                         <li className="flex items-center gap-2">
                           <Clock className="size-3.5 shrink-0" />
                           <span className="truncate">
-                            {formatDay(event.startDate, locale)} ·{' '}
-                            {formatTime(event.startDate, locale)}
+                            {isClient
+                              ? `${formatDay(event.startDate, locale)} · ${formatTime(event.startDate, locale)}`
+                              : '\u00a0'}
                           </span>
                         </li>
                         <li className="flex items-center gap-2">

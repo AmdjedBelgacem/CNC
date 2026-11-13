@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, m } from 'framer-motion';
 import { Crossfade, Reveal } from '@/components/ui/motion';
@@ -31,7 +31,11 @@ import {
 } from '@/hooks/use-notifications';
 import { useNotificationSocket } from '@/components/providers/notification-socket-provider';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  NotificationRowsLoading,
+  NotificationsPageSkeleton,
+} from '@/components/skeletons/public-page-replicas';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
@@ -135,6 +139,17 @@ export default function NotificationsPage() {
   );
   const groups = useMemo(() => groupNotifications(visible, locale), [locale, visible]);
 
+  // Record the inbox's shape (rows, days, rows with a body line, a "Show more" button) so the
+  // next visit's skeleton draws the same height. Only the default "All" view is recorded.
+  const settled = enabled && !isLoading && !isError && filter === 'all';
+  useEffect(() => {
+    if (!settled) return;
+    rememberListCount('public-notifications', visible.length);
+    rememberListCount('public-notification-days', groups.length);
+    rememberListCount('public-notification-bodies', visible.filter((item) => !!item.body).length);
+    rememberListCount('public-notifications-more', hasMore ? 1 : 0);
+  }, [settled, visible, groups, hasMore]);
+
   const onMarkAll = async () => {
     try {
       await markAllRead.mutateAsync();
@@ -154,12 +169,7 @@ export default function NotificationsPage() {
   };
 
   if (!hydrated) {
-    return (
-      <div className="mx-auto w-full max-w-3xl space-y-3 px-4 py-10 sm:px-6 lg:py-14">
-        <Skeleton className="h-10 w-56" />
-        {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full rounded-xl" />)}
-      </div>
-    );
+    return <NotificationsPageSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -237,8 +247,8 @@ export default function NotificationsPage() {
 
       <Crossfade value={`${filter}-${isLoading ? 'l' : isError ? 'e' : visible.length === 0 ? '0' : 'list'}`} axis="none">
       {isLoading ? (
-        <div className="space-y-2" role="status" aria-busy>
-          {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full rounded-xl" />)}
+        <div role="status" aria-busy="true">
+          <NotificationRowsLoading />
         </div>
       ) : isError ? (
         <ErrorState title={t('loadFailed')} description={error instanceof Error ? error.message : undefined} onRetry={() => void refetch()} />

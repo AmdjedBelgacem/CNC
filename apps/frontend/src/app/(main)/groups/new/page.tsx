@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { toast } from '@/components/ui/toast';
 import { GroupForm, GroupFormShell } from '@/components/groups/group-form';
+import { NewGroupPageSkeleton } from '@/components/skeletons/public-page-replicas';
 import { apiErrorMessage, groupsApi, type CreateGroupInput } from '@/lib/groups-api';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -35,7 +36,7 @@ export default function NewGroupPage() {
     onError: (err) => setError(apiErrorMessage(err, t('saveFailed'))),
   });
 
-  if (!hydrated) return null;
+  if (!hydrated) return <NewGroupPageSkeleton />;
   if (!isAuthenticated) return null;
 
   return (

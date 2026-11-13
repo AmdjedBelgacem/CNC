@@ -4,7 +4,8 @@ import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { RepairShopsLoading } from '@/components/skeletons/public-page-replicas';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { MapPin, Phone, Globe, Search, Star, Wrench } from 'lucide-react';
 import { AnimatePresence, m } from 'framer-motion';
 import { Input } from '@/components/ui/input';
@@ -60,7 +61,12 @@ export default function RepairPage() {
     if (search) params.set('search', search);
     fetch(`/api/proxy/repair?${params}`, { credentials: 'include' })
       .then((r) => r.json())
-      .then((res) => setShops(res.data || []))
+      .then((res) => {
+        const rows: RepairShop[] = res.data || [];
+        setShops(rows);
+        // The skeleton draws the unfiltered list, so only that one is recorded.
+        if (category === 'All' && !search) rememberListCount('public-repair', rows.length);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [category, search]);
@@ -121,14 +127,7 @@ export default function RepairPage() {
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="max-h-[70vh] space-y-3 overflow-y-auto pe-2 lg:col-span-2">
           {loading ? (
-            [1, 2, 3].map((i) => (
-              <Card key={i} className="rounded-xl border-border/70 shadow-xs">
-                <CardContent className="space-y-2 p-5">
-                  <Skeleton className="h-5 w-2/3" /> <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-4 w-3/4" />
-                </CardContent>
-              </Card>
-            ))
+            <RepairShopsLoading />
           ) : shops.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card/60 py-14 text-center text-muted-foreground">
               <span className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-muted">

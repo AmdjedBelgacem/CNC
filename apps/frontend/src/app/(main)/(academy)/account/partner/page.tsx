@@ -2,15 +2,25 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { AccountPartnerPageSkeleton } from '@/components/skeletons/public-page-replicas';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
 export default function AccountPartnerPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     api
       .get<any[]>('/partners/me')
-      .then((d) => setItems(Array.isArray(d) ? d : []))
-      .catch(() => {});
+      .then((d) => {
+        const list = Array.isArray(d) ? d : [];
+        setItems(list);
+        rememberListCount('public-account-partner', list.length);
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
+  // Until the list arrives, draw its remembered shape rather than the empty box.
+  if (!loaded) return <AccountPartnerPageSkeleton />;
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-6 py-12 md:py-16">
       <h1 className="font-display text-3xl font-medium tracking-[-0.02em] text-foreground sm:text-4xl">

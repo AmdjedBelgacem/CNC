@@ -90,9 +90,14 @@ describe('settings loading states', () => {
     expect(embedded).toMatch(/if \(embedded\)[\s\S]*<SkeletonRegion/);
     expect(embedded).toMatch(/<LoadingShell/);
 
+    // Pages whose body differs from the generic settings form render their own replica.
+    const replicas: Record<string, string> = {
+      'preferences/notifications/loading.tsx': 'NotificationPreferencesSkeleton',
+    };
     for (const file of loadings) {
       const skeleton = renderedSkeleton(file);
-      expect(skeleton, file).toBe('SettingsSkeleton');
+      const own = Object.entries(replicas).find(([suffix]) => file.endsWith(suffix))?.[1];
+      expect(skeleton, file).toBe(own ?? 'SettingsSkeleton');
     }
   });
 });

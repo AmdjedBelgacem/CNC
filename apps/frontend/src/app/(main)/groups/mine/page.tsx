@@ -7,7 +7,8 @@ import { useTranslations } from 'next-intl';
 import { Crown, Eye, UserMinus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { MyGroupsLoading, MyGroupsPageSkeleton } from '@/components/skeletons/public-page-replicas';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { GroupCard } from '@/components/groups/group-card';
@@ -52,7 +53,13 @@ export default function MyGroupsPage() {
     },
   });
 
-  if (!hydrated || !isAuthenticated) return null;
+  useEffect(() => {
+    if (data) rememberListCount('public-my-groups', data.data?.length ?? 0);
+  }, [data]);
+
+  // While the auth store hydrates the page has nothing to show yet: keep the route skeleton.
+  if (!hydrated) return <MyGroupsPageSkeleton />;
+  if (!isAuthenticated) return null;
 
   const groups: MyGroup[] = data?.data ?? [];
 
@@ -75,13 +82,7 @@ export default function MyGroupsPage() {
         </div>
       </Reveal>
 
-      {isLoading && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 rounded-xl" />
-          ))}
-        </div>
-      )}
+      {isLoading && <MyGroupsLoading />}
 
       {error && <ErrorState title={t('loadFailed')} onRetry={() => refetch()} />}
 

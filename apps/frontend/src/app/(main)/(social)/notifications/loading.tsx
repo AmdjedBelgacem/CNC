@@ -1,13 +1,11 @@
 /**
- * Route-level loading state for `/(main)/(social)/notifications`.
+ * Route-level loading state for `/notifications`.
  *
- * Next.js shows this the instant navigation starts and keeps it on screen until
- * the segment's server render resolves. Without it the browser paints nothing —
- * which on a slow connection reads as a blank page, not as "loading".
- *
- * The composition mirrors the real layout so nothing reflows on arrival.
+ * A replica of the inbox (header, tabs, the rows grouped by day as the page last showed them),
+ * so the page keeps its height when the notifications arrive.
  */
-import { NotificationListSkeleton } from '@/components/skeletons/route-skeletons';
+import { NotificationsPageSkeleton } from '@/components/skeletons/public-page-replicas';
+
 export default function Loading() {
-  return <NotificationListSkeleton  />;
+  return <NotificationsPageSkeleton />;
 }

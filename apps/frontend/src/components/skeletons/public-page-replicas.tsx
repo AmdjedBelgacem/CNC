@@ -1273,3 +1273,525 @@ export function PortfolioLoading() {
     </SkeletonRegion>
   );
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * Text-matched lines
+ *
+ * The replicas below size their text runs with the page's own type classes instead of a
+ * measured pixel height: each line holds a no-break space, so the browser gives it exactly the
+ * line box the real copy gets (font, size, leading and all), and a bar is laid over it.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+const NBSP = ' ';
+
+/** `lines` line boxes of the type set by `className` (put the copy's own text classes there). */
+function TextLines({
+  className,
+  lines = 1,
+  width = 'w-1/2',
+  last = 'w-3/5',
+  bar = 'h-3',
+  center = false,
+}: {
+  className?: string;
+  lines?: number;
+  width?: string;
+  last?: string;
+  bar?: string;
+  center?: boolean;
+}) {
+  return (
+    <div className={className}>
+      <Repeat count={lines}>
+        {(i) => (
+          <div key={i} className="relative">
+            {NBSP}
+            <div className={cn('absolute inset-0 flex items-center', center && 'justify-center')}>
+              <Skeleton className={cn(bar, 'max-w-full', i === lines - 1 && lines > 1 ? last : width)} />
+            </div>
+          </div>
+        )}
+      </Repeat>
+    </div>
+  );
+}
+
+/** An inline run of text (inside a legend, a tab, a button): a no-break space under a bar. */
+function InlineText({ width, bar = 'h-3' }: { width: number; bar?: string }) {
+  return (
+    <span className="relative inline-block align-baseline" style={{ width }}>
+      {NBSP}
+      <span className={cn('absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-md bg-muted/80', bar)} />
+    </span>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * /account/partner
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `app/(main)/(academy)/account/partner/page.tsx`: heading, then the dashed "No applications
+ * yet." box at zero or one card per application. The trailing empty div stands in for the
+ * page's always-rendered (and at zero, empty) list, which still takes its `space-y-6` gap.
+ */
+export function AccountPartnerPageSkeleton() {
+  const items = useRememberedListCount('public-account-partner', 0, 20);
+  return (
+    <SkeletonRegion>
+      <div className="mx-auto max-w-3xl space-y-6 px-6 py-12 md:py-16">
+        <TextLines
+          className="font-display text-3xl font-medium tracking-[-0.02em] sm:text-4xl"
+          bar="h-7"
+          width="w-80"
+        />
+        {items === 0 ? (
+          <div className="rounded-xl border border-dashed border-border px-6 py-10">
+            <TextLines width="w-40" center />
+          </div>
+        ) : null}
+        <div className="space-y-3">
+          <Repeat count={items}>
+            {(i) => (
+              <div key={i} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <TextLines className="flex-1 font-display text-lg font-medium" bar="h-4" width={W[i % W.length]} />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+                <TextLines className="mt-1 text-xs" bar="h-2.5" width="w-44" />
+              </div>
+            )}
+          </Repeat>
+        </div>
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * /groups/mine and /groups/new
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * The body of `/groups/mine` under its header: the `EmptyState` at zero, else one `GroupCard`
+ * with its role badge and View / Leave buttons per group. Also the page's own loading branch.
+ */
+export function MyGroupsLoading() {
+  const groups = useRememberedListCount('public-my-groups', 0, 12);
+  if (groups === 0) return <EmptyStateSkeleton descriptionLines={1} action="md" />;
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+      <Repeat count={groups}>
+        {(i) => (
+          <div key={i} className="flex flex-col gap-3">
+            <div className="flex flex-1 flex-col">
+              <GroupCardSkeleton index={i} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="me-auto h-[22px] w-16 rounded-full" />
+              <Skeleton className="h-9 w-[74px] rounded-lg" />
+              <Skeleton className="h-9 w-[78px] rounded-lg" />
+            </div>
+          </div>
+        )}
+      </Repeat>
+    </div>
+  );
+}
+
+/** `app/(main)/groups/mine/page.tsx`: title and hint beside two buttons, then the groups. */
+export function MyGroupsPageSkeleton() {
+  return (
+    <SkeletonRegion>
+      <div className="container mx-auto px-4 py-10 md:py-14">
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <TextLines
+              className="font-display text-3xl font-medium tracking-[-0.022em] md:text-4xl"
+              bar="h-7"
+              width="w-48"
+            />
+            <TextLines className="mt-2 text-sm leading-relaxed" width="w-60" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32 rounded-lg" />
+            <Skeleton className="h-10 w-32 rounded-lg bg-primary/25" />
+          </div>
+        </div>
+        <MyGroupsLoading />
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+/** A `Label` + `Input` pair of `GroupForm`, with `hint` lines of `text-xs` help below. */
+function GroupFieldSkeleton({ span = false, hint = 0, label = 'w-24', textarea = false }: {
+  span?: boolean;
+  hint?: number;
+  label?: string;
+  textarea?: boolean;
+}) {
+  return (
+    <div className={cn('space-y-2', span && 'md:col-span-2')}>
+      {/* The label is inline in the real field, so it sits on the parent's line box. */}
+      <div className="relative">
+        <span className="text-sm font-medium leading-none">{NBSP}</span>
+        <div className="absolute inset-0 flex items-center">
+          <Skeleton className={cn('h-3', label)} />
+        </div>
+      </div>
+      {/* `Textarea rows={4}`: four 20px lines + py-2 + border. */}
+      <Skeleton className={cn('w-full rounded-lg', textarea ? 'h-[98px]' : 'h-10')} />
+      {hint > 0 ? <TextLines className="text-xs" lines={hint} bar="h-2.5" width={hint > 1 ? 'w-full' : 'w-2/3'} /> : null}
+    </div>
+  );
+}
+
+/** `app/(main)/groups/new/page.tsx`: `GroupFormShell` around the hint, `GroupForm` and back link. */
+export function NewGroupPageSkeleton() {
+  return (
+    <SkeletonRegion>
+      <div className="mx-auto max-w-3xl px-4 py-10 md:py-14">
+        <TextLines
+          className="mb-8 font-display text-3xl font-medium tracking-[-0.022em] md:text-4xl"
+          bar="h-7"
+          width="w-56"
+        />
+        <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs sm:p-8">
+          <TextLines className="mb-6 text-sm" width="w-4/5" />
+          <div className="space-y-6">
+            <div className="grid gap-5 md:grid-cols-2">
+              <GroupFieldSkeleton span hint={1} label="w-12" />
+              <GroupFieldSkeleton span textarea label="w-20" />
+              <GroupFieldSkeleton label="w-10" />
+              <GroupFieldSkeleton label="w-24" />
+              <GroupFieldSkeleton span label="w-16" />
+              <GroupFieldSkeleton label="w-36" />
+              <GroupFieldSkeleton hint={1} label="w-28" />
+              {/* The academy hint wraps to two lines in a half-width column. */}
+              <GroupFieldSkeleton hint={2} label="w-16" />
+              <GroupFieldSkeleton label="w-28" />
+              <fieldset className="space-y-2 rounded-xl border border-border/70 bg-muted/30 p-4 md:col-span-2">
+                <legend className="px-1 text-sm font-medium">
+                  <InlineText width={176} />
+                </legend>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <GroupFieldSkeleton label="w-16" />
+                  <GroupFieldSkeleton label="w-20" />
+                </div>
+                <TextLines className="text-xs" bar="h-2.5" width="w-4/5" />
+              </fieldset>
+            </div>
+            <div className="flex flex-wrap gap-3 border-t border-border/60 pt-6">
+              <Skeleton className="h-10 w-32 rounded-lg bg-primary/25" />
+              <Skeleton className="h-10 w-24 rounded-lg" />
+            </div>
+          </div>
+          <TextLines className="mt-6 text-sm" width="w-28" />
+        </div>
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * /notifications
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * The inbox under the tabs: the `EmptyState` at zero, else the notification rows grouped by
+ * day as the page last showed them (rows, days, rows with a body line, a "Show more" button).
+ */
+export function NotificationRowsLoading() {
+  const rows = useRememberedListCount('public-notifications', 16, 40);
+  const days = Math.min(Math.max(1, useRememberedListCount('public-notification-days', 2, 40)), Math.max(1, rows));
+  const bodies = useRememberedListCount('public-notification-bodies', rows, 40);
+  const more = useRememberedListCount('public-notifications-more', 0, 1) > 0;
+  if (rows === 0) return <EmptyStateSkeleton descriptionLines={2} />;
+  const perDay = Array.from({ length: days }, (_, d) => Math.floor(rows / days) + (d < rows % days ? 1 : 0));
+  let offset = 0;
+  return (
+    <div className="space-y-8" aria-hidden="true">
+      {perDay.map((count, d) => {
+        const start = offset;
+        offset += count;
+        return (
+          <div key={d}>
+            <TextLines className="mb-3 px-1 text-xs font-medium" bar="h-2.5" width="w-20" />
+            <div className="space-y-2">
+              <Repeat count={count}>
+                {(i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3.5 shadow-xs sm:p-4">
+                    <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                      <Skeleton className="size-10 shrink-0 rounded-full" />
+                      <div className="min-w-0 flex-1">
+                        <TextLines className="text-sm" width={W[(start + i) % W.length]} />
+                        {start + i < bodies ? (
+                          <TextLines className="mt-0.5 text-sm leading-relaxed" width="w-4/5" bar="h-2.5" />
+                        ) : null}
+                        <TextLines className="mt-1.5 text-xs" width="w-16" bar="h-2" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Repeat>
+            </div>
+          </div>
+        );
+      })}
+      {more ? (
+        <div className="flex justify-center pt-2">
+          <Skeleton className="h-10 w-28 rounded-lg" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** `app/(main)/(social)/notifications/page.tsx`: header, All / Unread tabs, the inbox. */
+export function NotificationsPageSkeleton() {
+  return (
+    <SkeletonRegion>
+      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <TextLines
+              className="font-display text-3xl font-medium tracking-[-0.022em] md:text-4xl"
+              bar="h-7"
+              width="w-56"
+            />
+            <TextLines className="mt-2 text-sm" width="w-52" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+        {/* `Tabs` is a block around an inline-flex list, so the list sits on a line box. */}
+        <div>
+          <div className="mb-6 inline-flex items-center gap-1 rounded-xl border border-border/70 bg-muted/70 p-1">
+            <span className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-[13px] font-medium">
+              <InlineText width={18} />
+            </span>
+            <span className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-[13px] font-medium">
+              <InlineText width={44} />
+            </span>
+          </div>
+        </div>
+        <NotificationRowsLoading />
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * /repair
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/** The shop list column of /repair: its dashed empty box at zero, else that many shop cards. */
+export function RepairShopsLoading() {
+  const shops = useRememberedListCount('public-repair', 3, 12);
+  if (shops === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-card/60 py-14 text-center" aria-hidden="true">
+        <Skeleton className="mx-auto mb-3 size-12 rounded-full" />
+        <TextLines className="font-display text-lg font-medium" bar="h-4" width="w-40" center />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      <Repeat count={shops}>
+        {(i) => (
+          <div key={i} className="rounded-xl border border-border/70 bg-card p-5 shadow-xs">
+            <TextLines className="font-display text-base font-medium" bar="h-4" width={W[i % W.length]} />
+            <Skeleton className="mt-1.5 h-5 w-24 rounded-full" />
+            <TextLines className="mt-3 text-xs" bar="h-2.5" width="w-32" />
+            <TextLines className="mt-2 text-xs" bar="h-2.5" width="w-24" />
+          </div>
+        )}
+      </Repeat>
+    </div>
+  );
+}
+
+/** `app/(main)/(social)/repair/page.tsx`: header, category chips + search, list beside the map. */
+export function RepairPageSkeleton() {
+  return (
+    <SkeletonRegion>
+      <div className="container mx-auto px-4 py-10 md:py-14">
+        <div className="mb-8 max-w-2xl">
+          <TextLines
+            className="font-display text-3xl font-medium tracking-[-0.022em] md:text-4xl"
+            bar="h-7"
+            width="w-96"
+          />
+          <TextLines className="mt-2 leading-relaxed" width="w-64" />
+        </div>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-wrap gap-1.5">
+            {[20, 76, 66, 80, 72, 146].map((w) => (
+              <div key={w} className="rounded-full border border-border/70 bg-card px-3.5 py-1.5 text-sm font-medium">
+                <InlineText width={w} />
+              </div>
+            ))}
+          </div>
+          <Skeleton className="h-10 w-full rounded-lg sm:ms-auto sm:w-64" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-5">
+          <div className="max-h-[70vh] overflow-hidden pe-2 lg:col-span-2">
+            <RepairShopsLoading />
+          </div>
+          <div className="lg:col-span-3">
+            <Skeleton className="h-[400px] w-full rounded-2xl lg:h-[70vh]" />
+          </div>
+        </div>
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * /sponsors
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/** The sponsor section body: the dashed empty box at zero, else a tier heading over the cards. */
+export function SponsorsLoading() {
+  const sponsors = useRememberedListCount('public-sponsors', 0, 24);
+  if (sponsors === 0) {
+    return (
+      <div
+        className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center"
+        aria-hidden="true"
+      >
+        <TextLines className="w-full font-display text-xl font-medium" bar="h-5" width="w-40" center />
+        <TextLines className="mt-2 w-full text-sm" width="w-64" center />
+      </div>
+    );
+  }
+  return (
+    <div aria-hidden="true">
+      <div className="mb-8 flex items-center gap-3">
+        <Skeleton className="size-9 shrink-0 rounded-full" />
+        <TextLines className="flex-1 font-display text-2xl font-medium md:text-3xl" bar="h-6" width="w-60" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Repeat count={sponsors}>
+          {(i) => (
+            <div key={i} className="rounded-2xl border border-border/70 bg-card p-6 shadow-xs">
+              <div className="mb-5 flex items-start justify-between">
+                <Skeleton className="size-14 rounded-xl" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <TextLines className="font-display text-lg font-medium" bar="h-4" width={W[i % W.length]} />
+              <TextLines className="mt-1.5 text-sm leading-relaxed" lines={2} />
+              <TextLines className="mt-4 text-sm font-medium" width="w-28" />
+            </div>
+          )}
+        </Repeat>
+      </div>
+    </div>
+  );
+}
+
+/** `app/(main)/sponsors/page.tsx`: centred hero with the partner button, then the sponsors. */
+export function SponsorsPageSkeleton() {
+  return (
+    <SkeletonRegion>
+      <section className="relative isolate overflow-hidden border-b border-border/70 py-20 text-center md:py-28">
+        <div className="container mx-auto px-4">
+          <TextLines
+            className="mx-auto mb-5 max-w-3xl font-display text-4xl font-medium tracking-[-0.025em] sm:text-5xl md:text-6xl"
+            bar="h-10 md:h-12"
+            width="w-80"
+            center
+          />
+          {/* The subtitle wraps to two lines at the 672px measure. */}
+          <TextLines
+            className="mx-auto mb-9 max-w-2xl text-lg leading-relaxed"
+            lines={2}
+            bar="h-3.5"
+            width="w-full"
+            last="w-1/2"
+            center
+          />
+          <div className="inline-flex h-11 w-48 items-center justify-center rounded-lg bg-primary/25 px-6 text-sm font-medium">
+            {NBSP}
+          </div>
+        </div>
+      </section>
+      <section className="py-20 md:py-24">
+        <div className="container mx-auto px-4">
+          <SponsorsLoading />
+        </div>
+      </section>
+    </SkeletonRegion>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * /settings/preferences/notifications
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/** One `SettingsSection` of four `SettingsRow`s with switches. */
+function PreferenceChannelSkeleton({ title }: { title: string }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+      <div className="flex items-start gap-3 px-6 pb-4 pt-5">
+        <Skeleton className="mt-0.5 size-8 shrink-0 rounded-lg" />
+        <TextLines
+          className="min-w-0 flex-1 font-display text-lg font-medium leading-snug tracking-[-0.012em]"
+          bar="h-4"
+          width={title}
+        />
+      </div>
+      <div className="divide-y divide-border/60 border-t border-border/60">
+        <Repeat count={4}>
+          {(i) => (
+            <div key={i} className="flex items-center justify-between gap-4 px-6 py-4">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Skeleton className="size-4 shrink-0 rounded" shimmer={false} />
+                <div className="min-w-0 flex-1">
+                  <TextLines className="text-sm font-medium" width={['w-16', 'w-20', 'w-24', 'w-20'][i]} />
+                  <TextLines className="text-xs leading-relaxed" bar="h-2.5" width={['w-60', 'w-72', 'w-64', 'w-56'][i]} />
+                </div>
+              </div>
+              <Skeleton className="h-6 w-11 shrink-0 rounded-full" />
+            </div>
+          )}
+        </Repeat>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * `settings/preferences/notifications/page.tsx` inside the settings shell: header, the email
+ * and in-app channels (four categories each) and the save bar. Used by the route's loading.tsx
+ * and by the page while the auth store hydrates and the preferences load.
+ */
+export function NotificationPreferencesSkeleton() {
+  return (
+    <SkeletonRegion>
+      <div className="space-y-6">
+        <div className="flex items-start gap-4">
+          <Skeleton className="mt-0.5 size-10 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <TextLines
+              className="font-display text-2xl font-medium tracking-[-0.02em] sm:text-[1.75rem]"
+              bar="h-6"
+              width="w-44"
+            />
+            <TextLines className="mt-1.5 max-w-2xl text-sm leading-relaxed" width="w-96" />
+          </div>
+          <Skeleton className="hidden h-9 w-24 shrink-0 rounded-full sm:block" />
+        </div>
+        <div className="space-y-6">
+          <PreferenceChannelSkeleton title="w-44" />
+          <PreferenceChannelSkeleton title="w-40" />
+        </div>
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-lg">
+          <TextLines className="flex-1 text-xs" bar="h-2.5" width="w-52" />
+          <Skeleton className="h-10 w-40 rounded-full bg-primary/25" />
+        </div>
+      </div>
+    </SkeletonRegion>
+  );
+}

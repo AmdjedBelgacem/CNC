@@ -1,8 +1,10 @@
 'use client';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { ExternalLink, Crown, Shield, Medal } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SponsorsLoading } from '@/components/skeletons/public-page-replicas';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getImageSrc } from '@/lib/images';
@@ -36,6 +38,9 @@ export default function SponsorsPage() {
     retry: 2,
   });
   const sponsors = data?.data || [];
+  useEffect(() => {
+    if (data) rememberListCount('public-sponsors', data.data?.length ?? 0);
+  }, [data]);
   const grouped: Record<string, Sponsor[]> = {};
   for (const s of sponsors) {
     const tier = s.tier || 'General';
@@ -73,13 +78,7 @@ export default function SponsorsPage() {
       </section>
       <section className="py-20 md:py-24">
         <div className="container mx-auto px-4">
-          {isLoading && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-44 rounded-2xl" />
-              ))}
-            </div>
-          )}
+          {isLoading && <SponsorsLoading />}
           {error && (
             <Reveal className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
               <p className="text-muted-foreground">{t('loadFailed')}</p>
