@@ -5234,6 +5234,8 @@
       "noAcademiesHint": "Published academies will appear here automatically."
     },
     "academiesDropdown": {
+      "browseAll": "Browse Academies",
+      "browseAllDesc": "See every published academy for this site",
       "empty": "No academies published yet."
     },
     "routeSkeletons": {

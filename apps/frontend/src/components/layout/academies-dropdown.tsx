@@ -25,8 +25,9 @@ interface AcademyOption {
 const OFFLINE_FALLBACK: AcademyOption[] = [
   {
     slug: '',
-    label: 'Browse Academies',
-    desc: 'See every published academy for this site',
+    // Translated at render; these are message keys, not visible text.
+    label: 'browseAll',
+    desc: 'browseAllDesc',
     color: '#0E7490',
   },
 ];
@@ -157,10 +158,10 @@ export function AcademiesDropdown() {
                         />
                         <div>
                           <p className="font-display text-[15px] font-medium leading-snug text-foreground">
-                            {a.label}
+                            {a === OFFLINE_FALLBACK[0] ? t('browseAll') : a.label}
                           </p>
                           <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                            {a.desc}
+                            {a === OFFLINE_FALLBACK[0] ? t('browseAllDesc') : a.desc}
                           </p>
                         </div>
                       </Link>
