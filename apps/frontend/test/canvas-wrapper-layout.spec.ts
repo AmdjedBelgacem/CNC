@@ -41,3 +41,13 @@ describe('flex and grid item properties on the canvas', () => {
     expect(canvasItemRules('tel-x', 'display: grid; gap: 8px', '')).toBe('');
   });
 });
+
+describe('tables on the canvas', () => {
+  it('marks every table part so its drag wrapper steps out of the layout', async () => {
+    const { TABLE_PARTS } = await import('../src/components/builder/blocks/element-block');
+    for (const tag of ['thead', 'tbody', 'tr', 'td', 'th']) expect(TABLE_PARTS.has(tag)).toBe(true);
+    expect(TABLE_PARTS.has('table')).toBe(false);
+    const css = readFileSync(join(__dirname, '..', 'src/styles/globals.css'), 'utf8');
+    expect(css).toMatch(/\[data-puck-component\]:has\(> \[data-builder-table-part\]\)\s*\{\s*display: contents !important;/);
+  });
+});

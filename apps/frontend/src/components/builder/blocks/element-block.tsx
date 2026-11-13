@@ -22,6 +22,9 @@ import { fillCountTokens, isZeroCountToken } from '@/lib/home-metrics';
  * (inline styles cannot express either). `sanitizeElementCss` has already removed anything
  * that could leave the rule or load from an arbitrary origin.
  */
+/** Elements whose parent must be their table structure, with nothing in between. */
+export const TABLE_PARTS = new Set(['thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption', 'colgroup', 'col']);
+
 const OUT_OF_FLOW = /(?:^|[;{\s])position\s*:\s*(?:absolute|fixed)\b/i;
 
 /** True when the element's own CSS (desktop or phone) positions it out of flow. */
@@ -91,11 +94,16 @@ export function ElementBlock({ props, puck }: BlockComponentProps<ElementProps>)
   // their section. Marked here, the wrapper is made static (globals.css) and the element anchors
   // to the same ancestor as on the public page.
   const outOfFlow = Boolean(puck.isEditing) && isOutOfFlow(css, cssMobile);
+  // A table only lays out when its rows and cells are direct children of each other. The drag
+  // wrapper between them broke that on the canvas (an AI-built comparison table stacked its
+  // cells in one column), so a table part's wrapper steps out of the layout (globals.css).
+  const tablePart = Boolean(puck.isEditing) && TABLE_PARTS.has(tag);
   const common = {
     className: cn(sheet.className, className),
     style,
     'aria-label': ariaLabel || undefined,
     ...(outOfFlow ? { 'data-builder-out-of-flow': '' } : {}),
+    ...(tablePart ? { 'data-builder-table-part': '' } : {}),
     ...(zeroCount
       ? puck.isEditing
         ? { 'data-count-zero-editing': '', title: 'Hidden on the live site while this count is 0' }
@@ -103,7 +111,8 @@ export function ElementBlock({ props, puck }: BlockComponentProps<ElementProps>)
       : {}),
   };
   // Out-of-flow elements are not flex or grid items; their wrapper is made static instead.
-  const canvasRules = puck.isEditing && !outOfFlow ? canvasItemRules(sheet.className, css, cssMobile) : '';
+  const canvasRules =
+    puck.isEditing && !outOfFlow && !tablePart ? canvasItemRules(sheet.className, css, cssMobile) : '';
   const allRules = sheet.rules + canvasRules;
   const styleTag = allRules ? <style dangerouslySetInnerHTML={{ __html: allRules }} /> : null;
 

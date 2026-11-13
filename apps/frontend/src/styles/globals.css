@@ -1166,6 +1166,11 @@
 [data-puck-component]:has(> [data-builder-out-of-flow]) {
   position: static !important;
 }
+/* Table rows and cells must be direct children of their table structure; the canvas drag
+   wrapper between them stops taking part in layout (see element-block.tsx). */
+[data-puck-component]:has(> [data-builder-table-part]) {
+  display: contents !important;
+}
 [data-count-zero-editing] {
   opacity: 0.45;
   outline: 1px dashed rgb(var(--c-border));
