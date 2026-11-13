@@ -834,7 +834,7 @@ export function AdminFinanceSkeleton() {
 }
 
 /** A `TrendChart` panel (analytics-charts.tsx): header and a 260px plot. */
-function TrendChartSkeleton() {
+function TrendChartSkeleton({ legend = true }: { legend?: boolean }) {
   return (
     <PanelSkeleton variant="card" titleWidth="w-40">
       <div className="flex h-[260px] items-end gap-2">
@@ -842,7 +842,52 @@ function TrendChartSkeleton() {
           <Skeleton key={i} className="flex-1 rounded-b-none rounded-t-md" style={{ height: `${h}%` }} shimmer={false} />
         ))}
       </div>
+      {/* The "compared with the previous period" legend under each series chart. */}
+      {legend && (
+        <div className="flex h-6 items-center gap-4">
+          <Skeleton className="h-2.5 w-24" />
+          <Skeleton className="h-2.5 w-32" />
+        </div>
+      )}
     </PanelSkeleton>
+  );
+}
+
+/** A "top courses" row: rank, title over a progress bar and a count line. */
+function RankedRowSkeleton({ i }: { i: number }) {
+  return (
+    <div className="flex h-[76px] items-center gap-3 border-b border-border/60 last:border-b-0">
+      <Skeleton className="size-8 shrink-0 rounded-full" shimmer={false} />
+      <div className="min-w-0 flex-1">
+        <div className="flex h-5 items-center">
+          <Skeleton className={cn('h-3', ['w-2/5', 'w-1/3', 'w-1/2', 'w-1/4', 'w-2/5'][i % 5])} />
+        </div>
+        <Skeleton className="mt-1.5 h-1 w-full rounded-full" shimmer={false} />
+        <div className="mt-1.5 flex h-4 items-center">
+          <Skeleton className="h-2.5 w-20" />
+        </div>
+      </div>
+      <Skeleton className="h-3 w-3 shrink-0" />
+    </div>
+  );
+}
+
+/** An insight card: icon, label, figure, explanation and a link. */
+function InsightCardSkeleton() {
+  return (
+    <div className="space-y-2 rounded-xl border border-border/70 bg-card p-4">
+      <Skeleton className="size-8 rounded-lg" shimmer={false} />
+      <div className="flex h-5 items-center">
+        <Skeleton className="h-3 w-3/5" />
+      </div>
+      <Skeleton className="h-7 w-10" />
+      <div className="flex h-4 items-center">
+        <Skeleton className="h-2.5 w-4/5" />
+      </div>
+      <div className="flex h-6 items-center">
+        <Skeleton className="h-2.5 w-20" />
+      </div>
+    </div>
   );
 }
 
@@ -850,19 +895,41 @@ function TrendChartSkeleton() {
 export function AnalyticsBodySkeleton() {
   return (
     <div className="space-y-6">
-      <KpiGridSkeleton count={6} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" sparkline />
+      <KpiGridSkeleton count={7} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" sparkline />
+      {/* Four series charts and the revenue chart share one two-column grid. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Repeat count={4}>{(i) => <TrendChartSkeleton key={i} />}</Repeat>
+        <TrendChartSkeleton legend={false} />
       </div>
-      <TrendChartSkeleton />
+      {/* Top courses by enrolment and by completion. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Repeat count={2}>
           {(i) => (
-            <PanelSkeleton key={i} variant="card" titleWidth="w-44" action="w-16">
-              <PanelListSkeleton rows={5} lead="square" trailing="w-12" rowClassName="py-3" />
+            <PanelSkeleton key={i} variant="card" titleWidth="w-44" action="w-6">
+              <Repeat count={5}>{(r) => <RankedRowSkeleton key={r} i={r + i} />}</Repeat>
             </PanelSkeleton>
           )}
         </Repeat>
+      </div>
+      {/* Top products by revenue, and the actionable insights grid. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <PanelSkeleton variant="card" titleWidth="w-48" action="w-6">
+          <PanelListSkeleton rows={5} lead="square" trailing="w-12" rowClassName="py-3" />
+        </PanelSkeleton>
+        <PanelSkeleton variant="card" titleWidth="w-36" action="w-16">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Repeat count={4}>{(i) => <InsightCardSkeleton key={i} />}</Repeat>
+          </div>
+        </PanelSkeleton>
+      </div>
+      {/* Recent activity timeline. */}
+      <PanelSkeleton variant="card" titleWidth="w-32" action="w-24">
+        <PanelListSkeleton rows={3} lead="circle" trailing="w-12" rowClassName="py-2.5" />
+      </PanelSkeleton>
+      {/* "Last updated" footer line. */}
+      <div className="flex h-[42px] items-center justify-between rounded-xl border border-dashed border-border/80 px-4">
+        <Skeleton className="h-2.5 w-48" />
+        <Skeleton className="h-2.5 w-24" />
       </div>
     </div>
   );
@@ -1069,19 +1136,67 @@ export function AdminSettingsSkeleton() {
               </>
             }
           >
-            <FormSectionSkeleton rows={['field', 'area', 'field']} />
+            {/* Identity: name, a three-line description with a hint, the custom domain with a hint. */}
+            <FormSectionSkeleton>
+              <div className="space-y-5">
+                <FieldSkeleton />
+                <SettingsHintedField control="h-[102px]" />
+                <SettingsHintedField />
+              </div>
+            </FormSectionSkeleton>
+            {/* Branding: logo and favicon URLs, three colour fields with their preset swatches, the
+                font field with its suggestion chips, and the live preview column from lg. */}
             <FormSectionSkeleton bodyClassName="p-0">
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <div className="space-y-6 p-4 sm:p-5">
-                  <FormSectionRows rows={['grid2', 'color', 'grid2']} />
+                  <FormSectionRows rows={['grid2']} />
+                  <div className="space-y-5">
+                    <Repeat count={3}>{(i) => <SettingsColorField key={i} />}</Repeat>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex h-[18px] items-center">
+                      <Skeleton className="h-2.5 w-16" />
+                    </div>
+                    <Skeleton className="h-10 w-full rounded-lg" />
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {['w-12', 'w-12', 'w-16', 'w-20', 'w-24', 'w-28', 'w-28'].map((w, i) => (
+                        <Skeleton key={i} className={cn('h-[26px] rounded-full', w)} />
+                      ))}
+                    </div>
+                    <div className="flex h-5 items-center">
+                      <Skeleton className="h-2.5 w-56 max-w-full" />
+                    </div>
+                  </div>
                 </div>
-                <div className="hidden border-s border-border/60 p-5 lg:block">
-                  <Skeleton className="h-48 w-full rounded-xl" />
+                <div className="border-t border-border/70 bg-muted/30 p-5 sm:p-6 lg:border-s lg:border-t-0">
+                  <div className="flex h-4 items-center">
+                    <Skeleton className="h-2.5 w-24" />
+                  </div>
+                  <Skeleton className="mt-3 h-48 w-full rounded-xl" />
                 </div>
               </div>
             </FormSectionSkeleton>
-            <FormSectionSkeleton rows={['grid2', 'field']} />
-            <FormSectionSkeleton rows={['switch', 'switch']} />
+            {/* Analytics: two measurement IDs side by side. */}
+            <FormSectionSkeleton rows={['grid2']} />
+            {/* Tools: two link cards. */}
+            <FormSectionSkeleton bodyClassName="p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Repeat count={2}>
+                  {(i) => (
+                    <div key={i} className="flex h-[74px] items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-4 shadow-xs">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Skeleton className="size-10 shrink-0 rounded-xl" shimmer={false} />
+                        <div className="space-y-2">
+                          <Skeleton className="h-3.5 w-24" />
+                          <Skeleton className="h-2.5 w-40" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-2.5 w-14" />
+                    </div>
+                  )}
+                </Repeat>
+              </div>
+            </FormSectionSkeleton>
           </FormLayoutSkeleton>
         </div>
       </div>
@@ -1108,6 +1223,41 @@ function FormSectionRows({ rows }: { rows: Array<'grid2' | 'color' | 'field'> })
         ),
       )}
     </>
+  );
+}
+
+/** A field with a one-line hint under the control, as the settings form renders it. */
+function SettingsHintedField({ control = 'h-10' }: { control?: string }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex h-[18px] items-center">
+        <Skeleton className="h-2.5 w-24" />
+      </div>
+      <Skeleton className={cn('w-full rounded-lg', control)} />
+      <div className="flex h-5 items-center">
+        <Skeleton className="h-2.5 w-64 max-w-full" />
+      </div>
+    </div>
+  );
+}
+
+/** `ColorField`: label, swatch beside the hex input, then the row of preset swatches. */
+function SettingsColorField() {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex h-[18px] items-center">
+        <Skeleton className="h-2.5 w-24" />
+      </div>
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-10 shrink-0 rounded-lg" />
+          <Skeleton className="h-10 flex-1 rounded-lg" />
+        </div>
+        <div className="flex gap-1.5">
+          <Repeat count={6}>{(i) => <Skeleton key={i} className="size-6 rounded-full" shimmer={false} />}</Repeat>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1146,6 +1296,44 @@ export function AiAssistantSettingsSkeleton() {
 }
 
 /** admin/theme/theme-editor.tsx */
+/** `TokenField`: label, swatch beside the hex input, then the contrast read-out line. */
+function ThemeTokenFieldSkeleton() {
+  return (
+    <div className="h-[100px]">
+      <div className="flex h-[18px] items-center">
+        <Skeleton className="h-2.5 w-24" />
+      </div>
+      <div className="mt-[7px] flex items-center gap-2">
+        <Skeleton className="h-[38px] flex-1 rounded-lg" />
+        <Skeleton className="size-[38px] shrink-0 rounded-lg" />
+      </div>
+      <div className="mt-[17px] flex h-5 items-center justify-between">
+        <Skeleton className="h-2.5 w-24" />
+        <Skeleton className="h-[15px] w-9 rounded-full" shimmer={false} />
+      </div>
+    </div>
+  );
+}
+
+/** `PreviewPanel`: header, the storefront mock, and the footer line naming mode and fonts. */
+function ThemePreviewSkeleton() {
+  return (
+    <div className="shrink-0 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <div className="flex h-[79px] flex-col justify-center gap-2 border-b border-border/70 px-5">
+        <Skeleton className="h-3.5 w-28" />
+        <Skeleton className="h-2.5 w-44" />
+      </div>
+      <div className="h-[689px] p-4">
+        <Skeleton className="h-full w-full rounded-xl" shimmer={false} />
+      </div>
+      <div className="flex h-[41px] items-center justify-between border-t border-border/70 px-5">
+        <Skeleton className="h-2.5 w-12" />
+        <Skeleton className="h-2.5 w-36" />
+      </div>
+    </div>
+  );
+}
+
 export function ThemeEditorSkeleton() {
   return (
     <SkeletonRegion>
@@ -1158,10 +1346,12 @@ export function ThemeEditorSkeleton() {
           <FormLayoutSkeleton
             className="max-w-[1600px] xl:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]"
             aside={
-              <>
+              // The rail is capped at the viewport like the real one, so the preview is cut at the
+              // same line instead of ending early.
+              <div className="flex flex-col gap-4 xl:max-h-[calc(100vh-8rem)] xl:overflow-hidden">
                 <SectionNavSkeleton items={4} className="max-w-[17rem]" />
-                <Skeleton className="h-[28rem] w-full rounded-xl border border-border/70" />
-              </>
+                <ThemePreviewSkeleton />
+              </div>
             }
           >
             {/* Typography: heading and body font pickers side by side, each a 2×2 grid of "Ag" tiles. */}
@@ -1188,7 +1378,35 @@ export function ThemeEditorSkeleton() {
               </div>
             </FormSectionSkeleton>
             <FormSectionSkeleton rows={['grid3', 'grid3']} />
-            <FormSectionSkeleton rows={['color', 'color', 'color', 'color']} />
+            {/* Colours: light/dark tabs, then brand, surfaces, text and borders groups of token fields. */}
+            <FormSectionSkeleton actions="w-[93px] rounded-full">
+              <div className="space-y-6">
+                {[3, 3, 3, 2].map((count, group) => (
+                  <div key={group}>
+                    <div className="mb-3 flex h-4 items-center gap-3">
+                      <Skeleton className="h-2.5 w-16" />
+                      <span className="h-px flex-1 bg-border/70" aria-hidden="true" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <Repeat count={count}>{(i) => <ThemeTokenFieldSkeleton key={i} />}</Repeat>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </FormSectionSkeleton>
+            {/* Contrast: four checked pairs, each with its ratio chip. */}
+            <FormSectionSkeleton>
+              <div className="divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70">
+                <Repeat count={4}>
+                  {(i) => (
+                    <div key={i} className="flex h-[39px] items-center justify-between gap-3 bg-card px-3.5">
+                      <Skeleton className={cn('h-2.5', ['w-40', 'w-36', 'w-44', 'w-32'][i])} />
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                    </div>
+                  )}
+                </Repeat>
+              </div>
+            </FormSectionSkeleton>
           </FormLayoutSkeleton>
         </div>
       </div>
@@ -1288,14 +1506,32 @@ export function NavigationEditorSkeleton() {
                 </Repeat>
               </div>
             </FormSectionSkeleton>
-            <div className="min-w-0 rounded-xl border border-border/70 bg-card p-4 shadow-xs">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="mt-4 h-12 w-full rounded-lg" />
-              <div className="mt-3 space-y-2">
-                <Skeleton className="h-3 w-2/3" />
-                <Skeleton className="h-3 w-1/2" />
+            {/* Live preview: titled header with the desktop/mobile toggle, then the rendered menu. */}
+            <section className="min-w-0 overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+              <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
+                <div className="min-w-0 flex-1 space-y-2 py-1">
+                  <Skeleton className="h-3.5 w-28" />
+                  <Skeleton className="h-2.5 w-44" />
+                  <Skeleton className="h-2.5 w-32" />
+                </div>
+                <Skeleton className="h-8 w-[86px] shrink-0 rounded-full" />
               </div>
-            </div>
+              <div className="p-5">
+                <div className="h-[193px] space-y-2 rounded-lg border border-border/60 p-3">
+                  <div className="flex flex-wrap gap-2">
+                    {['w-16', 'w-14', 'w-12', 'w-12'].map((w, i) => (
+                      <Skeleton key={i} className={cn('h-7 rounded-md', w)} />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {['w-16', 'w-14', 'w-20'].map((w, i) => (
+                      <Skeleton key={i} className={cn('h-7 rounded-md', w)} />
+                    ))}
+                  </div>
+                  <Skeleton className="h-[92px] w-full rounded-lg" shimmer={false} />
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>

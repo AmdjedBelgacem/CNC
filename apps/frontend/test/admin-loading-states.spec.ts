@@ -27,7 +27,13 @@ function pageDirs(dir: string): string[] {
 
 /** `/admin/products/[slug]/edit` → a concrete path the resolver would see. */
 function routeOf(dir: string): string {
-  const rel = relative(ADMIN_ROOT, dir).split('\\').join('/');
+  // Route groups such as `(dashboard)` are not part of the URL.
+  const rel = relative(ADMIN_ROOT, dir)
+    .split('\\')
+    .join('/')
+    .split('/')
+    .filter((part) => !/^\(.*\)$/.test(part))
+    .join('/');
   const path = rel ? `/admin/${rel}` : '/admin';
   return path.replace(/\[[^\]]+\]/g, 'sample-id');
 }
