@@ -1,5 +1,6 @@
 'use client';
-import { useMemo } from 'react';
+import { rememberListCount } from '@/lib/admin-shape-memory';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Award, BookOpen, CheckCircle2, Clock, Flame, PlayCircle, Trophy } from 'lucide-react';
@@ -66,6 +67,11 @@ export default function LearningPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const { enrollments, isLoading, isError, error, refetch } = useMyEnrollments(isAuthenticated);
+
+  // The /learning skeleton draws as many course cards as this grid last showed (0 → empty state).
+  useEffect(() => {
+    if (isAuthenticated && !isLoading && !isError) rememberListCount('public-learning', enrollments.length);
+  }, [isAuthenticated, isLoading, isError, enrollments.length]);
 
   const stats = useMemo(() => {
     const total = enrollments.length;

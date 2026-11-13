@@ -1,13 +1,11 @@
 /**
- * Route-level loading state for `/(main)/titan-tv`.
+ * Route-level loading state for `/titan-tv`.
  *
- * Next.js shows this the instant navigation starts and keeps it on screen until
- * the segment's server render resolves. Without it the browser paints nothing —
- * which on a slow connection reads as a blank page, not as "loading".
- *
- * The composition mirrors the real layout so nothing reflows on arrival.
+ * A replica of the page (same sections, containers and line heights), so
+ * nothing moves when the real content replaces it.
  */
-import { MediaPageSkeleton } from '@/components/skeletons/route-skeletons';
+import { TitanTvPageSkeleton } from '@/components/skeletons/public-page-replicas';
+
 export default function Loading() {
-  return <MediaPageSkeleton  />;
+  return <TitanTvPageSkeleton />;
 }

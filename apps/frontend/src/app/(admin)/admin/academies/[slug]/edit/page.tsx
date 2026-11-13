@@ -39,6 +39,7 @@ import {
 } from './academy-hero-editor';
 import { AcademyCourses, type RosterCourse } from './academy-courses';
 import { AcademyEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
 interface AcademyDetail {
   id: string;
@@ -187,6 +188,8 @@ function AcademyEditor() {
         if (!res.ok) throw new Error(tAdmin('drawer.requestFailed', { status: res.status }));
         const data: AcademyDetail = await res.json();
         setAcademy(data);
+        // The roster is the editor's one data-sized part; the loading skeleton draws this many.
+        rememberListCount('edit-academy-courses', data.courses?.length ?? 0);
         storedSlugRef.current = data.slug;
         if (opts?.keepForm) return;
         const next = baselineOf(data);

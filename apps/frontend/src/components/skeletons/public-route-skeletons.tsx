@@ -2,11 +2,13 @@
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Repeat, SkeletonRegion } from '@/components/ui/skeletons/region';
+import { useRememberedListCount } from '@/lib/admin-shape-memory';
 import {
   CertificateListSkeleton,
   CourseFilterSkeleton,
   CourseGridSkeleton,
   DifficultyBarSkeleton,
+  EmptyStateSkeleton,
   EnrollmentRowSkeleton,
   LanguageLineSkeleton,
   PublicPageHeaderSkeleton,
@@ -23,14 +25,24 @@ import { cn } from '@/lib/utils';
 
 /* ── /courses ────────────────────────────────────────────────────────────── */
 
-/** `app/(main)/(academy)/courses/page.tsx`. */
+/**
+ * `app/(main)/(academy)/courses/page.tsx`. The filter only renders when there are
+ * academies, and an empty catalogue shows `EmptyState`; both counts are remembered by
+ * `CategoryFilter` and `CourseGrid`.
+ */
 export function CoursesIndexSkeleton() {
+  const academies = useRememberedListCount('public-course-academies', 4, 20);
+  const courses = useRememberedListCount('public-courses', 6, 12);
   return (
     <SkeletonRegion>
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16 lg:px-8">
-        <PublicPageHeaderSkeleton />
-        <CourseFilterSkeleton />
-        <CourseGridSkeleton />
+        <PublicPageHeaderSkeleton leadLines={3} />
+        {academies > 0 ? (
+          <CourseFilterSkeleton chips={[32, 96, 120, 84, 104, 88, 112].slice(0, Math.min(academies + 1, 7))} />
+        ) : null}
+        <div className="space-y-8">
+          {courses === 0 ? <EmptyStateSkeleton descriptionLines={1} /> : <CourseGridSkeleton count={courses} />}
+        </div>
       </div>
     </SkeletonRegion>
   );
@@ -508,7 +520,10 @@ function LearningCourseSkeleton({ index }: { index: number }) {
  * What `/learning` shows under its header while enrolments load: the KPI row,
  * the continue card, the "All" heading and the course grid.
  */
-export function LearningContentSkeleton() {
+export function LearningContentSkeleton({ courses: fixed }: { courses?: number } = {}) {
+  const remembered = useRememberedListCount('public-learning', 3, 12);
+  const courses = fixed ?? remembered;
+  if (courses === 0) return <EmptyStateSkeleton descriptionLines={1} action="md" />;
   return (
     <>
       <div className="mb-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -533,7 +548,7 @@ export function LearningContentSkeleton() {
         <Skeleton className="h-3 w-8" />
       </div>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Repeat count={3}>{(i) => <LearningCourseSkeleton key={i} index={i} />}</Repeat>
+        <Repeat count={courses}>{(i) => <LearningCourseSkeleton key={i} index={i} />}</Repeat>
       </div>
     </>
   );
@@ -559,12 +574,48 @@ export function LearningPageSkeleton() {
 /* ── /account ────────────────────────────────────────────────────────────── */
 
 /** The enrolled-courses list on `/account`, for its own loading branch. */
-export function EnrollmentListSkeleton({ rows = 2 }: { rows?: number }) {
+export function EnrollmentListSkeleton({ rows: fixed }: { rows?: number }) {
+  const remembered = useRememberedListCount('public-account-enrollments', 2, 20);
+  const rows = fixed ?? remembered;
+  if (rows === 0) return <AccountEmptyBoxSkeleton action />;
   return (
     <div className="space-y-3">
       <Repeat count={rows}>{(i) => <EnrollmentRowSkeleton key={i} index={i} />}</Repeat>
     </div>
   );
+}
+
+/**
+ * The dashed empty box `/account` shows for no enrolments (with a browse button) and
+ * `CertificateList` shows for no certificates (one 19.5px line, no button).
+ */
+function AccountEmptyBoxSkeleton({ action = false }: { action?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border px-8 py-14 text-center">
+      <Skeleton className="mx-auto mb-4 size-12 rounded-full" />
+      <div className={cn('flex h-7 items-center justify-center', action && 'mb-1')}>
+        <Skeleton className="h-4 w-48" />
+      </div>
+      {action ? (
+        <>
+          <div className="mb-6 flex h-5 items-center justify-center">
+            <Skeleton className="h-3 w-72 max-w-full" />
+          </div>
+          <Skeleton className="mx-auto h-10 w-40 rounded-full" />
+        </>
+      ) : (
+        <div className="mt-1 flex h-[19.5px] items-center justify-center">
+          <Skeleton className="h-2.5 w-72 max-w-full" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** `CertificateList` on `/account`: remembered rows, or its empty box. */
+function AccountCertificatesSkeleton() {
+  const rows = useRememberedListCount('public-account-certificates', 2, 20);
+  return rows === 0 ? <AccountEmptyBoxSkeleton /> : <CertificateListSkeleton rows={rows} />;
 }
 
 function AccountSectionHeading({ width }: { width: string }) {
@@ -594,7 +645,7 @@ export function AccountPageSkeleton() {
           </section>
           <section>
             <AccountSectionHeading width="w-36" />
-            <CertificateListSkeleton />
+            <AccountCertificatesSkeleton />
           </section>
         </div>
       </div>

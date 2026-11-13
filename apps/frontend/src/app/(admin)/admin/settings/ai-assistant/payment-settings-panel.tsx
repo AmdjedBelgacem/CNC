@@ -16,6 +16,7 @@ import { api } from '@/lib/api-client';
 import { AnimatePresence, m } from 'framer-motion';
 import { Reveal } from '@/components/ui/motion';
 import { ease } from '@/lib/motion';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
 interface PaymentConfig {
   provider: string;
@@ -124,6 +125,14 @@ export function PaymentSettingsPanel() {
       setSeeded(true);
     }
   }, [data, seeded]);
+
+  // The settings skeleton draws as many order rows as this table last showed (paid rows are taller).
+  const orderRows = orders.data?.data;
+  useEffect(() => {
+    if (!orderRows) return;
+    rememberListCount('ai-assistant-orders', orderRows.length);
+    rememberListCount('ai-assistant-paid-orders', orderRows.filter((order) => order.status === 'paid').length);
+  }, [orderRows]);
 
   const save = async () => {
     setSaving(true);

@@ -1,6 +1,7 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Hash, Loader2, Search, TrendingUp } from 'lucide-react';
@@ -110,6 +111,11 @@ export function TagView({ slug }: { slug: string }) {
 export function TagIndex() {
   const t = useTranslations('tags');
   const { tags, isPending, isError, refetch } = useFeedTags();
+
+  // The /tags skeleton draws as many tag tiles as the index last showed.
+  useEffect(() => {
+    if (!isPending && !isError) rememberListCount('public-tags', tags.length);
+  }, [isPending, isError, tags.length]);
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {

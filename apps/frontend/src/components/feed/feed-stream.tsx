@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { rememberListCount } from '@/lib/admin-shape-memory';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Compass, Flame, Loader2, PenLine, Radio, Tag, TrendingUp, Users, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
@@ -65,6 +66,13 @@ export function FeedStream({ embedded = false }: { embedded?: boolean }) {
     { sort, tag: activeTag },
   );
   const createPost = useCreatePost();
+
+  // The /feed skeleton draws as many post cards as the default view (discover, hot, no tag) last showed.
+  useEffect(() => {
+    if (scope === 'discover' && sort === 'hot' && !activeTag && !isLoading && !isError) {
+      rememberListCount('public-feed', posts.length);
+    }
+  }, [scope, sort, activeTag, isLoading, isError, posts.length]);
   const deletePost = useDeletePost();
 
   const onVote = (postId: string, value: number) => votePost.mutate({ postId, value });

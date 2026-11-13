@@ -1,13 +1,11 @@
 /**
- * Route-level loading state for `/(main)/edu-purchases`.
+ * Route-level loading state for `/edu-purchases`.
  *
- * Next.js shows this the instant navigation starts and keeps it on screen until
- * the segment's server render resolves. Without it the browser paints nothing —
- * which on a slow connection reads as a blank page, not as "loading".
- *
- * The composition mirrors the real layout so nothing reflows on arrival.
+ * A replica of the page (same sections, containers and line heights), so
+ * nothing moves when the real content replaces it.
  */
-import { CmsBlockPageSkeleton } from '@/components/skeletons/route-skeletons';
+import { EduPurchasesPageSkeleton } from '@/components/skeletons/public-page-replicas';
+
 export default function Loading() {
-  return <CmsBlockPageSkeleton  />;
+  return <EduPurchasesPageSkeleton />;
 }

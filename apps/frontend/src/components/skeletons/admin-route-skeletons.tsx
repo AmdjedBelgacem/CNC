@@ -6,6 +6,7 @@ import {
   AsideCardSkeleton,
   CardGridSkeleton,
   CommandBarSkeleton,
+  EditorRailSkeleton,
   EditorShellSkeleton,
   FieldSkeleton,
   FormLayoutSkeleton,
@@ -389,14 +390,20 @@ export function DashboardKpiStripSkeleton() {
                 <div className="flex h-4 items-center">
                   <Skeleton className="h-2.5 w-20" />
                 </div>
-                <Skeleton className="mt-2 h-7 w-24" />
+                {/* The 28px figure and its delta badge; the revenue figure is wide enough to push
+                    the badge onto a second line in a narrow cell, which sets the row's height. */}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Skeleton className={cn('h-7', i === 4 ? 'w-36' : 'w-20')} />
+                  <Skeleton className="h-[18.85px] w-14 rounded-full" />
+                </div>
                 <div className="mt-1.5 flex h-4 items-center">
                   <Skeleton className="h-2.5 w-28" />
                 </div>
               </div>
               <Skeleton className="size-9 shrink-0 rounded-lg" />
             </div>
-            <Skeleton className="h-7 w-full" />
+            {/* The 28px sparkline, pulled up 4px (-mb-1) as in KpiCell. */}
+            <Skeleton className="-mb-1 h-7 w-full" />
           </div>
         )}
       </Repeat>
@@ -404,7 +411,17 @@ export function DashboardKpiStripSkeleton() {
   );
 }
 
+/*
+ * dashboard-parts' `Panel` merges its default `p-4 sm:p-5` with the body class it is given, so a
+ * body set to `p-0` or `p-3` still gets 20px of padding from sm. The replicas pass the same pair.
+ */
+
 export function DashboardSkeleton() {
+  // The four data-sized panels, as the dashboard last rendered them.
+  const attention = useRememberedListCount('dashboard-attention', 1, 6);
+  const withSamples = Math.min(attention, useRememberedListCount('dashboard-attention-samples', 1, 6));
+  const topCourses = useRememberedListCount('dashboard-top-courses', 3, 6);
+  const signups = useRememberedListCount('dashboard-signups', 5, 5);
   return (
     <SkeletonRegion>
       <div className="w-full">
@@ -415,17 +432,11 @@ export function DashboardSkeleton() {
         />
         <div className="mx-auto w-full max-w-[1560px] space-y-6 pt-6">
           <div className="space-y-5">
+            {/* Eyebrow, the greeting (28px / 36px at 1.15), one subtitle line. */}
             <div className="min-w-0">
-              <div className="flex h-[18px] items-center">
-                <Skeleton className="h-2.5 w-24" />
-              </div>
-              <div className="mt-2 flex h-8 items-center sm:h-[41px]">
-                <Skeleton className="h-6 w-56 sm:h-8 sm:w-80" />
-              </div>
-              <div className="mt-2 space-y-2 py-1">
-                <Skeleton className="h-3 w-full max-w-xl" />
-                <Skeleton className="h-3 w-1/2 sm:hidden" />
-              </div>
+              <Line h="h-5" w="w-24" />
+              <Line h="h-[32.2px] sm:h-[41.4px]" bar="h-6 sm:h-8" w="w-56 sm:w-80" className="mt-2" />
+              <Line h="h-5" bar="h-3" w="w-full max-w-xl" className="mt-2" />
             </div>
             <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
               <DashboardKpiStripSkeleton />
@@ -434,15 +445,40 @@ export function DashboardSkeleton() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-8">
-              <PanelSkeleton titleWidth="w-36" tone="attention" action="w-7 rounded-full" bodyClassName="p-0">
-                <PanelListSkeleton rows={3} rowClassName="px-4 py-3.5 sm:px-5" trailing="w-10" />
+              {/* Attention: one row per item, two lines where it names sample courses; or the
+                  "all clear" row. */}
+              <PanelSkeleton titleWidth="w-36" tone="attention" action="w-7 rounded-full" bodyClassName="p-0 sm:p-5">
+                {attention === 0 ? (
+                  <div className="flex items-center gap-3 px-4 py-5 sm:px-5">
+                    <Skeleton className="size-9 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1">
+                      <Line h="h-5" bar="h-3" w="w-40" />
+                      <Line h="h-4" w="w-56" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/60">
+                    <Repeat count={attention}>
+                      {(i) => (
+                        <div key={i} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
+                          <Skeleton className="mt-0.5 size-8 shrink-0 rounded-full" />
+                          <div className="min-w-0 flex-1">
+                            <Line h="h-[19.25px]" bar="h-3" w={['w-3/5', 'w-1/2', 'w-2/3'][i % 3]} />
+                            {i < withSamples && <Line h="h-4" w="w-2/5" className="mt-1" />}
+                          </div>
+                          <Skeleton className="mt-1 h-4 w-10 shrink-0" />
+                        </div>
+                      )}
+                    </Repeat>
+                  </div>
+                )}
               </PanelSkeleton>
               <PanelSkeleton titleWidth="w-28" action="w-24">
                 <div className="space-y-5">
                   <Repeat count={2}>
                     {(i) => (
                       <div key={i}>
-                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <div className="mb-1.5 flex h-6 items-center justify-between gap-2">
                           <Skeleton className="h-2.5 w-20" />
                           <Skeleton className="h-4 w-16" />
                         </div>
@@ -456,8 +492,28 @@ export function DashboardSkeleton() {
                   </Repeat>
                 </div>
               </PanelSkeleton>
-              <PanelSkeleton titleWidth="w-32" subtitle={false} action="w-16" bodyClassName="p-0">
-                <PanelListSkeleton rows={5} lead="index" trailing="w-20" />
+              {/* Most enrolled: rank, title over its bar, count; up to six. */}
+              <PanelSkeleton titleWidth="w-32" subtitle={false} action="h-[25px] w-16" bodyClassName="p-0 sm:p-5">
+                {topCourses === 0 ? (
+                  <div className="flex h-[84px] items-center justify-center">
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/60">
+                    <Repeat count={topCourses}>
+                      {(i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                          <Skeleton className="h-3.5 w-3 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <Line h="h-[18.2px]" w={['w-3/5', 'w-1/2', 'w-2/3', 'w-2/5'][i % 4]} />
+                            <Skeleton className="mt-1.5 h-1 w-full max-w-40 rounded-full" shimmer={false} />
+                          </div>
+                          <Skeleton className="h-2.5 w-20 shrink-0" />
+                        </div>
+                      )}
+                    </Repeat>
+                  </div>
+                )}
               </PanelSkeleton>
             </div>
             <div className="space-y-6 lg:col-span-4">
@@ -475,14 +531,34 @@ export function DashboardSkeleton() {
                     </Repeat>
                   </div>
                   <div className="border-t border-border/60 pt-3">
-                    <Skeleton className="h-2.5 w-2/3" />
+                    <Line h="h-4" w="w-2/3" />
                   </div>
                 </div>
               </PanelSkeleton>
-              <PanelSkeleton titleWidth="w-32" subtitle={false} action="w-16" bodyClassName="p-0">
-                <PanelListSkeleton rows={5} trailing="w-10" />
+              {/* New accounts: avatar, name over email, time; up to five. */}
+              <PanelSkeleton titleWidth="w-32" subtitle={false} action="h-[25px] w-16" bodyClassName="p-0 sm:p-5">
+                {signups === 0 ? (
+                  <div className="flex h-[84px] items-center justify-center">
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/60">
+                    <Repeat count={signups}>
+                      {(i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                          <Skeleton className="size-8 shrink-0 rounded-full" />
+                          <div className="min-w-0 flex-1">
+                            <Line h="h-[18.2px]" w={['w-1/2', 'w-2/5', 'w-3/5'][i % 3]} />
+                            <Line h="h-4" w="w-2/3" />
+                          </div>
+                          <Skeleton className="h-2.5 w-10 shrink-0" />
+                        </div>
+                      )}
+                    </Repeat>
+                  </div>
+                )}
               </PanelSkeleton>
-              <PanelSkeleton titleWidth="w-24" bodyClassName="p-3">
+              <PanelSkeleton titleWidth="w-24" bodyClassName="p-3 sm:p-5">
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
                   <Repeat count={7}>
                     {(i) => (
@@ -568,38 +644,595 @@ export function AdminAcademiesSkeleton() {
  * Editors — the shared editor kit
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/** admin/products/[slug]/edit — ProductFormSections. */
-export function ProductEditorSkeleton() {
+/* ── Editor-kit pieces drawn row by row ──────────────────────────────────────
+ * The product and academy editors are long, data-sized forms, so their replicas are composed
+ * here field by field rather than from the generic EditorShellSkeleton rows. Heights follow the
+ * real controls: a 13px label (18px line), 44px bilingual inputs, 38px plain inputs, textareas
+ * at rows × 22.75px + 18px plus the 7px line-box gap an inline textarea leaves under it, and
+ * 19.5px hint lines (text-xs, leading-relaxed).
+ */
+
+/** A text line box of `h` holding a bar of width `w`, so the bar sits where the text would. */
+function Line({ h = 'h-5', w, bar = 'h-2.5', className }: { h?: string; w?: string; bar?: string; className?: string }) {
   return (
-    <EditorShellSkeleton
-      crumbs={['w-20', 'w-40']}
-      barActions={['button']}
-      railSections={6}
-      checks={6}
-      sections={[
-        { hint: true, rows: ['bilingual', 'bilingual', 'bilingual-area', 'grid3'] },
-        { hint: true, rows: ['grid3', 'grid3'] },
-        { hint: true, rows: ['grid2'] },
-        { hint: true, rows: ['media'] },
-      ]}
-    />
+    <div className={cn('flex items-center', h, className)}>
+      <Skeleton className={cn('max-w-full', bar, w)} />
+    </div>
   );
 }
 
-/** admin/academies/[slug]/edit. */
-export function AcademyEditorSkeleton() {
+/** A field label: 13px at leading 1.4. */
+function LabelLine({ w = 'w-24' }: { w?: string }) {
+  return <Line h="h-[18.2px]" w={w} />;
+}
+
+/** One or more text-xs leading-relaxed hint lines. */
+function HintLines({ lines = 1, w = 'w-72' }: { lines?: number; w?: string }) {
   return (
-    <EditorShellSkeleton
-      crumbs={['w-24', 'w-40']}
+    <div>
+      <Repeat count={lines}>
+        {(i) => <Line key={i} h="h-[19.5px]" w={i === lines - 1 && lines > 1 ? 'w-2/3' : w} />}
+      </Repeat>
+    </div>
+  );
+}
+
+/**
+ * A bilingual textarea of `rows` (text-sm leading-relaxed, py-2; BilingualField's min-h-11 replaces
+ * TextArea's min-h-24) plus its line-box gap.
+ */
+function textareaHeight(rows: number) {
+  return Math.max(44, rows * 22.75 + 18) + 7;
+}
+
+/** `BilingualField`: label, English and Arabic side by side from md, optional hint. */
+function BilingualFieldSkeleton({
+  rows,
+  hint,
+  label = 'w-24',
+}: {
+  /** Textarea rows; a single-line field when omitted. */
+  rows?: number;
+  hint?: { lines?: number; w?: string };
+  label?: string;
+}) {
+  const style = rows ? { height: textareaHeight(rows) } : undefined;
+  return (
+    <div className="space-y-1.5">
+      <LabelLine w={label} />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <Repeat count={2}>
+          {(i) =>
+            rows ? (
+              <Skeleton key={i} className="w-full rounded-lg" style={style} />
+            ) : (
+              <Skeleton key={i} className="h-11 w-full rounded-lg" />
+            )
+          }
+        </Repeat>
+      </div>
+      {hint && <HintLines lines={hint.lines} w={hint.w} />}
+    </div>
+  );
+}
+
+/** admin-form's `Field` around a 38px input (or `control`), with optional hint lines. */
+function PlainFieldSkeleton({
+  label = 'w-24',
+  control = 'h-[38px]',
+  hint,
+}: {
+  label?: string;
+  control?: string;
+  hint?: { lines?: number; w?: string };
+}) {
+  return (
+    <div className="space-y-1.5">
+      <LabelLine w={label} />
+      <Skeleton className={cn('w-full rounded-lg', control)} />
+      {hint && <HintLines lines={hint.lines} w={hint.w} />}
+    </div>
+  );
+}
+
+/** form-page's `SlugField` in edit mode: prefix input, lock button, the locked-URL hint. */
+function SlugFieldSkeleton({ hintLines = 1 }: { hintLines?: number }) {
+  return (
+    <div className="space-y-1.5">
+      <LabelLine w="w-12" />
+      <div className="flex items-stretch gap-2">
+        <Skeleton className="h-[38px] min-w-0 flex-1 rounded-lg" />
+        <Skeleton className="w-10 shrink-0 rounded-lg" />
+      </div>
+      <HintLines lines={hintLines} w="w-96" />
+    </div>
+  );
+}
+
+/**
+ * `EditorSection`: serif heading (22px, leading-tight), then the hint and any header action on
+ * the trailing side, wrapping under the title when the card is narrow.
+ */
+function EditorCardSkeleton({
+  title,
+  hint,
+  action,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  /** Width class of a header button (the translate action is 36px tall). */
+  action?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-xs sm:p-6">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <Line h="h-[27.5px]" bar="h-5" w={title} />
+        {(hint || action) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {hint && <Line h="h-4" w={hint} />}
+            {action && <Skeleton className={cn('h-9 rounded-lg', action)} />}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col gap-5">{children}</div>
+    </div>
+  );
+}
+
+/** `EditorHeader`: status chip and save line, serif title, address line, then the actions. */
+function EditorHeaderReplica({ preview = true }: { preview?: boolean }) {
+  return (
+    <div className="mx-auto flex w-full max-w-[90rem] flex-wrap items-center gap-4 px-0 pb-5 pt-6 sm:px-1">
+      <div className="flex min-w-0 flex-[999_1_26rem] flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Skeleton className="h-5 w-20 rounded-full" />
+          <Skeleton className="h-2.5 w-20" />
+        </div>
+        {/* 1.75rem / 2rem at leading-tight. */}
+        <Line h="h-[35px] sm:h-10" bar="h-7 sm:h-8" w="w-3/4 max-w-md" />
+        <Line h="h-[18.2px]" w="w-64" />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {/* The language toggle: three 36px options inside a 2px-padded, bordered pill. */}
+        <Skeleton className="h-[42px] w-[13.5rem] rounded-full border border-border/70" />
+        {preview && <Skeleton className="h-10 w-[6.5rem] rounded-full border border-border-strong bg-card" />}
+        <Skeleton className="h-10 w-24 rounded-full bg-primary/25" />
+      </div>
+    </div>
+  );
+}
+
+/** `CheckList` inside its `AsideCard`: 36px rows, two-line rows where a check carries detail. */
+function AsideCheckListSkeleton({ checks, detailed = 0 }: { checks: number; detailed?: number }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+      <Line h="h-5" bar="h-3" w="w-32" />
+      <div className="flex flex-col gap-1">
+        <Repeat count={checks}>
+          {(i) => {
+            const withDetail = i >= checks - detailed;
+            return (
+              <div key={i} className="flex min-h-9 items-start gap-2.5 px-1.5 py-1.5">
+                <Skeleton className="mt-px size-5 shrink-0 rounded-full" />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <Line h="h-[17.9px]" bar="h-3" w={['w-2/3', 'w-1/2', 'w-3/5', 'w-2/5'][i % 4]} />
+                  {withDetail && <Line h="h-[19.5px]" w="w-4/5" />}
+                </div>
+              </div>
+            );
+          }}
+        </Repeat>
+      </div>
+    </div>
+  );
+}
+
+/** Command bar, header, then `EditorLayout`'s rail · form · aside grid (classes copied). */
+function EditorPageSkeleton({
+  crumbs,
+  barActions,
+  railSections,
+  aside,
+  children,
+}: {
+  crumbs: string[];
+  barActions: Parameters<typeof CommandBarSkeleton>[0]['actions'];
+  railSections: number;
+  aside: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <SkeletonRegion>
+      <div className="w-full">
+        <CommandBarSkeleton crumbs={crumbs} actions={barActions} />
+        <EditorHeaderReplica />
+        <div className="mx-auto grid w-full max-w-[90rem] grid-cols-1 gap-6 pb-28 lg:grid-cols-[13.5rem_minmax(0,1fr)] xl:grid-cols-[13rem_minmax(0,1fr)_19rem] 2xl:grid-cols-[13.5rem_minmax(0,1fr)_21rem]">
+          <div className="min-w-0 lg:row-span-2">
+            <EditorRailSkeleton sections={railSections} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-5">{children}</div>
+          <div className="min-w-0 lg:col-start-2 xl:col-start-3 xl:row-start-1">
+            <div className="flex flex-col gap-4">{aside}</div>
+          </div>
+        </div>
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+/** product-form's `SubHeading`: a ruled serif subheading and its one-line hint (mt-6, mb-3). */
+function SubHeadingSkeleton({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="mb-3 mt-6 border-t border-border/60 pt-5">
+      <Line h="h-6" bar="h-4" w={title} />
+      <Line h="h-[19.5px]" w={hint} className="mt-1" />
+    </div>
+  );
+}
+
+/** admin-form's `SwitchField`: label, one-line description, the 24px switch. */
+function SwitchCardSkeleton({ i }: { i: number }) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-border/70 bg-card p-4">
+      <div className="min-w-0 flex-1">
+        <Line h="h-5" bar="h-3" w={['w-28', 'w-32', 'w-28', 'w-20'][i % 4]} />
+        <Line h="h-[19.5px]" w="w-52" className="mt-1" />
+      </div>
+      <Skeleton className="mt-0.5 h-6 w-11 shrink-0 rounded-full" shimmer={false} />
+    </div>
+  );
+}
+
+/**
+ * admin/products/[slug]/edit — ProductFormSections (Basics, Pricing, Inventory, Media, Details,
+ * SEO) with the store card and checklist aside.
+ */
+export function ProductEditorSkeleton() {
+  // The parts that change size from product to product, as the editor last rendered them.
+  const images = useRememberedListCount('edit-product-images', 1, 12);
+  const pinpoints = useRememberedListCount('edit-product-pinpoints', 0, 30);
+  const documents = useRememberedListCount('edit-product-documents', 0, 30);
+  // 1 when the product has a thumbnail: it decides the drop zone and the pinpoint photo.
+  const thumbnail = useRememberedListCount('edit-product-thumbnail', 1, 1) > 0;
+  return (
+    <EditorPageSkeleton
+      crumbs={['w-20', 'w-48']}
+      barActions={['button']}
+      railSections={6}
+      aside={
+        <>
+          {/* "Store card": eyebrow, ProductCardPreview (4:3 image, category, title, tagline, price), link. */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+            <div className="flex h-[16.5px] items-center justify-between gap-2">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-2.5 w-12" />
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-background">
+              <Skeleton className="aspect-[4/3] w-full rounded-none" />
+              <div className="flex h-[122px] flex-col gap-1 p-3.5">
+                <Line h="h-[14.85px]" bar="h-2" w="w-16" />
+                <Line h="h-[22px]" bar="h-3.5" w="w-3/4" />
+                <Line h="h-[18.2px]" w="w-1/2" />
+                <Line h="h-[22.5px]" bar="h-3" w="w-20" className="mt-1" />
+              </div>
+            </div>
+            <Line h="h-8" bar="h-3" w="w-32" />
+          </div>
+          {/* Six readiness checks and the Arabic coverage line. */}
+          <AsideCheckListSkeleton checks={7} />
+        </>
+      }
+    >
+      <EditorCardSkeleton title="w-16" hint="w-56" action="w-40">
+        <BilingualFieldSkeleton label="w-10" />
+        <SlugFieldSkeleton />
+        <BilingualFieldSkeleton label="w-16" />
+        <BilingualFieldSkeleton label="w-20" rows={5} />
+        <BilingualFieldSkeleton label="w-16" rows={3} hint={{ w: 'w-24' }} />
+        {/* Category, product type, tags (with its hint): stacked, two, then three across. */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <PlainFieldSkeleton label="w-16" />
+          <PlainFieldSkeleton label="w-24" />
+          <PlainFieldSkeleton label="w-10" hint={{ w: 'w-28' }} />
+        </div>
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-16" hint="w-72">
+        {/* The legend (with its mb-2), then the three 50px pricing-mode cards, stacked on a phone. */}
+        <div className="flex flex-col gap-2">
+          <LabelLine w="w-12" />
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <Repeat count={3}>{(i) => <Skeleton key={i} className="h-[50px] rounded-xl" shimmer={false} />}</Repeat>
+          </div>
+        </div>
+        {/* Price and compare-at carry hints that take two lines once the grid has columns. */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Repeat count={2}>
+            {(i) => (
+              <div key={i} className="space-y-1.5">
+                <LabelLine w="w-24" />
+                <Skeleton className="h-[38px] w-full rounded-lg" />
+                <div>
+                  <Line h="h-[19.5px]" w="w-56" />
+                  <Line h="h-[19.5px]" w="w-24" className="hidden sm:flex" />
+                </div>
+              </div>
+            )}
+          </Repeat>
+          <PlainFieldSkeleton label="w-16" />
+        </div>
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-44" hint="w-72">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <PlainFieldSkeleton label="w-16" />
+          <PlainFieldSkeleton label="w-20" hint={{ w: 'w-40' }} />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Repeat count={4}>{(i) => <SwitchCardSkeleton key={i} i={i} />}</Repeat>
+        </div>
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-16" hint="w-72">
+        {/* ImageUploadField: label, drop zone (the 160px preview, or the upload prompt), the
+            two-line hint inside it, and "Remove image" under it when there is a thumbnail. */}
+        <div className="space-y-2">
+          <Line h="h-4" w="w-28" />
+          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border px-4 py-6">
+            {thumbnail ? (
+              <Skeleton className="h-40 w-40 rounded-lg" />
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Skeleton className="size-10 rounded-xl" />
+                <Line h="h-4" w="w-44" />
+              </div>
+            )}
+            <div className="flex h-[35.75px] w-52 flex-col items-center justify-center gap-2">
+              <Skeleton className="h-2 w-full" />
+              <Skeleton className="h-2 w-1/2" />
+            </div>
+          </div>
+          {thumbnail && <Skeleton className="h-[30px] w-28 rounded-lg" shimmer={false} />}
+        </div>
+
+        <SubHeadingSkeleton title="w-16" hint="w-full" />
+        {/* ProductGalleryManager: the add button, then one card per image, two across from sm. */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-10 w-32 rounded-xl" />
+            <Skeleton className="h-2.5 w-10" />
+          </div>
+          {images === 0 ? (
+            <Skeleton className="h-[66px] w-full rounded-xl border border-dashed border-border bg-transparent" shimmer={false} />
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Repeat count={images}>
+                {(i) => (
+                  <div key={i} className="space-y-2 rounded-xl border border-border/70 bg-card p-3 shadow-xs">
+                    <div className="flex gap-3">
+                      <Skeleton className="size-20 shrink-0 rounded-lg" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Skeleton className="h-[34px] w-full rounded-lg" />
+                        {/* Primary / make primary, up, down, remove: they wrap in a narrow card. */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Skeleton className={cn('h-[24.85px] rounded-full', i === 0 ? 'w-[4.5rem]' : 'w-[6.5rem]')} />
+                          <Skeleton className="h-[24.85px] w-6 rounded-lg" />
+                          <Skeleton className="h-[24.85px] w-6 rounded-lg" />
+                          <Skeleton className="ms-auto h-[24.85px] w-[4.5rem] rounded-lg" />
+                        </div>
+                      </div>
+                    </div>
+                    <Skeleton className="h-[32.85px] w-full rounded-lg" shimmer={false} />
+                  </div>
+                )}
+              </Repeat>
+            </div>
+          )}
+        </div>
+
+        <SubHeadingSkeleton title="w-56" hint="w-full" />
+        {/* ProductHotspotsEditor: prompt and button, the photo (up to 384px), one card per pinpoint. */}
+        <div className="space-y-3">
+          <div className="flex h-[30px] items-center justify-between gap-2">
+            <Skeleton className="h-2.5 w-48" />
+            <Skeleton className="h-[30px] w-24 rounded-lg" />
+          </div>
+          {thumbnail ? (
+            <Skeleton className="h-[386px] w-[386px] max-w-full rounded-xl" />
+          ) : (
+            <Line h="h-4" w="w-72" />
+          )}
+          <div className="space-y-3">
+            <Repeat count={pinpoints}>
+              {(i) => (
+                <div key={i} className="space-y-2 rounded-xl border border-border/70 bg-card p-3 shadow-xs">
+                  <div className="flex h-[26px] items-center justify-between">
+                    <Skeleton className="h-2.5 w-28" />
+                    <Skeleton className="h-[26px] w-14 rounded-lg" shimmer={false} />
+                  </div>
+                  <Skeleton className="h-[38px] w-full rounded-lg" />
+                  <Skeleton className="h-[38px] w-full rounded-lg" />
+                  {/* A two-row TextArea keeps its 96px minimum; 7px more is the inline gap under it. */}
+                  <Skeleton className="h-[103px] w-full rounded-lg" />
+                </div>
+              )}
+            </Repeat>
+          </div>
+        </div>
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-44" hint="w-72">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <PlainFieldSkeleton label="w-16" />
+          <PlainFieldSkeleton label="w-14" />
+        </div>
+        <Line h="h-4" w="w-80" className="-mt-2" />
+        <SubHeadingSkeleton title="w-44" hint="w-full" />
+        {/* ProductDocumentsField: the attach button, then a 64px row per PDF. */}
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-28 rounded-xl" />
+          <div className="space-y-2">
+            <Repeat count={documents}>
+              {(i) => (
+                <div key={i} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-xs">
+                  <Skeleton className="h-[38px] min-w-0 flex-1 rounded-lg" />
+                  <Skeleton className="h-[34px] w-[51px] shrink-0 rounded-lg" shimmer={false} />
+                  <Skeleton className="h-[34px] w-[66px] shrink-0 rounded-lg" shimmer={false} />
+                </div>
+              )}
+            </Repeat>
+          </div>
+        </div>
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-12" hint="w-96">
+        {/* SearchPreview: address, title, a two-line description. */}
+        <div className="flex flex-col gap-1 rounded-xl border border-border/70 bg-background p-4">
+          <Line h="h-4" w="w-48" />
+          <Line h="h-[24.75px]" bar="h-3.5" w="w-1/2" />
+          <div className="space-y-[11px] py-[5.5px]">
+            <Skeleton className="h-2.5 w-full" />
+            <Skeleton className="h-2.5 w-2/3" />
+          </div>
+        </div>
+        <BilingualFieldSkeleton label="w-16" />
+        <BilingualFieldSkeleton label="w-28" rows={3} />
+      </EditorCardSkeleton>
+    </EditorPageSkeleton>
+  );
+}
+
+/** admin/academies/[slug]/edit — Look, Words, the course roster, Search & sharing. */
+export function AcademyEditorSkeleton() {
+  // The roster is the one part that changes size between academies.
+  const courses = useRememberedListCount('edit-academy-courses', 1, 60);
+  return (
+    <EditorPageSkeleton
+      crumbs={['w-24', 'w-28']}
       barActions={['button', 'button']}
       railSections={4}
-      checks={5}
-      sections={[
-        { hint: true, rows: ['media'] },
-        { hint: true, rows: ['bilingual', 'bilingual', 'bilingual-area'] },
-        { hint: true, rows: ['list'] },
-      ]}
-    />
+      aside={
+        <>
+          {/* "Card on the academies page": eyebrow, AcademyCardPreview, the open-page link. */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+            <div className="flex h-[16.5px] items-center justify-between gap-2">
+              <Skeleton className="h-2.5 w-40" />
+              <Skeleton className="h-2.5 w-12" />
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-background">
+              <Skeleton className="m-2 mb-0 aspect-[16/10] rounded-xl" />
+              <div className="flex flex-col gap-2 p-4">
+                <div className="flex h-[19px] items-center gap-2">
+                  <Skeleton className="h-[18.85px] w-16 rounded-full" />
+                  <Skeleton className="h-2.5 w-40" />
+                </div>
+                <Line h="h-[24.75px]" bar="h-4" w="w-1/2" />
+                <div className="space-y-[11px] py-[5.5px]">
+                  <Skeleton className="h-2.5 w-full" />
+                  <Skeleton className="h-2.5 w-2/3" />
+                </div>
+                <div className="mt-1 flex h-[31.2px] items-end justify-between border-t border-border/60">
+                  <Skeleton className="mb-[7px] h-1 w-10 rounded-full" shimmer={false} />
+                  <Line h="h-[18.2px]" w="w-24" />
+                </div>
+              </div>
+            </div>
+            <Line h="h-10" bar="h-3" w="w-36" />
+          </div>
+          {/* Eight checks, the Arabic coverage line, and the roster check's detail line. */}
+          <AsideCheckListSkeleton checks={9} detailed={1} />
+        </>
+      }
+    >
+      <EditorCardSkeleton title="w-16" hint="w-60">
+        {/* AcademyHeroEditor: the hero (224px on a phone, 16:6 from sm), then its two-line note. */}
+        <div className="flex flex-col gap-3">
+          <Skeleton className="min-h-56 w-full rounded-2xl sm:aspect-[16/6] sm:min-h-0" />
+          <HintLines lines={2} w="w-full" />
+        </div>
+        {/* AccentColorRow: label, six 40px swatches + picker + 44px hex input, contrast note. */}
+        <div className="flex flex-col gap-2">
+          <LabelLine w="w-24" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1">
+              <Repeat count={7}>{(i) => <Skeleton key={i} className="size-10 rounded-full" shimmer={false} />}</Repeat>
+            </div>
+            <Skeleton className="h-11 w-36 rounded-lg" />
+          </div>
+          <HintLines w="w-64" />
+        </div>
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-14" hint="w-72" action="w-40">
+        <BilingualFieldSkeleton label="w-12" />
+        <SlugFieldSkeleton />
+        <BilingualFieldSkeleton label="w-16" hint={{ w: 'w-64' }} />
+        <BilingualFieldSkeleton label="w-20" rows={5} />
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-60" hint="w-72">
+        <div className="flex flex-col gap-4">
+          {courses === 0 ? (
+            /* The dashed "no courses yet" note. */
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border-strong bg-background px-4 py-8">
+              <Skeleton className="size-5 rounded" shimmer={false} />
+              <Line h="h-5" bar="h-3" w="w-48" />
+              <Line h="h-[18.2px]" w="w-64" />
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70">
+              <Repeat count={courses}>
+                {(i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-3 bg-card px-3 py-3 sm:flex-nowrap sm:px-4">
+                    <Skeleton className="h-3 w-5 shrink-0" shimmer={false} />
+                    <Skeleton className="size-10 shrink-0 rounded-lg" />
+                    {/* Title, then its status and level pills (they wrap under a long title). */}
+                    <div className="min-w-0 flex-1 basis-40">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <Line h="h-5" bar="h-3" w={['w-44', 'w-40', 'w-48', 'w-36'][i % 4]} />
+                        <Skeleton className="h-[22px] w-20 rounded-full" />
+                        <Skeleton className="h-[22px] w-20 rounded-full" />
+                      </div>
+                      <Line h="h-4" w="w-28" />
+                    </div>
+                    <div className="ms-auto flex shrink-0 items-center gap-1">
+                      <Skeleton className="h-10 w-[6.5rem] rounded-full" shimmer={false} />
+                      <Skeleton className="h-10 w-24 rounded-full" shimmer={false} />
+                    </div>
+                  </div>
+                )}
+              </Repeat>
+            </div>
+          )}
+          {/* "Add a course": label, the 44px search box and the browse button. */}
+          <div className="flex flex-col gap-2">
+            <LabelLine w="w-24" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-11 min-w-0 flex-[1_1_16rem] rounded-lg" />
+              <Skeleton className="h-11 w-40 shrink-0 rounded-full" />
+            </div>
+          </div>
+        </div>
+      </EditorCardSkeleton>
+
+      <EditorCardSkeleton title="w-36" hint="w-96">
+        <BilingualFieldSkeleton label="w-16" />
+        <BilingualFieldSkeleton label="w-28" rows={3} />
+        {/* AcademyImageTile (max-w-md): label, 1200×630 drop tile, hint beside the remove button. */}
+        <div className="max-w-md">
+          <div className="flex flex-col gap-2">
+            <LabelLine w="w-28" />
+            <Skeleton className="aspect-[1200/630] w-full rounded-xl" />
+            <div className="flex h-10 items-start gap-2">
+              <Line h="h-[19.5px]" w="w-60" className="flex-1" />
+              <Skeleton className="h-10 w-24 shrink-0 rounded-full" shimmer={false} />
+            </div>
+          </div>
+        </div>
+      </EditorCardSkeleton>
+    </EditorPageSkeleton>
   );
 }
 
@@ -835,14 +1468,30 @@ export function AdminRolesSkeleton() {
   );
 }
 
-/** The audit entries, shared with staff/audit/audit-log.tsx's loading branch. */
-export function AuditRowsSkeleton({ rows = 10 }: { rows?: number }) {
+/**
+ * The audit entries, shared with staff/audit/audit-log.tsx's loading branch: as many as the
+ * unfiltered first page showed last time (25 a page), of which `details` had a details toggle,
+ * or the dashed empty note when there were none.
+ */
+export function AuditRowsSkeleton({ rows }: { rows?: number }) {
+  const remembered = useRememberedListCount('staff-audit', 25, 25);
+  const rememberedDetails = useRememberedListCount('staff-audit-details', 2, 25);
+  const count = rows ?? remembered;
+  const details = Math.min(count, rows === undefined ? rememberedDetails : count);
+  if (count === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border/70 p-10">
+        <Skeleton className="size-6 rounded" shimmer={false} />
+        <Line h="h-5" bar="h-3" w="w-40" />
+      </div>
+    );
+  }
   return (
     <div className="divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card">
-      <Repeat count={rows}>
+      <Repeat count={count}>
         {(i) => (
           <div key={i} className="px-4 py-3">
-            {/* Same three lines as an entry: action and time, the actor line, the "details" toggle. */}
+            {/* An entry: action and time, the actor line, and the "details" toggle when it has details. */}
             <div className="flex h-5 items-center justify-between gap-4">
               <Skeleton className={cn('h-3', ['w-40', 'w-32', 'w-48', 'w-36'][i % 4])} />
               <Skeleton className="h-2.5 w-28" />
@@ -850,9 +1499,11 @@ export function AuditRowsSkeleton({ rows = 10 }: { rows?: number }) {
             <div className="mt-0.5 flex h-4 items-center">
               <Skeleton className="h-2.5 w-1/3" />
             </div>
-            <div className="mt-1.5 flex h-4 items-center">
-              <Skeleton className="h-2.5 w-12 bg-primary/20" shimmer={false} />
-            </div>
+            {i < details && (
+              <div className="mt-1.5 flex h-4 items-center">
+                <Skeleton className="h-2.5 w-12 bg-primary/20" shimmer={false} />
+              </div>
+            )}
           </div>
         )}
       </Repeat>
@@ -861,7 +1512,7 @@ export function AuditRowsSkeleton({ rows = 10 }: { rows?: number }) {
 }
 
 /** The whole audit body: filter form, entries, pager (the page's Suspense fallback). */
-export function AuditLogBodySkeleton({ rows = 10 }: { rows?: number }) {
+export function AuditLogBodySkeleton({ rows }: { rows?: number }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -1549,33 +2200,340 @@ function SettingsColorField() {
   );
 }
 
-/** admin/settings/ai-assistant/page.tsx */
+/** ui/card's `CardHeader` as the AI panels use it: serif title, optional description lines. */
+function AiCardHeaderSkeleton({ title, description }: { title: string; description?: { w: string; wrapUntil?: string } }) {
+  return (
+    <div className="flex flex-col gap-1.5 border-b border-border/70 p-6 pb-5">
+      <Line h="h-[24.75px]" bar="h-4" w={title} />
+      {description && (
+        <div>
+          <Line h="h-[22.75px]" bar="h-3" w={description.w} />
+          {description.wrapUntil && <Line h="h-[22.75px]" bar="h-3" w="w-1/3" className={description.wrapUntil} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A ui `Label` over a 40px `Input`: the inline label sits in a 24px line box. */
+function AiInputSkeleton({ hint, label = 'w-28' }: { hint?: 1 | 2; label?: string }) {
+  return (
+    <div className="space-y-2">
+      <Line h="h-6" bar="h-3" w={label} />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      {hint === 1 && <Line h="h-[14.85px]" bar="h-2" w="w-48" />}
+      {hint === 2 && (
+        <div className="space-y-[5px] py-[5px]">
+          <Skeleton className="h-2 w-full max-w-xs" />
+          <Skeleton className="h-2 w-1/3" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A data table in the AI panels: 32.5px header row, then text-xs rows. */
+function AiTableSkeleton({ columns, rows }: { columns: number; rows: Array<'plain' | 'action' | 'badge'> }) {
+  return (
+    <div className="overflow-hidden">
+      <div className="flex h-[32.5px] items-center gap-3">
+        <Repeat count={columns}>{(i) => <Skeleton key={i} className="h-2.5 flex-1" shimmer={false} />}</Repeat>
+      </div>
+      {rows.map((kind, i) => (
+        <div
+          key={i}
+          className={cn(
+            'flex items-center gap-3 border-t border-border/70',
+            // py-2 around a 16px line, a 26px badge, or a badge beside a 36px refund button.
+            kind === 'plain' ? 'h-[33px]' : kind === 'badge' ? 'h-[43px]' : 'h-[53px]',
+          )}
+        >
+          <Repeat count={columns}>
+            {(c) =>
+              kind !== 'plain' && c === 1 ? (
+                <div key={c} className="flex-1">
+                  <Skeleton className="h-[26px] w-16 rounded-full" />
+                </div>
+              ) : kind === 'action' && c === columns - 1 ? (
+                <div key={c} className="flex flex-1 justify-end">
+                  <Skeleton className="h-9 w-16 rounded-lg" shimmer={false} />
+                </div>
+              ) : (
+                <Skeleton key={c} className="h-2.5 flex-1" />
+              )
+            }
+          </Repeat>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * admin/settings/ai-assistant/page.tsx: status cards, the five settings sections, then the
+ * payment gateway and recent orders (payment-settings-panel.tsx) and the web search, feedback and
+ * eval cards (ai-learning-panel.tsx). The orders, votes and eval runs are as many as last time.
+ */
 export function AiAssistantSettingsSkeleton() {
+  const orders = useRememberedListCount('ai-assistant-orders', 5, 20);
+  const paidOrders = Math.min(orders, useRememberedListCount('ai-assistant-paid-orders', 2, 20));
+  const votes = useRememberedListCount('ai-assistant-feedback', 0, 6);
+  const evalRuns = useRememberedListCount('ai-assistant-eval-runs', 10, 200);
   return (
     <SkeletonRegion>
       <div className="w-full">
-        <CommandBarSkeleton crumbs={['w-16', 'w-24']} actions={['button']} />
+        <CommandBarSkeleton crumbs={['w-16', 'w-24']} live={false} actions={['button']} />
         <div className="space-y-6 pt-6">
           <div className="mx-auto w-full max-w-6xl">
-            <PageHeaderSkeleton titleWidth="w-44 sm:w-60" badge="h-[22px] w-24 rounded-full" />
+            <PageHeaderSkeleton titleWidth="w-44 sm:w-60" badge="h-[26px] w-16 rounded-full" />
           </div>
           <FormLayoutSkeleton aside={<SectionNavSkeleton items={5} />}>
+            {/* Provider, API key (with the masked key line), encryption. */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Repeat count={3}>
                 {(i) => (
-                  <div key={i} className="h-full rounded-xl border border-border/70 bg-card p-5 shadow-xs">
-                    <Skeleton className="h-2.5 w-24" />
+                  <div key={i} className="h-full rounded-xl border border-border/80 bg-card p-5 shadow-xs">
+                    <Line h="h-4" w="w-24" />
                     <div className="mt-2.5 flex h-5 items-center gap-2">
                       <Skeleton className="size-4 rounded" shimmer={false} />
-                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-3 w-28" />
                     </div>
+                    {i === 1 && <Line h="h-4" w="w-20" className="mt-1" />}
                   </div>
                 )}
               </Repeat>
             </div>
-            <FormSectionSkeleton rows={['grid2', 'field', 'grid2', 'switch']} />
-            <FormSectionSkeleton rows={['area']} />
-            <FormSectionSkeleton rows={['grid3']} />
+
+            {/* Connection: provider / base URL, API key / write-only note, models, embeddings, switches. */}
+            <FormSectionSkeleton>
+              <div className="space-y-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PlainFieldSkeleton label="w-16" hint={{ w: 'w-72' }} />
+                  <PlainFieldSkeleton label="w-28" hint={{ w: 'w-64' }} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <LabelLine w="w-16" />
+                    <Skeleton className="h-[38px] w-full rounded-lg" />
+                    {/* "Clear API key", a 36px ghost button. */}
+                    <Line h="h-9" w="w-24" />
+                    <div>
+                      <Line h="h-[19.5px]" w="w-72" />
+                      <Line h="h-[19.5px]" w="w-40" className="hidden sm:flex" />
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-muted/50 p-4">
+                    <Line h="h-[19.5px]" bar="h-3" w="w-36" />
+                    <div className="mt-1">
+                      <Line h="h-[19.5px]" w="w-full" />
+                      <Line h="h-[19.5px]" w="w-1/2" />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PlainFieldSkeleton label="w-24" />
+                  <PlainFieldSkeleton label="w-28" hint={{ w: 'w-72' }} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PlainFieldSkeleton label="w-28" hint={{ w: 'w-64' }} />
+                  <PlainFieldSkeleton label="w-32" />
+                </div>
+                {/* Two switches; their descriptions take two lines once side by side. */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Repeat count={2}>
+                    {(i) => (
+                      <div key={i} className="flex items-start justify-between gap-4 rounded-xl border border-border/70 bg-card p-4">
+                        <div className="min-w-0 flex-1">
+                          <Line h="h-5" bar="h-3" w="w-32" />
+                          <div className="mt-1">
+                            <Line h="h-[19.5px]" w="w-60" />
+                            <Line h="h-[19.5px]" w="w-24" className="hidden sm:flex" />
+                          </div>
+                        </div>
+                        <Skeleton className="mt-0.5 h-6 w-11 shrink-0 rounded-full" shimmer={false} />
+                      </div>
+                    )}
+                  </Repeat>
+                </div>
+              </div>
+            </FormSectionSkeleton>
+
+            {/* Generation and retrieval: three numbers each. */}
+            <Repeat count={2}>
+              {(i) => (
+                <FormSectionSkeleton key={i}>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <Repeat count={3}>{(f) => <PlainFieldSkeleton key={f} label="w-24" />}</Repeat>
+                  </div>
+                </FormSectionSkeleton>
+              )}
+            </Repeat>
+
+            {/* Style prompt: a five-row textarea. */}
+            <FormSectionSkeleton>
+              <div className="space-y-1.5">
+                <LabelLine w="w-24" />
+                <Skeleton className="w-full rounded-lg" style={{ height: 5 * 22.75 + 18 + 7 }} />
+              </div>
+            </FormSectionSkeleton>
+
+            {/* Index status: three counts, last index / last test, the two actions. */}
+            <FormSectionSkeleton>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <Repeat count={3}>
+                    {(i) => (
+                      <div key={i} className="rounded-xl bg-muted/50 p-4">
+                        <Line h="h-4" w="w-20" />
+                        <Line h="h-8" bar="h-6" w="w-12" className="mt-1" />
+                      </div>
+                    )}
+                  </Repeat>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <Line h="h-4" w="w-20" />
+                    <Line h="h-5" bar="h-3" w="w-40" className="mt-1" />
+                    <Line h="h-4" w="w-36" className="mt-1" />
+                  </div>
+                  <div>
+                    <Line h="h-4" w="w-20" />
+                    <Line h="h-5" bar="h-3" w="w-40" className="mt-1" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Skeleton className="h-10 w-40 rounded-lg" shimmer={false} />
+                  <Skeleton className="h-10 w-32 rounded-lg" shimmer={false} />
+                </div>
+              </div>
+            </FormSectionSkeleton>
+
+            {/* payment-settings-panel.tsx */}
+            <div className="space-y-8">
+              <div className="rounded-xl border border-border/80 bg-card shadow-xs">
+                <AiCardHeaderSkeleton title="w-56" description={{ w: 'w-40' }} />
+                <div className="space-y-5 p-6">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <AiInputSkeleton />
+                    <AiInputSkeleton label="w-36" />
+                    <AiInputSkeleton hint={2} label="w-20" />
+                    <AiInputSkeleton hint={1} />
+                  </div>
+                  <div className="flex h-6 flex-wrap items-center gap-6">
+                    <Skeleton className="h-6 w-40 rounded-full" shimmer={false} />
+                    <Skeleton className="h-6 w-64 rounded-full" shimmer={false} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-10 w-24 rounded-lg bg-primary/25" />
+                    <Skeleton className="h-9 w-20 rounded-lg" shimmer={false} />
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/80 bg-card shadow-xs">
+                <AiCardHeaderSkeleton title="w-32" />
+                <div className="p-6">
+                  {orders === 0 ? (
+                    <Line h="h-5" bar="h-3" w="w-4" />
+                  ) : (
+                    <AiTableSkeleton
+                      columns={4}
+                      rows={Array.from({ length: orders }, (_, i) => (i < paidOrders ? 'action' : 'badge'))}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ai-learning-panel.tsx */}
+            <div className="space-y-8">
+              <div className="rounded-xl border border-border/80 bg-card shadow-xs">
+                <AiCardHeaderSkeleton title="w-28" description={{ w: 'w-96' }} />
+                <div className="space-y-5 p-6">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <AiInputSkeleton label="w-32" />
+                    <AiInputSkeleton hint={1} label="w-28" />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card p-4">
+                    <div>
+                      <Line h="h-5" bar="h-3" w="w-32" />
+                      <Line h="h-4" w="w-56" />
+                    </div>
+                    <Skeleton className="h-6 w-11 shrink-0 rounded-full" shimmer={false} />
+                  </div>
+                  <div className="space-y-2">
+                    <Line h="h-5" bar="h-3" w="w-24" />
+                    <div className="flex flex-wrap gap-3">
+                      {['w-20', 'w-24', 'w-20', 'w-24'].map((w, i) => (
+                        <Skeleton key={i} className={cn('h-[30px] rounded-full', w)} shimmer={false} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Repeat count={3}>{(i) => <AiInputSkeleton key={i} label="w-24" />}</Repeat>
+                  </div>
+                  {/* Allowed domains: a three-row mono textarea and its hint. */}
+                  <div className="space-y-2">
+                    <Line h="h-6" bar="h-3" w="w-28" />
+                    <Skeleton className="h-[81px] w-full rounded-lg" />
+                    <Line h="h-[14.85px]" bar="h-2" w="w-64" />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Skeleton className="h-10 w-24 rounded-lg bg-primary/25" />
+                    <Skeleton className="h-10 w-32 rounded-lg" shimmer={false} />
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/80 bg-card shadow-xs">
+                <AiCardHeaderSkeleton title="w-36" />
+                <div className="p-6">
+                  {votes === 0 ? (
+                    <Line h="h-5" bar="h-3" w="w-28" />
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                        <Repeat count={4}>
+                          {(i) => (
+                            <div key={i} className="rounded-xl bg-muted/50 p-4">
+                              <Line h="h-4" w="w-20" />
+                              <Line h="h-8" bar="h-6" w="w-12" className="mt-1" />
+                            </div>
+                          )}
+                        </Repeat>
+                      </div>
+                      <div className="mt-5 divide-y divide-border/70 border-t border-border/70">
+                        <Repeat count={votes}>
+                          {(i) => (
+                            <div key={i} className="flex h-9 items-center gap-2">
+                              <Skeleton className="size-3.5 shrink-0 rounded" shimmer={false} />
+                              <Skeleton className={cn('h-2.5', ['w-2/3', 'w-1/2', 'w-3/5'][i % 3])} />
+                            </div>
+                          )}
+                        </Repeat>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/80 bg-card shadow-xs">
+                <AiCardHeaderSkeleton title="w-32" description={{ w: 'w-full max-w-xl', wrapUntil: 'lg:hidden' }} />
+                <div className="space-y-5 p-6">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="min-w-48 flex-1">
+                      <AiInputSkeleton hint={1} label="w-20" />
+                    </div>
+                    <Skeleton className="h-10 w-28 rounded-lg bg-primary/25" />
+                  </div>
+                  {evalRuns === 0 ? (
+                    <Line h="h-5" bar="h-3" w="w-32" />
+                  ) : (
+                    <>
+                      <AiTableSkeleton columns={7} rows={Array.from({ length: evalRuns }, () => 'plain' as const)} />
+                      <Line h="h-[14.85px]" bar="h-2" w="w-48" />
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </FormLayoutSkeleton>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Award, Download, ExternalLink, Loader2, Printer, ShieldCheck, Ban } from 'lucide-react';
@@ -47,6 +48,11 @@ export function CertificateList({ className }: { className?: string }) {
         return r.json();
       }),
   });
+
+  // The /account skeleton draws as many certificate rows as this list last showed.
+  useEffect(() => {
+    if (!isLoading) rememberListCount('public-account-certificates', Array.isArray(data) ? data.length : 0);
+  }, [isLoading, data]);
 
   const fetchPdf = async (id: string): Promise<Blob> => {
     const res = await fetch(`/api/proxy/certifications/my/${id}/download`, {

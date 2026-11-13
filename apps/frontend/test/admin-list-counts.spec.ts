@@ -33,7 +33,11 @@ describe('admin list skeletons remember the list size', () => {
   });
 
   it('has no skeleton reading a key that no list records', () => {
-    const read_ = [...skeletons.matchAll(/useRememberedListCount\('([^']+)'/g)].map((m) => m[1]);
+    // Editor, dashboard, AI settings and audit shapes are paired in admin-edit-skeletons.spec.ts.
+    const elsewhere = /^(edit-|dashboard-|ai-assistant-|staff-audit)/;
+    const read_ = [...skeletons.matchAll(/useRememberedListCount\('([^']+)'/g)]
+      .map((m) => m[1])
+      .filter((key) => !elsewhere.test(key ?? ''));
     expect(new Set(read_)).toEqual(new Set(LISTS.map((l) => l.key)));
   });
 });

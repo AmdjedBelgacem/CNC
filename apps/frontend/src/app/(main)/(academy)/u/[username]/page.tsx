@@ -1,4 +1,6 @@
 'use client';
+import { ProfilePageSkeleton } from '@/components/skeletons/public-page-replicas';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
@@ -6,7 +8,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton, SkeletonCircle } from '@/components/ui/skeleton';
 import { Placeholder } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { api } from '@/lib/api-client';
@@ -184,33 +185,6 @@ function ActivityTabPlaceholder() {
     />
   );
 }
-function LoadingSkeleton() {
-  // Page-specific (hero + overlapping identity block + tab pills), but built
-  // from the shared kit so it shimmers and honours prefers-reduced-motion like
-  // every other placeholder. The previous version used raw `animate-pulse` on
-  // eight divs, which meant this one screen blinked while the rest of the app
-  // swept.
-  return (
-    <div className="min-h-screen bg-background">
-      <Skeleton className="h-48 w-full rounded-none sm:h-56 md:h-72" />
-      <div className="relative z-10 mx-auto -mt-14 max-w-5xl px-4">
-        <div className="mb-6 flex items-end gap-4">
-          <SkeletonCircle className="size-28 border-4 border-background" />
-          <div className="flex-1 space-y-2 pb-1">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        </div>
-        <Skeleton className="mb-6 h-4 w-full max-w-xl" />
-        <div className="flex gap-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-28" />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 export default function ProfilePage() {
   const tp = useTranslations('pages.publicProfile');
   const tProfile = useTranslations('profile');
@@ -226,6 +200,10 @@ export default function ProfilePage() {
   const [followLoading, setFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'portfolio' | 'activity'>('portfolio');
   const isOwnProfile = !!(user && user.username === username);
+  // The profile skeleton draws as many portfolio cards as the last profile showed.
+  useEffect(() => {
+    if (!loading && profile) rememberListCount('public-profile-portfolio', profile.portfolioItems?.length ?? 0);
+  }, [loading, profile]);
   useEffect(() => {
     let cancelled = false;
     async function fetchProfile() {
@@ -307,7 +285,7 @@ export default function ProfilePage() {
       setFollowLoading(false);
     }
   }, [followStatus, followLoading, tProfile, profile?.id]);
-  if (loading) return <LoadingSkeleton />;
+  if (loading) return <ProfilePageSkeleton />;
   if (!profile) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">

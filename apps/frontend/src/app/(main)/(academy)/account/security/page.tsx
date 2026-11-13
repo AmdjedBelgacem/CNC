@@ -1,4 +1,5 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,10 @@ export default function SecuritySettingsPage() {
   useEffect(() => {
     loadSessions();
   }, []);
+  // The skeleton draws as many session rows as this list last showed.
+  useEffect(() => {
+    if (!sessionsLoading) rememberListCount('public-account-sessions', sessions.length);
+  }, [sessionsLoading, sessions.length]);
   const loadSessions = async () => {
     setSessionsLoading(true);
     try {

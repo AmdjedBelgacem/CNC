@@ -1,4 +1,6 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -23,6 +25,11 @@ export function CategoryFilter() {
   const active = searchParams.get('academy')?.trim() || '';
 
   const { academies, isLoading } = useAcademies();
+
+  // The /courses skeleton only draws the filter when there are academies to show.
+  useEffect(() => {
+    if (!isLoading) rememberListCount('public-course-academies', academies.length);
+  }, [isLoading, academies.length]);
 
   if (isLoading) {
     return (

@@ -37,6 +37,7 @@ import {
 import type { InteractiveHotspot } from '@titan/shared';
 import { ProductGalleryManager } from '../../product-gallery';
 import { ProductEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
 export interface ProductImage {
   id: string;
@@ -204,6 +205,11 @@ function ProductEditor() {
       setProduct(data);
       setBaseline(next);
       setImages(Array.isArray(data.images) ? data.images : []);
+      // The editor's data-sized parts, so the loading skeleton can draw them next time.
+      rememberListCount('edit-product-images', Array.isArray(data.images) ? data.images.length : 0);
+      rememberListCount('edit-product-pinpoints', next.pinpoints.length);
+      rememberListCount('edit-product-documents', next.documents.length);
+      rememberListCount('edit-product-thumbnail', next.thumbnailUrl ? 1 : 0);
       /**
        * Populate the form. This line is the entire data-loss fix.
        *

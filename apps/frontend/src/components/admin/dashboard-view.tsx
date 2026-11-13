@@ -63,6 +63,7 @@ import {
   useMountedNow,
 } from './dashboard-parts';
 import { DashboardKpiStripSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { PanelListSkeleton } from '@/components/ui/skeletons';
 
 /* -------------------------------------------------------------------------- */
@@ -489,6 +490,19 @@ export function DashboardView() {
    * is still live. The bar therefore shows published (split into engaged and
    * silent) against drafts.
    */
+  // The route skeleton draws these panels at the size they last rendered.
+  const attentionRows = attention.length;
+  const attentionWithSamples = attention.filter((item) => item.samples.length > 0).length;
+  const topCourseRows = Math.min(6, topCourses?.length ?? 0);
+  const signupRows = Math.min(5, stats?.recentUsers?.length ?? 0);
+  useEffect(() => {
+    if (loading) return;
+    rememberListCount('dashboard-attention', attentionRows);
+    rememberListCount('dashboard-attention-samples', attentionWithSamples);
+    rememberListCount('dashboard-top-courses', topCourseRows);
+    rememberListCount('dashboard-signups', signupRows);
+  }, [loading, attentionRows, attentionWithSamples, topCourseRows, signupRows]);
+
   const health = useMemo(() => {
     const drafts = insights?.draftCourses?.count ?? 0;
     const zero = insights?.zeroEnrollmentCourses?.count ?? 0;

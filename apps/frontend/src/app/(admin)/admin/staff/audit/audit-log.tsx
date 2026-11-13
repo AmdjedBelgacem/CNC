@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, ScrollText } from 'lucide-react';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AuditRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
 interface AuditRow {
   id: string;
@@ -37,7 +38,7 @@ export function AuditLog() {
   const [draft, setDraft] = useState('');
   const [action, setAction] = useState('');
 
-  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching, isPlaceholderData } = useQuery({
     queryKey: ['admin', 'audit-logs', action, page],
     queryFn: () => {
       const qs = new URLSearchParams({ limit: String(PAGE_SIZE + 1), offset: String(page * PAGE_SIZE) });
@@ -50,6 +51,17 @@ export function AuditLog() {
   const rows = (data ?? []).slice(0, PAGE_SIZE);
   const hasNext = (data?.length ?? 0) > PAGE_SIZE;
   const suggestions = [...new Set(rows.map((r) => r.action))];
+
+  // The route skeleton opens on the unfiltered first page, so that view's shape is the one to keep:
+  // how many entries, and how many carry the taller details toggle.
+  const isDefaultView = !action && page === 0 && !!data && !isPlaceholderData;
+  const rowCount = rows.length;
+  const detailCount = rows.filter((r) => r.details && Object.keys(r.details).length > 0).length;
+  useEffect(() => {
+    if (!isDefaultView) return;
+    rememberListCount('staff-audit', rowCount);
+    rememberListCount('staff-audit-details', detailCount);
+  }, [isDefaultView, rowCount, detailCount]);
 
   const applyFilter = (value: string) => {
     setPage(0);

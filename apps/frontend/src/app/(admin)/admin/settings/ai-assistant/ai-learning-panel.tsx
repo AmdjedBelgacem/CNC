@@ -31,6 +31,7 @@ import { ErrorState, LoadingState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import type { AiWebSearchProvider } from '@/lib/api/types';
 import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
 const PROVIDERS: Array<{ value: AiWebSearchProvider; label: string }> = [
   { value: 'none', label: '—' },
@@ -151,6 +152,16 @@ export function AiLearningPanel() {
   const summary = feedback.data?.data.summary;
   const latest = runs.data?.data[0];
   const previous = runs.data?.data[1];
+
+  // The settings skeleton sizes the feedback and eval cards from these (0 votes: the "no votes" line).
+  const recentVotes = feedback.data ? (summary && summary.total > 0 ? feedback.data.data.recent.slice(0, 6).length : 0) : null;
+  const runCount = runs.data?.data.length ?? null;
+  useEffect(() => {
+    if (recentVotes !== null) rememberListCount('ai-assistant-feedback', recentVotes);
+  }, [recentVotes]);
+  useEffect(() => {
+    if (runCount !== null) rememberListCount('ai-assistant-eval-runs', runCount);
+  }, [runCount]);
 
   return (
     <div className="space-y-8">

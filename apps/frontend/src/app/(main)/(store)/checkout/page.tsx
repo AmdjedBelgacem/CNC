@@ -17,6 +17,7 @@ import { AnimatePresence, m } from 'framer-motion';
 import { Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { spring, transition } from '@/lib/motion';
 import { CheckoutStepper } from '@/components/store/checkout-stepper';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 
 /**
  * Loads Moyasar's Payment Form.
@@ -102,6 +103,11 @@ export default function CheckoutPage() {
   const items = useCartStore((state) => state.items);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hydrated = useAuthStore((state) => state.hydrated);
+
+  // The /checkout skeleton shares the cart's remembered line count.
+  useEffect(() => {
+    if (useCartStore.persist?.hasHydrated?.() ?? true) rememberListCount('public-cart', items.length);
+  }, [items.length]);
 
   // A direct buy (course, event ticket) arrives as /checkout?order=<id>: the
   // order already exists, so this page must load it rather than build a new one

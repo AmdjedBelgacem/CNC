@@ -1,4 +1,5 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -16,6 +17,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { AnimatePresence, Crossfade, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { ActivePill } from '@/components/feed/feed-motion';
 import { cn } from '@/lib/utils';
+import { GroupGridSkeleton, GroupsPageSkeleton } from '@/components/skeletons/public-page-replicas';
 
 const MapView = dynamic(() => import('./map-view'), {
   ssr: false,
@@ -27,19 +29,9 @@ const PAGE_SIZE = 12;
 
 export default function GroupsPage() {
   return (
-    <Suspense fallback={<GroupsSkeleton />}>
+    <Suspense fallback={<GroupsPageSkeleton />}>
       <GroupsContent />
     </Suspense>
-  );
-}
-
-function GroupsSkeleton() {
-  return (
-    <div className="container mx-auto space-y-4 px-4 py-20 md:py-28" aria-hidden="true">
-      <Skeleton className="mx-auto h-10 w-64" />
-      <Skeleton className="mx-auto h-5 w-96 max-w-full" />
-      <Skeleton className="h-80 w-full rounded-xl" />
-    </div>
   );
 }
 
@@ -141,6 +133,11 @@ function GroupsContent() {
   );
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // The /groups skeleton draws as many cards as the unfiltered first page last showed.
+  useEffect(() => {
+    if (!isLoading && !error && !hasFilters && page === 1) rememberListCount('public-groups', groups.length);
+  }, [isLoading, error, hasFilters, page, groups.length]);
 
   return (
     <div>
@@ -245,11 +242,7 @@ function GroupsContent() {
 
           <Crossfade value={isLoading ? 'loading' : error ? 'error' : groups.length === 0 ? 'empty' : 'list'} axis="none">
           {isLoading && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-xl" />
-              ))}
-            </div>
+            <GroupGridSkeleton />
           )}
 
           {error && <ErrorState title={t('loadFailed')} onRetry={() => refetch()} />}

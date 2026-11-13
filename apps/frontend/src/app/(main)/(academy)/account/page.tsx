@@ -1,4 +1,6 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@/stores/auth-store';
@@ -39,6 +41,11 @@ export default function AccountPage() {
     enabled: isAuthenticated,
   });
   const { nextSession } = useNextLiveSession(isAuthenticated);
+
+  // The /account skeleton draws as many enrolment rows as this list last showed.
+  useEffect(() => {
+    if (!isLoading && Array.isArray(enrollments)) rememberListCount('public-account-enrollments', enrollments.length);
+  }, [isLoading, enrollments]);
   if (!isAuthenticated) {
     return (
       <div className="container mx-auto max-w-xl px-4 py-24 text-center">

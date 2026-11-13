@@ -175,3 +175,47 @@ export function CertificateListSkeleton({ rows = 2, className }: { rows?: number
     </div>
   );
 }
+
+/**
+ * `components/ui/states.tsx` `EmptyState`: a 56px icon tile, a title line, an optional
+ * description and an optional action button, centred with `gap-3`.
+ */
+export function EmptyStateSkeleton({
+  descriptionLines = 1,
+  action,
+  compact = false,
+  className,
+}: {
+  /** Lines of `text-sm leading-relaxed` copy (22.75px each); 0 for no description. */
+  descriptionLines?: number;
+  /** The action button's height: `'sm'` 36px, `'md'` 40px, or none. */
+  action?: 'sm' | 'md';
+  compact?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center gap-3 text-center',
+        compact ? 'px-4 py-10' : 'px-6 py-16',
+        className,
+      )}
+    >
+      <Skeleton className="size-14 rounded-2xl" />
+      <div className="flex w-full max-w-sm flex-col items-center space-y-1">
+        {/* font-display text-lg → 28px line. */}
+        <div className="flex h-7 items-center">
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <Repeat count={descriptionLines}>
+          {(i) => (
+            <div key={i} className="flex h-[22.75px] w-full items-center justify-center">
+              <Skeleton className={cn('h-3', i === descriptionLines - 1 ? 'w-3/5' : 'w-full')} />
+            </div>
+          )}
+        </Repeat>
+      </div>
+      {action ? <Skeleton className={cn('w-32 rounded-lg', action === 'sm' ? 'h-9' : 'h-10')} /> : null}
+    </div>
+  );
+}

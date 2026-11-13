@@ -1,6 +1,7 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,12 @@ export default function CartPage() {
   );
   const total = lines.reduce((sum, line) => sum + line.displayPrice * line.quantity, 0);
   const money = (minor: number) => formatMinorUnits(minor, displayCurrency, locale);
+
+  // /cart and /checkout skeletons draw the empty state or this many lines. Effects run after
+  // the persisted cart has rehydrated from localStorage, so 0 here is a real empty cart.
+  useEffect(() => {
+    if (useCartStore.persist?.hasHydrated?.() ?? true) rememberListCount('public-cart', items.length);
+  }, [items.length]);
 
   if (items.length === 0) {
     // `EmptyState` renders its title as a paragraph, so this branch had no heading at all —

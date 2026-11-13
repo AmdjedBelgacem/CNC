@@ -18,6 +18,7 @@ import {
   SkeletonText,
 } from '@/components/ui/skeleton';
 import { Stagger, StaggerItem } from '@/components/ui/motion';
+import { SkeletonRegion } from '@/components/ui/skeletons/region';
 
 /**
  * ROUTE SKELETONS
@@ -279,7 +280,9 @@ export function SettingsSkeleton({
   const tc = useTranslations('common');
   if (embedded) {
     return (
-      <div role="status" aria-label={tc('loading')} className="space-y-6">
+      // Same live-region contract as every other replica (`role="status"` + `aria-busy`),
+      // so assistive tech and the loading probe both see the settings pages as loading.
+      <SkeletonRegion label={tc('loading')} className="space-y-6">
         <div className="flex items-start gap-4">
           <SkeletonCircle className="size-10 shrink-0" />
           <div className="flex-1 space-y-2">
@@ -288,7 +291,7 @@ export function SettingsSkeleton({
           </div>
         </div>
         <FormPanel fields={fields} />
-      </div>
+      </SkeletonRegion>
     );
   }
   return (

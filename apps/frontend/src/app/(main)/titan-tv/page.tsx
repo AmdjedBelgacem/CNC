@@ -1,4 +1,6 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Play, Clock, Film } from 'lucide-react';
@@ -77,6 +79,10 @@ export default function TitanTvPage() {
       }),
     retry: 2,
   });
+  // The /titan-tv skeleton draws as many series rows as this page last showed.
+  useEffect(() => {
+    if (data?.data) rememberListCount('public-titan-tv', data.data.length);
+  }, [data]);
   return (
     <div>
       <section className="relative isolate overflow-hidden border-b border-border/70 py-20 md:py-28">

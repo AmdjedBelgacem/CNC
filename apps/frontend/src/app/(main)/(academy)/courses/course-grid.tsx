@@ -1,4 +1,6 @@
 'use client';
+import { rememberListCount } from '@/lib/admin-shape-memory';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -101,6 +103,11 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
   const courses = data?.data || [];
   const academy = academyQuery.data ?? null;
   const academyMissing = Boolean(academySlug) && academyQuery.isSuccess && academy === null;
+
+  // The /courses skeleton draws as many cards as the unfiltered catalogue last showed.
+  useEffect(() => {
+    if (!academySlug && !isLoading && !error) rememberListCount('public-courses', courses.length);
+  }, [academySlug, isLoading, error, courses.length]);
 
   if (isLoading) {
     // Same wrapper and grid as the loaded list below, so the cards land in place.
