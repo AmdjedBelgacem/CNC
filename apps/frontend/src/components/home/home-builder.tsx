@@ -14,6 +14,8 @@ import type {
 } from '@titan/shared';
 import { isSampleTestimonial, getSlotChildren, mergeBlockProps } from '@titan/shared';
 import { BuilderNode } from '@/components/builder/block-renderer';
+import { AboutFactsSection, HomeFaqSection, HomeGuidesSection } from '@/components/home/home-extras';
+import { liveIslandSlot } from '@/components/home/live-island-header';
 import { AcademyGridBlock } from '@/components/builder/blocks/academy-grid-block';
 import { CatalogHeroBlock } from '@/components/builder/blocks/catalog-hero-block';
 import { ProgramCardsBlock, courseToCardProps } from '@/components/builder/blocks/program-cards-block';
@@ -87,6 +89,11 @@ export function HomeBuilder({
       if (variant && islands && Object.prototype.hasOwnProperty.call(islands, variant)) {
         return islands[variant];
       }
+      // Content-only islands need nothing but the layout, so they render on any page an admin
+      // adds them to. Each route used to wire up its own short list, and the FAQ placed on the
+      // products page showed in the builder but was silently dropped on the live page.
+      const shared = variant ? renderSharedIsland(layout, variant) : undefined;
+      if (shared !== undefined) return shared;
       // Never expose the builder's preview iframe on the public site. An
       // unmapped island is a configuration error; hiding it is safer than
       // rendering editor chrome to visitors.
@@ -250,4 +257,22 @@ export function HomeBuilder({
       ))}
     </div>
   );
+}
+
+/**
+ * Islands that carry their own copy and need no page data. A route may still pass its own
+ * element for these through `islands`; otherwise they render from the layout here.
+ */
+function renderSharedIsland(layout: PageLayout, variant: string): ReactNode | undefined {
+  const slot = (name: string) => liveIslandSlot(layout, variant, name, '');
+  switch (variant) {
+    case 'home-faq':
+      return <HomeFaqSection header={slot('header')} items={slot('items')} />;
+    case 'home-guides':
+      return <HomeGuidesSection header={slot('header')} />;
+    case 'about-facts':
+      return <AboutFactsSection header={slot('header')} items={slot('items')} footer={slot('footer')} />;
+    default:
+      return undefined;
+  }
 }
