@@ -32,3 +32,11 @@ describe('in-page loading states', () => {
     expect(page).toContain('<CoursesGridLoading />');
   });
 });
+
+describe('course filter while academies load', () => {
+  it('follows the remembered academy count instead of always drawing chips', () => {
+    const filter = read('components/academy/category-filter.tsx');
+    expect(filter).toMatch(/if \(isLoading\) \{\s*return <CourseFilterLoading \/>;/);
+    expect(filter).not.toContain('<CourseFilterSkeleton />');
+  });
+});

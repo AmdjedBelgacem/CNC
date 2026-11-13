@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Layers } from 'lucide-react';
 import { useAcademies } from '@/hooks/use-academies';
-import { CourseFilterSkeleton } from '@/components/ui/skeletons/public';
+import { CourseFilterLoading } from '@/components/skeletons/public-route-skeletons';
 import { cn } from '@/lib/utils';
 import { m } from 'framer-motion';
 import { spring } from '@/lib/motion';
@@ -31,10 +31,10 @@ export function CategoryFilter() {
     if (!isLoading) rememberListCount('public-course-academies', academies.length);
   }, [isLoading, academies.length]);
 
+  // While academies load, draw the filter only if there were academies last time: with none,
+  // the placeholder sat above an empty library and the page jumped 100px when it vanished.
   if (isLoading) {
-    return (
-      <CourseFilterSkeleton />
-    );
+    return <CourseFilterLoading />;
   }
 
   if (academies.length === 0) return null;
