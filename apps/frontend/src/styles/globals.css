@@ -1160,6 +1160,12 @@
 [class*='tel-']:has(> [data-count-zero]) {
   display: none;
 }
+/* The builder canvas wraps every block in a drag wrapper with inline `position: relative`. An
+   element positioned out of flow must anchor past it, to the ancestor it anchors to on the live
+   page (see element-block.tsx). */
+[data-puck-component]:has(> [data-builder-out-of-flow]) {
+  position: static !important;
+}
 [data-count-zero-editing] {
   opacity: 0.45;
   outline: 1px dashed rgb(var(--c-border));
