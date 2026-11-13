@@ -76,6 +76,31 @@ export async function fetchLinkedProducts(
 }
 
 /**
+ * Server-side: the related products for one product, the same list the detail page's
+ * "related" section shows. `null` on failure, so the browser still fetches it itself;
+ * an empty list is a real answer (no section).
+ */
+export async function fetchRelatedProducts(
+  tenantSlug: string,
+  productId: string,
+  locale?: ContentLocale,
+): Promise<Product[] | null> {
+  try {
+    const params = new URLSearchParams();
+    if (locale) params.set('locale', coerceLocale(locale));
+    const res = await fetch(
+      `${API_BASE}/products/related/${encodeURIComponent(productId)}?${params.toString()}`,
+      { headers: tenantHeaders(tenantSlug, locale), next: { revalidate: REVALIDATE } },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    return Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Server-side: one published product by slug.
  *
  * The detail page renders from this during SSR. It used to fetch only on the client,

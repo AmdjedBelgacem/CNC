@@ -52,9 +52,11 @@ interface ProductGalleryEntry {
 export function ProductDetailClient({
   slug: slugProp,
   initialProduct,
+  initialRelated,
 }: {
   slug: string;
   initialProduct?: Product | null;
+  initialRelated?: { productId: string; products: Product[] } | null;
 }) {
   // The server hands down the slug, but a client-side navigation to a different product
   // leaves the prop stale for a tick; `useParams` is the live value and wins.
@@ -65,7 +67,7 @@ export function ProductDetailClient({
   const router = useRouter();
 
   const { product, isLoading, isError, error, refetch } = useProduct(slug, initialProduct);
-  const { products: related } = useRelatedProducts(product?.id ?? null);
+  const { products: related } = useRelatedProducts(product?.id ?? null, undefined, initialRelated);
   const addItem = useCartStore((s) => s.addItem);
   const displayCurrency = useCurrencyStore((s) => s.code);
   const { rates } = useFxRates();

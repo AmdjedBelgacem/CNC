@@ -292,7 +292,7 @@ export function AboutPageSkeleton() {
       <section className="overflow-hidden py-20">
         <div className="container mx-auto max-w-3xl px-4">
           <Line height={51.84} bar="h-9" width="w-56" center className="mb-12" />
-          <div className="relative border-l-2 border-primary/30 pl-8 rtl:border-l-0 rtl:border-r-2 rtl:pl-0 rtl:pr-8">
+          <div className="relative border-s-2 border-primary/30 ps-8">
             <Repeat count={6}>
               {(i) => (
                 <div key={i}>

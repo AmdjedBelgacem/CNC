@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getLocale } from 'next-intl/server';
 import type { ContentLocale } from '@titan/shared';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
-import { fetchProductBySlug } from '@/lib/products';
+import { fetchProductBySlug, fetchRelatedProducts } from '@/lib/products';
 import { ProductDetailClient } from './product-detail-client';
 
 /**
@@ -46,5 +46,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const tenantSlug = cookieStore.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const initialProduct = await fetchProductBySlug(tenantSlug, slug, locale);
   if (!initialProduct) notFound();
-  return <ProductDetailClient slug={slug} initialProduct={initialProduct} />;
+  // Related products load with the page so their section is in the first paint; fetched in
+  // the browser, it appeared afterwards and the page grew by ~700px under the reader.
+  const relatedProducts = await fetchRelatedProducts(tenantSlug, initialProduct.id, locale);
+  return (
+    <ProductDetailClient
+      slug={slug}
+      initialProduct={initialProduct}
+      initialRelated={relatedProducts ? { productId: initialProduct.id, products: relatedProducts } : null}
+    />
+  );
 }

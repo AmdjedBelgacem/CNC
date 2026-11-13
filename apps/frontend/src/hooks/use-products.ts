@@ -53,12 +53,22 @@ export function useProduct(slug: string, initialData?: Product | null, requested
   return { ...query, product: query.data ?? null };
 }
 
-export function useRelatedProducts(id: string | null, requestedLocale?: ContentLocale) {
+/**
+ * `initialData` is the server's related list for that product, so the "related" section is in
+ * the first paint instead of appearing (and pushing the footer down) after a browser fetch.
+ * It only applies while `id` is the product the server answered for.
+ */
+export function useRelatedProducts(
+  id: string | null,
+  requestedLocale?: ContentLocale,
+  initial?: { productId: string; products: Product[] } | null,
+) {
   const locale = coerceLocale(requestedLocale ?? useLocale());
   const query = useQuery({
     queryKey: productKeys.related(id ?? 'none', locale),
     queryFn: async () => toList<Product>(await api.get(`/products/related/${id}`, { locale })),
     enabled: !!id,
+    initialData: initial && id && initial.productId === id ? initial.products : undefined,
   });
   return { ...query, products: query.data ?? [] };
 }
