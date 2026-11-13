@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/skeletons';
 import { BuilderSkeleton } from '@/components/builder/builder-shell';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth-store';
 
 /* -----------------------------------------------------------------------------
  * ADMIN ROUTE SKELETONS
@@ -1116,6 +1117,7 @@ export function AdminIntegrationsSkeleton() {
 
 /** admin/settings/page.tsx */
 export function AdminSettingsSkeleton() {
+  const isSuperAdmin = useAuthStore((state) => state.user?.role) === 'super_admin';
   return (
     <SkeletonRegion>
       <div className="w-full">
@@ -1127,7 +1129,7 @@ export function AdminSettingsSkeleton() {
           <FormLayoutSkeleton
             aside={
               <>
-                <SectionNavSkeleton items={4} />
+                <SectionNavSkeleton items={isSuperAdmin ? 5 : 4} />
                 <AsideCardSkeleton eyebrow={false}>
                   <Skeleton className="h-2.5 w-20" />
                   <Skeleton className="h-3 w-32" />
@@ -1197,6 +1199,32 @@ export function AdminSettingsSkeleton() {
                 </Repeat>
               </div>
             </FormSectionSkeleton>
+            {/* Platform alerts render for super admins only; the role is already in the store. */}
+            {isSuperAdmin && (
+              <FormSectionSkeleton>
+                <div className="space-y-2">
+                  <Repeat count={7}>
+                    {(i) => (
+                      <div key={i} className="flex h-[80px] items-center gap-3 rounded-xl border border-border/70 bg-card p-4 shadow-xs">
+                        <Skeleton className="size-9 shrink-0 rounded-lg" shimmer={false} />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Skeleton className={cn('h-3', ['w-36', 'w-20', 'w-24', 'w-28', 'w-24', 'w-40', 'w-36'][i])} />
+                            <Skeleton className="h-[18px] w-12 rounded-full" />
+                          </div>
+                          <Skeleton className="h-2.5 w-4/5" />
+                        </div>
+                        <Skeleton className="h-6 w-[75px] shrink-0 rounded-full" />
+                      </div>
+                    )}
+                  </Repeat>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Skeleton className="h-2.5 w-full" />
+                  <Skeleton className="h-2.5 w-2/3" />
+                </div>
+              </FormSectionSkeleton>
+            )}
           </FormLayoutSkeleton>
         </div>
       </div>
