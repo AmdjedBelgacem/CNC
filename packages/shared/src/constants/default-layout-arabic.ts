@@ -446,6 +446,23 @@ export const DEFAULT_LAYOUT_ARABIC: Readonly<Record<string, string>> = {
   "What's coming up": "ما هو قادم"
 };
 
+let lowerCased: Map<string, string> | null = null;
+/**
+ * The dictionary keyed by lower-cased English. An admin who retitles "Browse academies" as
+ * "Browse Academies" still means the built-in label; an exact-only lookup left it in English for
+ * Arabic visitors.
+ */
+function caseInsensitiveArabic(): Map<string, string> {
+  if (!lowerCased) {
+    lowerCased = new Map();
+    for (const [english, arabic] of Object.entries(DEFAULT_LAYOUT_ARABIC)) {
+      const key = english.toLowerCase();
+      if (!lowerCased.has(key)) lowerCased.set(key, arabic);
+    }
+  }
+  return lowerCased;
+}
+
 /**
  * Translates every field of `layout` whose English text is a built-in string. Anything else —
  * text an admin wrote, text already in Arabic — is left exactly as it is.
@@ -454,7 +471,8 @@ export function localizeDefaultLayout(layout: PageLayout): PageLayout {
   const draft = harvestPageLayout(layout);
   const translations: Record<string, string> = {};
   for (const field of draft.harvested) {
-    const arabic = DEFAULT_LAYOUT_ARABIC[field.value.trim()];
+    const english = field.value.trim();
+    const arabic = DEFAULT_LAYOUT_ARABIC[english] ?? caseInsensitiveArabic().get(english.toLowerCase());
     if (arabic) translations[field.key] = arabic;
   }
   return Object.keys(translations).length ? applyPageTranslations(draft, translations) : layout;
