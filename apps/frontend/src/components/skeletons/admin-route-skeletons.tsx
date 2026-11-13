@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AsideCardSkeleton,
@@ -28,6 +28,7 @@ import {
 import { BuilderSkeleton } from '@/components/builder/builder-shell';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
+import { useRememberedNavShape } from '@/lib/admin-shape-memory';
 
 /* -----------------------------------------------------------------------------
  * ADMIN ROUTE SKELETONS
@@ -1117,7 +1118,13 @@ export function AdminIntegrationsSkeleton() {
 
 /** admin/settings/page.tsx */
 export function AdminSettingsSkeleton() {
-  const isSuperAdmin = useAuthStore((state) => state.user?.role) === 'super_admin';
+  // Read the role outside render's first pass: the server cannot know it, so the server render
+  // and the hydrating render both use `false`, then the alerts section appears for super admins.
+  const isSuperAdmin = useSyncExternalStore(
+    useAuthStore.subscribe,
+    () => useAuthStore.getState().user?.role === 'super_admin',
+    () => false,
+  );
   return (
     <SkeletonRegion>
       <div className="w-full">
@@ -1506,7 +1513,11 @@ export function EmailTemplateEditorSkeleton() {
 }
 
 /** components/admin/navigation-editor.tsx */
+/** This site's menu when the skeleton was written: five top-level links and a group of four. */
+const NAV_SHAPE_FALLBACK = [0, 0, 0, 0, 0, 1, 1, 1, 1, 0];
+
 export function NavigationEditorSkeleton() {
+  const navShape = useRememberedNavShape(NAV_SHAPE_FALLBACK);
   return (
     <SkeletonRegion>
       <div className="w-full">
@@ -1516,22 +1527,25 @@ export function NavigationEditorSkeleton() {
             <PageHeaderSkeleton titleWidth="w-40 sm:w-52" badge="h-4 w-20" />
           </div>
           <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-start gap-6 pb-28 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            {/* Menu structure: one 60px row per item, group children indented; the row count is
+                remembered from the last load of the editor. */}
             <FormSectionSkeleton actions="w-28">
               <div className="space-y-2">
-                <Repeat count={5}>
-                  {(i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-3"
-                      style={{ marginInlineStart: i === 2 || i === 3 ? 24 : 0 }}
-                    >
-                      <Skeleton className="size-4 shrink-0 rounded" shimmer={false} />
-                      <Skeleton className={cn('h-3', ['w-24', 'w-32', 'w-20', 'w-28', 'w-24'][i])} />
-                      <Skeleton className="hidden h-2.5 w-28 sm:block" />
-                      <Skeleton className="ms-auto size-8 rounded-lg" />
+                {navShape.map((depth, i) => (
+                  <div
+                    key={i}
+                    className="flex h-[60px] items-center gap-3 rounded-xl border border-border/70 bg-card px-3"
+                    style={{ marginInlineStart: depth === 1 ? 37 : 0 }}
+                  >
+                    <Skeleton className="size-4 shrink-0 rounded" shimmer={false} />
+                    <div className="min-w-0 space-y-1.5">
+                      <Skeleton className={cn('h-3', ['w-24', 'w-32', 'w-20', 'w-28', 'w-24'][i % 5])} />
+                      <Skeleton className="h-2.5 w-20" />
                     </div>
-                  )}
-                </Repeat>
+                    <Skeleton className="hidden h-2.5 w-28 sm:block" />
+                    <Skeleton className="ms-auto size-8 rounded-lg" />
+                  </div>
+                ))}
               </div>
             </FormSectionSkeleton>
             {/* Live preview: titled header with the desktop/mobile toggle, then the rendered menu. */}

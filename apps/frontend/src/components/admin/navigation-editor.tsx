@@ -1,4 +1,5 @@
 'use client';
+import { rememberNavShape } from '@/lib/admin-shape-memory';
 import {
   createContext,
   useCallback,
@@ -227,6 +228,11 @@ export function NavigationEditor() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The loading skeleton draws one row per menu item; record the saved shape for the next visit.
+  useEffect(() => {
+    if (!loading && !loadError) rememberNavShape(saved);
+  }, [saved, loading, loadError]);
 
   /** True only when the tree differs from what the server holds. */
   const dirty = useMemo(
