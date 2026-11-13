@@ -39,6 +39,7 @@ import {
 import { LearnerDrawer } from './learner-drawer';
 import type { AdminUserRow } from './users-shared';
 import { LearnersTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const PER_PAGE = 12;
@@ -168,6 +169,12 @@ export default function AdminUsersPage() {
 
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const hasFilters = Boolean(q || status || from || to);
+
+  // The loading skeleton draws one row per row shown here; record how many for the next
+  // visit. Only the unfiltered first page, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (!loading && !error && rows && !hasFilters && page === 1) rememberListCount('users', rows.length);
+  }, [loading, error, rows, hasFilters, page]);
   const countOf = (key: StatusKey) => facets?.[key] ?? 0;
 
   const statusTabs = useMemo(

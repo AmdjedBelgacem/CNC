@@ -42,7 +42,8 @@ import {
 import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { ProductRowMenu, type ProductAction } from './product-row-menu';
 import { categoryStyle } from '@/components/admin/product-category';
-import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
+import { ProductsListSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 /* A product catalogue with no product photography still has one strong visual
@@ -484,6 +485,12 @@ export default function AdminProductsPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = Boolean(status || category || productType || q);
 
+  // The loading skeleton draws one card per row shown here; record how many for the next
+  // visit. Only the unfiltered first page, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (!loading && !error && rows && !hasFilters && page === 1) rememberListCount('products', rows.length);
+  }, [loading, error, rows, hasFilters, page]);
+
   const menuLabels = {
     publish: t('action.publish', { default: 'Publish' }),
     unpublish: t('action.unpublish', { default: 'Unpublish' }),
@@ -692,7 +699,7 @@ export default function AdminProductsPage() {
         </Toolbar>
 
         {loading ? (
-          <SkeletonRegion><AdminCardGrid kind="product" /></SkeletonRegion>
+          <SkeletonRegion><ProductsListSkeleton /></SkeletonRegion>
         ) : !rows || rows.length === 0 ? (
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
             <EmptyState

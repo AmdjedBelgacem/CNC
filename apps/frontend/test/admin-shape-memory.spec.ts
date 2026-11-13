@@ -25,3 +25,24 @@ describe('navigation skeleton shape', () => {
     expect(parseNavShape(JSON.stringify(Array(61).fill(0)), FALLBACK)).toBe(FALLBACK);
   });
 });
+
+import { parseListCount } from '../src/lib/admin-shape-memory';
+
+describe('remembered list counts', () => {
+  it('reads a stored count, including zero', () => {
+    expect(parseListCount('7', 5)).toBe(7);
+    expect(parseListCount('0', 5)).toBe(0);
+  });
+
+  it('caps at the maximum a skeleton needs', () => {
+    expect(parseListCount('500', 5, 20)).toBe(20);
+  });
+
+  it('falls back on nothing or garbage', () => {
+    expect(parseListCount(null, 5)).toBe(5);
+    expect(parseListCount('', 5)).toBe(5);
+    expect(parseListCount('abc', 5)).toBe(5);
+    expect(parseListCount('-2', 5)).toBe(5);
+    expect(parseListCount('2.5', 5)).toBe(5);
+  });
+});

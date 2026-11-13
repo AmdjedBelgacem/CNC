@@ -44,7 +44,8 @@ import {
 import { CertificateDetailDialog, type CertificateRow } from './certificate-detail';
 import { IssueCertificateSheet } from './issue-sheet';
 import { TemplatesTab } from './templates-tab';
-import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
+import { CertificatesListSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 /* A certificate is a document, so it is presented as one: a small credential
@@ -448,6 +449,12 @@ export default function AdminCertificatesPage() {
   const countOf = (k: string) => facets?.[k] ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = Boolean(q || status || courseId || from || to);
+
+  // The loading skeleton draws one card per row shown here; record how many for the next
+  // visit. Only the unfiltered first page, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (!loading && !error && rows && !hasFilters && page === 1) rememberListCount('certificates', rows.length);
+  }, [loading, error, rows, hasFilters, page]);
   const expiringSoonShown = useMemo(
     () => (rows ?? []).filter(expiresSoon).length,
     [rows],
@@ -715,7 +722,7 @@ export default function AdminCertificatesPage() {
             </Toolbar>
 
             {loading ? (
-              <SkeletonRegion><AdminCardGrid kind="certificate" count={4} /></SkeletonRegion>
+              <SkeletonRegion><CertificatesListSkeleton /></SkeletonRegion>
             ) : !rows || rows.length === 0 ? (
               hasFilters ? (
                 <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">

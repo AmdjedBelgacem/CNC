@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, Inbox, Mail, Search, X } from 'lucide-react';
@@ -18,6 +18,7 @@ import { StatusChip } from '@/components/admin/form-page';
 import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/admin/drawer-kit';
 import { toast } from '@/components/ui/toast';
 import { QuoteRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 interface QuoteRow {
@@ -77,6 +78,12 @@ export function QuotesInbox() {
   const items = data?.items ?? [];
   const openQuote = items.find((q) => q.id === openId) ?? null;
   const counts = data?.counts ?? { new: 0, contacted: 0, closed: 0 };
+
+  // The loading skeleton draws one row per request listed here, or the empty note; record how
+  // many for the next visit. Only the unfiltered inbox, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (!isLoading && data && status === 'all' && !search) rememberListCount('quotes', data.items?.length ?? 0);
+  }, [isLoading, data, status, search]);
 
   return (
     <div className="space-y-4">

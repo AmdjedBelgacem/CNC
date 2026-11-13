@@ -25,6 +25,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { IntegrationCardsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 type Status = 'connected' | 'expired' | 'revoked' | 'not_connected' | 'blocked';
@@ -75,6 +76,14 @@ export function IntegrationsPanel() {
 
   const services = query.data?.data ?? [];
   const platform = query.data?.platform;
+
+  // The four cards are fixed; what changes their height is the "blocked" notice, so the loading
+  // skeleton draws as many notices as were shown here last time.
+  useEffect(() => {
+    if (query.isSuccess) {
+      rememberListCount('integrations-notices', services.filter((s) => s.status === 'blocked' && s.blockedReason).length);
+    }
+  }, [query.isSuccess, services]);
 
   const result = searchParams.get('result');
   // Firing this during render repeats the toast on every re-render, so it runs

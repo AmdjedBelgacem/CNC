@@ -66,6 +66,49 @@ export function parseNavShape(raw: string | null, fallback: number[]): number[] 
   return fallback;
 }
 
+/* ── Remembered list sizes ──────────────────────────────────────────────────────────────────
+ * The same idea for list pages: a list records how many rows it rendered, and its skeleton
+ * draws that many next time. Keys are short page names ('partners', 'quotes', …).
+ */
+
+const COUNT_PREFIX = 'admin:list-count:';
+
+/** Record how many rows a list rendered. Call it once the list has loaded (0 is a real value). */
+export function rememberListCount(key: string, count: number): void {
+  if (!Number.isFinite(count) || count < 0) return;
+  try {
+    window.localStorage.setItem(COUNT_PREFIX + key, String(Math.min(Math.floor(count), 200)));
+  } catch {
+    // Storage unavailable: the skeleton keeps its fallback.
+  }
+}
+
+export function parseListCount(raw: string | null, fallback: number, max = 200): number {
+  if (raw == null || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) return fallback;
+  return Math.min(value, max);
+}
+
+/**
+ * The remembered row count for `key`, capped at `max` (a skeleton only needs to fill the
+ * viewport and a page of rows), or `fallback` before hydration and on a first visit.
+ */
+export function useRememberedListCount(key: string, fallback: number, max = 200): number {
+  const raw = useSyncExternalStore(
+    noSubscription,
+    () => {
+      try {
+        return window.localStorage.getItem(COUNT_PREFIX + key);
+      } catch {
+        return null;
+      }
+    },
+    () => null,
+  );
+  return parseListCount(raw, fallback, max);
+}
+
 /** The remembered row depths, or `fallback` before hydration and on a first visit. */
 export function useRememberedNavShape(fallback: number[]): number[] {
   const raw = useSyncExternalStore(noSubscription, readNavShape, () => null);

@@ -26,6 +26,7 @@ import { AnimatedNumber } from '@/components/ui/motion';
 import { api } from '@/lib/api-client';
 import { toast } from '@/components/ui/toast';
 import { AlertListSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 /**
@@ -121,6 +122,14 @@ export default function PlatformAlertsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The loading skeleton draws one card per alert listed here, or the empty state; record how
+  // many for the next visit. Only the unfiltered feed, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (!loading && !error && items && !severity && !group && !unreadOnly) {
+      rememberListCount('alerts', items.length);
+    }
+  }, [loading, error, items, severity, group, unreadOnly]);
 
   const markRead = async (id: string) => {
     setItems((prev) =>

@@ -56,6 +56,7 @@ import {
 import { StaffDrawer } from './staff-drawer';
 import type { AdminUserRow } from '../users/users-shared';
 import { StaffTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const ROLES = ['super_admin', 'admin', 'instructor', 'moderator', 'sponsor'] as const;
@@ -389,6 +390,12 @@ export default function AdminStaffPage() {
   const from = total === 0 ? 0 : (page - 1) * limit + 1;
   const to = Math.min(total, page * limit);
   const hasFilters = Boolean(q || role || status);
+
+  // The loading skeleton draws one row per row shown here; record how many for the next
+  // visit. Only the unfiltered first page, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (!loading && rows && !hasFilters && page === 1) rememberListCount('staff', rows.length);
+  }, [loading, rows, hasFilters, page]);
 
   const toggleSelectAll = () => {
     if (!rows) return;

@@ -28,7 +28,7 @@ import {
 import { BuilderSkeleton } from '@/components/builder/builder-shell';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
-import { useRememberedNavShape } from '@/lib/admin-shape-memory';
+import { useRememberedListCount, useRememberedNavShape } from '@/lib/admin-shape-memory';
 
 /* -----------------------------------------------------------------------------
  * ADMIN ROUTE SKELETONS
@@ -241,6 +241,133 @@ export function AdminCardGrid({
   return <CardGridSkeleton count={count} className={grid} card={() => <Card />} />;
 }
 
+/**
+ * admin-ui's `EmptyState`: icon disc, title, a one- or two-line body and the optional action
+ * button, which is what a list shows in place of its rows when it last loaded empty.
+ */
+function AdminEmptyStateSkeleton({ bodyLines = 2, action }: { bodyLines?: 1 | 2; action?: string }) {
+  return (
+    <div className="flex flex-col items-center px-4 py-12 text-center sm:px-6 sm:py-16">
+      <Skeleton className="size-12 rounded-full" />
+      <div className="mt-4 flex h-7 items-center">
+        <Skeleton className="h-4 w-56" />
+      </div>
+      <div
+        className={cn(
+          'mt-1 flex w-full max-w-sm flex-col items-center justify-center gap-2',
+          bodyLines === 2 ? 'h-[42px]' : 'h-[21px]',
+        )}
+      >
+        <Skeleton className="h-2.5 w-full" />
+        {bodyLines === 2 && <Skeleton className="h-2.5 w-2/3" />}
+      </div>
+      {action && <Skeleton className={cn('mt-5 rounded-xl', action)} />}
+    </div>
+  );
+}
+
+/** The `Pagination` card the catalogue lists put under their grid. */
+function PaginationCardSkeleton({ rounded = 'rounded-2xl' }: { rounded?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col-reverse gap-3 border border-border/70 bg-card px-5 py-3 shadow-xs sm:flex-row sm:items-center sm:justify-between',
+        rounded,
+      )}
+    >
+      <div className="flex h-4 items-center">
+        <Skeleton className="h-2.5 w-40" />
+      </div>
+      <div className="flex w-full items-center gap-2 sm:w-auto">
+        <Skeleton className="h-10 flex-1 rounded-lg sm:h-9 sm:w-20 sm:flex-none" />
+        <Skeleton className="h-10 flex-1 rounded-lg sm:h-9 sm:w-20 sm:flex-none" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A catalogue list's body below its toolbar: the cards it showed last time and the pagination
+ * card under them, or the empty-state card when it last loaded empty. Shared by the route
+ * skeleton and the page's own loading branch.
+ */
+function CatalogueListSkeleton({
+  kind,
+  count,
+  emptyBodyLines = 2,
+}: {
+  kind: 'product' | 'academy' | 'certificate';
+  count: number;
+  emptyBodyLines?: 1 | 2;
+}) {
+  if (count === 0) {
+    if (kind === 'certificate') return <CertificatesGettingStartedSkeleton />;
+    return (
+      <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+        <AdminEmptyStateSkeleton bodyLines={emptyBodyLines} action="h-10 w-40" />
+      </div>
+    );
+  }
+  // Its own space-y-6, because the page's loading branch wraps it in a SkeletonRegion div.
+  return (
+    <div className="space-y-6">
+      <AdminCardGrid kind={kind} count={count} />
+      <PaginationCardSkeleton rounded={kind === 'certificate' ? 'rounded-xl' : 'rounded-2xl'} />
+    </div>
+  );
+}
+
+/** admin/products/page.tsx's grid, or its empty state (shared with its loading branch). */
+export function ProductsListSkeleton() {
+  // The catalogue lists ask for 12 per page, so no more than that can show at once.
+  const count = useRememberedListCount('products', 6, 12);
+  return <CatalogueListSkeleton kind="product" count={count} />;
+}
+
+/** admin/academies/page.tsx's gallery, or its empty state (shared with its loading branch). */
+export function AcademiesListSkeleton() {
+  const count = useRememberedListCount('academies', 6, 12);
+  return <CatalogueListSkeleton kind="academy" count={count} />;
+}
+
+/** The issued certificates, or the getting-started card (shared with the page's loading branch). */
+export function CertificatesListSkeleton() {
+  const count = useRememberedListCount('certificates', 4, 12);
+  return <CatalogueListSkeleton kind="certificate" count={count} />;
+}
+
+/** `GettingStarted` in admin/certificates/page.tsx: what the issued tab shows with none issued. */
+function CertificatesGettingStartedSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs">
+      <div className="flex flex-col items-center px-6 py-16 text-center">
+        <Skeleton className="size-14 rounded-full" />
+        <div className="mt-6 flex h-8 items-center">
+          <Skeleton className="h-6 w-72 max-w-full" />
+        </div>
+        <div className="mt-2 flex h-[46px] w-full max-w-md flex-col items-center justify-center gap-2.5">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+        <div className="mt-10 flex w-full max-w-2xl flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <Repeat count={3}>
+            {(i) => (
+              <div key={i} className="flex flex-1 items-center gap-3">
+                <Skeleton className="size-9 shrink-0 rounded-full" />
+                <Skeleton className="h-2.5 w-20" />
+              </div>
+            )}
+          </Repeat>
+        </div>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <Skeleton className="h-10 w-48 rounded-lg" />
+          <Skeleton className="h-10 w-44 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** The date-range control on users / certificates toolbars. */
 function DateRangeSkeleton() {
   return <Skeleton className="h-9 w-[15.5rem] max-w-full rounded-lg border border-border/80 bg-card" />;
@@ -392,7 +519,7 @@ export function AdminProductsSkeleton() {
           <SegmentedToggleSkeleton />
         </div>
       </ToolbarSkeleton>
-      <AdminCardGrid kind="product" />
+      <ProductsListSkeleton />
     </ListPage>
   );
 }
@@ -432,7 +559,7 @@ export function AdminAcademiesSkeleton() {
           <SegmentedToggleSkeleton />
         </div>
       </ToolbarSkeleton>
-      <AdminCardGrid kind="academy" />
+      <AcademiesListSkeleton />
     </ListPage>
   );
 }
@@ -557,10 +684,22 @@ const LEARNER_COLUMNS: ColumnSpec[] = [
   { cell: 'actions', size: '5rem', hideBelow: 'sm', header: 48 },
 ];
 
-/** The learners table, shared with admin/users/page.tsx's loading branch. */
-export function LearnersTableSkeleton({ rows = 8 }: { rows?: number }) {
+/**
+ * The learners table, shared with admin/users/page.tsx's loading branch. It draws as many rows
+ * as the list showed last time (12 per page), or the empty state when it was empty.
+ */
+export function LearnersTableSkeleton({ rows }: { rows?: number }) {
+  const remembered = useRememberedListCount('users', 8, 12);
+  const count = rows ?? remembered;
+  if (count === 0) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+        <AdminEmptyStateSkeleton bodyLines={1} />
+      </div>
+    );
+  }
   return (
-    <TableCardSkeleton columns={LEARNER_COLUMNS} rows={rows} rowClassName="px-4 py-3.5 sm:px-6" footer />
+    <TableCardSkeleton columns={LEARNER_COLUMNS} rows={count} rowClassName="px-4 py-3.5 sm:px-6" footer />
   );
 }
 
@@ -589,9 +728,42 @@ const STAFF_COLUMNS: ColumnSpec[] = [
   { cell: 'actions', size: '5rem', hideBelow: 'sm', header: 48 },
 ];
 
-/** The staff table, shared with admin/staff/page.tsx's loading branch. */
-export function StaffTableSkeleton({ rows = 8 }: { rows?: number }) {
-  return <TableCardSkeleton columns={STAFF_COLUMNS} rows={rows} rowClassName="px-4 py-4 sm:px-6" footer />;
+/**
+ * The staff table and the pagination card under it, shared with admin/staff/page.tsx's loading
+ * branch. It draws as many rows as the list showed last time (up to the 50-row page size the
+ * rows-per-page select allows), or the empty state when it was empty.
+ */
+export function StaffTableSkeleton({ rows }: { rows?: number }) {
+  const remembered = useRememberedListCount('staff', 8, 50);
+  const count = rows ?? remembered;
+  if (count === 0) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
+        <AdminEmptyStateSkeleton bodyLines={1} action="h-9 w-40" />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-6">
+      <TableCardSkeleton columns={STAFF_COLUMNS} rows={count} rowClassName="px-4 py-4 sm:px-6" />
+      {/* The page's pagination is a separate card: pager, then "showing x–y" and rows per page. */}
+      <div className="rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs sm:px-5">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex h-4 items-center">
+            <Skeleton className="h-2.5 w-40" />
+          </div>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Skeleton className="h-10 flex-1 rounded-lg sm:h-9 sm:w-20 sm:flex-none" />
+            <Skeleton className="h-10 flex-1 rounded-lg sm:h-9 sm:w-20 sm:flex-none" />
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3">
+          <Skeleton className="h-2.5 w-48" />
+          <Skeleton className="h-[26px] w-36 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /** admin/staff/page.tsx */
@@ -608,6 +780,16 @@ export function AdminStaffSkeleton() {
         </div>
       </ToolbarSkeleton>
       <StaffTableSkeleton />
+      {/* The audit footnote the page always ends with. */}
+      <div className="flex flex-col items-center justify-between gap-3 rounded-xl bg-muted/50 px-5 py-4 sm:flex-row">
+        <div className="flex h-6 items-center gap-2">
+          <Skeleton className="size-4 shrink-0 rounded" shimmer={false} />
+          <Skeleton className="h-2.5 w-96 max-w-[60vw]" />
+        </div>
+        <div className="flex h-6 items-center">
+          <Skeleton className="h-2.5 w-24" />
+        </div>
+      </div>
     </ListPage>
   );
 }
@@ -722,7 +904,7 @@ export function CertificatesIssuedSkeleton() {
         <SelectSkeleton />
         <DateRangeSkeleton />
       </ToolbarSkeleton>
-      <AdminCardGrid kind="certificate" count={4} />
+      <CertificatesListSkeleton />
     </div>
   );
 }
@@ -738,17 +920,37 @@ export function AdminCertificatesSkeleton() {
   );
 }
 
-/** The quote rows, shared with quotes/quotes-inbox.tsx's loading branch. */
-export function QuoteRowsSkeleton({ rows = 6 }: { rows?: number }) {
+/**
+ * The quote rows, shared with quotes/quotes-inbox.tsx's loading branch: as many as the inbox
+ * showed last time (it does not paginate), or its dashed "no requests" note when it was empty.
+ */
+export function QuoteRowsSkeleton({ rows }: { rows?: number }) {
+  const remembered = useRememberedListCount('quotes', 6, 30);
+  const count = rows ?? remembered;
+  if (count === 0) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 bg-surface-sunken/30 px-4 py-14">
+        <Skeleton className="size-10 rounded-full" />
+        <div className="flex h-5 items-center">
+          <Skeleton className="h-3 w-40" />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-2">
-      <Repeat count={rows}>
+      <Repeat count={count}>
         {(i) => (
           <div key={i} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-4 shadow-xs">
-            <Skeleton className="h-[22px] w-20 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className={cn('h-3', ['w-1/2', 'w-2/5', 'w-3/5'][i % 3])} />
-              <Skeleton className="h-2.5 w-1/3" />
+            {/* A 26px badge beside a 20px name line over a 16px email line, as in the real row. */}
+            <Skeleton className="h-[26px] w-20 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1">
+              <div className="flex h-5 items-center">
+                <Skeleton className={cn('h-3', ['w-1/2', 'w-2/5', 'w-3/5'][i % 3])} />
+              </div>
+              <div className="flex h-4 items-center">
+                <Skeleton className="h-2.5 w-1/3" />
+              </div>
             </div>
             <Skeleton className="h-2.5 w-16 shrink-0" />
             <Skeleton className="size-4 shrink-0 rounded" shimmer={false} />
@@ -760,7 +962,7 @@ export function QuoteRowsSkeleton({ rows = 6 }: { rows?: number }) {
 }
 
 /** The whole inbox: filter bar and rows (the page's Suspense fallback). */
-export function QuotesInboxSkeleton({ rows = 6 }: { rows?: number }) {
+export function QuotesInboxSkeleton({ rows }: { rows?: number }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 bg-card p-2 shadow-xs">
@@ -952,21 +1154,33 @@ export function AdminAnalyticsSkeleton() {
   );
 }
 
-/** The alert list, shared with admin/alerts/page.tsx's loading branch. */
-export function AlertListSkeleton({ rows = 5 }: { rows?: number }) {
+/**
+ * The alert list, shared with admin/alerts/page.tsx's loading branch: as many alerts as the
+ * feed showed last time (it asks for 40), or the empty state when there were none.
+ */
+export function AlertListSkeleton({ rows }: { rows?: number }) {
+  const remembered = useRememberedListCount('alerts', 5, 40);
+  const count = rows ?? remembered;
+  if (count === 0) return <AdminEmptyStateSkeleton />;
   return (
     <div className="space-y-2.5">
-      <Repeat count={rows}>
+      <Repeat count={count}>
         {(i) => (
           <div key={i} className="flex items-start gap-3.5 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
             <Skeleton className="size-10 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2 pt-0.5">
-              <div className="flex flex-wrap items-center gap-2">
+            {/* The real lines: title with its 22px pills, a one-line body (mt-1), then the
+                type and time (mt-1.5). */}
+            <div className="min-w-0 flex-1">
+              <div className="flex h-[22px] flex-wrap items-center gap-2">
                 <Skeleton className={cn('h-3.5', ['w-1/2', 'w-2/5', 'w-3/5'][i % 3])} />
-                <Skeleton className="h-[18px] w-16 rounded-full" />
+                <Skeleton className="h-[22px] w-16 rounded-full" />
               </div>
-              <Skeleton className="h-2.5 w-4/5" />
-              <Skeleton className="h-2.5 w-1/3" />
+              <div className="mt-1 flex h-5 items-center">
+                <Skeleton className="h-2.5 w-4/5" />
+              </div>
+              <div className="mt-1.5 flex h-4 items-center">
+                <Skeleton className="h-2.5 w-1/3" />
+              </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <Skeleton className="size-8 rounded-lg" />
@@ -1007,11 +1221,16 @@ export function AdminAlertsSkeleton() {
   );
 }
 
-/** The application list in admin/partners/page.tsx. */
-export function PartnerApplicationsSkeleton({ rows = 4 }: { rows?: number }) {
+/**
+ * The application list in admin/partners/page.tsx: as many applications as it showed last
+ * time. With none the real page shows only its header over an empty list, so this draws nothing.
+ */
+export function PartnerApplicationsSkeleton({ rows }: { rows?: number }) {
+  const remembered = useRememberedListCount('partners', 4, 30);
+  const count = rows ?? remembered;
   return (
     <div className="space-y-3">
-      <Repeat count={rows}>
+      <Repeat count={count}>
         {(i) => (
           <div key={i} className="space-y-2.5 rounded-xl border border-border/70 bg-card p-5 shadow-xs">
             <div className="flex items-center justify-between gap-3">
@@ -1020,13 +1239,17 @@ export function PartnerApplicationsSkeleton({ rows = 4 }: { rows?: number }) {
               </div>
               <Skeleton className="h-[22px] w-24 rounded-full" />
             </div>
-            <Skeleton className="h-2.5 w-2/3" />
-            <div className="max-w-prose space-y-2 py-1">
+            {/* Line boxes as in the real item: a 16px contact line, a two-line message, and the
+                30px xs action buttons. */}
+            <div className="flex h-4 items-center">
+              <Skeleton className="h-2.5 w-2/3" />
+            </div>
+            <div className="flex h-[46px] max-w-prose flex-col justify-center gap-2.5">
               <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-3/4" />
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
-              <Repeat count={3}>{(j) => <Skeleton key={j} className="h-9 w-24 rounded-lg" />}</Repeat>
+              <Repeat count={3}>{(j) => <Skeleton key={j} className="h-[30px] w-24 rounded-lg" />}</Repeat>
             </div>
           </div>
         )}
@@ -1047,8 +1270,17 @@ export function AdminPartnersSkeleton() {
   );
 }
 
-/** The integrations panel body, shared with integrations-panel.tsx. */
+/**
+ * The integrations panel body, shared with integrations-panel.tsx.
+ *
+ * Not a data-sized list: the server always returns the same four Google services, in this
+ * order (GOOGLE_SERVICES in the backend's google-integrations.service.ts). What varies is the
+ * "blocked" notice a card carries while the server lacks the OAuth client (all four) or the
+ * Ads developer token (Google Ads, the last card), so the panel remembers how many it showed.
+ */
 export function IntegrationCardsSkeleton({ count = 4 }: { count?: number }) {
+  // Production shows a notice on every card (no OAuth client yet), so that is the fallback.
+  const notices = useRememberedListCount('integrations-notices', count, count);
   return (
     <CardGridSkeleton
       count={count}
@@ -1057,22 +1289,43 @@ export function IntegrationCardsSkeleton({ count = 4 }: { count?: number }) {
         <div className="h-full rounded-xl border border-border/70 bg-card shadow-xs">
           <div className="flex flex-col gap-1.5 p-6">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 space-y-2.5">
-                <Skeleton className={cn('h-4', ['w-32', 'w-40', 'w-28'][i % 3])} />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
+              {/* A text-lg title line over a one-line description. */}
+              <div className="min-w-0 flex-1">
+                <div className="flex h-[25px] items-center">
+                  <Skeleton className={cn('h-4', ['w-28', 'w-32', 'w-36', 'w-28'][i % 4])} />
+                </div>
+                <div className="flex h-[23px] items-center">
+                  <Skeleton className="h-3 w-4/5" />
+                </div>
               </div>
-              <Skeleton className="h-[22px] w-24 shrink-0 rounded-full" />
+              <Skeleton className="h-[26px] w-24 shrink-0 rounded-full" />
             </div>
           </div>
           <div className="space-y-3 p-6 pt-0">
-            <Skeleton className="h-2.5 w-1/2" />
+            {/* Notices sit on the last cards: Google Ads alone when only its token is missing. */}
+            {i >= count - notices && (
+              <div className="flex flex-col justify-center gap-2 rounded-lg border border-border/70 p-2.5">
+                <div className="flex h-4 items-center">
+                  <Skeleton className="h-2.5 w-full" />
+                </div>
+                <div className="flex h-4 items-center">
+                  <Skeleton className="h-2.5 w-1/2" />
+                </div>
+              </div>
+            )}
+            {/* Search Console, the second service, carries a customer note. */}
+            {i === 1 && (
+              <div className="flex h-4 items-center">
+                <Skeleton className="h-2.5 w-1/2" />
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-1.5">
-              <Skeleton className="h-9 w-24 rounded-md" />
               <Skeleton className="h-9 w-28 rounded-md" />
             </div>
-            <div className="border-t border-border/60 pt-3">
-              <Skeleton className="h-2.5 w-14" />
+            <div className="flex h-[29px] items-end border-t border-border/60">
+              <div className="flex h-4 items-center">
+                <Skeleton className="h-2.5 w-14" />
+              </div>
             </div>
           </div>
         </div>
@@ -1450,10 +1703,32 @@ export function ThemeEditorSkeleton() {
 }
 
 /** The template list, shared with email-templates-list.tsx's loading branch. */
-export function EmailTemplateRowsSkeleton({ rows = 6 }: { rows?: number }) {
+export function EmailTemplateRowsSkeleton({ rows }: { rows?: number }) {
+  // As many templates as the list showed last time (it does not paginate), or its dashed
+  // "no templates" state when it had none.
+  const remembered = useRememberedListCount('email', 6, 60);
+  const count = rows ?? remembered;
+  if (count === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border/80 bg-surface-sunken/30">
+        <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+          <Skeleton className="size-14 rounded-2xl" />
+          <div className="flex max-w-sm flex-col items-center space-y-1">
+            <div className="flex h-7 items-center">
+              <Skeleton className="h-4 w-40" />
+            </div>
+            <div className="flex h-[23px] items-center">
+              <Skeleton className="h-3 w-72 max-w-full" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-36 rounded-lg sm:h-9" />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs">
-      <Repeat count={rows}>
+      <Repeat count={count}>
         {(i) => (
           <div key={i} className="flex items-center gap-4 border-b border-border/60 px-4 py-3.5 last:border-b-0">
             <Skeleton className="size-9 shrink-0 rounded-lg" />

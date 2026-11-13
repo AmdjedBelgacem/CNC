@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/ui/states';
 import { toast } from '@/components/ui/toast';
 import { AlertTriangle, ChevronRight, Loader2, Mail, Plus, ShieldAlert } from 'lucide-react';
 import { EmailTemplateRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const CATEGORIES = Object.keys(EMAIL_CATEGORY_LABELS) as EmailCategory[];
@@ -69,6 +70,12 @@ export function EmailTemplatesList() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The loading skeleton draws one row per template listed here, or the empty state; record
+  // how many for the next visit. The "All" chip is what a fresh visit opens on.
+  useEffect(() => {
+    if (!loading && !error && !forbidden) rememberListCount('email', templates.length);
+  }, [loading, error, forbidden, templates]);
 
   const visible = useMemo(
     () => (filter === 'all' ? templates : templates.filter((x) => x.category === filter)),

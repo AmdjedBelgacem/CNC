@@ -41,7 +41,8 @@ import {
 } from '@/components/admin/admin-ui';
 import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { AcademyRowMenu, type AcademyAction } from './academy-row-menu';
-import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
+import { AcademiesListSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion, TableCardSkeleton } from '@/components/ui/skeletons';
 
 /* Academies are branded destinations: each one carries its own accent colour, a
@@ -441,6 +442,12 @@ export default function AdminAcademiesPage() {
   const countOf = (k: string) => facets?.[k] ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = Boolean(status || q);
+
+  // The loading skeleton draws one card per row shown here; record how many for the next
+  // visit. Only the unfiltered first page, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (!loading && !error && rows && !hasFilters && page === 1) rememberListCount('academies', rows.length);
+  }, [loading, error, rows, hasFilters, page]);
   const shownCourses = useMemo(
     () => (rows ?? []).reduce((sum, a) => sum + (a.courseCount ?? 0), 0),
     [rows],
@@ -634,7 +641,7 @@ export default function AdminAcademiesPage() {
 
         {loading ? (
           view === 'gallery' ? (
-            <SkeletonRegion><AdminCardGrid kind="academy" /></SkeletonRegion>
+            <SkeletonRegion><AcademiesListSkeleton /></SkeletonRegion>
           ) : (
             <SkeletonRegion>
               <TableCardSkeleton

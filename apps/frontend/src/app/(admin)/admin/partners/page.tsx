@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { PartnerApplicationsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
 
 const ACTION =
@@ -120,11 +121,19 @@ export default function AdminPartnersPage() {
   const [loaded, setLoaded] = useState(false);
   const [review, setReview] = useState<ReviewAction | null>(null);
   const [status, setStatus] = useState('all');
+  // A failed request still ends in `loaded`, so only a successful one may be remembered.
+  const [failed, setFailed] = useState(false);
   const load = () => {
     const q = status !== 'all' ? `?status=${status}` : '';
-    api.get<any>(`/admin/partners/applications${q}`).then((d) => setItems(Array.isArray(d?.items) ? d.items : [])).catch((e)=>toast({type:'err',title:e?.message})).finally(() => setLoaded(true));
+    api.get<any>(`/admin/partners/applications${q}`).then((d) => { setItems(Array.isArray(d?.items) ? d.items : []); setFailed(false); }).catch((e)=>{ setFailed(true); toast({type:'err',title:e?.message}); }).finally(() => setLoaded(true));
   };
   useEffect(load, [status]);
+
+  // The loading skeleton draws one card per application listed here (none when empty); record
+  // how many for the next visit. Only the "All" view, which is what a fresh visit opens on.
+  useEffect(() => {
+    if (loaded && !failed && status === 'all') rememberListCount('partners', items.length);
+  }, [loaded, failed, status, items]);
   const act = async (id: string, action: 'approve'|'reject'|'request-info', payload?: any): Promise<boolean> => {
     try {
       await api.post(`/admin/partners/applications/${id}/${action}`, payload ?? {});
