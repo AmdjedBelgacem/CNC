@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '../../../config/config.service';
 type FastifyReplyLike = { setCookie: (name: string, value: string, opts?: Record<string, unknown>) => unknown; clearCookie: (name: string, opts?: Record<string, unknown>) => unknown };
 
+export const REMEMBER_COOKIE = 'auth-remember';
+
 @Injectable()
 export class CookieService {
   constructor(private config: ConfigService) {}
@@ -60,6 +62,27 @@ export class CookieService {
       path: '/',
       maxAge: refreshMaxAge,
     });
+
+    // Whether this session is a "Keep me signed in" one, so a token rotation can keep the
+    // 30-day refresh cookie. Supabase rotations cannot read it from a session row, and they
+    // used to pass `false`, which cut every remembered sign-in down to 7 days on its first
+    // refresh. Holds no secret; it only picks the cookie lifetime.
+    if (rememberDevice) {
+      reply.setCookie(REMEMBER_COOKIE, '1', {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: refreshMaxAge,
+      });
+    } else {
+      reply.clearCookie(REMEMBER_COOKIE, { path: '/' });
+    }
+  }
+
+  /** True when the request belongs to a "Keep me signed in" session. */
+  isRememberedSession(req: { cookies?: Record<string, string | undefined> }): boolean {
+    return req.cookies?.[REMEMBER_COOKIE] === '1';
   }
 
   setCsrfCookie(reply: FastifyReplyLike, token: string): void {
@@ -109,6 +132,7 @@ export class CookieService {
     reply.clearCookie(accessName, { path: '/' });
     reply.clearCookie(refreshName, { path: '/' });
     reply.clearCookie(this.getCsrfCookieName(), { path: '/' });
+    reply.clearCookie(REMEMBER_COOKIE, { path: '/' });
     this.clearPending2faCookie(reply);
     // Legacy-name cleanup during migration window
     reply.clearCookie('access-token', { path: '/' });

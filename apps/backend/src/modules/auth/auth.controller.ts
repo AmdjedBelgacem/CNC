@@ -380,7 +380,12 @@ export class AuthController {
 
     if (this.supabaseAuth.enabled) {
       const session = await this.supabaseAuth.refreshSession(rawToken);
-      this.cookieService.setAuthCookies(reply, session.accessToken, session.refreshToken, false);
+      this.cookieService.setAuthCookies(
+        reply,
+        session.accessToken,
+        session.refreshToken,
+        this.cookieService.isRememberedSession(req),
+      );
       const linked = await this.drizzle.db.query.users.findFirst({
         where: eq(users.authUserId, session.userId),
       });

@@ -58,6 +58,7 @@ import type { AdminUserRow } from '../users/users-shared';
 import { StaffTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 const ROLES = ['super_admin', 'admin', 'instructor', 'moderator', 'sponsor'] as const;
 type RoleKey = (typeof ROLES)[number];
@@ -322,7 +323,7 @@ export default function AdminStaffPage() {
         if (q) query.set('search', q);
         if (role) query.set('role', role);
         if (status) query.set('status', status);
-        const res = await fetch(`/api/proxy/admin/staff?${query.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/staff?${query.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) throw new Error(`${res.status}`);
@@ -345,7 +346,7 @@ export default function AdminStaffPage() {
       const entries = await Promise.all(
         ROLES.map(async (r) => {
           try {
-            const res = await fetch(`/api/proxy/admin/staff?limit=1&role=${r}`, {
+            const res = await fetchWithRefresh(`/api/proxy/admin/staff?limit=1&role=${r}`, {
               credentials: 'include',
             });
             if (!res.ok) return [r, 0] as const;
@@ -421,7 +422,7 @@ export default function AdminStaffPage() {
         if (q) query.set('search', q);
         if (role) query.set('role', role);
         if (status) query.set('status', status);
-        const res = await fetch(`/api/proxy/admin/staff?${query.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/staff?${query.toString()}`, {
           credentials: 'include',
         });
         if (res.ok) {

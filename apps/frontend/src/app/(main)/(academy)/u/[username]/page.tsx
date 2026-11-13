@@ -27,6 +27,7 @@ import { getImageSrc } from '@/lib/images';
 import { m } from 'framer-motion';
 import { AnimatedNumber, Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { spring } from '@/lib/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface ProfileProject {
   id: string;
   title: string;
@@ -209,7 +210,7 @@ export default function ProfilePage() {
     async function fetchProfile() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/proxy/profile/${username}`, { credentials: 'include' });
+        const res = await fetchWithRefresh(`/api/proxy/profile/${username}`, { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to fetch profile');
         const data = await res.json();
         if (!cancelled) setProfile(data);
@@ -228,7 +229,7 @@ export default function ProfilePage() {
     let cancelled = false;
     async function fetchFollowStatus() {
       try {
-        const res = await fetch(`/api/proxy/profile/${username}/follow-status`, { credentials: 'include' });
+        const res = await fetchWithRefresh(`/api/proxy/profile/${username}/follow-status`, { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           if (!cancelled) setFollowStatus(data);
@@ -258,7 +259,7 @@ export default function ProfilePage() {
     if (!followStatus || followLoading) return;
     try {
       setFollowLoading(true);
-      const res = await fetch(`/api/proxy/profile/${profile?.id ?? followStatus.targetUserId}/follow`, { credentials: 'include', method: 'POST' });
+      const res = await fetchWithRefresh(`/api/proxy/profile/${profile?.id ?? followStatus.targetUserId}/follow`, { credentials: 'include', method: 'POST' });
       if (!res.ok) throw new Error(tProfile('followFailed'));
       const wasFollowing = followStatus.isFollowing;
       setFollowStatus((prev) => (prev ? { ...prev, isFollowing: !prev.isFollowing } : null));

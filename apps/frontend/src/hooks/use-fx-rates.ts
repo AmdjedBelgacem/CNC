@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { DEFAULT_CURRENCY } from '@titan/shared';
 import type { FxRates } from '@/lib/api/types';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 const TTL_MS = 15 * 60 * 1000;
 
@@ -52,7 +53,7 @@ function ensure(force = false): Promise<FxRates> {
   if (inflight) return inflight;
 
   setState({ loading: true, error: null });
-  inflight = fetch(`/api/proxy/currencies?base=${DEFAULT_CURRENCY}`, { headers: { accept: 'application/json' } })
+  inflight = fetchWithRefresh(`/api/proxy/currencies?base=${DEFAULT_CURRENCY}`, { headers: { accept: 'application/json' } })
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<FxRates>;

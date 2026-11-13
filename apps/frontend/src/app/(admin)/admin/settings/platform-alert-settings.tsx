@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ease, spring } from '@/lib/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /**
  * Super-admin control over which platform-critical alerts are shown.
@@ -75,7 +76,7 @@ export function PlatformAlertSettings({ id }: { id?: string }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/proxy/admin/platform-alerts/settings', {
+      const res = await fetchWithRefresh('/api/proxy/admin/platform-alerts/settings', {
         credentials: 'include',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Play, Clock, Film } from 'lucide-react';
 import { getImageSrc } from '@/lib/images';
 import { Reveal } from '@/components/ui/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface Video {
   id: string;
   title: string;
@@ -73,7 +74,7 @@ export default function TitanTvPage() {
   const { data, isLoading, error } = useQuery<{ data: Series[] }>({
     queryKey: ['titan-tv'],
     queryFn: () =>
-      fetch('/api/proxy/titan-tv', { credentials: 'include' }).then((r) => {
+      fetchWithRefresh('/api/proxy/titan-tv', { credentials: 'include' }).then((r) => {
         if (!r.ok) throw new Error();
         return r.json();
       }),

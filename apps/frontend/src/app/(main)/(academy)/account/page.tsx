@@ -14,6 +14,7 @@ import { Award, BookOpen, ArrowRight, Shield, Video } from 'lucide-react';
 import { CertificateList } from '@/components/certificates/certificate-list';
 import { useNextLiveSession } from '@/hooks/use-live-sessions';
 import Link from 'next/link';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface Enrollment {
   id: string;
   status: string;
@@ -35,7 +36,7 @@ export default function AccountPage() {
   const { data: enrollments, isLoading } = useQuery<Enrollment[]>({
     queryKey: ['my-enrollments'],
     queryFn: () =>
-      fetch('/api/proxy/courses/enrollments/mine', { credentials: 'include' }).then((r) =>
+      fetchWithRefresh('/api/proxy/courses/enrollments/mine', { credentials: 'include' }).then((r) =>
         r.json(),
       ),
     enabled: isAuthenticated,

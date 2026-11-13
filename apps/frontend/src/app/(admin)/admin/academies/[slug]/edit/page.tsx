@@ -40,6 +40,7 @@ import {
 import { AcademyCourses, type RosterCourse } from './academy-courses';
 import { AcademyEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface AcademyDetail {
   id: string;
@@ -184,7 +185,7 @@ function AcademyEditor() {
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/proxy/admin/academies/${slug}`, { credentials: 'include' });
+        const res = await fetchWithRefresh(`/api/proxy/admin/academies/${slug}`, { credentials: 'include' });
         if (!res.ok) throw new Error(tAdmin('drawer.requestFailed', { status: res.status }));
         const data: AcademyDetail = await res.json();
         setAcademy(data);
@@ -340,7 +341,7 @@ function AcademyEditor() {
     setValidating(true);
     void (async () => {
       try {
-        const res = await fetch(`/api/proxy/admin/academies/${academySlug}/validate`, { credentials: 'include' });
+        const res = await fetchWithRefresh(`/api/proxy/admin/academies/${academySlug}/validate`, { credentials: 'include' });
         const data: PublishValidation | null = res.ok ? await res.json().catch(() => null) : null;
         if (!cancelled) setValidation(data);
       } catch {

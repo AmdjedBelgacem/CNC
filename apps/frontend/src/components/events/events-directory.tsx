@@ -14,6 +14,7 @@ import { getImageSrc } from '@/lib/images';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/format';
 import { EmptyState, ErrorState } from '@/components/ui/states';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface EventData {
   id: string;
@@ -53,7 +54,7 @@ export function EventsDirectory() {
     params.set('page', String(page));
     params.set('limit', String(PAGE_SIZE));
     setError(null);
-    fetch(`/api/proxy/events?${params}`, { credentials: 'include' })
+    fetchWithRefresh(`/api/proxy/events?${params}`, { credentials: 'include' })
       .then((r) => {
         if (!r.ok) throw new Error(t('loadFailed'));
         return r.json();

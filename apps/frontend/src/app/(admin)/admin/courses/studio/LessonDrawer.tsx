@@ -39,6 +39,7 @@ import { slugify } from './slugify';
 import { LessonBlockEditor } from './LessonBlockEditor';
 import * as api from './api';
 import { uploadFileToStorage } from '@/lib/upload';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 function formatBytes(n: number): string {
   if (!n) return '';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -191,7 +192,7 @@ export function LessonDrawer({
     if (!key.startsWith('tenants/')) return;
     let cancelled = false;
     setResolvingVideo(true);
-    fetch(`/api/proxy/courses/lessons/${encodeURIComponent(lesson.slug)}/playback`, {
+    fetchWithRefresh(`/api/proxy/courses/lessons/${encodeURIComponent(lesson.slug)}/playback`, {
       credentials: 'include',
       headers: { 'x-locale': locale, 'x-next-locale': locale, 'accept-language': `${locale},en;q=0.8` },
     })

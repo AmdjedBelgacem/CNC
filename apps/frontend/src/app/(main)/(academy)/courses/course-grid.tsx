@@ -16,6 +16,7 @@ import { CourseGridSkeleton } from '@/components/ui/skeletons/public';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { getImageSrc } from '@/lib/images';
 import { LayoutBox, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface Course {
   id: string;
@@ -74,7 +75,7 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
     queryKey: ['courses', locale, { academy: academySlug || 'all' }],
     queryFn: () => {
       const qs = academySlug ? `?academy=${encodeURIComponent(academySlug)}` : '';
-      return fetch(`/api/proxy/courses${qs}`, { credentials: 'include', headers: localeHeaders }).then((r) => {
+      return fetchWithRefresh(`/api/proxy/courses${qs}`, { credentials: 'include', headers: localeHeaders }).then((r) => {
         if (!r.ok) throw new Error('Failed to load courses');
         return r.json();
       });
@@ -87,7 +88,7 @@ export function CourseGrid({ initialCourses }: CourseGridProps) {
     queryKey: ['academy-header', locale, academySlug || 'none'],
     queryFn: async () => {
       if (!academySlug) return null;
-      const res = await fetch(`/api/proxy/academies/${encodeURIComponent(academySlug)}`, {
+      const res = await fetchWithRefresh(`/api/proxy/academies/${encodeURIComponent(academySlug)}`, {
         credentials: 'include',
         headers: localeHeaders,
       });

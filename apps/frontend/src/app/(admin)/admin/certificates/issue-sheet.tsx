@@ -8,6 +8,7 @@ import { ease, spring } from '@/lib/motion';
 import { api } from '@/lib/api-client';
 import { Modal, ModalHeader } from '@/components/ui/modal';
 import { INPUT, LABEL } from '../courses/studio/glass';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface IssueSheetProps {
   open: boolean;
   onClose: () => void;
@@ -43,11 +44,11 @@ export function IssueCertificateSheet({ open, onClose, onIssued }: IssueSheetPro
   const [submitting, setSubmitting] = useState(false);
   useEffect(() => {
     if (!open) return;
-    fetch('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
+    fetchWithRefresh('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((d) => setCourses((d?.items ?? []).map((c: any) => ({ id: c.id, title: c.title }))))
       .catch(() => {});
-    fetch('/api/proxy/admin/cert-templates?limit=100', { credentials: 'include' })
+    fetchWithRefresh('/api/proxy/admin/cert-templates?limit=100', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((d) =>
         setTemplates(

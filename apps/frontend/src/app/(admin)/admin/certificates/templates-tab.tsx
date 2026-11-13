@@ -47,6 +47,7 @@ import { AnimatedNumber, Crossfade, Reveal, Stagger, StaggerItem } from '@/compo
 import { ease, spring } from '@/lib/motion';
 import { api } from '@/lib/api-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 /* ---------------------------------- types --------------------------------- */ type TemplateField =
   {
     key: string;
@@ -545,7 +546,7 @@ function CertificateArt({
         const qs = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
         if (q) qs.set('q', q);
         if (filterActive) qs.set('isActive', filterActive);
-        const res = await fetch(`/api/proxy/admin/cert-templates?${qs.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/cert-templates?${qs.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) throw new Error(`Failed (${res.status})`);
@@ -1657,11 +1658,11 @@ function TemplateStudioSheet({
     if (open) {
       setTab('design');
       setAttempted(false);
-      fetch('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
+      fetchWithRefresh('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
         .then((r) => (r.ok ? r.json() : { items: [] }))
         .then((d) => setCourses((d?.items ?? []).map((c: any) => ({ id: c.id, title: c.title }))))
         .catch(() => {});
-      fetch('/api/proxy/admin/academies?limit=100', { credentials: 'include' })
+      fetchWithRefresh('/api/proxy/admin/academies?limit=100', { credentials: 'include' })
         .then((r) => (r.ok ? r.json() : { items: [] }))
         .then((d) => setAcademies((d?.items ?? []).map((a: any) => ({ id: a.id, title: a.title }))))
         .catch(() => {});

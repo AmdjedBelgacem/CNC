@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { Crossfade, HoverLift, Stagger, StaggerItem } from '@/components/ui/motion';
 import { Switch } from '@/components/ui/switch';
 import { ActivePill } from '@/components/feed/feed-motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 const EVENT_TYPES = [
   'All',
@@ -97,7 +98,7 @@ export function EventsBoard({
     if (type !== 'All') params.set('type', type);
     if (upcoming) params.set('upcoming', 'true');
     params.set('limit', '50');
-    fetch(`/api/proxy/events?${params}`, { credentials: 'include' })
+    fetchWithRefresh(`/api/proxy/events?${params}`, { credentials: 'include' })
       .then((r) => {
         if (!r.ok) throw new Error(t('loadFailed'));
         return r.json();

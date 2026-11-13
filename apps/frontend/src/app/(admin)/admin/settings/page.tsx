@@ -38,6 +38,7 @@ import {
   TextInput,
 } from '@/components/admin/admin-form';
 import { AdminSettingsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /* Settings is grouped by concern and, for branding, needs to be *seen* rather
  * than described: the live preview renders a storefront header from the values
@@ -166,7 +167,7 @@ export default function AdminSettingsPage() {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/proxy/admin/tenant', { credentials: 'include' });
+      const res = await fetchWithRefresh('/api/proxy/admin/tenant', { credentials: 'include' });
       if (!res.ok) throw new Error(`${res.status}`);
       const data: TenantProfile = await res.json();
       setProfile(data);

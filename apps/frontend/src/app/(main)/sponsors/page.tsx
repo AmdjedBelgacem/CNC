@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getImageSrc } from '@/lib/images';
 import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface Sponsor {
   id: string;
   name: string;
@@ -31,7 +32,7 @@ export default function SponsorsPage() {
   const { data, isLoading, error } = useQuery<{ data: Sponsor[] }>({
     queryKey: ['sponsors'],
     queryFn: () =>
-      fetch('/api/proxy/sponsors?limit=50', { credentials: 'include' }).then((r) => {
+      fetchWithRefresh('/api/proxy/sponsors?limit=50', { credentials: 'include' }).then((r) => {
         if (!r.ok) throw new Error();
         return r.json();
       }),

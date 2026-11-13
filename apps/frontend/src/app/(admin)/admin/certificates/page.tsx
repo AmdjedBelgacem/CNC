@@ -47,6 +47,7 @@ import { TemplatesTab } from './templates-tab';
 import { CertificatesListSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /* A certificate is a document, so it is presented as one: a small credential
  * tile carrying the certificate number, with the learner, course and validity
@@ -399,7 +400,7 @@ export default function AdminCertificatesPage() {
         if (courseId) qs.set('courseId', courseId);
         if (from) qs.set('from', from);
         if (to) qs.set('to', to);
-        const res = await fetch(`/api/proxy/admin/certifications?${qs.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/certifications?${qs.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) {
@@ -431,7 +432,7 @@ export default function AdminCertificatesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/proxy/admin/courses?limit=200', { credentials: 'include' });
+        const res = await fetchWithRefresh('/api/proxy/admin/courses?limit=200', { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data?.items)) {

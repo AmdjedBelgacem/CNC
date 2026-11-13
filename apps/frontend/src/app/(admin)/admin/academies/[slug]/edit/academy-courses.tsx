@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 export interface RosterCourse {
   id: string;
@@ -53,7 +54,7 @@ function useCourseOptions() {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch('/api/proxy/admin/courses?limit=100', { credentials: 'include' });
+        const res = await fetchWithRefresh('/api/proxy/admin/courses?limit=100', { credentials: 'include' });
         if (!res.ok) throw new Error(tAdmin('drawer.requestFailed', { status: res.status }));
         const data: { items?: CourseOption[] } = await res.json();
         if (!cancelled) setOptions(Array.isArray(data?.items) ? data.items : []);

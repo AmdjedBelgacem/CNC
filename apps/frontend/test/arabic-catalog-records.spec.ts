@@ -25,7 +25,7 @@ describe('Arabic product catalogue', () => {
 
   it('refreshes the catalogue in the page language', () => {
     const catalog = read('components/store/products-catalog.tsx');
-    expect(catalog).toMatch(/fetch\('\/api\/proxy\/products\?limit=200', \{ headers: \{ 'x-client-locale': locale \} \}\)/);
+    expect(catalog).toMatch(/fetchWithRefresh\('\/api\/proxy\/products\?limit=200', \{ headers: \{ 'x-client-locale': locale \} \}\)/);
     expect(catalog).toMatch(/const locale = contentLocale \?\? uiLocale;/);
   });
 });

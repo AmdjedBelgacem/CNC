@@ -9,6 +9,7 @@ import type {
   ProfileConnection,
   ProfileLearningRecord,
 } from '@/lib/api/types';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 export interface FollowSuggestion {
   id: string;
@@ -36,7 +37,7 @@ export function useProfilePosts(userId: string | null, page = 1) {
     queryKey: profileKeys.posts(userId ?? ''),
     enabled: !!userId,
     queryFn: async () => {
-      const res = await fetch(`/api/proxy/social/profile/${userId}/posts?page=${page}&limit=6`, {
+      const res = await fetchWithRefresh(`/api/proxy/social/profile/${userId}/posts?page=${page}&limit=6`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -56,7 +57,7 @@ export function useProfileLearning(userId: string | null, enabled = true) {
     queryKey: profileKeys.learning(userId ?? ''),
     enabled: !!userId && enabled,
     queryFn: async () => {
-      const res = await fetch(`/api/proxy/social/profile/${userId}/courses`, {
+      const res = await fetchWithRefresh(`/api/proxy/social/profile/${userId}/courses`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -121,7 +122,7 @@ export function useFollowSuggestions(enabled: boolean) {
     queryKey: profileKeys.suggestions,
     enabled,
     queryFn: async () => {
-      const res = await fetch('/api/proxy/social/suggestions?limit=6', { credentials: 'include' });
+      const res = await fetchWithRefresh('/api/proxy/social/suggestions?limit=6', { credentials: 'include' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return (await res.json()) as FollowSuggestion[];
     },
@@ -153,7 +154,7 @@ export function useFollowToggle() {
 
   const mutation = useMutation({
     mutationFn: async ({ userId, following }: { userId: string; following: boolean }) => {
-      const res = await fetch(`/api/proxy/social/follow/${userId}`, {
+      const res = await fetchWithRefresh(`/api/proxy/social/follow/${userId}`, {
         method: following ? 'DELETE' : 'POST',
         credentials: 'include',
       });

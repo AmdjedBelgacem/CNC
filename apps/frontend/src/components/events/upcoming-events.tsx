@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, Calendar, MapPin } from 'lucide-react';
 import { HoverLift, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface EventItem {
   id: string;
   title: string;
@@ -27,7 +28,7 @@ export function UpcomingEvents() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    fetch('/api/proxy/events/upcoming?limit=3', { credentials: 'include' })
+    fetchWithRefresh('/api/proxy/events/upcoming?limit=3', { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => setEvents(Array.isArray(data) ? data : []))
       .catch(() => {})

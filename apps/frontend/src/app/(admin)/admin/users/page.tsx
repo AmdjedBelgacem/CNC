@@ -41,6 +41,7 @@ import type { AdminUserRow } from './users-shared';
 import { LearnersTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 const PER_PAGE = 12;
 
@@ -137,7 +138,7 @@ export default function AdminUsersPage() {
         if (status) query.set('status', status);
         if (from) query.set('from', from);
         if (to) query.set('to', to);
-        const res = await fetch(`/api/proxy/admin/users/learners?${query.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/users/learners?${query.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) throw new Error(`${res.status}`);

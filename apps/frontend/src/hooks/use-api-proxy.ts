@@ -77,7 +77,10 @@ export async function apiProxyFetch(input: string | URL | Request, init?: Reques
  * the sign-in page — a quarter of an hour into a session, while `api.*` calls on the same
  * page refreshed and carried on. Bodies here are strings or absent, so a replay is safe.
  */
-async function fetchWithRefresh(input: string | URL | Request, init: RequestInit): Promise<Response> {
+export async function fetchWithRefresh(
+  input: string | URL | Request,
+  init: RequestInit = {},
+): Promise<Response> {
   const res = await fetch(input, init);
   if (res.status !== 401 || typeof window === 'undefined') return res;
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /**
  * Live counts for a `live-island` variant, shown in the builder canvas.
@@ -44,7 +45,7 @@ const RESOLVERS: Record<
     (tenantSlug: string) => Promise<Omit<IslandSummary, 'loading'>>
 > = {
   'products-featured': async () => {
-    const res = await fetch('/api/proxy/products?limit=200&featured=true');
+    const res = await fetchWithRefresh('/api/proxy/products?limit=200&featured=true');
     const data = await res.json();
     const items: unknown[] = Array.isArray(data?.data) ? data.data : [];
     return {
@@ -55,7 +56,7 @@ const RESOLVERS: Record<
     };
   },
   'products-inventory': async () => {
-    const res = await fetch('/api/proxy/products?limit=200');
+    const res = await fetchWithRefresh('/api/proxy/products?limit=200');
     const data = await res.json();
     const items: any[] = Array.isArray(data?.data) ? data.data : [];
     const categories = new Set<string>();
@@ -68,7 +69,7 @@ const RESOLVERS: Record<
     };
   },
   'products-departments': async () => {
-    const res = await fetch('/api/proxy/products?limit=200');
+    const res = await fetchWithRefresh('/api/proxy/products?limit=200');
     const data = await res.json();
     const items: any[] = Array.isArray(data?.data) ? data.data : [];
     const categories = new Set<string>();
@@ -81,7 +82,7 @@ const RESOLVERS: Record<
     };
   },
   'academy-pathways': async () => {
-    const res = await fetch('/api/proxy/academies');
+    const res = await fetchWithRefresh('/api/proxy/academies');
     const data = await res.json();
     const items: unknown[] = Array.isArray(data?.data) ? data.data : [];
     return {

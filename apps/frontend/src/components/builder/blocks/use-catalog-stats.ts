@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /**
  * Live values for the catalog hero's stat strip inside the builder.
@@ -44,7 +45,7 @@ export function useCatalogStats(stats: HeroStat[] | undefined): HeroStat[] | und
     if (!stats.some((s) => isPlaceholderValue(s.value))) return;
 
     let active = true;
-    fetch('/api/proxy/products?limit=200')
+    fetchWithRefresh('/api/proxy/products?limit=200')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!active) return;

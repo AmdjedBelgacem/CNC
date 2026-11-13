@@ -27,6 +27,7 @@ import { toast } from '@/components/ui/toast';
 import { AnimatePresence, m } from 'framer-motion';
 import { Reveal } from '@/components/ui/motion';
 import { ease, spring, transition } from '@/lib/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface EventDetail {
   id: string;
   title: string;
@@ -92,7 +93,7 @@ export default function EventDetailPage() {
     }
     setRegistering(true);
     try {
-      const res = await fetch(`/api/proxy/events/${event.id}/register`, {
+      const res = await fetchWithRefresh(`/api/proxy/events/${event.id}/register`, {
         method: wasRegistered ? 'DELETE' : 'POST',
         credentials: 'include',
       });

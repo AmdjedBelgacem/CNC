@@ -28,6 +28,7 @@ import { toast } from '@/components/ui/toast';
 import { AlertListSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /**
  * Platform-critical alert feed (super admins only).
@@ -102,8 +103,8 @@ export default function PlatformAlertsPage() {
       if (group) qs.set('group', group);
       if (unreadOnly) qs.set('unreadOnly', 'true');
       const [feed, stats] = await Promise.all([
-        fetch(`/api/proxy/admin/platform-alerts?${qs.toString()}`, { credentials: 'include' }),
-        fetch('/api/proxy/admin/platform-alerts/overview', { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/platform-alerts?${qs.toString()}`, { credentials: 'include' }),
+        fetchWithRefresh('/api/proxy/admin/platform-alerts/overview', { credentials: 'include' }),
       ]);
       if (feed.status === 403) {
         throw new Error(t('noAccess'));

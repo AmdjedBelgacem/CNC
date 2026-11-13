@@ -1,6 +1,7 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { getImageSrc } from '@/lib/images';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface Sponsor {
   id: string;
   name: string;
@@ -11,7 +12,7 @@ export function SponsorWall({ tier, limit = 12 }: { tier?: string; limit?: numbe
   const { data } = useQuery<{ data: Sponsor[] }>({
     queryKey: ['sponsors', tier, limit],
     queryFn: () =>
-      fetch(`/api/proxy/sponsors?limit=${limit}${tier ? `&tier=${tier}` : ''}`, { credentials: 'include' }).then((r) =>
+      fetchWithRefresh(`/api/proxy/sponsors?limit=${limit}${tier ? `&tier=${tier}` : ''}`, { credentials: 'include' }).then((r) =>
         r.json(),
       ),
     enabled: true,

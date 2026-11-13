@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { LayoutBox, Stagger, StaggerItem } from '@/components/ui/motion';
 import { AnimatePresence, m } from 'framer-motion';
 import { spring, transition } from '@/lib/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 type SortKey = 'featured' | 'newest' | 'price-asc' | 'price-desc' | 'name';
 type FormatFilter = 'all' | 'digital' | 'physical';
@@ -145,7 +146,7 @@ export function ProductsCatalog({
 
     // Ask for the page's language. The proxy otherwise takes it from the visitor's cookie, so the
     // Arabic builder canvas of an admin browsing in English refreshed to English product names.
-    fetch('/api/proxy/products?limit=200', { headers: { 'x-client-locale': locale } })
+    fetchWithRefresh('/api/proxy/products?limit=200', { headers: { 'x-client-locale': locale } })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

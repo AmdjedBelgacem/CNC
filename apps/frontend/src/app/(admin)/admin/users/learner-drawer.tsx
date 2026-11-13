@@ -51,6 +51,7 @@ import {
   type UserCertificateRow,
   type UserLearningProgress,
 } from './users-shared';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface SessionRow {
   id: string;
@@ -296,13 +297,13 @@ export function LearnerDrawer({
     setLoadError(null);
     try {
       const [uRes, sRes, aRes, pRes, eRes, cRes, lRes] = await Promise.all([
-        fetch(`/api/proxy/admin/users/${userId}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/sessions?userId=${userId}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/audit-logs?userId=${userId}&limit=20`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/users/${userId}/purchases?limit=20`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/users/${userId}/enrollments?limit=20`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/users/${userId}/certificates?limit=20`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/users/${userId}/learning`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/users/${userId}`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/sessions?userId=${userId}`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/audit-logs?userId=${userId}&limit=20`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/users/${userId}/purchases?limit=20`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/users/${userId}/enrollments?limit=20`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/users/${userId}/certificates?limit=20`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/users/${userId}/learning`, { credentials: 'include' }),
       ]);
       if (!uRes.ok) {
         throw new Error(
@@ -344,8 +345,8 @@ export function LearnerDrawer({
       setRolesLoading(true);
       try {
         const [rolesRes, assignedRes] = await Promise.all([
-          fetch('/api/proxy/admin/roles', { credentials: 'include' }),
-          fetch(`/api/proxy/admin/users/${userId}/roles`, { credentials: 'include' }),
+          fetchWithRefresh('/api/proxy/admin/roles', { credentials: 'include' }),
+          fetchWithRefresh(`/api/proxy/admin/users/${userId}/roles`, { credentials: 'include' }),
         ]);
         if (!cancelled && rolesRes.ok) setAllRoles(await rolesRes.json());
         if (!cancelled && assignedRes.ok) {

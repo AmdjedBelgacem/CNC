@@ -8,6 +8,7 @@ import { Stagger, StaggerItem } from '@/components/ui/motion';
 import { spring } from '@/lib/motion';
 import { getImageSrc } from '@/lib/images';
 import { Skeleton } from '@/components/ui/skeleton';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface AcademyOption {
   slug: string;
@@ -43,7 +44,7 @@ export function AcademiesDropdown() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/proxy/academies', { credentials: 'include' });
+        const res = await fetchWithRefresh('/api/proxy/academies', { credentials: 'include' });
         if (cancelled) return;
         if (!res.ok) {
           setAcademies(OFFLINE_FALLBACK);

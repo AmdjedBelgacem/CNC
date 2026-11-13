@@ -13,6 +13,7 @@ import { Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
 import { ActivePill } from '@/components/feed/feed-motion';
 import { spring, transition } from '@/lib/motion';
 import { cn } from '@/lib/utils';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), {
   ssr: false,
 });
@@ -59,7 +60,7 @@ export default function RepairPage() {
     const params = new URLSearchParams();
     if (category !== 'All') params.set('category', category);
     if (search) params.set('search', search);
-    fetch(`/api/proxy/repair?${params}`, { credentials: 'include' })
+    fetchWithRefresh(`/api/proxy/repair?${params}`, { credentials: 'include' })
       .then((r) => r.json())
       .then((res) => {
         const rows: RepairShop[] = res.data || [];

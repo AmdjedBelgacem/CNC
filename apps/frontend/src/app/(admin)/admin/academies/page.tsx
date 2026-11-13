@@ -44,6 +44,7 @@ import { AcademyRowMenu, type AcademyAction } from './academy-row-menu';
 import { AcademiesListSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion, TableCardSkeleton } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /* Academies are branded destinations: each one carries its own accent colour, a
  * logo, a hero image and a subtitle. Rendering them as bare title/slug rows
@@ -350,7 +351,7 @@ export default function AdminAcademiesPage() {
         const qs = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
         if (status) qs.set('status', status);
         if (q) qs.set('search', q);
-        const res = await fetch(`/api/proxy/admin/academies?${qs.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/academies?${qs.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) throw new Error(`${res.status}`);
@@ -402,7 +403,7 @@ export default function AdminAcademiesPage() {
   const runBackfill = useCallback(async () => {
     setBackfillBusy(true);
     try {
-      const reportRes = await fetch('/api/proxy/admin/academies/backfill/report', {
+      const reportRes = await fetchWithRefresh('/api/proxy/admin/academies/backfill/report', {
         credentials: 'include',
       });
       if (!reportRes.ok) throw new Error('Report failed');

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { SelectInput, TextInput } from '@/components/admin/admin-form';
 import { slugify } from '@/components/admin/form-page';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /* -----------------------------------------------------------------------------
  * Create in one step.
@@ -81,7 +82,7 @@ function useAcademies(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    fetch('/api/proxy/admin/academies?limit=100', { credentials: 'include' })
+    fetchWithRefresh('/api/proxy/admin/academies?limit=100', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (alive) setItems(Array.isArray(d?.items) ? d.items : Array.isArray(d) ? d : []);

@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 export interface CertificateRow {
   id: string;
   certificateNumber: string;
@@ -90,7 +91,7 @@ export function CertificateDetailDialog({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/admin/certifications/${certificateId}`, {
+      const res = await fetchWithRefresh(`/api/proxy/admin/certifications/${certificateId}`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error(`Failed to load certificate (${res.status})`);

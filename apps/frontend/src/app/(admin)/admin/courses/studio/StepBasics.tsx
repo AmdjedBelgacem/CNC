@@ -8,6 +8,7 @@ import { DIFFICULTY_LEVELS, difficultyKey, difficultyFallback } from '@/lib/diff
 import { slugify } from './slugify';
 import type { CourseStudioData } from './types';
 import type { CopyTranslate } from './useCourseTranslate';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface AcademyOption {
   id: string;
@@ -43,7 +44,7 @@ export function StepBasics({
     let cancelled = false;
     void (async () => {
       try {
-        const response = await fetch('/api/proxy/admin/academies?limit=100', {
+        const response = await fetchWithRefresh('/api/proxy/admin/academies?limit=100', {
           credentials: 'include',
         });
         if (!response.ok) throw new Error('Academy request failed');

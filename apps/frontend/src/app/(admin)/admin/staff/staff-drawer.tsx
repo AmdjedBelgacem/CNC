@@ -42,6 +42,7 @@ import { DiscardChangesDialog, DrawerFooter, useDirtyClose } from '@/components/
 import { useAuthStore } from '@/stores/auth-store';
 import { useCan, useCanAny, useIsSuper } from '@/lib/use-permissions';
 import { userInitials, type AdminUserRow } from '../users/users-shared';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface SessionRow {
   id: string;
@@ -306,9 +307,9 @@ export function StaffDrawer({
     setLoadError(null);
     try {
       const [uRes, sRes, aRes] = await Promise.all([
-        fetch(`/api/proxy/admin/users/${userId}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/sessions?userId=${userId}`, { credentials: 'include' }),
-        fetch(`/api/proxy/admin/audit-logs?userId=${userId}&limit=20`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/users/${userId}`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/sessions?userId=${userId}`, { credentials: 'include' }),
+        fetchWithRefresh(`/api/proxy/admin/audit-logs?userId=${userId}&limit=20`, { credentials: 'include' }),
       ]);
       if (!uRes.ok) {
         throw new Error(
@@ -352,8 +353,8 @@ export function StaffDrawer({
       setRolesLoading(true);
       try {
         const [rolesRes, assignedRes] = await Promise.all([
-          fetch('/api/proxy/admin/roles', { credentials: 'include' }),
-          fetch(`/api/proxy/admin/users/${userId}/roles`, { credentials: 'include' }),
+          fetchWithRefresh('/api/proxy/admin/roles', { credentials: 'include' }),
+          fetchWithRefresh(`/api/proxy/admin/users/${userId}/roles`, { credentials: 'include' }),
         ]);
         if (!cancelled && rolesRes.ok) setAllRoles(await rolesRes.json());
         if (!cancelled && assignedRes.ok) {
@@ -383,9 +384,9 @@ export function StaffDrawer({
       setPermsLoading(true);
       try {
         const [catRes, ...detailRes] = await Promise.all([
-          fetch('/api/proxy/admin/permissions', { credentials: 'include' }),
+          fetchWithRefresh('/api/proxy/admin/permissions', { credentials: 'include' }),
           ...assignedIds.map((id) =>
-            fetch(`/api/proxy/admin/roles/${id}`, { credentials: 'include' }),
+            fetchWithRefresh(`/api/proxy/admin/roles/${id}`, { credentials: 'include' }),
           ),
         ]);
         if (!cancelled && catRes.ok) setPermCatalog(await catRes.json());

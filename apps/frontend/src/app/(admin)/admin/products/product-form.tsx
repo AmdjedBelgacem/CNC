@@ -47,6 +47,7 @@ import { ErrorBanner } from '@/components/admin/admin-ui';
 import { makeId } from '@/lib/lesson-blocks';
 import { uploadFileToStorage, uploadImage } from '@/lib/upload';
 import { toast } from '@/components/ui/toast';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /* The create and edit screens collect the same ~20 fields. They are defined
  * once here so the two screens cannot drift apart — previously the currency
@@ -292,11 +293,11 @@ function useRelations() {
   const [academies, setAcademies] = useState<Relation[]>([]);
   const [courses, setCourses] = useState<Relation[]>([]);
   useEffect(() => {
-    fetch('/api/proxy/admin/academies?limit=100', { credentials: 'include' })
+    fetchWithRefresh('/api/proxy/admin/academies?limit=100', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setAcademies(Array.isArray(d?.items) ? d.items : []))
       .catch(() => {});
-    fetch('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
+    fetchWithRefresh('/api/proxy/admin/courses?limit=100', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setCourses(Array.isArray(d?.items) ? d.items : []))
       .catch(() => {});

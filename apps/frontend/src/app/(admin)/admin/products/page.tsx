@@ -45,6 +45,7 @@ import { categoryStyle } from '@/components/admin/product-category';
 import { ProductsListSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /* A product catalogue with no product photography still has one strong visual
  * signal per item: its category. Each card is built around that, with the price
@@ -384,7 +385,7 @@ export default function AdminProductsPage() {
         if (category) qs.set('category', category);
         if (productType) qs.set('productType', productType);
         if (q) qs.set('search', q);
-        const res = await fetch(`/api/proxy/admin/products?${qs.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/products?${qs.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) {

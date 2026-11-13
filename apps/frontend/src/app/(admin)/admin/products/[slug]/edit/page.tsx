@@ -38,6 +38,7 @@ import type { InteractiveHotspot } from '@titan/shared';
 import { ProductGalleryManager } from '../../product-gallery';
 import { ProductEditorSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { rememberListCount } from '@/lib/admin-shape-memory';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 export interface ProductImage {
   id: string;
@@ -198,7 +199,7 @@ function ProductEditor() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/admin/products/${slug}`, { credentials: 'include' });
+      const res = await fetchWithRefresh(`/api/proxy/admin/products/${slug}`, { credentials: 'include' });
       if (!res.ok) throw new Error(`${res.status}`);
       const data: ProductDetail = await res.json();
       const next = baselineOf(data);

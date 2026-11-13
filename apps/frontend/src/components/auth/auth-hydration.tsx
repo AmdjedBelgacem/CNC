@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { probeSession } from '@/lib/session-probe';
+import { renewSessionEarly, sessionRenewalDue } from '@/lib/api-client';
 
 /**
  * Restores the client session on app load.
@@ -20,10 +21,38 @@ import { probeSession } from '@/lib/session-probe';
  */
 const HYDRATION_RETRY_DELAY_MS = 700;
 
+/** How often a signed-in page checks whether the session is due for an early renewal. */
+const RENEWAL_CHECK_MS = 60 * 1000;
+
+/**
+ * While someone is signed in, renew the session before its 15-minute access cookie lapses
+ * (see `renewSessionEarly`). Checked every minute and whenever the tab comes back, since a
+ * background tab's timers are throttled and a laptop may have slept past the window.
+ */
+function useEarlySessionRenewal(signedIn: boolean) {
+  useEffect(() => {
+    if (!signedIn) return;
+    const tick = () => {
+      if (sessionRenewalDue()) void renewSessionEarly();
+    };
+    const id = window.setInterval(tick, RENEWAL_CHECK_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [signedIn]);
+}
+
 export function AuthHydration({ children }: { children?: React.ReactNode }) {
   const setUser = useAuthStore((s) => s.setUser);
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const [done, setDone] = useState(false);
+  const signedIn = useAuthStore((s) => s.isAuthenticated);
+  useEarlySessionRenewal(signedIn);
 
   useEffect(() => {
     let cancelled = false;

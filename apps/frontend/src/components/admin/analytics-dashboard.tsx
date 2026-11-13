@@ -53,6 +53,7 @@ import {
 } from './admin-ui';
 import { RankedListItem, TrendChart, type TrendPoint } from './analytics-charts';
 import { AdminAnalyticsSkeleton } from '@/components/skeletons/admin-route-skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 type RangeKey = '7d' | '30d' | '90d' | '12m';
 
@@ -210,7 +211,7 @@ export function AnalyticsDashboardView({ title }: { title: string }) {
         if (tid) qs.set('tenantId', tid);
         const q = qs.toString();
         const get = (path: string) =>
-          fetch(`/api/proxy/admin/analytics/${path}?${q}`, { credentials: 'include' });
+          fetchWithRefresh(`/api/proxy/admin/analytics/${path}?${q}`, { credentials: 'include' });
 
         const [overviewRes, trendsRes, breakdownsRes, insightsRes, activityRes] = await Promise.all([
           get('overview'),

@@ -12,6 +12,7 @@ import { toast } from '@/components/ui/toast';
 import { AnimatePresence, m } from 'framer-motion';
 import { Stagger, StaggerItem } from '@/components/ui/motion';
 import { transition } from '@/lib/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /**
  * A learner's earned certificates.
@@ -43,7 +44,7 @@ export function CertificateList({ className }: { className?: string }) {
   const { data, isLoading } = useQuery({
     queryKey: ['my-certifications'],
     queryFn: () =>
-      fetch('/api/proxy/certifications/my', { credentials: 'include' }).then((r) => {
+      fetchWithRefresh('/api/proxy/certifications/my', { credentials: 'include' }).then((r) => {
         if (!r.ok) throw new Error('load');
         return r.json();
       }),
@@ -55,7 +56,7 @@ export function CertificateList({ className }: { className?: string }) {
   }, [isLoading, data]);
 
   const fetchPdf = async (id: string): Promise<Blob> => {
-    const res = await fetch(`/api/proxy/certifications/my/${id}/download`, {
+    const res = await fetchWithRefresh(`/api/proxy/certifications/my/${id}/download`, {
       credentials: 'include',
     });
     if (!res.ok) {

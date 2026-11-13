@@ -17,6 +17,7 @@ import { Modal, ModalHeader, GLASS_SUB } from '@/components/ui/modal';
 import { useCan } from '@/lib/use-permissions';
 import { RoleRowsSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface PermDef {
   key: string;
   label: string;
@@ -57,8 +58,8 @@ export default function AdminRolesPage() {
     setLoading(true);
     try {
       const [rRes, cRes] = await Promise.all([
-        fetch('/api/proxy/admin/roles', { credentials: 'include' }),
-        fetch('/api/proxy/admin/permissions', { credentials: 'include' }),
+        fetchWithRefresh('/api/proxy/admin/roles', { credentials: 'include' }),
+        fetchWithRefresh('/api/proxy/admin/permissions', { credentials: 'include' }),
       ]);
       if (rRes.ok) setRoles(await rRes.json());
       if (cRes.ok) setCatalog(await cRes.json());
@@ -268,7 +269,7 @@ function RoleEditor({
     if (mode === 'edit' && role?.id) {
       let cancelled = false;
       setLoadingRole(true);
-      fetch(`/api/proxy/admin/roles/${role.id}`, { credentials: 'include' })
+      fetchWithRefresh(`/api/proxy/admin/roles/${role.id}`, { credentials: 'include' })
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (!cancelled && data?.permissions) setSelected(data.permissions as string[]);

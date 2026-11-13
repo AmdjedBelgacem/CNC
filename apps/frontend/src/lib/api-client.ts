@@ -133,7 +133,10 @@ async function refreshOutcome(): Promise<RefreshOutcome> {
       // Another tab may have rotated while this one waited for the lock.
       if (await sessionIsLive()) return 'renewed';
       const res = await postRefresh();
-      if (res.ok) return 'renewed';
+      if (res.ok) {
+        markSessionRenewed();
+        return 'renewed';
+      }
       // A rate limit or a server error says nothing about the session. Treating it as a sign-out
       // is what logged people out of the builder when the site was busy.
       if (isTransientStatus(res.status)) return 'unavailable';
@@ -181,6 +184,72 @@ export function refreshSessionOutcome(): Promise<RefreshOutcome> {
     });
   }
   return outcomePromise;
+}
+
+/**
+ * Renew the session BEFORE the 15-minute access cookie expires.
+ *
+ * Without this, the access cookie lapsed every quarter hour and whatever request happened to
+ * go out in that moment got a 401. `api.*` refreshes and retries, but dozens of screens call
+ * the proxy with a plain `fetch`, and the product editor, for one, showed "401" instead of the
+ * form: it read as being logged off. Rotating early keeps the access cookie valid while the
+ * site is open, so no request meets an expired one.
+ *
+ * Every tab runs this, so it is coordinated: the same Web Lock as a reactive refresh, plus a
+ * shared "renewed at" stamp, so only one tab rotates per window. It never signs anyone out —
+ * a refused rotation is left to the normal session check to judge.
+ */
+export const SESSION_RENEW_INTERVAL_MS = 10 * 60 * 1000;
+const RENEWED_AT_KEY = 'auth:renewed-at';
+
+function readRenewedAt(): number {
+  try {
+    return Number(window.localStorage.getItem(RENEWED_AT_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeRenewedAt(at: number) {
+  try {
+    window.localStorage.setItem(RENEWED_AT_KEY, String(at));
+  } catch {
+    // Storage blocked: each tab renews on its own schedule, still under the lock.
+  }
+}
+
+/** True when no tab has renewed within `withinMs`. */
+export function sessionRenewalDue(withinMs = SESSION_RENEW_INTERVAL_MS, now = Date.now()): boolean {
+  return now - readRenewedAt() >= withinMs;
+}
+
+export async function renewSessionEarly(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const run = async () => {
+    // Checked again inside the lock: the tab that held it may have just renewed.
+    if (!sessionRenewalDue()) return;
+    try {
+      const res = await postRefresh();
+      if (res.ok) writeRenewedAt(Date.now());
+    } catch {
+      // Offline or unreachable: the next tick or the next request tries again.
+    }
+  };
+  const locks = (navigator as Navigator & { locks?: LockManager }).locks;
+  if (locks?.request) {
+    try {
+      await locks.request('titan-auth-refresh', run);
+      return;
+    } catch {
+      // Fall through to an unlocked attempt.
+    }
+  }
+  await run();
+}
+
+/** Record a rotation done by the reactive path, so the early renewal does not repeat it. */
+export function markSessionRenewed() {
+  if (typeof window !== 'undefined') writeRenewedAt(Date.now());
 }
 
 interface FetchOptions extends RequestInit {

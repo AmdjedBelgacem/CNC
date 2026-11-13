@@ -28,6 +28,7 @@ import { ease } from '@/lib/motion';
 import { Crossfade, Stagger, StaggerItem } from '@/components/ui/motion';
 import { BudgetsTableSkeleton } from '@/components/skeletons/admin-route-skeletons';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 interface BudgetRow {
   id: string;
@@ -109,8 +110,8 @@ export default function AdminFinancePage() {
     setError(null);
     try {
       const [bRes, sRes] = await Promise.all([
-        fetch('/api/proxy/admin/budgets', { credentials: 'include' }),
-        fetch('/api/proxy/admin/finance/summary', { credentials: 'include' }),
+        fetchWithRefresh('/api/proxy/admin/budgets', { credentials: 'include' }),
+        fetchWithRefresh('/api/proxy/admin/finance/summary', { credentials: 'include' }),
       ]);
       if (!bRes.ok) throw new Error(`Request failed (${bRes.status})`);
       if (!sRes.ok) throw new Error(`Request failed (${sRes.status})`);

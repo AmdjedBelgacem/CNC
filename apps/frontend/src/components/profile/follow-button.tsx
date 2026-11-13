@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { m } from 'framer-motion';
 import { spring } from '@/lib/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 type FollowState = { following: boolean; pending?: boolean };
 
@@ -45,7 +46,7 @@ export function useFollowToggle(onChanged?: (targetId: string, following: boolea
       }
       set(targetId, following);
       try {
-        const res = await fetch(`/api/proxy/social/follow/${targetId}`, {
+        const res = await fetchWithRefresh(`/api/proxy/social/follow/${targetId}`, {
           method: following ? 'DELETE' : 'POST',
           credentials: 'include',
         });

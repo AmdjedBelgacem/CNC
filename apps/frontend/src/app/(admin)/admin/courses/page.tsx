@@ -53,6 +53,7 @@ import { AnimatedNumber, Crossfade, Reveal, Stagger, StaggerItem } from '@/compo
 import { CourseRowMenu, type CourseAction } from './course-row-menu';
 import { AdminCardGrid } from '@/components/skeletons/admin-route-skeletons';
 import { SkeletonRegion } from '@/components/ui/skeletons';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 
 /* Courses carry a thumbnail, a subtitle, a difficulty level and live enrollment
  * and lesson counts. The previous card treated the thumbnail as a full-bleed
@@ -363,7 +364,7 @@ export default function AdminCoursesPage() {
         if (zeroEnrollments) qs.set('enrollments', '0');
         if (academy) qs.set('academy', academy);
         if (q) qs.set('search', q);
-        const res = await fetch(`/api/proxy/admin/courses?${qs.toString()}`, {
+        const res = await fetchWithRefresh(`/api/proxy/admin/courses?${qs.toString()}`, {
           credentials: 'include',
         });
         if (!res.ok) throw new Error(`${res.status}`);
@@ -392,7 +393,7 @@ export default function AdminCoursesPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/proxy/admin/academies?limit=100', { credentials: 'include' });
+        const res = await fetchWithRefresh('/api/proxy/admin/academies?limit=100', { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && Array.isArray(data?.items)) {

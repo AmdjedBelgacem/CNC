@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, MessageCircle, Heart } from 'lucide-react';
 import { HoverLift, Reveal, Stagger, StaggerItem } from '@/components/ui/motion';
+import { fetchWithRefresh } from '@/hooks/use-api-proxy';
 interface FeedPost {
   id: string;
   content: string;
@@ -20,7 +21,7 @@ export function CommunityFeedPreview() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    fetch('/api/proxy/feed?limit=3', { credentials: 'include' })
+    fetchWithRefresh('/api/proxy/feed?limit=3', { credentials: 'include' })
       .then((r) => r.json())
       .then((res) => setPosts(res.data || []))
       .catch(() => {})
