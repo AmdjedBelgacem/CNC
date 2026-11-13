@@ -1,4 +1,5 @@
 'use client';
+import { SessionRowsLoading } from '@/components/skeletons/public-page-replicas';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
@@ -353,7 +354,7 @@ export default function SecuritySettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {sessionsLoading ? (
-              <p className="text-sm text-muted-foreground">{t('security.loadingSessions')}</p>
+              <SessionRowsLoading />
             ) : sessions.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('security.noSessions')}</p>
             ) : (

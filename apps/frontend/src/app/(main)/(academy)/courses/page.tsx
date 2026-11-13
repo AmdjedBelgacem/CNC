@@ -3,7 +3,9 @@ import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { CourseGrid } from './course-grid';
 import { CategoryFilter } from '@/components/academy/category-filter';
-import { CourseFilterSkeleton, CourseGridSkeleton as CourseGridReplica } from '@/components/ui/skeletons/public';
+// The streaming fallbacks follow the remembered library size: an empty library shows its empty
+// state, not six placeholder cards that then vanish.
+import { CourseFilterLoading, CoursesGridLoading } from '@/components/skeletons/public-route-skeletons';
 import { fetchPublishedCourses } from '@/lib/courses';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { BRAND_NAME, OG_IMAGE, absoluteUrl } from '@/lib/brand';
@@ -86,7 +88,7 @@ async function CategoryFilterSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-label={t('loadingFilters')}>
       <span className="sr-only">{t('loadingFilters')}</span>
-      <CourseFilterSkeleton />
+      <CourseFilterLoading />
     </div>
   );
 }
@@ -103,7 +105,7 @@ async function CourseGridSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-label={t('loadingCourses')}>
       <span className="sr-only">{t('loadingCourses')}</span>
-      <CourseGridReplica />
+      <CoursesGridLoading />
     </div>
   );
 }

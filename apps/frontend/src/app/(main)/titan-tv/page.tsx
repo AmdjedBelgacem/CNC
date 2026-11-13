@@ -1,10 +1,10 @@
 'use client';
+import { TitanTvSeriesSkeleton } from '@/components/skeletons/public-page-replicas';
 import { rememberListCount } from '@/lib/admin-shape-memory';
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Play, Clock, Film } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { getImageSrc } from '@/lib/images';
 import { Reveal } from '@/components/ui/motion';
 interface Video {
@@ -105,20 +105,7 @@ export default function TitanTvPage() {
       </section>
       <section className="py-20">
         <div className="container mx-auto px-4">
-          {isLoading && (
-            <div className="space-y-16">
-              {[1, 2, 3].map((i) => (
-                <div key={i}>
-                  <Skeleton className="mb-4 h-7 w-64" /> <Skeleton className="mb-6 h-4 w-96" />
-                  <div className="flex gap-5 overflow-hidden">
-                    {[1, 2, 3, 4].map((j) => (
-                      <Skeleton key={j} className="h-40 w-72 shrink-0 rounded-2xl" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {isLoading && <TitanTvSeriesSkeleton />}
           {error && (
             <Reveal className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
               <span className="mb-5 flex size-14 items-center justify-center rounded-full bg-muted ring-1 ring-inset ring-border/70">

@@ -1,4 +1,6 @@
 'use client';
+import { PortfolioLoading } from '@/components/skeletons/public-page-replicas';
+import { rememberListCount } from '@/lib/admin-shape-memory';
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
@@ -59,6 +61,10 @@ export default function EditProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
+  // The loading placeholder draws as many portfolio cards as were listed last time.
+  useEffect(() => {
+    if (!portfolioLoading) rememberListCount('settings-portfolio', portfolio.length);
+  }, [portfolioLoading, portfolio.length]);
   const [showPortfolioForm, setShowPortfolioForm] = useState(false);
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
   const [pfForm, setPfForm] = useState({
@@ -592,9 +598,7 @@ export default function EditProfilePage() {
             )}
           </AnimatePresence>
           {portfolioLoading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {t('profile.loadingPortfolio')}
-            </p>
+            <PortfolioLoading />
           ) : portfolio.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border px-8 py-12 text-center">
               <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">

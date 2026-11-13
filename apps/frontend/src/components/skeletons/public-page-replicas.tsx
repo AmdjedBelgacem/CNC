@@ -804,9 +804,49 @@ export function TagIndexPageSkeleton() {
  * /titan-tv
  * ══════════════════════════════════════════════════════════════════════════ */
 
+/**
+ * The series rows under the Titan TV hero, or its empty box at zero. Shared by the route skeleton
+ * and the page's own loading branch, which used to draw three fixed rows over an empty library.
+ */
+export function TitanTvSeriesSkeleton() {
+  const series = useRememberedListCount('public-titan-tv', 2, 8);
+  if (series === 0) {
+    return (
+      <div className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
+        <Skeleton className="mb-5 size-14 rounded-full" />
+        <Line height={28} bar="h-4" width="w-40" center />
+        <Line height={20} width="w-72" center className="mt-2" />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-20">
+      <Repeat count={series}>
+        {(i) => (
+          <div key={i}>
+            <div className="mb-1 flex h-8 items-center md:h-9">
+              <Skeleton className={cn('h-6', ['w-64', 'w-56', 'w-72'][i % 3])} />
+            </div>
+            <Line height={22.75} width="w-96" className="mb-6" />
+            <div className="-mx-4 flex gap-5 overflow-hidden px-4 pb-4 pt-1">
+              <Repeat count={5}>
+                {(j) => (
+                  <div key={j} className="w-72 shrink-0">
+                    <Skeleton className="aspect-video w-full rounded-2xl" />
+                    <Line height={22} bar="h-3.5" width="w-4/5" className="mt-3" />
+                  </div>
+                )}
+              </Repeat>
+            </div>
+          </div>
+        )}
+      </Repeat>
+    </div>
+  );
+}
+
 /** `app/(main)/titan-tv/page.tsx`: hero, then a row of videos per series. */
 export function TitanTvPageSkeleton() {
-  const series = useRememberedListCount('public-titan-tv', 2, 8);
   return (
     <SkeletonRegion>
       <section className="relative isolate overflow-hidden border-b border-border/70 py-20 md:py-28">
@@ -820,36 +860,7 @@ export function TitanTvPageSkeleton() {
       </section>
       <section className="py-20">
         <div className="container mx-auto px-4">
-          {series === 0 ? (
-            <div className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-20 text-center">
-              <Skeleton className="mb-5 size-14 rounded-full" />
-              <Line height={28} bar="h-4" width="w-40" center />
-              <Line height={20} width="w-72" center className="mt-2" />
-            </div>
-          ) : (
-            <div className="space-y-20">
-              <Repeat count={series}>
-                {(i) => (
-                  <div key={i}>
-                    <div className="mb-1 flex h-8 items-center md:h-9">
-                      <Skeleton className={cn('h-6', ['w-64', 'w-56', 'w-72'][i % 3])} />
-                    </div>
-                    <Line height={22.75} width="w-96" className="mb-6" />
-                    <div className="-mx-4 flex gap-5 overflow-hidden px-4 pb-4 pt-1">
-                      <Repeat count={5}>
-                        {(j) => (
-                          <div key={j} className="w-72 shrink-0">
-                            <Skeleton className="aspect-video w-full rounded-2xl" />
-                            <Line height={22} bar="h-3.5" width="w-4/5" className="mt-3" />
-                          </div>
-                        )}
-                      </Repeat>
-                    </div>
-                  </div>
-                )}
-              </Repeat>
-            </div>
-          )}
+          <TitanTvSeriesSkeleton />
         </div>
       </section>
     </SkeletonRegion>
@@ -1198,6 +1209,67 @@ export function ProfilePageSkeleton() {
           </div>
         )}
       </div>
+    </SkeletonRegion>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * In-page loading states
+ *
+ * Pages that fetch in the browser render their shell at once and show these while their data
+ * arrives. They used to show a line of "loading…" text, so the page jumped when the data came.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/** Active sessions on /account/security: one 70px row per session the page last listed. */
+export function SessionRowsLoading() {
+  const rows = useRememberedListCount('public-account-sessions', 3, 30);
+  return (
+    <SkeletonRegion>
+      {rows === 0 ? (
+        <Line height={20} width="w-56" />
+      ) : (
+        <div className="space-y-3">
+          <Repeat count={rows}>
+            {(i) => (
+              <div key={i} className="flex h-[70px] items-center justify-between rounded-xl border border-border/70 p-3.5">
+                <div className="space-y-1">
+                  <Line height={20} width={['w-40', 'w-32', 'w-44'][i % 3]} />
+                  <Line height={16} bar="h-2" width="w-36" />
+                </div>
+                {i > 0 && <Skeleton className="h-8 w-16 rounded-lg" />}
+              </div>
+            )}
+          </Repeat>
+        </div>
+      )}
+    </SkeletonRegion>
+  );
+}
+
+/** Portfolio on /settings/profile: its dashed empty box at zero, else that many cards. */
+export function PortfolioLoading() {
+  const items = useRememberedListCount('settings-portfolio', 0, 24);
+  return (
+    <SkeletonRegion>
+      {items === 0 ? (
+        <div className="rounded-xl border border-dashed border-border px-8 py-12 text-center">
+          <Skeleton className="mx-auto size-12 rounded-full" />
+          <Line height={24} width="w-40" center className="mt-3" />
+          <Line height={16} bar="h-2" width="w-56" center />
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Repeat count={items}>
+            {(i) => (
+              <div key={i} className="rounded-xl border border-border/70 bg-card p-4 shadow-xs">
+                <Line height={20} width={['w-40', 'w-32', 'w-48'][i % 3]} />
+                <Skeleton className="mt-3 h-28 w-full rounded-lg" />
+                <Line height={19.5} bar="h-2" width="w-4/5" className="mt-2" />
+              </div>
+            )}
+          </Repeat>
+        </div>
+      )}
     </SkeletonRegion>
   );
 }

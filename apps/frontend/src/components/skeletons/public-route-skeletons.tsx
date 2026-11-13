@@ -766,3 +766,20 @@ export function VerifyResultSkeleton() {
     </SkeletonRegion>
   );
 }
+
+/**
+ * The /courses grid while it streams: the empty state when the library was empty last time, else
+ * that many cards. Used inside the page's own Suspense fallback, which drew six cards regardless.
+ */
+export function CoursesGridLoading() {
+  const courses = useRememberedListCount('public-courses', 6, 12);
+  return courses === 0 ? <EmptyStateSkeleton descriptionLines={1} /> : <CourseGridSkeleton count={courses} />;
+}
+
+/** The academy filter while it streams; the page shows none when there are no academies. */
+export function CourseFilterLoading() {
+  const academies = useRememberedListCount('public-course-academies', 4, 20);
+  return academies > 0 ? (
+    <CourseFilterSkeleton chips={[32, 96, 120, 84, 104, 88, 112].slice(0, Math.min(academies + 1, 7))} />
+  ) : null;
+}
