@@ -90,7 +90,9 @@ export default async function ProductsPage() {
               categories={categories}
               products={products}
               header={liveIslandHeader(layout, 'products-inventory', locale)}
-              records={liveIslandSlot(layout, 'products-inventory', 'records', locale)}
+              // The record blocks hold English copy. Arabic shows the translated storefront cards
+              // alone; rendering both listed every seeded product twice.
+              records={locale === 'en' ? liveIslandSlot(layout, 'products-inventory', 'records', locale) : undefined}
               recordIds={liveIslandRecordIds(layout, 'products-inventory', locale)}
             />
           ),

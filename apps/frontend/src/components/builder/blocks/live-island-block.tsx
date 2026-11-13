@@ -268,9 +268,12 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
 
       {variant === 'products-inventory' ? (
         <div className={`px-margin-mobile md:px-margin-desktop ${ISLAND_PAD['products-inventory'].bottom}`}>
+          {/* The record blocks hold English copy. In Arabic the live page shows the translated
+              storefront cards instead, so the preview does the same. */}
           <ProductsCatalog
-            records={puck.renderSlot('records', { className: 'contents' })}
-            recordIds={recordIds}
+            records={canvasLocale === 'en' ? puck.renderSlot('records', { className: 'contents' }) : undefined}
+            recordIds={canvasLocale === 'en' ? recordIds : undefined}
+            contentLocale={canvasLocale}
             inBuilder
           />
         </div>

@@ -72,6 +72,7 @@ export function ProductsCatalog({
   records,
   recordIds,
   inBuilder = false,
+  contentLocale,
 }: {
   categories?: string[];
   initialProducts?: CatalogProduct[];
@@ -85,9 +86,15 @@ export function ProductsCatalog({
   recordIds?: string[];
   /** The builder canvas must not rewrite the admin URL when a filter changes. */
   inBuilder?: boolean;
+  /**
+   * Language of the product copy. Defaults to the visitor's locale; the builder passes the
+   * canvas language, which can differ from the admin's interface language.
+   */
+  contentLocale?: string;
 }) {
   const t = useTranslations('products');
-  const locale = useLocale();
+  const uiLocale = useLocale();
+  const locale = contentLocale ?? uiLocale;
 
   const displayCurrency = useCurrencyStore((s) => s.code);
   const setDisplayCurrency = useCurrencyStore((s) => s.setCode);
@@ -136,7 +143,9 @@ export function ProductsCatalog({
      */
     setLoading(products.length === 0);
 
-    fetch('/api/proxy/products?limit=200')
+    // Ask for the page's language. The proxy otherwise takes it from the visitor's cookie, so the
+    // Arabic builder canvas of an admin browsing in English refreshed to English product names.
+    fetch('/api/proxy/products?limit=200', { headers: { 'x-client-locale': locale } })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -166,7 +175,7 @@ export function ProductsCatalog({
     return () => {
       active = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, locale]);
 
   // Adopt a new `?category=` value (browser back/forward, or a link clicked
   // before this island hydrated).
