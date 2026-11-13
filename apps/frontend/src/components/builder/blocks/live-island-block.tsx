@@ -194,6 +194,13 @@ export function LiveIslandBlock({ props, puck }: BlockComponentProps<LiveIslandP
         <Icon name="bolt" className="size-3" />
         {copy.fixed ? 'Fixed' : 'Live'} · {copy.label}
       </span>
+      {empty ? (
+        // The live page drops an island with nothing to show, so the canvas gives it no height
+        // too. Say so: the partner and academy blocks do, and a bare tag read as "will appear".
+        <span className="rounded-lg border border-warning/30 bg-background/95 px-2.5 py-1 text-[11px] font-medium leading-snug text-warning shadow-sm backdrop-blur">
+          Nothing to show yet — hidden on the live site
+        </span>
+      ) : null}
       <span className="max-w-[22rem] rounded-lg border border-border/70 bg-background/95 px-2.5 py-1 text-[11px] leading-snug text-muted-foreground opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100">
         {copy.detail}
       </span>
