@@ -36,13 +36,14 @@ const escape = (key: string) => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 describe('remembered shapes of the admin edit and data-sized screens', () => {
   for (const [key, writer] of Object.entries(WRITERS)) {
     it(`"${key}" is read by a skeleton and written by ${writer.split('/').slice(-2).join('/')}`, () => {
-      expect(skeletons).toMatch(new RegExp(`useRememberedListCount\\(\\s*'${escape(key)}'`));
-      expect(read(writer)).toMatch(new RegExp(`rememberListCount\\(\\s*'${escape(key)}'`));
+      expect(skeletons).toMatch(new RegExp(`(useRememberedListCount|useProductEditCount)\\(\\s*'${escape(key)}'`));
+      // Written directly, or as a [key, count] entry the screen records in a loop.
+      expect(read(writer)).toMatch(new RegExp(`(rememberListCount\\(\\s*|\\[\\s*)'${escape(key)}'`));
     });
   }
 
   it('has no editor, dashboard, AI settings or audit skeleton reading a key nothing writes', () => {
-    const read = [...skeletons.matchAll(/useRememberedListCount\(\s*'([^']+)'/g)]
+    const read = [...skeletons.matchAll(/(?:useRememberedListCount|useProductEditCount)\(\s*'([^']+)'/g)]
       .map((m) => m[1] ?? '')
       .filter((key) => /^(edit-|dashboard-|ai-assistant-|staff-audit)/.test(key));
     expect(new Set(read)).toEqual(new Set(Object.keys(WRITERS)));
@@ -51,5 +52,17 @@ describe('remembered shapes of the admin edit and data-sized screens', () => {
   it('only the audit log remembers its view when it is the unfiltered first page', () => {
     const audit = read('app/(admin)/admin/staff/audit/audit-log.tsx');
     expect(audit).toMatch(/!action && page === 0/);
+  });
+});
+
+describe('product editor skeleton counts per product', () => {
+  it('records each count per product and reads that first, then the last product opened', () => {
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const { join } = require('node:path') as typeof import('node:path');
+    const src = join(__dirname, '..', 'src');
+    const page = readFileSync(join(src, 'app/(admin)/admin/products/[slug]/edit/page.tsx'), 'utf8');
+    expect(page).toMatch(/rememberListCount\(`\$\{key\}:\$\{slug\}`, count\)/);
+    const sk = readFileSync(join(src, 'components/skeletons/admin-route-skeletons.tsx'), 'utf8');
+    expect(sk).toMatch(/useRememberedListCount\(`\$\{key\}:\$\{slug\}`, latest, max\)/);
   });
 });

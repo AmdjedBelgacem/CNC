@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore, type ReactNode } from 'react';
+import { useParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AsideCardSkeleton,
@@ -885,17 +886,26 @@ function SwitchCardSkeleton({ i }: { i: number }) {
   );
 }
 
+/** A product editor count for this product, else the last product opened, else `fallback`. */
+function useProductEditCount(key: string, slug: string, fallback: number, max: number): number {
+  const latest = useRememberedListCount(key, fallback, max);
+  return useRememberedListCount(`${key}:${slug}`, latest, max);
+}
+
 /**
  * admin/products/[slug]/edit — ProductFormSections (Basics, Pricing, Inventory, Media, Details,
  * SEO) with the store card and checklist aside.
  */
 export function ProductEditorSkeleton() {
   // The parts that change size from product to product, as the editor last rendered them.
-  const images = useRememberedListCount('edit-product-images', 1, 12);
-  const pinpoints = useRememberedListCount('edit-product-pinpoints', 0, 30);
-  const documents = useRememberedListCount('edit-product-documents', 0, 30);
+  // Keyed by product first: products differ a lot (one gallery of 3 images, another of 12), so the
+  // last product opened is only the fallback for one this device has not opened yet.
+  const slug = useParams<{ slug?: string }>()?.slug ?? '';
+  const images = useProductEditCount('edit-product-images', slug, 1, 12);
+  const pinpoints = useProductEditCount('edit-product-pinpoints', slug, 0, 30);
+  const documents = useProductEditCount('edit-product-documents', slug, 0, 30);
   // 1 when the product has a thumbnail: it decides the drop zone and the pinpoint photo.
-  const thumbnail = useRememberedListCount('edit-product-thumbnail', 1, 1) > 0;
+  const thumbnail = useProductEditCount('edit-product-thumbnail', slug, 1, 1) > 0;
   return (
     <EditorPageSkeleton
       crumbs={['w-20', 'w-48']}

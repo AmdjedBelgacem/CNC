@@ -207,10 +207,18 @@ function ProductEditor() {
       setBaseline(next);
       setImages(Array.isArray(data.images) ? data.images : []);
       // The editor's data-sized parts, so the loading skeleton can draw them next time.
-      rememberListCount('edit-product-images', Array.isArray(data.images) ? data.images.length : 0);
-      rememberListCount('edit-product-pinpoints', next.pinpoints.length);
-      rememberListCount('edit-product-documents', next.documents.length);
-      rememberListCount('edit-product-thumbnail', next.thumbnailUrl ? 1 : 0);
+      // Recorded per product (what its own skeleton draws next time) and as the latest product
+      // (the fallback for a product this device has not opened yet).
+      const shape: Array<[string, number]> = [
+        ['edit-product-images', Array.isArray(data.images) ? data.images.length : 0],
+        ['edit-product-pinpoints', next.pinpoints.length],
+        ['edit-product-documents', next.documents.length],
+        ['edit-product-thumbnail', next.thumbnailUrl ? 1 : 0],
+      ];
+      for (const [key, count] of shape) {
+        rememberListCount(key, count);
+        rememberListCount(`${key}:${slug}`, count);
+      }
       /**
        * Populate the form. This line is the entire data-loss fix.
        *
