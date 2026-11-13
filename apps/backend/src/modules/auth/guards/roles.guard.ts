@@ -29,6 +29,20 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
+    // `user.role` is the role in the user's HOME tenant. Acting on another tenant (the request
+    // tenant differs) it confers nothing, except for a platform super_admin. TenantScopeGuard
+    // already refuses that today; this keeps a global admin role from ever reading as admin
+    // of a tenant the user merely belongs to.
+    const requestTenantId = request.tenant?.id ? String(request.tenant.id) : '';
+    if (
+      requestTenantId &&
+      user.tenantId &&
+      String(user.tenantId) !== requestTenantId &&
+      user.role !== 'super_admin'
+    ) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
     const userLevel = ROLE_HIERARCHY[user.role as string] || 0;
     const hasRole = requiredRoles.some((role) => {
       const requiredLevel = ROLE_HIERARCHY[role] || 0;

@@ -16,6 +16,24 @@ import * as querystring from 'node:querystring';
 import { AppModule } from './app.module';
 import { assertNoPlaceholderSecrets } from './config/config.service';
 
+/** Extensions served inline from /uploads; everything else is forced to download. */
+const INLINE_UPLOAD_EXT = /\.(png|jpe?g|gif|webp|avif|mp4|webm|mov|m4v|ogv|pdf)$/i;
+
+/**
+ * Security headers for files served from `/uploads/`. Exported for tests.
+ */
+export function uploadResponseHeaders(filePath: string): Record<string, string> {
+  // Chrome refuses to open its PDF viewer inside a CSP-sandboxed document, so PDFs get
+  // the same lockdown minus `sandbox` (the viewer runs no page script of ours anyway).
+  const isPdf = /\.pdf$/i.test(filePath);
+  const headers: Record<string, string> = {
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': `default-src 'none'; img-src 'self'; media-src 'self'${isPdf ? '' : '; sandbox'}`,
+  };
+  if (!INLINE_UPLOAD_EXT.test(filePath)) headers['Content-Disposition'] = 'attachment';
+  return headers;
+}
+
 /**
  * Whether to serve the interactive API docs.
  *
@@ -79,7 +97,13 @@ export async function createApp(): Promise<NestFastifyApplication> {
       // client's real IP (the rate limiter keys on it) and the real scheme (so
       // Secure/Lax cookies and redirects reflect https, not the internal http hop).
       // Without it every client looks like one Caddy IP and the throttler collapses.
-      trustProxy: true,
+      //
+      // `1`, not `true`: trust exactly ONE hop. With `true`, request.ip is the LEFT-most
+      // X-Forwarded-For entry, which any client can write itself wherever the API is
+      // reachable directly (Fly exposes it publicly) — a free per-request IP to dodge
+      // every rate limit. With one trusted hop, request.ip is the address the nearest
+      // proxy (Caddy / the Next BFF / Fly's edge) appended, i.e. the right-most entry.
+      trustProxy: 1,
       logger: {
         level: process.env.LOG_LEVEL || 'info',
         redact: {
@@ -193,6 +217,14 @@ export async function createApp(): Promise<NestFastifyApplication> {
     root: uploadDir,
     prefix: '/uploads/',
     decorateReply: false,
+    // Uploaded files are user content served from the API origin. Lock them down so a
+    // file can never execute as a page: no sniffing, a CSP that forbids scripts and
+    // sandboxes any document, and anything that is not plainly media is downloaded.
+    setHeaders: (reply, filePath) => {
+      for (const [name, value] of Object.entries(uploadResponseHeaders(filePath))) {
+        reply.header(name, value);
+      }
+    },
   });
 
   /**

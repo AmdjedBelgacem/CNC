@@ -330,7 +330,7 @@ describe('certificate issuance (integration)', () => {
     expect(result.status).toBe('issued');
     const cert = result.certificate!;
 
-    expect(cert.certificateNumber).toMatch(/^TMF-\d{4}-\d+$/);
+    expect(cert.certificateNumber).toMatch(/^TMF-\d{4}-[0-9A-HJKMNP-TV-Z]{10}$/);
     expect(cert.pdfStorageKey).toBeTruthy();
     expect(cert.pdfUrl).toContain('https://storage.test/');
     expect(cert.source).toBe('automatic');

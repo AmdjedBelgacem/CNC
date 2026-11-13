@@ -7,7 +7,9 @@ import { certifications } from '../../database/schema/certifications';
 import { userPreferences } from '../../database/schema/user-preferences';
 import { userBlocks } from '../../database/schema/dm';
 import { series, lessons } from '../../database/schema/courses';
-import { eq, and, desc, asc, count, ilike, or, inArray, isNull, sql } from 'drizzle-orm';
+import { eq, and, desc, asc, count, or, inArray, isNull, sql } from 'drizzle-orm';
+import { ilikeContains } from '../../common/utils/escape-like';
+import type { CreatePortfolioItemDto, UpdateSocialProfileDto } from './dto/social.dto';
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SearchService } from '../search/search.service';
@@ -430,9 +432,17 @@ export class SocialService {
     return { data: rows, total, limit: safeLimit, offset: safeOffset };
   }
 
-  async updateProfile(userId: string, tenantId: string, data: { name?: string; headline?: string; bio?: string; avatarUrl?: string; location?: string }) {
+  async updateProfile(userId: string, tenantId: string, data: UpdateSocialProfileDto) {
+    // Copy the editable keys one by one. Spreading the body let a caller set `role`,
+    // `tenantId`, `passwordHash`, ... on their own row.
+    const patch: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.headline !== undefined) patch.headline = data.headline;
+    if (data.bio !== undefined) patch.bio = data.bio;
+    if (data.avatarUrl !== undefined) patch.avatarUrl = data.avatarUrl || null;
+    if (data.location !== undefined) patch.location = data.location;
     await this.drizzle.db.update(users)
-      .set({ ...data, updatedAt: new Date() })
+      .set(patch)
       .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)));
 
     // Re-read through the public column allowlist: `returning()` would hand back
@@ -517,9 +527,18 @@ export class SocialService {
     return { following: false };
   }
 
-  async addPortfolioItem(userId: string, data: { title: string; description?: string; imageUrl?: string; tags?: string[] }) {
+  async addPortfolioItem(userId: string, data: CreatePortfolioItemDto) {
+    // Explicit fields with the owner last: spreading the body after `userId` let
+    // `{"userId":"<victim>"}` write into someone else's portfolio.
     const [item] = await this.drizzle.db.insert(userPortfolioItems)
-      .values({ userId, ...data })
+      .values({
+        title: data.title,
+        description: data.description ?? null,
+        imageUrl: data.imageUrl ?? null,
+        projectUrl: data.projectUrl ?? null,
+        tags: data.tags ?? null,
+        userId,
+      })
       .returning();
     return item;
   }
@@ -530,7 +549,7 @@ export class SocialService {
         eq(users.tenantId, tenantId),
         inArray(users.accountStatus, Array.from(PUBLIC_STATUSES)),
         isNull(users.deletedAt),
-        or(ilike(users.name, `%${query}%`), ilike(users.headline, `%${query}%`), ilike(users.bio, `%${query}%`)),
+        or(ilikeContains(users.name, query), ilikeContains(users.headline, query), ilikeContains(users.bio, query)),
       ),
       columns: { id: true, username: true, name: true, avatarUrl: true, headline: true },
       limit: 20,

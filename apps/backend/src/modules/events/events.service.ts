@@ -5,6 +5,40 @@ import { events, eventAttendees } from '../../database/schema/events';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
 import { SearchService } from '../search/search.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import type { CreateEventDto, UpdateEventDto } from './dto/event.dto';
+
+type EventValues = Partial<typeof events.$inferInsert>;
+
+/**
+ * Build the column values from the declared event fields only. Spreading the body let a
+ * caller set `tenantId` (moving the event to another tenant), `id`, `createdAt`, ...
+ */
+export function eventValuesFrom(data: UpdateEventDto): EventValues {
+  const values: EventValues = {};
+  if (data.title !== undefined) values.title = data.title;
+  if (data.slug !== undefined) values.slug = data.slug;
+  if (data.description !== undefined) values.description = data.description;
+  if (data.eventType !== undefined) values.eventType = data.eventType;
+  if (data.startDate !== undefined) values.startDate = new Date(data.startDate);
+  if (data.endDate !== undefined) values.endDate = data.endDate ? new Date(data.endDate) : null;
+  if (data.location !== undefined) values.location = data.location;
+  if (data.isVirtual !== undefined) values.isVirtual = data.isVirtual;
+  if (data.maxAttendees !== undefined) values.maxAttendees = data.maxAttendees;
+  if (data.price !== undefined) values.price = data.price;
+  if (data.thumbnailUrl !== undefined) values.thumbnailUrl = data.thumbnailUrl;
+  if (data.isPublished !== undefined) values.isPublished = data.isPublished;
+  return values;
+}
+
+function slugFromTitle(title: string): string {
+  const base = title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 180);
+  return base || `event-${Date.now().toString(36)}`;
+}
 
 @Injectable()
 export class EventsService {
@@ -155,18 +189,25 @@ export class EventsService {
     return { cancelled: true };
   }
 
-  async create(data: any) {
-    const [event] = await this.drizzle.db.insert(events).values(data).returning();
+  async create(tenantId: string, data: CreateEventDto) {
+    const values = eventValuesFrom(data);
+    const [event] = await this.drizzle.db.insert(events).values({
+      ...values,
+      title: data.title,
+      slug: data.slug || slugFromTitle(data.title),
+      startDate: new Date(data.startDate),
+      tenantId,
+    }).returning();
     if (event) this.syncSearch(event.tenantId, event.id);
     return event;
   }
 
-  async update(id: string, data: any, tenantId?: string) {
+  async update(id: string, data: UpdateEventDto, tenantId?: string) {
     const where = tenantId
       ? and(eq(events.id, id), eq(events.tenantId, tenantId))
       : eq(events.id, id);
     const [event] = await this.drizzle.db
-      .update(events).set({ ...data, updatedAt: new Date() })
+      .update(events).set({ ...eventValuesFrom(data), updatedAt: new Date() })
       .where(where).returning();
     if (!event) throw new NotFoundException('Event not found');
     this.syncSearch(event.tenantId, event.id);

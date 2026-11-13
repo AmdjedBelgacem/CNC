@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api-client';
+import { safeReturnPath } from '@/lib/safe-return-path';
 import { Loader2, X } from 'lucide-react';
 import { AuthStatus, AuthStatusIcon, AuthSteps } from '@/components/auth/auth-kit';
 function CallbackInner() {
@@ -19,7 +20,9 @@ function CallbackInner() {
       const provider = params.get('provider') || 'oauth';
       const twoFactorRequired = params.get('twoFactor') === '1';
       const userId = params.get('userId');
-      const returnTo = params.get('returnTo') || '/'; // Cookies are already set by the backend callback redirect.
+      // Same-origin paths only, so a crafted callback link cannot bounce the user off-site.
+      // Cookies are already set by the backend callback redirect.
+      const returnTo = safeReturnPath(params.get('returnTo'));
 if (twoFactorRequired && userId) {
         router.replace(`/2fa/verify?userId=${encodeURIComponent(userId)}`);
         return;

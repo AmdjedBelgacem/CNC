@@ -11,7 +11,8 @@ import { UploadService } from '../auth/services/upload.service';
 import { CertificationService } from '../certification/certification.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SearchService } from '../search/search.service';
-import { eq, and, asc, desc, like, ilike, count, sql, inArray, isNull, ne, lt, or } from 'drizzle-orm';
+import { eq, and, asc, desc, count, sql, inArray, isNull, ne, lt, or } from 'drizzle-orm';
+import { ilikeContains, likeContains } from '../../common/utils/escape-like';
 import { CreateCourseDto, UpdateCourseDto, CreateSeriesDto, UpdateSeriesDto, CreateLessonDto, UpdateLessonDto, CourseFilterDto, LessonUploadUrlDto, CreateLessonBlockDto, UpdateLessonBlockDto, ReorderLessonBlocksDto } from './dto/courses.dto';
 import {
   getQuizBlocks,
@@ -177,7 +178,7 @@ export class CoursesService {
     // Filters that do not involve status, reused by the facet counts so each
     // status tab can report how many courses it would actually return.
     const baseConditions: any[] = [eq(courses.tenantId, tenantId)];
-    if (opts.search) baseConditions.push(or(ilike(courses.title, `%${opts.search}%`), sql`${courses.translations}::text ILIKE ${`%${opts.search}%`}`)!);
+    if (opts.search) baseConditions.push(or(ilikeContains(courses.title, opts.search), ilikeContains(sql`${courses.translations}::text`, opts.search))!);
 
     const statusConditions = (status?: string): any[] => {
       if (status === 'draft') return [eq(courses.isPublished, false), eq(courses.isArchived, false)];
@@ -325,7 +326,7 @@ export class CoursesService {
     const conditions: ReturnType<typeof eq>[] = [eq(courses.tenantId, tenantId)];
     conditions.push(eq(courses.isPublished, true), eq(courses.isArchived, false));
     if (filters?.difficulty) conditions.push(eq(courses.difficulty, filters.difficulty));
-    if (filters?.search) conditions.push(or(like(courses.title, `%${filters.search}%`), sql`${courses.translations}::text ILIKE ${`%${filters.search}%`}`)!);
+    if (filters?.search) conditions.push(or(likeContains(courses.title, filters.search), ilikeContains(sql`${courses.translations}::text`, filters.search))!);
 
     if (filters?.academy) {
       const [academy] = await this.drizzle.db

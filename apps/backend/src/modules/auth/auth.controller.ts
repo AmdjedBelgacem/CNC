@@ -2,7 +2,7 @@ import {
   Controller, Post, Get, Patch, Put, Body, HttpCode, HttpStatus, UseGuards, Req, Res,
   Query, Inject, UnauthorizedException, BadRequestException, NotFoundException,
   ServiceUnavailableException,
-  UseFilters,
+  UseFilters, Optional,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -27,7 +27,7 @@ import { TenantScopeGuard } from './guards/tenant-scope.guard';
 import { SkipCsrf } from './guards/csrf.guard';
 import { UploadService } from './services/upload.service';
 import { CookieService } from './services/cookie.service';
-import { createHash, createHmac, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto, RegisterDto, ResetPasswordDto } from './dto/credentials.dto';
 import { ConfigService } from '../../config/config.service';
@@ -37,6 +37,24 @@ import { OauthFailureFilter, oauthFailureUrl } from './strategies/oauth-failure.
 import { SupabaseAuthClient, SupabaseAuthError } from './supabase-auth.client';
 import { AuditService } from './services/audit.service';
 import { EmailOnlyDto, VerifyEmailDto } from './dto/email-verification.dto';
+import { UpdatePreferencesDto, UpdateProfileDto } from './dto/profile.dto';
+import { TwoFactorAttemptsService } from './services/two-factor-attempts.service';
+import { assertAccountUsable } from './account-status';
+import { safeRedirectPath } from './safe-redirect';
+
+/**
+ * Session tokens travel only as httpOnly cookies. Login and refresh used to echo them in
+ * the JSON body too (a "dual-write" for legacy clients), which handed them to any script
+ * running on the page. No client reads them from the body.
+ */
+function withoutTokens<T extends Record<string, unknown>>(result: T) {
+  if (!result || typeof result !== 'object') return result;
+  const { accessToken: _a, refreshToken: _r, remember: _m, ...rest } = result as Record<string, unknown>;
+  return rest as Omit<T, 'accessToken' | 'refreshToken' | 'remember'>;
+}
+
+/** Wrong second-factor attempts are capped per IP on top of the per-account counter. */
+const TWO_FACTOR_THROTTLE = { default: { ttl: 300_000, limit: 5 } };
 
 @ApiTags('auth')
 @Controller('auth')
@@ -54,6 +72,7 @@ export class AuthController {
     private config: ConfigService,
     @Inject(SupabaseAuthClient) private readonly supabaseAuth: SupabaseAuthClient,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Optional() private readonly twoFactorAttempts?: TwoFactorAttemptsService,
   ) {}
 
   private async saveOauthState(state: string, tenantId: string | null | undefined, redirectTo?: string) {
@@ -92,7 +111,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Create an OAuth CSRF state and get pre-built provider URLs' })
   async getOauthState(@Req() req: any) {
     const state = this.randomState();
-    const redirectTo = typeof req.query?.redirectTo === 'string' ? String(req.query.redirectTo).slice(0, 400) : undefined;
+    // Only a same-origin path is stored; an absolute or protocol-relative URL here was an
+    // open redirect out of the OAuth callback.
+    const redirectTo = safeRedirectPath(req.query?.redirectTo) ?? undefined;
     const tenant = await this.resolveTenant(req);
     await this.saveOauthState(state, tenant.id || undefined, redirectTo);
     return { state };
@@ -258,6 +279,22 @@ export class AuthController {
       }
 
       /**
+       * Supabase proved the password, but the account's state is ours. This branch used to
+       * hand over cookies to suspended accounts. The same states `JwtStrategy` refuses are
+       * refused here, and the session Supabase just minted is revoked.
+       */
+      try {
+        if (linked.accountStatus === 'pending_verification') {
+          // Same text as the first-party path: the login form keys "resend verification" on it.
+          throw new UnauthorizedException('Please verify your email address before logging in.');
+        }
+        assertAccountUsable(linked);
+      } catch (error) {
+        await this.supabaseAuth.signOut(session.refreshToken);
+        throw error;
+      }
+
+      /**
        * The password is proven by now, but a second factor is still owed. This branch
        * used to hand over cookies unconditionally, so an account with 2FA enabled
        * signed in with nothing but its password — the factor was silently skipped. The
@@ -341,11 +378,10 @@ export class AuthController {
       this.issuePending2fa(reply, result.user?.id);
       return { user: result.user, twoFactorRequired: true };
     }
-    // Dual-write: httpOnly cookies for new clients + tokens in body for legacy clients (migration window)
     if (result && result.accessToken && result.refreshToken) {
       this.cookieService.setAuthCookies(reply, result.accessToken, result.refreshToken, !!body.rememberDevice);
     }
-    return result;
+    return withoutTokens(result);
   }
 
   /** Signed pending-2FA marker: HMAC(userId.expiry) bound to this browser via httpOnly cookie. */
@@ -380,16 +416,29 @@ export class AuthController {
 
     if (this.supabaseAuth.enabled) {
       const session = await this.supabaseAuth.refreshSession(rawToken);
+      const linked = await this.drizzle.db.query.users.findFirst({
+        where: eq(users.authUserId, session.userId),
+      });
+      // A suspended (or otherwise unusable) account does not get its session renewed.
+      if (linked) {
+        try {
+          assertAccountUsable(linked);
+        } catch (error) {
+          await this.supabaseAuth.signOut(session.refreshToken);
+          try {
+            this.cookieService.clearAuthCookies(reply);
+          } catch {}
+          throw error;
+        }
+      }
       this.cookieService.setAuthCookies(
         reply,
         session.accessToken,
         session.refreshToken,
         this.cookieService.isRememberedSession(req),
       );
-      const linked = await this.drizzle.db.query.users.findFirst({
-        where: eq(users.authUserId, session.userId),
-      });
-      return { user: linked ?? null, provider: 'supabase' };
+      // `getProfile`, not the raw row: the row carries `passwordHash`, auth ids and IPs.
+      return { user: linked ? await this.auth.getProfile(linked.id) : null, provider: 'supabase' };
     }
 
     const result: any = await this.auth.refreshAccessToken(
@@ -402,7 +451,7 @@ export class AuthController {
       // A "Keep me signed in" session keeps its 30-day cookie across rotations.
       this.cookieService.setAuthCookies(reply, result.accessToken, result.refreshToken, result.remember === true);
     } catch {}
-    return result;
+    return withoutTokens(result);
   }
 
   @Post('logout')
@@ -549,9 +598,11 @@ export class AuthController {
   @ApiBearerAuth()
   async updateProfile(
     @CurrentUser() user: any,
-    @Body() body: { name?: string; username?: string; headline?: string; bio?: string; location?: string; language?: string; timezone?: string },
+    @Body() body: UpdateProfileDto,
   ) {
-    return this.auth.updateProfile(user.id, body);
+    // Explicit keys only: avatar and cover URLs are set by the upload endpoints, never here.
+    const { name, username, headline, bio, location, language, timezone } = body;
+    return this.auth.updateProfile(user.id, { name, username, headline, bio, location, language, timezone });
   }
 
   @Get('login-history')
@@ -596,9 +647,9 @@ export class AuthController {
   @ApiBearerAuth()
   async updatePreferences(
     @CurrentUser() user: any,
-    @Body() body: any,
+    @Body() body: UpdatePreferencesDto,
   ) {
-    return this.userPreferences.update(user.id, body);
+    return this.userPreferences.update(user.id, body as Parameters<UserPreferencesService['update']>[1]);
   }
 
   @Get('sessions')
@@ -630,6 +681,7 @@ export class AuthController {
   }
 
   @Post('2fa/enable')
+  @Throttle(TWO_FACTOR_THROTTLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Enable 2FA' })
   async enable2fa(
@@ -655,6 +707,7 @@ export class AuthController {
   }
 
   @Post('2fa/disable')
+  @Throttle(TWO_FACTOR_THROTTLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Disable 2FA' })
   async disable2fa(
@@ -663,8 +716,13 @@ export class AuthController {
   ) {
     const secret = await this.totp.getSecret(user.id);
     if (!secret) throw new BadRequestException('2FA not enabled');
+    await this.twoFactorAttempts?.assertNotLocked(user.id);
     const valid = this.totp.verifyToken(body.token, secret);
-    if (!valid) throw new UnauthorizedException('Invalid verification code');
+    if (!valid) {
+      await this.twoFactorAttempts?.recordFailure(user.id);
+      throw new UnauthorizedException('Invalid verification code');
+    }
+    await this.twoFactorAttempts?.reset(user.id);
     await this.totp.disable2fa(user.id);
     this.auth.notifySecurityEvent({
       userId: user.id,
@@ -701,6 +759,7 @@ export class AuthController {
 
   @Public()
   @Post('2fa/verify')
+  @Throttle(TWO_FACTOR_THROTTLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify 2FA token during login' })
   async verify2fa(
@@ -721,8 +780,9 @@ export class AuthController {
         const payloadB64 = pending.slice(0, dot);
         const sig = pending.slice(dot + 1);
         const payload = Buffer.from(payloadB64, 'base64url').toString('utf8');
-        const expectedSig = createHmac('sha256', secretKey).update(payload).digest('hex');
-        if (sig !== expectedSig) {
+        const expectedSig = Buffer.from(createHmac('sha256', secretKey).update(payload).digest('hex'), 'utf8');
+        const givenSig = Buffer.from(sig, 'utf8');
+        if (givenSig.length !== expectedSig.length || !timingSafeEqual(givenSig, expectedSig)) {
           throw new UnauthorizedException('Invalid login session');
         }
         const [pendingUserId, expiresStr] = payload.split('.');
@@ -740,11 +800,17 @@ export class AuthController {
 
     const secret = await this.totp.getSecret(body.userId);
     if (!secret) throw new BadRequestException('2FA not configured');
+    // Per-account cap: the route throttle is per IP, which rotating addresses defeats.
+    await this.twoFactorAttempts?.assertNotLocked(body.userId);
     const valid = this.totp.verifyToken(body.token, secret);
     if (!valid) {
       const backupValid = await this.totp.verifyBackupCode(body.userId, body.token);
-      if (!backupValid) throw new UnauthorizedException('Invalid verification code');
+      if (!backupValid) {
+        await this.twoFactorAttempts?.recordFailure(body.userId);
+        throw new UnauthorizedException('Invalid verification code');
+      }
     }
+    await this.twoFactorAttempts?.reset(body.userId);
 
     const u = await this.drizzle.db.query.users.findFirst({ where: eq(users.id, body.userId) });
     if (!u) throw new UnauthorizedException('User not found');
@@ -780,6 +846,7 @@ export class AuthController {
   }
 
   @Post('verify-password')
+  @Throttle(TWO_FACTOR_THROTTLE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify current password for sensitive actions' })
   @ApiBearerAuth()
@@ -923,7 +990,9 @@ export class AuthController {
       const target = new URL(result.twoFactorRequired ? '/2fa/verify' : '/auth/callback', frontend);
       target.searchParams.set('provider', provider);
       if (result.twoFactorRequired && result.user?.id) target.searchParams.set('userId', result.user.id);
-      if (stateInfo?.redirectTo) target.searchParams.set('returnTo', stateInfo.redirectTo);
+      // Re-checked on the way out: rows written before the check was added may still hold a URL.
+      const returnTo = safeRedirectPath(stateInfo?.redirectTo);
+      if (returnTo) target.searchParams.set('returnTo', returnTo);
       return reply.status(302).redirect(target.toString());
     }
     return reply.send(result);
@@ -936,18 +1005,12 @@ export class AuthController {
     return this.auth.oauth.findAccountsByUser(user.id);
   }
 
-  @Post('oauth/link')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Link an OAuth account' })
-  async linkOAuth(
-    @CurrentUser() user: any,
-    @Body() body: { provider: string; providerAccountId: string; email?: string },
-  ) {
-    return this.auth.oauth.linkAccount({
-      userId: user.id, provider: body.provider,
-      providerAccountId: body.providerAccountId, providerEmail: body.email,
-    });
-  }
+  /**
+   * `POST /auth/oauth/link` was removed. It linked whatever `{provider, providerAccountId}`
+   * the body named with no proof of owning that identity, and `loginWithOauth` trusts the
+   * link — so linking a victim's public GitHub id took over the victim's next OAuth sign-in.
+   * Accounts are linked only by `loginWithOauth`, after the provider's own callback.
+   */
 
   @Post('oauth/unlink')
   @HttpCode(HttpStatus.OK)

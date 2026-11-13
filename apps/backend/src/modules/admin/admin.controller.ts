@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Req, Res, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { AuthService } from '../auth/services/auth.service';
@@ -212,8 +212,16 @@ export class AdminController {
   @Get('sessions')
   @Roles('super_admin', 'admin')
   @ApiOperation({ summary: 'List user sessions for admin' })
-  async listSessions(@Query('userId') userId: string | undefined) {
+  async listSessions(@CurrentUser() caller: any, @Query('userId') userId: string | undefined) {
     if (!userId) return { sessions: [] };
+    // Same tenant check as `GET /admin/users/:id`: a tenant admin must not read another
+    // tenant's sessions (IPs, user agents) by guessing a user id.
+    if (caller?.role !== 'super_admin') {
+      const target: any = await this.auth.getProfile(userId);
+      if (!target || String(caller?.tenantId) !== String(target.tenantId)) {
+        throw new ForbiddenException('Access to this user is not permitted for your tenant');
+      }
+    }
     return this.auth.getSessions(userId);
   }
 

@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { IsString, IsOptional, MaxLength, Matches } from 'class-validator';
+import { IsString, IsOptional, MaxLength, Matches, IsInt, Min, Max } from 'class-validator';
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
@@ -15,6 +15,9 @@ class PresignedUploadDto {
   @IsString() contentType!: string;
 
   @IsOptional() @IsString() @MaxLength(30) folder?: string;
+
+  /** Optional declared byte size; when sent it is capped and signed into the URL. */
+  @IsOptional() @IsInt() @Min(1) @Max(MAX_UPLOAD_BYTES) size?: number;
 }
 
 @ApiTags('upload')
@@ -41,6 +44,7 @@ export class UploadController {
       contentType,
       body.folder,
       MAX_UPLOAD_BYTES,
+      body.size,
     );
   }
 }

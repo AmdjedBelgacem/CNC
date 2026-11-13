@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { TenantGuard } from '../../../common/guards/tenant.guard';
+import { TenantScopeGuard } from '../../auth/guards/tenant-scope.guard';
 import { CurrentTenant } from '../../../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { BuilderService, type Actor } from '../builder.service';
@@ -93,7 +94,7 @@ export class BuilderAiSettingsDto {
 @ApiTags('builder')
 @ApiBearerAuth()
 @Controller('builder/ai')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
 @Roles('super_admin', 'admin')
 export class BuilderAiController {
   constructor(

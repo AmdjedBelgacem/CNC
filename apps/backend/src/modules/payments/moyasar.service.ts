@@ -660,6 +660,16 @@ export class MoyasarService {
       return { orderId: order.id, status, fulfilled: false, reason: `payment_${payment.status}` };
     }
 
+    // The payment must belong to THIS order. Amount and currency alone are not enough: one
+    // paid charge used to settle any other order of the same total, by replaying its payment
+    // id against each order's callback. The signed `order_ref` the checkout put on the payment
+    // must name this order, and a payment already recorded on another order is refused.
+    const binding = await this.paymentBinding(params.tenantId, order, payment);
+    if (binding) {
+      this.logger.error(`Refused to settle order ${order.id} with payment ${payment.id}: ${binding}`);
+      return { orderId: order.id, status: (order.status ?? 'pending') as OrderStatus, fulfilled: false, reason: binding };
+    }
+
     // Amount and currency must agree to the halala. A short payment is never
     // fulfilled, whatever the gateway says.
     if (payment.amount !== order.total) {
@@ -1239,6 +1249,38 @@ export class MoyasarService {
    * The payment is fetched with the secret key first: the webhook body is not
    * evidence of anything.
    */
+  /**
+   * Why `payment` may not settle `order`, or null when it may. Returns a reason code rather than
+   * throwing, so the order is left untouched (not marked failed) when someone replays a payment.
+   */
+  private async paymentBinding(
+    tenantId: string,
+    order: typeof orders.$inferSelect,
+    payment: VerifiedPayment,
+  ): Promise<string | null> {
+    const raw = payment.metadata['order_ref'];
+    if (typeof raw === 'string' && raw.includes('.')) {
+      const [refOrderId, sig] = raw.split('.');
+      if (refOrderId !== order.id || !this.verifyOrderRef({ orderId: refOrderId, sig: sig ?? '' }, order.total)) {
+        return 'payment_for_another_order';
+      }
+    } else if (payment.metadata['order_id'] !== undefined && String(payment.metadata['order_id']) !== order.id) {
+      return 'payment_for_another_order';
+    }
+    const [other] = await this.drizzle.db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.tenantId, tenantId),
+          eq(orders.providerPaymentId, payment.id),
+          sql`${orders.id} <> ${order.id}`,
+        ),
+      )
+      .limit(1);
+    return other ? 'payment_already_used' : null;
+  }
+
   private async findOrderBySignedRef(tenantId: string, paymentId: string) {
     let payment: VerifiedPayment;
     try {

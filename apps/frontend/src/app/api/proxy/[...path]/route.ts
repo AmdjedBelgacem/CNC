@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { DEFAULT_TENANT_SLUG } from '@/lib/tenant-config';
 import { LOCALE_COOKIE, coerceLocale, localeFromAcceptLanguage, type Locale } from '@/i18n/config';
 import { serverApiUrl } from '@/lib/server-api-url';
+import { crossSiteRejection, declaredBodyTooLarge, readBoundedText } from '../_lib/request-guards';
 
 /**
  * Server-side only — never shipped to the browser.
@@ -111,7 +112,21 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
   const tenantSlug = store.get('x-tenant-slug')?.value || DEFAULT_TENANT_SLUG;
   const locale = requestLocale(request, store);
   const url = `${API_BASE}/${path.join('/')}${request.nextUrl.search}`;
-  const body = method !== 'GET' ? await request.text().catch(() => null) : null;
+  // Refuse cross-site state changes before doing any work (see request-guards.ts).
+  const crossSite = crossSiteRejection(method, path, request.headers);
+  if (crossSite) {
+    return NextResponse.json({ statusCode: 403, message: crossSite }, { status: 403 });
+  }
+  // Bounded body read: a declared or streamed body over the cap is refused with 413
+  // instead of being buffered whole into memory before auth is even checked.
+  let body: string | null = null;
+  if (method !== 'GET') {
+    const tooLarge = { statusCode: 413, message: 'Request body too large' };
+    if (declaredBodyTooLarge(request.headers)) return NextResponse.json(tooLarge, { status: 413 });
+    const read = await readBoundedText(request.body);
+    if (read.tooLarge) return NextResponse.json(tooLarge, { status: 413 });
+    body = read.text;
+  }
   const headers: Record<string, string> = {
     'x-tenant-slug': tenantSlug,
     'x-locale': locale,
@@ -133,6 +148,9 @@ async function proxyRequest(request: NextRequest, path: string[], method: string
     headers['x-forwarded-for'] = clientIp;
     headers['x-real-ip'] = clientIp;
   }
+  // Operator-only health detail token (see HealthController); forwarded for health probes only.
+  const healthToken = request.headers.get('x-health-token');
+  if (healthToken && path[0] === 'health') headers['x-health-token'] = healthToken;
   // Forward all cookies (including httpOnly access/refresh) to backend
   const cookieHeader = request.headers.get('cookie');
   if (cookieHeader) {

@@ -126,6 +126,9 @@ services:
       # origin a user actually opens, otherwise Google rejects the email redirect.
       API_PUBLIC_URL: ${API_PUBLIC_URL}
       AUTH_SECRET: ${AUTH_SECRET}
+      # Unlocks per-service detail on /health and /health/ready for the smoke script.
+      # Unset (the default) means both return only {status}.
+      HEALTH_DETAIL_TOKEN: ${HEALTH_DETAIL_TOKEN:-}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}

@@ -19,6 +19,7 @@ import { UserPreferencesService } from './services/user-preferences.service';
 import { UploadService } from './services/upload.service';
 import { CookieService } from './services/cookie.service';
 import { RedisService } from './services/redis.service';
+import { TwoFactorAttemptsService } from './services/two-factor-attempts.service';
 import { ProfileController } from './profile.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SupabaseTokenVerifier } from './supabase-token.verifier';
@@ -70,6 +71,7 @@ import { SearchModule } from '../search/search.module';
     UploadService,
     CookieService,
     RedisService,
+    TwoFactorAttemptsService,
     JwtStrategy,
     SupabaseTokenVerifier,
     SupabaseAuthClient,

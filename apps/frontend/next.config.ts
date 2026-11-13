@@ -18,17 +18,13 @@ const nextConfig: NextConfig = {
    */
   output: 'standalone',
   /**
-   * Ship source maps for the client bundle.
+   * No public source maps for the client bundle.
    *
-   * Lighthouse's Best Practices score includes an audit for first-party JavaScript that has no
-   * source map attached. Weight zero, so it never moved the score on its own — the 96 → 100 came
-   * from clearing the console errors — but it leaves a red line in the report and hands anyone
-   * opening devtools a stack trace that points at compiled frames instead of our source.
-   *
-   * The maps are fetched only when devtools is open, so this costs nothing at runtime; it costs
-   * image size, which is why it is stated plainly rather than left implicit.
+   * They were on to clear a zero-weight Lighthouse audit, but they hand anyone the full
+   * original source of the admin and payment UI (comments included), which is a free map
+   * of every route and guard. Upload them to an error tracker privately if needed.
    */
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: false,
   turbopack: {
     // Monorepo root, resolved from this file rather than hardcoded. An absolute
     // machine-specific path (`/Users/mac/...`) made Turbopack fail on CI with

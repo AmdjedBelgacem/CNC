@@ -2,7 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { localizeProductFields, resolveContentLocale } from '../courses/lesson-content';
 import { DrizzleService } from '../../database/drizzle.service';
 import { productsBundle, productVariants, productImages } from '../../database/schema/products';
-import { eq, and, asc, desc, like, count, arrayOverlaps, sql } from 'drizzle-orm';
+import { eq, and, asc, desc, count, arrayOverlaps, sql } from 'drizzle-orm';
+import { ilikeContains, likeContains } from '../../common/utils/escape-like';
 import type { InteractiveHotspot } from '@titan/shared';
 import { SearchService } from '../search/search.service';
 import { StorageService } from '../storage/storage.service';
@@ -40,7 +41,7 @@ export class ProductsService {
     if (opts?.productType) conditions.push(eq(productsBundle.productType, opts.productType));
     if (opts?.search) {
       conditions.push(
-        sql`(${like(productsBundle.title, `%${opts.search}%`)} or ${like(productsBundle.productType, `%${opts.search}%`)} or ${sql`${productsBundle.translations}::text`} ilike ${`%${opts.search}%`})`,
+        sql`(${likeContains(productsBundle.title, opts.search)} or ${likeContains(productsBundle.productType, opts.search)} or ${ilikeContains(sql`${productsBundle.translations}::text`, opts.search)})`,
       );
     }
     if (opts?.academyId) conditions.push(eq(productsBundle.academyId, opts.academyId));
@@ -209,7 +210,7 @@ export class ProductsService {
     const taxonomyConditions: any[] = [eq(productsBundle.tenantId, tenantId)];
     if (opts?.search) {
       taxonomyConditions.push(
-        sql`(${like(productsBundle.title, `%${opts.search}%`)} or ${like(productsBundle.productType, `%${opts.search}%`)} or ${sql`${productsBundle.translations}::text`} ilike ${`%${opts.search}%`})`,
+        sql`(${likeContains(productsBundle.title, opts.search)} or ${likeContains(productsBundle.productType, opts.search)} or ${ilikeContains(sql`${productsBundle.translations}::text`, opts.search)})`,
       );
     }
     if (opts?.academyId) taxonomyConditions.push(eq(productsBundle.academyId, opts.academyId));

@@ -7,6 +7,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
+import { CreatePortfolioItemDto, UpdateSocialProfileDto } from './dto/social.dto';
 
 @ApiTags('social')
 @Controller('social')
@@ -125,7 +126,7 @@ export class SocialController {
   @ApiOperation({ summary: 'Update own profile' })
   updateProfile(
     @CurrentUser() user: { id: string; tenantId: string },
-    @Body() body: { name?: string; headline?: string; bio?: string; avatarUrl?: string; location?: string },
+    @Body() body: UpdateSocialProfileDto,
   ) {
     return this.social.updateProfile(user.id, user.tenantId, body);
   }
@@ -157,7 +158,7 @@ export class SocialController {
   @ApiOperation({ summary: 'Add portfolio item' })
   addPortfolio(
     @CurrentUser() user: { id: string },
-    @Body() body: { title: string; description?: string; imageUrl?: string; tags?: string[] },
+    @Body() body: CreatePortfolioItemDto,
   ) {
     return this.social.addPortfolioItem(user.id, body);
   }

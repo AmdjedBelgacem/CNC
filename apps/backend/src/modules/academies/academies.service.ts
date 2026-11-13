@@ -21,14 +21,45 @@ import {
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,198}[a-z0-9])?$/;
 
-const ALLOWED_IMAGE_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/svg+xml',
-  'image/avif',
-]);
+/**
+ * MIME -> file extension. The extension is derived ONLY from this table, never from
+ * the client's filename: a local-disk upload is served same-origin by @fastify/static,
+ * which picks the Content-Type from the extension, so a client-chosen `.html` or
+ * `.svg` would turn an "image" into a stored-XSS page. SVG is excluded for the same
+ * reason (it is XML and can carry <script>).
+ */
+const IMAGE_EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/avif': 'avif',
+};
+const ALLOWED_IMAGE_TYPES = new Set(Object.keys(IMAGE_EXT_BY_MIME));
+
+/** True when the decoded bytes carry the magic number of the declared image type. */
+export function imageBytesMatchMime(buffer: Buffer, mime: string): boolean {
+  const ascii = (start: number, end: number) => buffer.subarray(start, end).toString('latin1');
+  switch (mime) {
+    case 'image/png':
+      return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    case 'image/jpeg':
+      return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    case 'image/gif':
+      return buffer.length >= 6 && (ascii(0, 6) === 'GIF87a' || ascii(0, 6) === 'GIF89a');
+    case 'image/webp':
+      return buffer.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP';
+    case 'image/avif': {
+      // ISO-BMFF: [size]['ftyp'][major brand]...; AVIF uses the 'avif' or 'avis' brand.
+      if (buffer.length < 12 || ascii(4, 8) !== 'ftyp') return false;
+      const boxSize = Math.min(buffer.readUInt32BE(0), buffer.length, 64);
+      const brands = ascii(8, Math.max(boxSize, 12));
+      return /avif|avis/.test(brands);
+    }
+    default:
+      return false;
+  }
+}
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB per image (hero, logo, seo)
 type AcademyImageKind = 'hero' | 'logo' | 'seo';
 const KIND_TO_COLUMN: Record<AcademyImageKind, 'heroImageUrl' | 'logoUrl' | 'seoImageUrl'> = {
@@ -335,15 +366,10 @@ export class AcademiesService {
     }
   }
 
-  private sanitizeExt(mime: string, originalName?: string): string {
-    if (mime === 'image/svg+xml') return 'svg';
-    if (mime === 'image/jpeg') return 'jpg';
-    const fromMime = mime.split('/')[1]?.split('+')[0]?.replace(/[^a-z0-9]/g, '') || 'bin';
-    if (originalName && originalName.includes('.')) {
-      const extFromName = originalName.split('.').pop()!.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
-      if (extFromName) return extFromName;
-    }
-    return fromMime.slice(0, 8) || 'bin';
+  private extForMime(mime: string): string {
+    const ext = IMAGE_EXT_BY_MIME[mime];
+    if (!ext) throw new BadRequestException(`Unsupported image type: ${mime}`);
+    return ext;
   }
 
   async uploadImage(
@@ -379,12 +405,18 @@ export class AcademiesService {
     if (buffer.length > MAX_IMAGE_BYTES) {
       throw new BadRequestException(`Image too large: ${Math.round(buffer.length / 1024)}KB > ${MAX_IMAGE_BYTES / 1024}KB`);
     }
-    // Basic magic-byte sanity (optional): ensure buffer is not HTML/text masquerading
-    if (mime !== 'image/svg+xml' && buffer.length < 10) {
+    if (buffer.length < 10) {
       throw new BadRequestException('Image data too small');
     }
+    // The bytes must really be the declared image type: never store HTML/SVG/script
+    // that merely claims to be an image.
+    if (!imageBytesMatchMime(buffer, mime)) {
+      throw new BadRequestException(`Image data does not match its declared type ${mime}`);
+    }
 
-    const ext = this.sanitizeExt(mime, originalName);
+    // `originalName` is deliberately unused for the extension (see IMAGE_EXT_BY_MIME).
+    void originalName;
+    const ext = this.extForMime(mime);
     const filename = `${randomUUID()}.${ext}`;
 
     let newUrl: string | undefined;

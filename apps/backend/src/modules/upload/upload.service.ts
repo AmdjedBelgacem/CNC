@@ -5,6 +5,17 @@ import { ConfigService } from '../../config/config.service';
 import { randomUUID } from 'node:crypto';
 import { ALLOWED_UPLOAD_CONTENT_TYPES, MAX_UPLOAD_BYTES } from './upload.constants';
 
+/**
+ * Presigner options for a PUT. The v3 presigner treats `content-type` as UNSIGNABLE by
+ * default, so without this a URL issued for `image/png` accepts `text/html` too and the
+ * type allowlist is decorative. Signing it makes storage reject any other Content-Type.
+ * (A `ContentLength` on the command is signed as `content-length` automatically.)
+ */
+export const presignedPutOptions = () => ({
+  expiresIn: 900,
+  signableHeaders: new Set(['content-type']),
+});
+
 @Injectable()
 export class UploadService {
   private s3: S3Client;
@@ -29,7 +40,7 @@ export class UploadService {
       Key: `uploads/${sanitized}`,
       ContentType: contentType,
     });
-    return getSignedUrl(this.s3, command, { expiresIn: 900 });
+    return getSignedUrl(this.s3, command, presignedPutOptions());
   }
 
   async getPresignedUploadUrlForTenant(
@@ -39,6 +50,7 @@ export class UploadService {
     contentType: string,
     folder?: string,
     maxBytes?: number,
+    size?: number,
   ) {
     if (!tenantId) throw new BadRequestException('Tenant context required');
     const safeFolder = (folder || 'uploads').replace(/[^a-z0-9-]/gi, '').slice(0, 24) || 'uploads';
@@ -51,14 +63,24 @@ export class UploadService {
     if (!ALLOWED_UPLOAD_CONTENT_TYPES.has(contentType.toLowerCase())) {
       throw new BadRequestException(`Unsupported content type "${contentType}"`);
     }
+    // When the client declares the size, enforce the ceiling and sign it, so the PUT
+    // must carry exactly that many bytes. Without a declared size only the type is bound.
+    const ceiling = Math.min(maxBytes ?? MAX_UPLOAD_BYTES, MAX_UPLOAD_BYTES);
+    if (size !== undefined) {
+      if (!Number.isSafeInteger(size) || size <= 0) throw new BadRequestException('Invalid size');
+      if (size > ceiling) {
+        throw new BadRequestException(`File too large. Max ${Math.round(ceiling / 1024 / 1024)}MB.`);
+      }
+    }
     // Short TTL – 15 minutes
     const objectKey = `tenants/${tenantId}/${finalFolder}/${userId}/${randomUUID()}-${safeKey}`;
     const command = new PutObjectCommand({
       Bucket: this.config.get('S3_BUCKET'),
       Key: objectKey,
       ContentType: contentType,
+      ...(size !== undefined ? { ContentLength: size } : {}),
     });
-    const url = await getSignedUrl(this.s3, command, { expiresIn: 900 });
+    const url = await getSignedUrl(this.s3, command, presignedPutOptions());
     /**
      * `publicUrl` is the URL the object will be readable at once uploaded, so the caller
      * never has to reconstruct it from the key. Making the browser do that would mean

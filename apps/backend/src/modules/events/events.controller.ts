@@ -11,6 +11,7 @@ import { TenantGuard } from '../../common/guards/tenant.guard';
 import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
 
 @ApiTags('events')
 @Controller('events')
@@ -74,9 +75,9 @@ export class EventsController {
   @ApiOperation({ summary: 'Create an event' })
   create(
     @CurrentTenant() tenant: { id: string },
-    @Body() body: any,
+    @Body() body: CreateEventDto,
   ) {
-    return this.events.create({ ...body, tenantId: tenant.id });
+    return this.events.create(tenant.id, body);
   }
 
   @Patch(':id')
@@ -86,7 +87,7 @@ export class EventsController {
   update(
     @CurrentTenant() tenant: { id: string },
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: UpdateEventDto,
   ) {
     return this.events.update(id, body, tenant.id);
   }

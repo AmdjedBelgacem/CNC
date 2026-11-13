@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 // `Actor` is an interface, so it must be a type-only import. Importing it as a value
@@ -27,7 +28,7 @@ import {
 @ApiTags('builder')
 @ApiBearerAuth()
 @Controller('builder')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantScopeGuard)
 @Roles('super_admin', 'admin')
 export class BuilderController {
   constructor(

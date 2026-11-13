@@ -4,7 +4,8 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, or, sql } from 'drizzle-orm';
+import { ilikeContains } from '../../common/utils/escape-like';
 import { DrizzleService } from '../../database/drizzle.service';
 import { quotes, QUOTE_STATUSES, type QuoteStatus } from '../../database/schema/quotes';
 import { productsBundle, productVariants } from '../../database/schema/products';
@@ -178,9 +179,8 @@ export class QuotesService {
     const filters = [eq(quotes.tenantId, tenantId)];
     if (opts.status && opts.status !== 'all') filters.push(eq(quotes.status, opts.status));
     if (opts.search) {
-      const term = `%${opts.search}%`;
       filters.push(
-        or(ilike(quotes.name, term), ilike(quotes.email, term), ilike(quotes.company, term))!,
+        or(ilikeContains(quotes.name, opts.search), ilikeContains(quotes.email, opts.search), ilikeContains(quotes.company, opts.search))!,
       );
     }
 

@@ -227,7 +227,11 @@ export class RbacService {
     roleIds: string[],
   ) {
     const target = await this.drizzle.db.query.users.findFirst({ where: eq(users.id, userId) });
-    if (!target) throw new NotFoundException('User not found');
+    // A tenant admin may only assign roles to members of their own tenant. Answer 404 (not 403)
+    // so the endpoint does not confirm that a user id exists in another tenant.
+    if (!target || (actor.role !== SUPER_ADMIN_KEY && String(target.tenantId) !== String(tenantId))) {
+      throw new NotFoundException('User not found');
+    }
 
     const targetIsSuper =
       target.role === SUPER_ADMIN_KEY || (await this.hasRole(userId, tenantId, SUPER_ADMIN_KEY));

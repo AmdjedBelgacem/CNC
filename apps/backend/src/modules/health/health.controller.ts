@@ -1,4 +1,5 @@
-import { Controller, Get, HttpCode, HttpStatus, Inject } from '@nestjs/common';
+import { Controller, Get, Headers, HttpCode, HttpStatus, Inject, Res } from '@nestjs/common';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '../../config/config.module';
@@ -45,6 +46,23 @@ function isPlaceholderUrl(value: string): boolean {
 
 const TIMEOUT_MS = 2_000;
 
+/** Header an operator sends (with HEALTH_DETAIL_TOKEN) to receive the per-check report. */
+export const HEALTH_DETAIL_HEADER = 'x-health-token';
+
+/**
+ * Whether `provided` matches the configured detail token. Constant-time over SHA-256
+ * digests so neither the content nor the length of the secret leaks through timing.
+ * An unset or short (< 16 chars) token disables detail entirely: fail closed.
+ */
+export function healthDetailAllowed(provided: string | string[] | undefined, expected = process.env.HEALTH_DETAIL_TOKEN): boolean {
+  if (!expected || expected.length < 16) return false;
+  const value = Array.isArray(provided) ? provided[0] : provided;
+  if (!value) return false;
+  const a = createHash('sha256').update(value).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
 /** Never let a hung dependency hang the health endpoint. */
 async function withTimeout<T>(work: Promise<T>, fallback: T, ms = TIMEOUT_MS): Promise<T> {
   return Promise.race([
@@ -61,26 +79,39 @@ export class HealthController {
     @Inject(DrizzleService) private readonly db: DrizzleService,
   ) {}
 
+  /**
+   * Both probes are public, so by default they answer with `{ status }` (and, for
+   * readiness, the HTTP code) only. The per-dependency report names infrastructure and
+   * carries raw error strings, so it is returned only to a caller presenting
+   * `x-health-token: <HEALTH_DETAIL_TOKEN>`.
+   */
   @Public()
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Liveness probe (always 200 while the process serves)' })
-  async health() {
-    return this.collect();
+  async health(@Headers(HEALTH_DETAIL_HEADER) token?: string) {
+    const report = await this.collect();
+    return healthDetailAllowed(token) ? report : { status: report.status };
   }
 
   @Public()
   @Get('ready')
   @ApiOperation({ summary: 'Readiness probe (503 when a required dependency is down)' })
-  async ready() {
+  async ready(
+    @Headers(HEALTH_DETAIL_HEADER) token: string | undefined,
+    @Res({ passthrough: true }) reply: { status: (code: number) => unknown },
+  ) {
     const report = await this.collect();
     // Postgres and Supabase Auth are the two the API genuinely cannot serve without.
     // Redis and Meilisearch degrade to working alternatives, so they report but do not
     // take the instance out of rotation.
     const requiredDown = ['database', 'auth'].filter((k) => report.checks[k]?.state === 'down');
+    const ready = requiredDown.length === 0;
+    reply.status(ready ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
+    if (!healthDetailAllowed(token)) return { status: report.status };
     return {
       ...report,
-      ready: requiredDown.length === 0,
+      ready,
       ...(requiredDown.length ? { notReady: requiredDown } : {}),
     };
   }

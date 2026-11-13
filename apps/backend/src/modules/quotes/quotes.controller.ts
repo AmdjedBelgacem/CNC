@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('quotes')
 /**
@@ -70,6 +71,7 @@ export class QuotesController {
 
   @Get()
   @UseGuards(JwtAuthGuard, TenantGuard, TenantScopeGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List quote requests for this tenant' })
   listForAdmin(
@@ -89,6 +91,7 @@ export class QuotesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, TenantGuard, TenantScopeGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Advance a quote request (status, note, quoted price)' })
   updateForAdmin(

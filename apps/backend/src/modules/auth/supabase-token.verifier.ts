@@ -1,5 +1,5 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { createPublicKey, createVerify, createHmac } from 'node:crypto';
+import { createPublicKey, createVerify, createHmac, timingSafeEqual } from 'node:crypto';
 import { ConfigService } from '../../config/config.service';
 
 /**
@@ -99,6 +99,12 @@ export class SupabaseTokenVerifier {
     // partially-applied config cannot silently read as disabled.
     const value: unknown = this.config.get('SUPABASE_AUTH_ENABLED');
     return value === true || value === 'true';
+  }
+
+  /** `<SUPABASE_URL>/auth/v1`, the `iss` GoTrue stamps; undefined when the URL is not configured. */
+  private get expectedIssuer(): string | undefined {
+    const base = this.config.get('SUPABASE_URL');
+    return base ? `${String(base).replace(/\/+$/, '')}/auth/v1` : undefined;
   }
 
   private get jwksUrl(): string | undefined {
@@ -226,15 +232,29 @@ export class SupabaseTokenVerifier {
         throw new UnauthorizedException(`Unsupported token algorithm: ${alg}`);
       }
       const expected = createHmac('sha256', secret).update(signed).digest();
-      if (signature.length !== expected.length || !signature.equals(expected)) {
+      if (signature.length !== expected.length || !timingSafeEqual(signature, expected)) {
         throw new UnauthorizedException('Invalid token signature');
       }
     }
 
     const claims = payload as unknown as SupabaseClaims;
     if (!claims.sub) throw new UnauthorizedException('Token has no subject');
-    if (claims.exp !== undefined && claims.exp * 1000 <= Date.now()) {
+    // A token without `exp` would never expire; GoTrue always sets it.
+    if (typeof claims.exp !== 'number' || !Number.isFinite(claims.exp)) {
+      throw new UnauthorizedException('Token has no expiry');
+    }
+    if (claims.exp * 1000 <= Date.now()) {
       throw new UnauthorizedException('Token expired');
+    }
+    // User access tokens carry `aud: "authenticated"`. Anything else (anon/service keys,
+    // tokens minted for another audience) is not a signed-in user.
+    const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+    if (!audiences.includes('authenticated')) {
+      throw new UnauthorizedException('Token audience is not accepted');
+    }
+    const issuer = this.expectedIssuer;
+    if (issuer && claims.iss !== issuer) {
+      throw new UnauthorizedException('Token issuer is not accepted');
     }
     return claims;
   }

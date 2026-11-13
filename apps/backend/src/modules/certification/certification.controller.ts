@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Param, Req, Res, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CertificationService } from './certification.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
@@ -19,6 +20,8 @@ export class CertificationController {
   }
 
   @Public()
+  // Public lookups name the learner, so they are rate-limited against enumeration.
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Get('verify/:number')
   @ApiOperation({ summary: 'Verify a certificate by number' })
   verify(@Param('number') number: string) {

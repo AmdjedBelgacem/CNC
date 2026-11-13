@@ -11,6 +11,17 @@
 	# Automatic HTTPS via Let's Encrypt / ZeroSSL. This machine must be reachable
 	# on :80/:443 publicly or this will fail healthily: set it in the firewall
 	# section of the docs.
+
+	# Cloudflare is the TCP peer (the origin firewall admits only Cloudflare), so the
+	# visitor's address comes from CF-Connecting-IP — but only when the peer is one of
+	# Cloudflare's published ranges. Every per-visitor key below uses {client_ip}, which
+	# applies this allowlist; a raw header placeholder would let any caller pick an IP.
+	# Ranges: https://www.cloudflare.com/ips/ (refresh if Cloudflare publishes changes).
+	servers {
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers CF-Connecting-IP
+		trusted_proxies_strict
+	}
 }
 
 # Injected into the scope via the container environment ({$VAR}), documented in
@@ -45,10 +56,6 @@
 		# terminates TLS, so these headers are safe.
 		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 		X-Content-Type-Options nosniff
-		# SAMEORIGIN rather than DENY: DENY also blocks our own origin from framing
-		# itself, which the admin page builder will want the moment it renders a
-		# preview in an iframe. External framing stays blocked either way.
-		X-Frame-Options SAMEORIGIN
 		Referrer-Policy strict-origin-when-cross-origin
 		# The platform uses no camera, microphone or geolocation; deny all three so
 		# an injected script cannot prompt for them.
@@ -58,6 +65,34 @@
 		-Server
 		# App sets its own CSP per-request with a nonce (middleware). Caddy only
 		# frames the policy; no need to duplicate here.
+	}
+
+	# Clickjacking: DENY everywhere except the builder's preview surface. The admin
+	# builder canvas embeds /preview/island/* in a same-origin iframe, so only that
+	# path may be framed, and only by this origin. Both are deferred so they replace
+	# whatever the upstream sent (Next also emits DENY globally / SAMEORIGIN on
+	# /preview, and two conflicting values would be ignored by the browser).
+	@frameable path /preview/*
+	@not_frameable not path /preview/*
+	header @frameable {
+		X-Frame-Options SAMEORIGIN
+		defer
+	}
+	header @not_frameable {
+		X-Frame-Options DENY
+		defer
+	}
+
+	# ---- Request body ceilings ------------------------------------------------
+	# Nothing legitimate sends more than the backend's multipart limit (64MB): files go
+	# straight to object storage on presigned URLs and never pass through Caddy. Auth
+	# endpoints take a few hundred bytes of JSON, so they get a far tighter cap.
+	request_body {
+		max_size 70MB
+	}
+	@auth_body path /api/proxy/auth/*
+	request_body @auth_body {
+		max_size 1MB
 	}
 
 	# ---- Edge rate limits ----------------------------------------------------
@@ -72,20 +107,17 @@
 	# floods before they reach a 2 GB box:
 	#   login 10/min, register+forgot+reset 3/hr, global 100 req/min (all per IP).
 	#
-	# KEY CAVEAT: {http.request.remote.host} is the TCP peer, which is the real
-	# client today because Caddy is the edge. If Cloudflare goes in front, every key
-	# collapses onto Cloudflare's own IPs and these limits become global rather than
-	# per-caller. When that happens, add `trusted_proxies static <Cloudflare ranges>`
-	# and switch the key to {http.request.header.CF-Connecting-IP}. Never switch the
-	# key first: trusting that header without the proxy allowlist lets any caller
-	# forge an IP and walk straight out of the limit.
+	# KEY: {client_ip} is the visitor's address. Cloudflare is in front, so the TCP peer
+	# is a Cloudflare edge; the `servers` block above trusts CF-Connecting-IP only from
+	# Cloudflare's ranges. Keying on {http.request.remote.host} made every limit shared
+	# by everyone behind the same Cloudflare edge.
 	#
 	# ipv6_prefix 64: a single subscriber /64 holds ~2^64 addresses, so per-address
 	# IPv6 limits are trivially bypassed. Bucketing the /64 makes cycling useless.
 	@rl_login path /api/proxy/auth/login
 	rate_limit @rl_login {
 		zone auth_login {
-			key         {http.request.remote.host}
+			key         {client_ip}
 			events      12
 			window      1m
 			ipv6_prefix 64
@@ -95,7 +127,7 @@
 	@rl_auth_write path /api/proxy/auth/register /api/proxy/auth/forgot-password /api/proxy/auth/reset-password /api/proxy/auth/resend-verification /api/proxy/auth/verify-email
 	rate_limit @rl_auth_write {
 		zone auth_write {
-			key         {http.request.remote.host}
+			key         {client_ip}
 			events      10
 			window      1m
 			ipv6_prefix 64
@@ -108,7 +140,7 @@
 	@rl_oauth path /api/proxy/auth/oauth/* /auth/oauth/*
 	rate_limit @rl_oauth {
 		zone oauth {
-			key         {http.request.remote.host}
+			key         {client_ip}
 			events      30
 			window      1m
 			ipv6_prefix 64
@@ -119,7 +151,7 @@
 	@rl_refresh path /api/proxy/auth/refresh
 	rate_limit @rl_refresh {
 		zone auth_refresh {
-			key         {http.request.remote.host}
+			key         {client_ip}
 			events      60
 			window      1m
 			ipv6_prefix 64
@@ -135,7 +167,7 @@
 	handle @socket {
 		reverse_proxy {$API_UPSTREAM} {
 			header_up X-Forwarded-Proto https
-			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-For {client_ip}
 			header_up Host $host
 			transport http {
 				# Never drop an open socket if traffic is bursty or the client is slow.
@@ -152,6 +184,7 @@
 	handle @oauth {
 		reverse_proxy {$API_UPSTREAM} {
 			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-For {client_ip}
 			header_up Host $host
 		}
 	}
@@ -161,6 +194,7 @@
 	handle @uploads {
 		reverse_proxy {$API_UPSTREAM} {
 			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-For {client_ip}
 			header_up Host $host
 		}
 	}
@@ -171,6 +205,7 @@
 	handle {
 		reverse_proxy {$FRONTEND_UPSTREAM} {
 			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-For {client_ip}
 			header_up Host $host
 		}
 	}

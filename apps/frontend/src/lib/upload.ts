@@ -102,6 +102,8 @@ export async function uploadFileToStorage(
     key: safeName(file),
     contentType: file.type,
     folder: finalFolder,
+    // Signed into the URL as Content-Length, so storage refuses a body of any other size.
+    size: file.size,
   });
 
   if (!ticket?.url || !ticket.key) throw new Error('Could not prepare the upload');

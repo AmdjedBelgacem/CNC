@@ -73,24 +73,41 @@ else
   [ "$docs" = 404 ] && pass "GET /api/docs -> 404 (API docs disabled)" || fail "GET /api/docs -> $docs, expected 404"
 fi
 
-health="$(curl -sS --max-time 25 "$base/api/proxy/health" 2>/dev/null)"
-echo "  health: $(printf '%s' "$health" | head -c 160)"
+# The health endpoints answer `{ status }` only, unless the caller presents
+# HEALTH_DETAIL_TOKEN (the backend container must have it in its environment too).
+# With the token: per-dependency checks. Without it: readiness by HTTP code alone
+# (200 means database and auth are up; 503 means one of them is down).
+HEALTH_TOKEN="${HEALTH_DETAIL_TOKEN:-$(grep '^HEALTH_DETAIL_TOKEN=' "$DIR/.env" 2>/dev/null | head -1 | sed 's/HEALTH_DETAIL_TOKEN=//')}"
+health=""
+if [ -n "$HEALTH_TOKEN" ]; then
+  health="$(curl -sS --max-time 25 -H "x-health-token: $HEALTH_TOKEN" "$base/api/proxy/health" 2>/dev/null)"
+  echo "  health: $(printf '%s' "$health" | head -c 160)"
+fi
 case "$health" in
-  *'"database":{"state":"up"'*) pass "database up" ;;
-  *) fail "database not reported up" ;;
+  *'"checks":'*)
+    case "$health" in
+      *'"database":{"state":"up"'*) pass "database up" ;;
+      *) fail "database not reported up" ;;
+    esac
+    case "$health" in
+      *'"auth":{"state":"up"'*) pass "auth up" ;;
+      *) fail "auth not reported up" ;;
+    esac
+    # Search may legitimately be degraded (Meilisearch is off on purpose); everything
+    # else must be up, so only complain if an unexpected subsystem is down.
+    for svc in redis storage email; do
+      case "$health" in
+        *"\"$svc\":{\"state\":\"up\""*) ;;
+        *) fail "$svc not reported up" ;;
+      esac
+    done
+    ;;
+  *)
+    ready="$(code "$base/api/proxy/health/ready")"
+    if [ "$ready" = 200 ]; then pass "GET /api/proxy/health/ready -> 200 (database and auth up)"; else fail "GET /api/proxy/health/ready -> ${ready:-no response}"; fi
+    echo "  SKIP  per-service checks (set HEALTH_DETAIL_TOKEN here and in the backend environment)"
+    ;;
 esac
-case "$health" in
-  *'"auth":{"state":"up"'*) pass "auth up" ;;
-  *) fail "auth not reported up" ;;
-esac
-# Search may legitimately be degraded (Meilisearch is off on purpose); everything
-# else must be up, so only complain if an unexpected subsystem is down.
-for svc in redis storage email; do
-  case "$health" in
-    *"\"$svc\":{\"state\":\"up\""*) ;;
-    *) fail "$svc not reported up" ;;
-  esac
-done
 
 echo "== edge headers"
 if [ "$LOCAL_ONLY" = 0 ]; then

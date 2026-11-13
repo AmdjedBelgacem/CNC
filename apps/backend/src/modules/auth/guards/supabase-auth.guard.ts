@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { users } from '../../../database/schema/users';
 import { RbacService } from '../../rbac/rbac.service';
 import { SupabaseTokenVerifier } from '../supabase-token.verifier';
+import { assertAccountUsable } from '../account-status';
 
 /**
  * Accepts a Supabase-issued access token and resolves the matching application user.
@@ -61,7 +62,10 @@ export class SupabaseAuthGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException('No application user is linked to this identity');
     }
+    // The same states JwtStrategy refuses. Only `deleted` was checked here, so a suspended
+    // account kept a working session for as long as its Supabase token lived.
     if (user.accountStatus === 'deleted') throw new UnauthorizedException('Account is deleted');
+    assertAccountUsable(user);
 
     // RBAC stays in this application: resolve the same permission set the local JWT
     // strategy would, from our own roles/permissions tables. A Supabase claim is never

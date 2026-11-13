@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { trackLogin } from '@/lib/analytics';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { safeReturnPath } from '@/lib/safe-return-path';
 import {
   AuthAlert,
   AuthDivider,
@@ -47,7 +48,8 @@ function LoginForm() {
   const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnUrl = searchParams.get('returnUrl') || '/';
+  // Same-origin paths only: an absolute or `//host` value here was an open redirect.
+  const returnUrl = safeReturnPath(searchParams.get('returnUrl'));
   const { login, resendVerification } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

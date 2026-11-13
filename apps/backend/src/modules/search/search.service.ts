@@ -15,6 +15,7 @@ import { certifications } from '../../database/schema/certifications';
 import { AiCorpusService } from '../ai/ai-corpus.service';
 import { extractLessonBlockText, extractTranslationText, parseContentDocumentOrLegacy } from '../courses/lesson-content';
 import { PublicCacheService } from '../../common/cache/public-cache.service';
+import { escapeLike } from '../../common/utils/escape-like';
 
 export type SearchScope = 'public' | 'admin';
 export type SearchSort = 'relevance' | 'title' | 'newest';
@@ -167,10 +168,6 @@ function normalizeQuery(value: unknown) {
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
     .trim()
     .slice(0, MAX_QUERY_LENGTH);
-}
-
-function escapeLike(value: string) {
-  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
 /**

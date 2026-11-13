@@ -1,13 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, Optional, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Optional, Logger } from '@nestjs/common';
 import { DrizzleService } from '../../database/drizzle.service';
 import { certifications, certTemplates } from '../../database/schema/certifications';
 import { academies } from '../../database/schema/academies';
-import { enrollments } from '../../database/schema/progress';
+import { enrollments, lessonProgress } from '../../database/schema/progress';
 import { users } from '../../database/schema/users';
-import { courses } from '../../database/schema/courses';
+import { courses, series, lessons } from '../../database/schema/courses';
 import { tenants } from '../../database/schema/tenants';
-import { eq, and, desc, ilike, gte, lte, or, sql, count, isNull } from 'drizzle-orm';
-import { generateCertificateNumber } from '@titan/shared';
+import { eq, and, desc, ilike, gte, lte, or, sql, count, isNull, ne } from 'drizzle-orm';
 import * as crypto from 'crypto';
 import { AuditService } from '../auth/services/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -38,6 +37,21 @@ type TemplateRow = {
   fields: TemplateFieldDef[] | null;
   isActive: boolean;
 };
+
+/** Crockford base32: no I, L, O or U, so a number read aloud or typed is unambiguous. */
+const CERT_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+/**
+ * `TMF-<year>-<10 random characters>`. The number used to be `Date.now() % 1e6`: guessable, so the
+ * public verify page could be walked to list learners by name and course, and two certificates
+ * issued in the same millisecond window collided on the unique index.
+ */
+export function newCertificateNumber(at: Date): string {
+  const bytes = crypto.randomBytes(10);
+  let suffix = '';
+  for (const byte of bytes) suffix += CERT_ALPHABET[byte % 32];
+  return `TMF-${at.getFullYear()}-${suffix}`;
+}
 
 @Injectable()
 export class CertificationService {
@@ -94,8 +108,67 @@ export class CertificationService {
     };
   }
 
+  /**
+   * A learner claiming their own certificate. It used to issue for any course id with no other
+   * check, so any signed-in user could mint a verifiable certificate for a course they never
+   * bought or finished, even another tenant's. It now requires the course to be in this tenant,
+   * a live enrollment, and every published lesson completed. Staff issue through the admin route.
+   */
   async issue(userId: string, courseId: string, tenantId: string) {
+    await this.assertCourseCompleted(tenantId, userId, courseId);
     return this.issueInternal(tenantId, userId, courseId, { source: 'manual' });
+  }
+
+  private async assertCourseCompleted(tenantId: string, userId: string, courseId: string) {
+    const course = await this.drizzle.db.query.courses.findFirst({
+      where: and(eq(courses.id, courseId), eq(courses.tenantId, tenantId)),
+      columns: { id: true },
+    });
+    if (!course) throw new NotFoundException('Course not found');
+
+    const enrollment = await this.drizzle.db.query.enrollments.findFirst({
+      where: and(
+        eq(enrollments.tenantId, tenantId),
+        eq(enrollments.userId, userId),
+        eq(enrollments.courseId, courseId),
+        ne(enrollments.status, 'cancelled'),
+      ),
+      columns: { id: true },
+    });
+    if (!enrollment) throw new ForbiddenException('Enroll in and complete the course first');
+
+    // Same rule as course progress: every published lesson in a published series, completed.
+    const [row] = await this.drizzle.db
+      .select({
+        total: sql<number>`count(distinct ${lessons.id})::int`,
+        done: sql<number>`count(distinct ${lessonProgress.lessonId})::int`,
+      })
+      .from(lessons)
+      .innerJoin(series, eq(series.id, lessons.seriesId))
+      .leftJoin(
+        lessonProgress,
+        and(
+          eq(lessonProgress.lessonId, lessons.id),
+          eq(lessonProgress.userId, userId),
+          eq(lessonProgress.tenantId, tenantId),
+          eq(lessonProgress.completed, true),
+        ),
+      )
+      .where(
+        and(
+          eq(series.courseId, courseId),
+          eq(series.tenantId, tenantId),
+          eq(series.isPublished, true),
+          eq(series.isArchived, false),
+          eq(lessons.tenantId, tenantId),
+          eq(lessons.isPublished, true),
+          eq(lessons.isArchived, false),
+        ),
+      );
+    const total = Number(row?.total ?? 0);
+    if (total === 0 || Number(row?.done ?? 0) < total) {
+      throw new ForbiddenException('Complete every lesson before claiming the certificate');
+    }
   }
 
   // --- Admin management surface ---
@@ -239,8 +312,7 @@ export class CertificationService {
     let created: typeof certifications.$inferSelect | undefined;
     for (let attempt = 0; attempt < 3 && !created; attempt++) {
       try {
-        const seq = (Date.now() + attempt) % 1000000;
-        const certNumber = generateCertificateNumber('TMF', new Date().getFullYear(), seq);
+        const certNumber = newCertificateNumber(new Date());
         const signature = crypto
           .createHash('sha256')
           .update(`${certNumber}:${original.userId}:${original.courseId}:${tenantId}`)
@@ -820,8 +892,7 @@ export class CertificationService {
     }
 
     const issuedAt = new Date();
-    const seq = issuedAt.getTime() % 1000000;
-    const certNumber = generateCertificateNumber('TMF', issuedAt.getFullYear(), seq);
+    const certNumber = newCertificateNumber(issuedAt);
     const signature = crypto
       .createHash('sha256')
       .update(`${certNumber}:${userId}:${courseId}:${tenantId}`)

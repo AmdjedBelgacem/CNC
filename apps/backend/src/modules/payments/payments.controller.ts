@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Req, Headers, HttpCode, HttpStatus, UseGuards, Param } from '@nestjs/common';
+import { Controller, Post, Get, Req, Headers, HttpCode, HttpStatus, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -11,27 +11,12 @@ import { SkipCsrf } from '../auth/guards/csrf.guard';
 export class PaymentsController {
   constructor(private payments: PaymentsService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Post('checkout')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Create Stripe checkout session (tenant-isolated, one-time)' })
-  createCheckout(
-    @CurrentUser() user: { id: string; tenantId: string },
-    @Body() body: {
-      items: any[];
-      successUrl: string;
-      cancelUrl: string;
-    },
-  ) {
-    // Strict tenant isolation: use JWT tenant, not header
-    return this.payments.createCheckout({
-      tenantId: user.tenantId,
-      userId: user.id,
-      items: body.items,
-      successUrl: body.successUrl,
-      cancelUrl: body.cancelUrl,
-    });
-  }
+  /*
+   * `POST /payments/checkout` (legacy Stripe) was removed. Nothing in the app used it (checkout
+   * is Moyasar), and it took an untyped body: negative or fractional quantities, totals summed
+   * across currencies, and arbitrary success/cancel redirect URLs. The webhook below stays so
+   * any order created through it can still settle.
+   */
 
   @UseGuards(JwtAuthGuard)
   @Get('orders/by-session/:sessionId')

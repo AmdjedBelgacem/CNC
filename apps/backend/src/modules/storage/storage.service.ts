@@ -178,8 +178,16 @@ export class StorageService {
   async createPresignedPutUrl(key: string, contentType: string, size: number): Promise<string> {
     const client = this.ensure();
     this.validateVideo(contentType, size);
-    const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
-    return getSignedUrl(client, cmd, { expiresIn: 900 });
+    // Bind both the declared type and the declared size into the signature. The v3
+    // presigner leaves `content-type` unsigned by default, so without `signableHeaders`
+    // a URL issued for video/mp4 accepted any type and any size up to S3's own limit.
+    const cmd = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+      ContentLength: size,
+    });
+    return getSignedUrl(client, cmd, { expiresIn: 900, signableHeaders: new Set(['content-type']) });
   }
 
   /** Server-mediated upload (fallback when presigned PUT is unavailable). */

@@ -13,7 +13,8 @@ const b64 = (obj: unknown) =>
 
 const sign = (claims: Record<string, unknown>, secret = SECRET, alg = 'HS256') => {
   const h = b64({ alg, typ: 'JWT' });
-  const p = b64(claims);
+  // Supabase user tokens always carry aud "authenticated"; the verifier now requires it.
+  const p = b64({ aud: 'authenticated', ...claims });
   const sig = createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
   return `${h}.${p}.${sig}`;
 };
@@ -126,7 +127,7 @@ describe('SupabaseTokenVerifier with a JWKS (ES256)', () => {
 
   const signEs256 = (claims: Record<string, unknown>) => {
     const header = Buffer.from(JSON.stringify({ alg: 'ES256', typ: 'JWT', kid })).toString('base64url');
-    const payload = Buffer.from(JSON.stringify(claims)).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({ aud: 'authenticated', ...claims })).toString('base64url');
     const signingInput = `${header}.${payload}`;
     // JOSE uses the raw R||S form; Node signs DER, so convert on the way out.
     const der = cryptoSign('sha256', Buffer.from(signingInput), privateKey);

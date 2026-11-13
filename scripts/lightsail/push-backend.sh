@@ -20,7 +20,7 @@ cd "$ROOT"
 HOST="${LIGHTSAIL_HOST:-ubuntu@13.206.178.25}"
 KEY="${LIGHTSAIL_KEY:-$ROOT/../pem keys/Cnc-ap-south-1.pem}"
 REMOTE_DIR="${LIGHTSAIL_DIR:-/opt/titanic/cnc}"
-SSH_OPTS=(-i "$KEY" -o StrictHostKeyChecking=no -o ServerAliveInterval=15 -o ServerAliveCountMax=60 -o TCPKeepAlive=yes)
+SSH_OPTS=(-i "$KEY" -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=60 -o TCPKeepAlive=yes)
 CONNECT_OPTS=(-o ConnectTimeout=15 -o ConnectionAttempts=1)
 
 TAG=""
