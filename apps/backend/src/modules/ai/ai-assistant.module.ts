@@ -7,11 +7,13 @@ import { AiChatService } from './ai-chat.service';
 import { AiConversationsService } from './ai-conversations.service';
 import { AiEvalService } from './ai-eval.service';
 
+import { AiUsageLimitService } from './ai-usage-limit.service';
+
 @Module({
   imports: [AuthModule, AiCoreModule],
   controllers: [AiAdminController, AiChatController],
   // AiEvalService lives here, not in the global core module: it depends on
   // AiChatService, which is scoped to this module.
-  providers: [AiChatService, AiConversationsService, AiEvalService],
+  providers: [AiChatService, AiConversationsService, AiEvalService, AiUsageLimitService],
 })
 export class AiAssistantModule {}

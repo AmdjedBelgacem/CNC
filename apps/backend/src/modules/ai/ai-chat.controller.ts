@@ -9,6 +9,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalAuthGuard } from '../auth/guards/optional-auth.guard';
 import { TenantScopeGuard } from '../auth/guards/tenant-scope.guard';
+import { AiUsageLimitService } from './ai-usage-limit.service';
 import { AiChatService } from './ai-chat.service';
 import { AiSettingsService } from './ai-settings.service';
 import { AiConversationsService } from './ai-conversations.service';
@@ -24,6 +25,7 @@ export class AiChatController {
     private readonly settings: AiSettingsService,
     private readonly conversations: AiConversationsService,
     private readonly feedback: AiFeedbackService,
+    private readonly usage: AiUsageLimitService,
   ) {}
 
   // ------------------------------------------------------------------
@@ -148,12 +150,13 @@ export class AiChatController {
   @Throttle({ default: { ttl: 60000, limit: 10 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Ask the tenant-scoped AI assistant' })
-  authenticatedChat(
+  async authenticatedChat(
     @CurrentTenant() tenant: { id: string },
     @CurrentUser() user: AiViewer,
     @Body() dto: AiChatDto,
     @Req() request: { ip?: string; headers?: Record<string, string | string[] | undefined> },
   ) {
+    await this.usage.consume({ tenantId: tenant.id, userId: String(user.id), role: user.role, ip: request.ip });
     return this.chat.chat(tenant.id, dto, user, {
       ip: request.ip,
       userAgent: typeof request.headers?.['user-agent'] === 'string' ? request.headers['user-agent'] : undefined,
@@ -166,12 +169,18 @@ export class AiChatController {
   @UseGuards(OptionalAuthGuard, TenantGuard, TenantScopeGuard)
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Ask the explicitly enabled public AI assistant' })
-  publicChat(
+  async publicChat(
     @CurrentTenant() tenant: { id: string },
     @CurrentUser() user: AiViewer | null,
     @Body() dto: AiChatDto,
     @Req() request: { ip?: string; headers?: Record<string, string | string[] | undefined> },
   ) {
+    await this.usage.consume({
+      tenantId: tenant.id,
+      userId: user?.id ? String(user.id) : null,
+      role: user?.role ?? null,
+      ip: request.ip,
+    });
     return this.chat.chat(tenant.id, dto, user, {
       ip: request.ip,
       userAgent: typeof request.headers?.['user-agent'] === 'string' ? request.headers['user-agent'] : undefined,

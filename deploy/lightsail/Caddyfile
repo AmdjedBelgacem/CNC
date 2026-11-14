@@ -1,5 +1,10 @@
 # Caddy for the Lightsail single-origin deployment.
 #
+# APPLYING CHANGES: this file is bind-mounted as a single file, and the deploy rsync
+# replaces it with a new file. The container keeps the OLD one, so `caddy reload` re-reads
+# stale config. After editing, recreate the container instead:
+#   docker compose --project-name titan up -d --no-deps --force-recreate caddy
+#
 # One domain, three routes. Everything that belongs to the backend is addressed
 # before the catch-all, and so the middleware rewrite inside Next never has to be
 # trusted for those paths (it never runs because the browser never reaches Next
